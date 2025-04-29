@@ -1,0 +1,7 @@
+fn puts(ptr char) -> int;
+
+// Example of comment
+fn main() -> int {
+    puts("Hello world!");  // Comment of hello world
+    // puts(1234);            // Comment of put 1234
+}

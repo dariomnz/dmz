@@ -1,0 +1,11 @@
+fn wrapper(n: int) -> int {
+    return n;
+}
+
+fn wrapper2(n: int, n2: char) -> char {
+    return n2;
+}
+
+fn main()-> void {
+    println(wrapper(1234));
+}
