@@ -48,11 +48,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const SourceLocation& s) {
-    os << file_name(s.file_name.data()) << ":" << s.line + 1 << ":" << s.col + 1;
-    return os;
-}
-
 std::ostream& operator<<(std::ostream& os, const Token& t) {
     os << t.loc;
     os << " '" << t.str << "' ";

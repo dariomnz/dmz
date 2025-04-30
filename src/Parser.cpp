@@ -3,18 +3,6 @@
 #include <iostream>
 
 namespace C {
-#define varOrReturn(var, init) \
-    auto var = (init);         \
-    if (!var) return nullptr;
-#define matchOrReturn(tok, msg) \
-    if (m_nextToken.type != tok) return report(m_nextToken.loc, msg);
-
-std::nullptr_t report(SourceLocation loc, std::string_view message, bool isWarning = false) {
-    std::cerr << loc << ':' << (isWarning ? " warning: " : " error: ") << message << '\n';
-
-    return nullptr;
-}
-
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
     m_incompleteAST = true;
 

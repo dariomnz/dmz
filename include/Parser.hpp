@@ -5,6 +5,7 @@
 
 #include "AST.hpp"
 #include "Lexer.hpp"
+#include "Utils.hpp"
 
 namespace C {
 

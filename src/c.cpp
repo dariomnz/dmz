@@ -2,16 +2,17 @@
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
+#include "Semantic.hpp"
 #include "debug.hpp"
 
 using namespace C;
 
 static int s_argc = 0;
-static char** s_argv = nullptr;
+static char **s_argv = nullptr;
 
 void usage() { print("Usage: " << s_argv[0] << " <file name>"); }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     s_argc = argc;
     s_argv = argv;
 
@@ -33,10 +34,19 @@ int main(int argc, char* argv[]) {
         Parser p(l);
 
         auto ret = p.parse_source_file();
-        for (auto &val : ret.first)
-        {
+        for (auto &val : ret.first) {
             val->dump();
         }
-        
+    }
+    {
+        Lexer l(s_argv[1]);
+        Parser p(l);
+        auto ret = p.parse_source_file();
+        std::cout << "---------------------------------" << std::endl;
+        Sema s(ret.first);
+        auto ret_s = s.resolve_ast();
+        for (auto &val : ret_s) {
+            val->dump();
+        }
     }
 }

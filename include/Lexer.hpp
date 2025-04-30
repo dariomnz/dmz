@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Utils.hpp"
+
 namespace C {
 
 enum class TokenType {
@@ -48,12 +50,6 @@ const std::unordered_map<std::string_view, TokenType> keywords = {
     {"char", TokenType::kw_char},     {"ptr", TokenType::kw_ptr},      {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},     {"let", TokenType::kw_let},      {"while", TokenType::kw_while},
     {"return", TokenType::kw_return}, {"struct", TokenType::kw_struct}};
-
-struct SourceLocation {
-    std::string_view file_name = {};
-    size_t line = 0, col = 0;
-};
-std::ostream& operator<<(std::ostream& os, const SourceLocation& t);
 
 struct Token {
     TokenType type = TokenType::invalid;

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <llvm/Support/ErrorHandling.h>
+
 #include <memory>
 #include <vector>
 
 #include "Lexer.hpp"
+#include "Utils.hpp"
 
 namespace C {
 
@@ -45,6 +48,16 @@ struct Statement {
     Statement(SourceLocation location) : location(location) {}
 
     virtual ~Statement() = default;
+
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct ResolvedStmt {
+    SourceLocation location;
+
+    ResolvedStmt(SourceLocation location) : location(location) {}
+
+    virtual ~ResolvedStmt() = default;
 
     virtual void dump(size_t level = 0) const = 0;
 };
@@ -109,6 +122,89 @@ struct CallExpr : public Expr {
 
     CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments)
         : Expr(location), callee(std::move(callee)), arguments(std::move(arguments)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedExpr : public ResolvedStmt {
+    Type type;
+
+    ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type) {}
+};
+
+struct ResolvedDecl {
+    SourceLocation location;
+    std::string_view identifier;
+    Type type;
+
+    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type)
+        : location(location), identifier(std::move(identifier)), type(type) {}
+    virtual ~ResolvedDecl() = default;
+
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct ResolvedNumberLiteral : public ResolvedExpr {
+    int value;
+
+    ResolvedNumberLiteral(SourceLocation location, int value)
+        : ResolvedExpr(location, Type::builtinInt()), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedDeclRefExpr : public ResolvedExpr {
+    const ResolvedDecl &decl;
+
+    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl) : ResolvedExpr(location, decl.type), decl(decl) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedBlock {
+    SourceLocation location;
+    std::vector<std::unique_ptr<ResolvedStmt>> statements;
+
+    ResolvedBlock(SourceLocation location, std::vector<std::unique_ptr<ResolvedStmt>> statements)
+        : location(location), statements(std::move(statements)) {}
+
+    void dump(size_t level = 0) const;
+};
+
+struct ResolvedParamDecl : public ResolvedDecl {
+    ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type)
+        : ResolvedDecl{location, std::move(identifier), type} {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFunctionDecl : public ResolvedDecl {
+    std::vector<std::unique_ptr<ResolvedParamDecl>> params;
+    std::unique_ptr<ResolvedBlock> body;
+
+    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                         std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
+        : ResolvedDecl(location, std::move(identifier), type), params(std::move(params)), body(std::move(body)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedCallExpr : public ResolvedExpr {
+    const ResolvedFunctionDecl &callee;
+    std::vector<std::unique_ptr<ResolvedExpr>> arguments;
+
+    ResolvedCallExpr(SourceLocation location, const ResolvedFunctionDecl &callee,
+                     std::vector<std::unique_ptr<ResolvedExpr>> arguments)
+        : ResolvedExpr(location, callee.type), callee(callee), arguments(std::move(arguments)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedReturnStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedReturnStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> expr = nullptr)
+        : ResolvedStmt(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };

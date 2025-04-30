@@ -13,7 +13,7 @@
 
 namespace C {
 
-constexpr const char *file_name(const char *path) {
+constexpr const char *get_file_name(const char *path) {
     const char *file = path;
     while (*path) {
         if (*path++ == '/') {
@@ -62,7 +62,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
 #define debug_msg(out_format)                                                                                   \
     {                                                                                                           \
         std::unique_lock internal_debug_lock(::C::debug_lock::get_lock());                                   \
-        std::cerr << std::dec << ::C::time_stamp() << " [" << ::C::file_name(__FILE__) << ":" << __LINE__ \
+        std::cerr << std::dec << ::C::time_stamp() << " [" << ::C::get_file_name(__FILE__) << ":" << __LINE__ \
                   << "] [" << __func__ << "] " << out_format << std::endl;                                      \
     }
 #else
