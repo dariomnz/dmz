@@ -31,4 +31,8 @@ static inline std::nullptr_t report(SourceLocation loc, std::string_view message
 
 static inline std::string indent(size_t level) { return std::string(level * 2, ' '); }
 
+[[noreturn]] static inline void error(std::string_view msg) {
+    std::cerr << "error: " << msg << '\n';
+    std::exit(1);
+}
 }  // namespace C

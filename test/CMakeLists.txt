@@ -6,5 +6,5 @@ set(TEST_LIST
 
 # add the executables cpp
 foreach (test_name ${TEST_LIST})
-    add_test(NAME "${test_name}" COMMAND c ${CMAKE_CURRENT_LIST_DIR}/${test_name})
+    add_test(NAME "${test_name}" COMMAND compiler -res-dump ${CMAKE_CURRENT_LIST_DIR}/${test_name})
 endforeach (test_name)
