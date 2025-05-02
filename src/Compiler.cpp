@@ -25,10 +25,12 @@ int main(int argc, char *argv[]) {
 
         print("Content of file " << l.get_file_name() << ": ");
         print(l.get_file_content());
+        std::cout << "---------------------------------" << std::endl;
 
         auto tokens = l.tokenize_file();
         print(tokens);
     }
+    std::cout << "---------------------------------" << std::endl;
     {
         Lexer l(s_argv[1]);
         Parser p(l);
@@ -38,11 +40,11 @@ int main(int argc, char *argv[]) {
             val->dump();
         }
     }
+    std::cout << "---------------------------------" << std::endl;
     {
         Lexer l(s_argv[1]);
         Parser p(l);
         auto ret = p.parse_source_file();
-        std::cout << "---------------------------------" << std::endl;
         Sema s(ret.first);
         auto ret_s = s.resolve_ast();
         for (auto &val : ret_s) {

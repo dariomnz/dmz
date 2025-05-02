@@ -44,11 +44,11 @@ void ResolvedNumberLiteral::dump(size_t level) const {
 }
 
 void ResolvedDeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedDeclRefExpr: @(" << &decl << ") " << decl.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedDeclRefExpr: " << decl.identifier << '\n';
 }
 
 void ResolvedCallExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedCallExpr: @(" << &callee << ") " << callee.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedCallExpr: " << callee.identifier << '\n';
 
     for (auto &&arg : arguments) arg->dump(level + 1);
 }
@@ -60,11 +60,11 @@ void ResolvedBlock::dump(size_t level) const {
 }
 
 void ResolvedParamDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedParamDecl: @(" << this << ") " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ':' << '\n';
 }
 
 void ResolvedFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedFunctionDecl: @(" << this << ") " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedFunctionDecl: " << identifier << ':' << '\n';
 
     for (auto &&param : params) param->dump(level + 1);
 
