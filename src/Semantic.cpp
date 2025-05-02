@@ -212,7 +212,7 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
 
     if (!type || type->kind == Type::Kind::Void)
         return report(param.location,
-                      "parameter '" + std::string(param.identifier) + "' has invalid '" + param.type.name + "' type");
+                      "parameter '" + std::string(param.identifier) + "' has invalid '" + std::string(param.type.name) + "' type");
 
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type);
 }
@@ -222,7 +222,7 @@ std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const Function
 
     if (!type)
         return report(function.location, "function '" + std::string(function.identifier) + "' has invalid '" +
-                                             function.type.name + "' type");
+                                             std::string(function.type.name) + "' type");
 
     if (function.identifier == "main") {
         if (type->kind != Type::Kind::Void)

@@ -69,7 +69,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
 #define debug_msg(out_format)
 #endif
 
-#define print(out_format)                                                     \
+#define println(out_format)                                                     \
     {                                                                         \
         std::unique_lock internal_debug_lock(::C::debug_lock::get_lock()); \
         std::cout << std::dec << out_format << std::endl;                     \
