@@ -107,8 +107,9 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Statement &stmt) {
     if (auto *expr = dynamic_cast<const Expr *>(&stmt)) return resolve_expr(*expr);
 
-    //   if (auto *ifStmt = dynamic_cast<const IfStmt *>(&stmt))
-    //     return resolveIfStmt(*ifStmt);
+    if (auto *ifStmt = dynamic_cast<const IfStmt *>(&stmt)) {
+        return resolve_if_stmt(*ifStmt);
+    }
 
     //   if (auto *assignment = dynamic_cast<const Assignment *>(&stmt))
     //     return resolveAssignment(*assignment);
@@ -116,8 +117,9 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Statement &stmt) {
     //   if (auto *declStmt = dynamic_cast<const DeclStmt *>(&stmt))
     //     return resolveDeclStmt(*declStmt);
 
-    //   if (auto *whileStmt = dynamic_cast<const WhileStmt *>(&stmt))
-    //     return resolveWhileStmt(*whileStmt);
+    if (auto *whileStmt = dynamic_cast<const WhileStmt *>(&stmt)) {
+        return resolve_while_stmt(*whileStmt);
+    }
 
     if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) return resolve_return_stmt(*returnStmt);
 
@@ -317,7 +319,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
             currentFunction = fn;
             if (auto resolvedBody = resolve_block(*(*nextFunctionDecl++)->body)) {
                 fn->body = std::move(resolvedBody);
-                // error |= runFlowSensitiveChecks(*fn);
+                error |= run_flow_sensitive_checks(*fn);
                 continue;
             }
 
@@ -356,5 +358,84 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
 std::unique_ptr<ResolvedGroupingExpr> Sema::resolve_grouping_expr(const GroupingExpr &grouping) {
     varOrReturn(resolvedExpr, resolve_expr(*grouping.expr));
     return std::make_unique<ResolvedGroupingExpr>(grouping.location, std::move(resolvedExpr));
+}
+
+std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
+    varOrReturn(condition, resolve_expr(*ifStmt.condition));
+
+    if (condition->type.kind != Type::Kind::Int) {
+        return report(condition->location, "expected number in condition");
+    }
+    varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
+
+    std::unique_ptr<ResolvedBlock> resolvedFalseBlock;
+    if (ifStmt.falseBlock) {
+        resolvedFalseBlock = resolve_block(*ifStmt.falseBlock);
+        if (!resolvedFalseBlock) return nullptr;
+    }
+
+    condition->set_constant_value(cee.evaluate(*condition, false));
+
+    return std::make_unique<ResolvedIfStmt>(ifStmt.location, std::move(condition), std::move(resolvedTrueBlock),
+                                            std::move(resolvedFalseBlock));
+}
+
+std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
+    varOrReturn(condition, resolve_expr(*whileStmt.condition));
+
+    if (condition->type.kind != Type::Kind::Int) {
+        return report(condition->location, "expected number in condition");
+    }
+
+    varOrReturn(body, resolve_block(*whileStmt.body));
+
+    condition->set_constant_value(cee.evaluate(*condition, false));
+
+    return std::make_unique<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
+}
+
+bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
+    CFG cfg = CFGBuilder().build(fn);
+
+    bool error = false;
+    error |= check_return_on_all_paths(fn, cfg);
+
+    return error;
+};
+bool Sema::check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg) {
+    if (fn.type.kind == Type::Kind::Void) return false;
+
+    int returnCount = 0;
+    bool exitReached = false;
+
+    std::set<int> visited;
+    std::vector<int> worklist;
+    worklist.emplace_back(cfg.entry);
+
+    while (!worklist.empty()) {
+        int bb = worklist.back();
+        worklist.pop_back();
+
+        if (!visited.emplace(bb).second) continue;
+
+        exitReached |= bb == cfg.exit;
+
+        const auto &[preds, succs, stmts] = cfg.m_basicBlocks[bb];
+
+        if (!stmts.empty() && dynamic_cast<const ResolvedReturnStmt *>(stmts[0])) {
+            ++returnCount;
+            continue;
+        }
+
+        for (auto &&[succ, reachable] : succs)
+            if (reachable) worklist.emplace_back(succ);
+    }
+
+    if (exitReached || returnCount == 0) {
+        report(fn.location, returnCount > 0 ? "non-void function doesn't return a value on every path"
+                                            : "non-void function doesn't return a value");
+    }
+
+    return exitReached || returnCount == 0;
 }
 }  // namespace C

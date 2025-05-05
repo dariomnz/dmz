@@ -162,6 +162,8 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
 }
 
 std::unique_ptr<Statement> Parser::parse_statement() {
+    if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
+    if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
 
     varOrReturn(expr, parse_expr());
@@ -328,5 +330,49 @@ void Parser::synchronize() {
             break;
         }
     }
+}
+
+std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'if'
+
+    varOrReturn(condition, parse_expr());
+    matchOrReturn(TokenType::block_l, "expected 'if' body");
+
+    varOrReturn(trueBlock, parse_block());
+
+    if (m_nextToken.type != TokenType::kw_else)
+        return std::make_unique<IfStmt>(location, std::move(condition), std::move(trueBlock));
+    eat_next_token();  // eat 'else'
+
+    std::unique_ptr<Block> falseBlock;
+    if (m_nextToken.type == TokenType::kw_if) {
+        varOrReturn(elseIf, parse_if_stmt());
+
+        SourceLocation loc = elseIf->location;
+        std::vector<std::unique_ptr<Statement>> stmts;
+        stmts.emplace_back(std::move(elseIf));
+
+        falseBlock = std::make_unique<Block>(loc, std::move(stmts));
+    } else {
+        matchOrReturn(TokenType::block_l, "expected 'else' body");
+        falseBlock = parse_block();
+    }
+
+    if (!falseBlock) return nullptr;
+
+    return std::make_unique<IfStmt>(location, std::move(condition), std::move(trueBlock), std::move(falseBlock));
+}
+
+std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'while'
+
+    varOrReturn(cond, parse_expr());
+
+    matchOrReturn(TokenType::block_l, "expected 'while' body");
+    varOrReturn(body, parse_block());
+
+    return std::make_unique<WhileStmt>(location, std::move(cond), std::move(body));
 }
 }  // namespace C

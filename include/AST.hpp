@@ -48,16 +48,6 @@ struct Statement {
     virtual void dump(size_t level = 0) const = 0;
 };
 
-struct ResolvedStmt {
-    SourceLocation location;
-
-    ResolvedStmt(SourceLocation location) : location(location) {}
-
-    virtual ~ResolvedStmt() = default;
-
-    virtual void dump(size_t level = 0) const = 0;
-};
-
 struct Block {
     SourceLocation location;
     std::vector<std::unique_ptr<Statement>> statements;
@@ -158,6 +148,41 @@ class ConstantValueContainer {
    public:
     void set_constant_value(std::optional<Ty> val) { value = std::move(val); }
     std::optional<Ty> get_constant_value() const { return value; }
+};
+
+struct IfStmt : public Statement {
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Block> trueBlock;
+    std::unique_ptr<Block> falseBlock;
+
+    IfStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> trueBlock,
+           std::unique_ptr<Block> falseBlock = nullptr)
+        : Statement(location),
+          condition(std::move(condition)),
+          trueBlock(std::move(trueBlock)),
+          falseBlock(std::move(falseBlock)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct WhileStmt : public Statement {
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Block> body;
+
+    WhileStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> body)
+        : Statement(location), condition(std::move(condition)), body(std::move(body)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedStmt {
+    SourceLocation location;
+
+    ResolvedStmt(SourceLocation location) : location(location) {}
+
+    virtual ~ResolvedStmt() = default;
+
+    virtual void dump(size_t level = 0) const = 0;
 };
 
 struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
@@ -270,6 +295,32 @@ struct ResolvedGroupingExpr : public ResolvedExpr {
 
     ResolvedGroupingExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> expr)
         : ResolvedExpr(location, expr->type), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedIfStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedExpr> condition;
+    std::unique_ptr<ResolvedBlock> trueBlock;
+    std::unique_ptr<ResolvedBlock> falseBlock;
+
+    ResolvedIfStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                   std::unique_ptr<ResolvedBlock> trueBlock, std::unique_ptr<ResolvedBlock> falseBlock = nullptr)
+        : ResolvedStmt(location),
+          condition(std::move(condition)),
+          trueBlock(std::move(trueBlock)),
+          falseBlock(std::move(falseBlock)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedWhileStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedExpr> condition;
+    std::unique_ptr<ResolvedBlock> body;
+
+    ResolvedWhileStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                      std::unique_ptr<ResolvedBlock> body)
+        : ResolvedStmt(location), condition(std::move(condition)), body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
 };

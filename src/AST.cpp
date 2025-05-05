@@ -56,6 +56,40 @@ void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl: " << identifier << ':' << type.name << '\n';
 }
 
+void BinaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "BinaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    lhs->dump(level + 1);
+    rhs->dump(level + 1);
+}
+
+void UnaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "UnaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    operand->dump(level + 1);
+}
+
+void GroupingExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "GroupingExpr:\n";
+
+    expr->dump(level + 1);
+}
+
+void IfStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "IfStmt\n";
+
+    condition->dump(level + 1);
+    trueBlock->dump(level + 1);
+    if (falseBlock) falseBlock->dump(level + 1);
+}
+
+void WhileStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "WhileStmt\n";
+
+    condition->dump(level + 1);
+    body->dump(level + 1);
+}
+
 void ResolvedNumberLiteral::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedNumberLiteral: '" << value << "'\n";
     if (auto val = get_constant_value()) {
@@ -103,19 +137,6 @@ void ResolvedReturnStmt::dump(size_t level) const {
     if (expr) expr->dump(level + 1);
 }
 
-void BinaryOperator::dump(size_t level) const {
-    std::cerr << indent(level) << "BinaryOperator: '" << get_op_str(op) << '\'' << '\n';
-
-    lhs->dump(level + 1);
-    rhs->dump(level + 1);
-}
-
-void UnaryOperator::dump(size_t level) const {
-    std::cerr << indent(level) << "UnaryOperator: '" << get_op_str(op) << '\'' << '\n';
-
-    operand->dump(level + 1);
-}
-
 void ResolvedBinaryOperator::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedBinaryOperator: '" << get_op_str(op) << '\'' << '\n';
 
@@ -136,12 +157,6 @@ void ResolvedUnaryOperator::dump(size_t level) const {
     operand->dump(level + 1);
 }
 
-void GroupingExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "GroupingExpr:\n";
-
-    expr->dump(level + 1);
-}
-
 void ResolvedGroupingExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedGroupingExpr:\n";
 
@@ -149,5 +164,20 @@ void ResolvedGroupingExpr::dump(size_t level) const {
         std::cerr << indent(level) << "| value: " << *val << '\n';
     }
     expr->dump(level + 1);
+}
+
+void ResolvedIfStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedIfStmt\n";
+
+    condition->dump(level + 1);
+    trueBlock->dump(level + 1);
+    if (falseBlock) falseBlock->dump(level + 1);
+}
+
+void ResolvedWhileStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedWhileStmt\n";
+
+    condition->dump(level + 1);
+    body->dump(level + 1);
 }
 }  // namespace C

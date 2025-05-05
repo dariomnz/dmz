@@ -1,5 +1,6 @@
 #include "Driver.hpp"
 
+#include "CFG.hpp"
 #include "Codegen.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
@@ -15,6 +16,7 @@ static void displayHelp() {
     println("  -lexer-dump    print the lexer dump");
     println("  -ast-dump    print the abstract syntax tree");
     println("  -res-dump    print the resolved syntax tree");
+    println("  -cfg-dump    print the control flow graph");
     println("  -llvm-dump   print the llvm module");
 }
 
@@ -106,6 +108,17 @@ int main(int argc, char *argv[]) {
 
     if (options.resDump) {
         for (auto &&fn : resolvedTree) fn->dump();
+        return 0;
+    }
+
+    if (options.cfgDump) {
+        for (auto &&decl : resolvedTree) {
+            const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
+            if (!fn) continue;
+
+            std::cerr << fn->identifier << ':' << '\n';
+            CFGBuilder().build(*fn).dump();
+        }
         return 0;
     }
 

@@ -4,6 +4,7 @@
 #include "Constexpr.hpp"
 #include "PH.hpp"
 #include "Utils.hpp"
+#include "CFG.hpp"
 
 namespace C {
 
@@ -43,5 +44,9 @@ class Sema {
     std::unique_ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
     std::unique_ptr<ResolvedBinaryOperator> resolve_binary_operator(const BinaryOperator &binop);
     std::unique_ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
+    std::unique_ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
+    std::unique_ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
+    bool run_flow_sensitive_checks(const ResolvedFunctionDecl &fn);
+    bool check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg);
 };
 }  // namespace C

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "PH.hpp"
-
 #include "AST.hpp"
+#include "PH.hpp"
 
 namespace C {
 
@@ -41,5 +40,7 @@ class Codegen {
     llvm::Value *bool_to_int(llvm::Value *v);
     void generate_conditional_operator(const ResolvedExpr &op, llvm::BasicBlock *trueBB, llvm::BasicBlock *falseBB);
     llvm::Function *get_current_function();
+    llvm::Value *generate_if_stmt(const ResolvedIfStmt &stmt);
+    llvm::Value *generate_while_stmt(const ResolvedWhileStmt &stmt);
 };
 }  // namespace C

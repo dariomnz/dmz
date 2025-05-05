@@ -1,5 +1,13 @@
 fn wrapper(n: int) -> int {
-    return 100000;
+    if (n < 100){
+        return 100;
+    }else if (n < 1000) {
+        return 1000;
+    }else if (n < 10000){
+        return 10000;
+    }else{
+        return 100000;
+    }
 }
 
 fn wrapper2(n: int, n2: int) -> int {

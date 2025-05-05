@@ -142,6 +142,14 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
         return generate_return_stmt(*returnStmt);
     }
 
+    if (auto *ifStmt = dynamic_cast<const ResolvedIfStmt *>(&stmt)) {
+        return generate_if_stmt(*ifStmt);
+    }
+
+    if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
+        return generate_while_stmt(*whileStmt);
+    }
+
     llvm_unreachable("unknown statement");
 }
 
@@ -320,5 +328,55 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
 
     llvm::Value *val = int_to_bool(generate_expr(op));
     m_builder.CreateCondBr(val, trueBB, falseBB);
-};
+}
+
+llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
+    llvm::Function *function = get_current_function();
+
+    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true");
+    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit");
+
+    llvm::BasicBlock *elseBB = exitBB;
+    if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(m_context, "if.false");
+
+    llvm::Value *cond = generate_expr(*stmt.condition);
+    m_builder.CreateCondBr(int_to_bool(cond), trueBB, elseBB);
+
+    trueBB->insertInto(function);
+    m_builder.SetInsertPoint(trueBB);
+    generate_block(*stmt.trueBlock);
+    m_builder.CreateBr(exitBB);
+
+    if (stmt.falseBlock) {
+        elseBB->insertInto(function);
+        m_builder.SetInsertPoint(elseBB);
+        generate_block(*stmt.falseBlock);
+        m_builder.CreateBr(exitBB);
+    }
+
+    exitBB->insertInto(function);
+    m_builder.SetInsertPoint(exitBB);
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
+    llvm::Function *function = get_current_function();
+
+    auto *header = llvm::BasicBlock::Create(m_context, "while.cond", function);
+    auto *body = llvm::BasicBlock::Create(m_context, "while.body", function);
+    auto *exit = llvm::BasicBlock::Create(m_context, "while.exit", function);
+
+    m_builder.CreateBr(header);
+
+    m_builder.SetInsertPoint(header);
+    llvm::Value *cond = generate_expr(*stmt.condition);
+    m_builder.CreateCondBr(int_to_bool(cond), body, exit);
+
+    m_builder.SetInsertPoint(body);
+    generate_block(*stmt.body);
+    m_builder.CreateBr(header);
+
+    m_builder.SetInsertPoint(exit);
+    return nullptr;
+}
 }  // namespace C
