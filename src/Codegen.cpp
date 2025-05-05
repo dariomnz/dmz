@@ -152,6 +152,10 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr) {
+    if (auto val = expr.get_constant_value()) {
+        return llvm::ConstantInt::get(m_builder.getInt32Ty(), *val);
+    }
+
     if (auto *number = dynamic_cast<const ResolvedNumberLiteral *>(&expr)) {
         return llvm::ConstantInt::get(m_builder.getInt32Ty(), number->value);
     }
@@ -277,6 +281,7 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
     if (op == TokenType::op_more_eq) return bool_to_int(m_builder.CreateICmpSGE(lhs, rhs));
 
     if (op == TokenType::op_equal) return bool_to_int(m_builder.CreateICmpEQ(lhs, rhs));
+    if (op == TokenType::op_not_equal) return bool_to_int(m_builder.CreateICmpNE(lhs, rhs));
 
     llvm_unreachable("unexpected binary operator");
     return nullptr;

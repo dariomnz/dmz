@@ -8,6 +8,7 @@ namespace C {
     if (op == TokenType::op_mult) return "*";
     if (op == TokenType::op_div) return "/";
 
+    if (op == TokenType::op_not_equal) return "!=";
     if (op == TokenType::op_equal) return "==";
     if (op == TokenType::op_and) return "&&";
     if (op == TokenType::op_or) return "||";
@@ -57,15 +58,24 @@ void ParamDecl::dump(size_t level) const {
 
 void ResolvedNumberLiteral::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedNumberLiteral: '" << value << "'\n";
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
 }
 
 void ResolvedDeclRefExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedDeclRefExpr: " << decl.identifier << '\n';
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
 }
 
 void ResolvedCallExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedCallExpr: " << callee.identifier << '\n';
 
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
     for (auto &&arg : arguments) arg->dump(level + 1);
 }
 
@@ -109,6 +119,9 @@ void UnaryOperator::dump(size_t level) const {
 void ResolvedBinaryOperator::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedBinaryOperator: '" << get_op_str(op) << '\'' << '\n';
 
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
     lhs->dump(level + 1);
     rhs->dump(level + 1);
 }
@@ -116,7 +129,9 @@ void ResolvedBinaryOperator::dump(size_t level) const {
 void ResolvedUnaryOperator::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedUnaryOperator: '" << get_op_str(op) << '\'' << '\n';
 
-    // if (auto val = get_constant_value()) std::cerr << indent(level) << "| value: " << *val << '\n';
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
 
     operand->dump(level + 1);
 }
@@ -130,6 +145,9 @@ void GroupingExpr::dump(size_t level) const {
 void ResolvedGroupingExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedGroupingExpr:\n";
 
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: " << *val << '\n';
+    }
     expr->dump(level + 1);
 }
 }  // namespace C

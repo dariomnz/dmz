@@ -24,6 +24,7 @@ enum class TokenType {
     op_less_eq,
     op_more_eq,
     op_equal,
+    op_not_equal,
     op_not,
     block_l,
     block_r,

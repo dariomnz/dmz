@@ -1,16 +1,17 @@
 #pragma once
 
-#include "PH.hpp"
 #include "AST.hpp"
+#include "Constexpr.hpp"
+#include "PH.hpp"
 #include "Utils.hpp"
-
 
 namespace C {
 
-class Sema{
+class Sema {
    private:
+    ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<FunctionDecl>> m_ast;
-    std::vector<std::vector<ResolvedDecl*>> m_scopes;
+    std::vector<std::vector<ResolvedDecl *>> m_scopes;
     ResolvedFunctionDecl *currentFunction;
     class ScopeRAII {
         Sema &m_sema;
@@ -21,11 +22,12 @@ class Sema{
     };
 
    public:
-    explicit Sema(std::vector<std::unique_ptr<FunctionDecl>>& ast) : m_ast(std::move(ast)) {}
+    explicit Sema(std::vector<std::unique_ptr<FunctionDecl>> &ast) : m_ast(std::move(ast)) {}
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
 
    private:
-    template <typename T> std::pair<T *, int> lookup_decl(const std::string_view id);
+    template <typename T>
+    std::pair<T *, int> lookup_decl(const std::string_view id);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::vector<std::unique_ptr<ResolvedFunctionDecl>> resolve_source_file();

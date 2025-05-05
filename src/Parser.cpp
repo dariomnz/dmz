@@ -16,6 +16,7 @@ namespace C {
         case TokenType::op_more_eq:
             return 4;
         case TokenType::op_equal:
+        case TokenType::op_not_equal:
             return 3;
         case TokenType::op_and:
             return 2;

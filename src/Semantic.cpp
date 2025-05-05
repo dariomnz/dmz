@@ -95,7 +95,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (resolvedArg->type.name != resolvedFunctionDecl->params[idx]->type.name)
             return report(resolvedArg->location, "unexpected type of argument");
 
-        // resolvedArg->setConstantValue(cee.evaluate(*resolvedArg, false));
+        resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
 
         ++idx;
         resolvedArguments.emplace_back(std::move(resolvedArg));
@@ -141,7 +141,7 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
         if (currentFunction->type.name != resolvedExpr->type.name)
             return report(resolvedExpr->location, "unexpected return type");
 
-        // resolvedExpr->setConstantValue(cee.evaluate(*resolvedExpr, false));
+        resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }
 
     return std::make_unique<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr));

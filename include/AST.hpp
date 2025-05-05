@@ -151,7 +151,16 @@ struct CallExpr : public Expr {
     void dump(size_t level = 0) const override;
 };
 
-struct ResolvedExpr : public ResolvedStmt {
+template <typename Ty>
+class ConstantValueContainer {
+    std::optional<Ty> value = std::nullopt;
+
+   public:
+    void set_constant_value(std::optional<Ty> val) { value = std::move(val); }
+    std::optional<Ty> get_constant_value() const { return value; }
+};
+
+struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
     Type type;
 
     ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type) {}
