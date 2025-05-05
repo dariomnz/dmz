@@ -17,12 +17,18 @@ enum class TokenType {
     lit_int,
     lit_float,
     lit_string,
-    op_pus,
+    op_plus,
     op_minus,
     op_mult,
     op_div,
     op_and,
     op_or,
+    op_less,
+    op_more,
+    op_less_eq,
+    op_more_eq,
+    op_equal,
+    op_not,
     block_l,
     block_r,
     par_l,
@@ -45,7 +51,7 @@ enum class TokenType {
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
 
-const std::unordered_map<std::string_view, TokenType> keywords = {
+const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"void", TokenType::kw_void},     {"fn", TokenType::kw_fn},        {"int", TokenType::kw_int},
     {"char", TokenType::kw_char},     {"ptr", TokenType::kw_ptr},      {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},     {"let", TokenType::kw_let},      {"while", TokenType::kw_while},

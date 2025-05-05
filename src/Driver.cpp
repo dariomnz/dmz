@@ -16,6 +16,7 @@ static void displayHelp() {
     println("Options:");
     println("  -h, -help    display this message");
     println("  -o <file>    write executable to <file>");
+    println("  -lexer-dump    print the lexer dump");
     println("  -ast-dump    print the abstract syntax tree");
     println("  -res-dump    print the resolved syntax tree");
     println("  -llvm-dump   print the llvm module");
@@ -37,6 +38,8 @@ static CompilerOptions parseArguments(int argc, char **argv) {
                 options.displayHelp = true;
             else if (arg == "-o")
                 options.output = ++idx >= argc ? "" : argv[idx];
+            else if (arg == "-lexer-dump")
+                options.lexerDump = true;
             else if (arg == "-ast-dump")
                 options.astDump = true;
             else if (arg == "-res-dump")
@@ -82,6 +85,16 @@ int main(int argc, char *argv[]) {
     }
 
     Lexer lexer(options.source.c_str());
+
+    if (options.lexerDump) {
+        Token tok;
+        do{
+            tok = lexer.next_token();
+            println(tok);
+        }while(tok.type != TokenType::eof);
+        return 0;
+    }
+
     Parser parser(lexer);
     auto [ast, success] = parser.parse_source_file();
 

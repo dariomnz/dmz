@@ -40,5 +40,11 @@ class Codegen {
     void generate_builtin_println_body(const ResolvedFunctionDecl &println);
     void generate_main_wrapper();
     llvm::AttributeList construct_attr_list(const ResolvedFunctionDecl *fn);
+    llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
+    llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
+    llvm::Value *int_to_bool(llvm::Value *v);
+    llvm::Value *bool_to_int(llvm::Value *v);
+    void generate_conditional_operator(const ResolvedExpr &op, llvm::BasicBlock *trueBB, llvm::BasicBlock *falseBB);
+    llvm::Function *get_current_function();
 };
 }  // namespace C

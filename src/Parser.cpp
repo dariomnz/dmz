@@ -3,6 +3,31 @@
 #include <iostream>
 
 namespace C {
+
+[[maybe_unused]] static inline int get_token_precedence(TokenType tok) {
+    switch (tok) {
+        case TokenType::op_mult:
+        case TokenType::op_div:
+            return 6;
+        case TokenType::op_plus:
+        case TokenType::op_minus:
+            return 5;
+        case TokenType::op_less:
+        case TokenType::op_more:
+        case TokenType::op_less_eq:
+        case TokenType::op_more_eq:
+            return 4;
+        case TokenType::op_equal:
+            return 3;
+        case TokenType::op_and:
+            return 2;
+        case TokenType::op_or:
+            return 1;
+        default:
+            return -1;
+    }
+}
+
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
     m_incompleteAST = true;
 
@@ -163,6 +188,17 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return declRefExpr;
     }
 
+    if (m_nextToken.type == TokenType::par_l) {
+        eat_next_token();  // eat '('
+
+        varOrReturn(expr, parse_expr());
+
+        matchOrReturn(TokenType::par_r, "expected ')'");
+        eat_next_token();  // eat ')'
+
+        return std::make_unique<GroupingExpr>(location, std::move(expr));
+    }
+
     return report(location, "expected expression");
 }
 
@@ -197,7 +233,42 @@ std::unique_ptr<std::vector<std::unique_ptr<Expr>>> Parser::parse_argument_list(
     return std::make_unique<std::vector<std::unique_ptr<Expr>>>(std::move(argumentList));
 }
 
-std::unique_ptr<Expr> Parser::parse_expr() { return parse_postfix_expr(); }
+std::unique_ptr<Expr> Parser::parse_prefix_expr() {
+    Token tok = m_nextToken;
+
+    if (tok.type != TokenType::op_minus || tok.type != TokenType::op_not) {
+        return parse_postfix_expr();
+    }
+    eat_next_token();  // eat '-'
+
+    varOrReturn(rhs, parse_prefix_expr());
+
+    return std::make_unique<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
+}
+
+std::unique_ptr<Expr> Parser::parse_expr() {
+    varOrReturn(lhs, parse_prefix_expr());
+    return parse_expr_rhs(std::move(lhs), 0);
+}
+
+std::unique_ptr<Expr> Parser::parse_expr_rhs(std::unique_ptr<Expr> lhs, int precedence) {
+    while (true) {
+        Token op = m_nextToken;
+        int curOpPrec = get_token_precedence(op.type);
+
+        if (curOpPrec < precedence) return lhs;
+        eat_next_token();  // eat operator
+
+        varOrReturn(rhs, parse_prefix_expr());
+
+        if (curOpPrec < get_token_precedence(m_nextToken.type)) {
+            rhs = parse_expr_rhs(std::move(rhs), curOpPrec + 1);
+            if (!rhs) return nullptr;
+        }
+
+        lhs = std::make_unique<BinaryOperator>(op.loc, std::move(lhs), std::move(rhs), op.type);
+    }
+}
 
 std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
     SourceLocation location = m_nextToken.loc;

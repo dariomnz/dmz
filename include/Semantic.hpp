@@ -39,5 +39,8 @@ class Sema{
     std::unique_ptr<ResolvedExpr> resolve_expr(const Expr &expr);
     std::unique_ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false);
     std::unique_ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
+    std::unique_ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
+    std::unique_ptr<ResolvedBinaryOperator> resolve_binary_operator(const BinaryOperator &binop);
+    std::unique_ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
 };
 }  // namespace C

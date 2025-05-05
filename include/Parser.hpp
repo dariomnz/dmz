@@ -38,7 +38,9 @@ class Parser {
     std::unique_ptr<Expr> parse_primary();
     std::unique_ptr<Expr> parse_postfix_expr();
     std::unique_ptr<std::vector<std::unique_ptr<Expr>>> parse_argument_list();
+    std::unique_ptr<Expr> parse_prefix_expr();
     std::unique_ptr<Expr> parse_expr();
+    std::unique_ptr<Expr> parse_expr_rhs(std::unique_ptr<Expr> lhs, int precedence);
     std::unique_ptr<ParamDecl> parse_param_decl();
     std::unique_ptr<std::vector<std::unique_ptr<ParamDecl>>> parse_parameter_list();
 };

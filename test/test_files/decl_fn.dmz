@@ -1,11 +1,12 @@
 fn wrapper(n: int) -> int {
-    return n;
+    return 100000;
 }
 
 fn wrapper2(n: int, n2: int) -> int {
-    return wrapper(n);
+    return wrapper(n + n2);
 }
 
 fn main()-> void {
-    println(wrapper2(1234, 2));
+    println(wrapper2(1234, 1234));
+    println(1 >= 0 && 2<=20);
 }

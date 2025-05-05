@@ -2,7 +2,27 @@
 
 #include <iostream>
 
+#include "Utils.hpp"
+
 namespace C {
+
+[[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
+    if (op == TokenType::op_plus) return "+";
+    if (op == TokenType::op_minus) return "-";
+    if (op == TokenType::op_mult) return "*";
+    if (op == TokenType::op_div) return "/";
+
+    if (op == TokenType::op_equal) return "==";
+    if (op == TokenType::op_and) return "&&";
+    if (op == TokenType::op_or) return "||";
+    if (op == TokenType::op_less) return "<";
+    if (op == TokenType::op_less_eq) return "<=";
+    if (op == TokenType::op_more) return ">";
+    if (op == TokenType::op_more_eq) return ">=";
+    if (op == TokenType::op_not) return "!";
+
+    llvm_unreachable("unexpected operator");
+}
 
 void FunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FunctionDecl: " << identifier << " -> " << type.name << '\n';
@@ -75,5 +95,45 @@ void ResolvedReturnStmt::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedReturnStmt\n";
 
     if (expr) expr->dump(level + 1);
+}
+
+void BinaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "BinaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    lhs->dump(level + 1);
+    rhs->dump(level + 1);
+}
+
+void UnaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "UnaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    operand->dump(level + 1);
+}
+
+void ResolvedBinaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedBinaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    lhs->dump(level + 1);
+    rhs->dump(level + 1);
+}
+
+void ResolvedUnaryOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedUnaryOperator: '" << get_op_str(op) << '\'' << '\n';
+
+    // if (auto val = get_constant_value()) std::cerr << indent(level) << "| value: " << *val << '\n';
+
+    operand->dump(level + 1);
+}
+
+void GroupingExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "GroupingExpr:\n";
+
+    expr->dump(level + 1);
+}
+
+void ResolvedGroupingExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedGroupingExpr:\n";
+
+    expr->dump(level + 1);
 }
 }  // namespace C

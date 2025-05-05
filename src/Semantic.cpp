@@ -158,18 +158,25 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *number = dynamic_cast<const NumberLiteral *>(&expr))
         return std::make_unique<ResolvedNumberLiteral>(number->location, std::stod(std::string(number->value)));
 
-    if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) return resolve_decl_ref_expr(*declRefExpr);
+    if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
+        return resolve_decl_ref_expr(*declRefExpr);
+    }
 
-    if (const auto *callExpr = dynamic_cast<const CallExpr *>(&expr)) return resolve_call_expr(*callExpr);
+    if (const auto *callExpr = dynamic_cast<const CallExpr *>(&expr)) {
+        return resolve_call_expr(*callExpr);
+    }
 
-    //   if (const auto *groupingExpr = dynamic_cast<const GroupingExpr *>(&expr))
-    //     return resolveGroupingExpr(*groupingExpr);
+    if (const auto *groupingExpr = dynamic_cast<const GroupingExpr *>(&expr)) {
+        return resolve_grouping_expr(*groupingExpr);
+    }
 
-    //   if (const auto *binaryOperator = dynamic_cast<const BinaryOperator *>(&expr))
-    //     return resolveBinaryOperator(*binaryOperator);
+    if (const auto *binaryOperator = dynamic_cast<const BinaryOperator *>(&expr)) {
+        return resolve_binary_operator(*binaryOperator);
+    }
 
-    //   if (const auto *unaryOperator = dynamic_cast<const UnaryOperator *>(&expr))
-    //     return resolveUnaryOperator(*unaryOperator);
+    if (const auto *unaryOperator = dynamic_cast<const UnaryOperator *>(&expr)) {
+        return resolve_unary_operator(*unaryOperator);
+    }
 
     //   if (const auto *structInstantiation =
     //           dynamic_cast<const StructInstantiationExpr *>(&expr))
@@ -211,8 +218,8 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
     std::optional<Type> type = resolve_type(param.type);
 
     if (!type || type->kind == Type::Kind::Void)
-        return report(param.location,
-                      "parameter '" + std::string(param.identifier) + "' has invalid '" + std::string(param.type.name) + "' type");
+        return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
+                                          std::string(param.type.name) + "' type");
 
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type);
 }
@@ -328,5 +335,33 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
     if (error) return {};
 
     return resolvedTree;
+}
+
+std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
+    varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
+
+    if (resolvedRHS->type.kind == Type::Kind::Void)
+        return report(resolvedRHS->location, "void expression cannot be used as an operand to unary operator");
+
+    return std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
+}
+
+std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &binop) {
+    varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
+    varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
+
+    if (resolvedLHS->type.kind == Type::Kind::Void)
+        return report(resolvedLHS->location, "void expression cannot be used as LHS operand to binary operator");
+
+    if (resolvedRHS->type.kind == Type::Kind::Void)
+        return report(resolvedRHS->location, "void expression cannot be used as RHS operand to binary operator");
+
+    return std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
+                                                    std::move(resolvedRHS));
+}
+
+std::unique_ptr<ResolvedGroupingExpr> Sema::resolve_grouping_expr(const GroupingExpr &grouping) {
+    varOrReturn(resolvedExpr, resolve_expr(*grouping.expr));
+    return std::make_unique<ResolvedGroupingExpr>(grouping.location, std::move(resolvedExpr));
 }
 }  // namespace C

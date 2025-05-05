@@ -19,12 +19,18 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(lit_int);
         CASE_TYPE(lit_float);
         CASE_TYPE(lit_string);
-        CASE_TYPE(op_pus);
+        CASE_TYPE(op_plus);
         CASE_TYPE(op_minus);
         CASE_TYPE(op_mult);
         CASE_TYPE(op_div);
         CASE_TYPE(op_and);
         CASE_TYPE(op_or);
+        CASE_TYPE(op_less);
+        CASE_TYPE(op_more);
+        CASE_TYPE(op_less_eq);
+        CASE_TYPE(op_more_eq);
+        CASE_TYPE(op_equal);
+        CASE_TYPE(op_not);
         CASE_TYPE(block_l);
         CASE_TYPE(block_r);
         CASE_TYPE(par_l);
@@ -107,44 +113,36 @@ Token Lexer::next_token() {
     if (std::isdigit(file_content[0])) {
         debug_msg(TokenType::lit_int);
         size_t digit_count = 1;
-        advance();
         while (std::isdigit(file_content[digit_count])) {
             digit_count++;
-            advance();
         }
         t.type = TokenType::lit_int;
         t.str = file_content.substr(0, digit_count);
+        advance(digit_count);
     } else if (std::isalpha(file_content[0])) {
         debug_msg(TokenType::id);
         size_t alpha_count = 1;
-        advance();
         while (std::isalnum(file_content[alpha_count])) {
             alpha_count++;
-            advance();
         }
         t.type = TokenType::id;
         t.str = file_content.substr(0, alpha_count);
+        advance(alpha_count);
         auto it = keywords.find(t.str);
         if (it != keywords.end()) {
             t.type = it->second;
         }
-    } else if (file_content[0] == '/') {
+    } else if (file_content.substr(0, 2) == "//") {
         debug_msg(TokenType::comment);
-        if (file_content[1] == '/') {
-            size_t comment_count = 2;
-            // For the //
-            advance(2);
-            while (file_content[comment_count] != '\n') {
-                comment_count++;
-                advance();
-            }
-            t.type = TokenType::comment;
-            t.str = file_content.substr(0, comment_count);
-        } else {
+        size_t comment_count = 2;
+        // For the //
+        advance(2);
+        while (file_content[comment_count] != '\n') {
+            comment_count++;
             advance();
-            t.type = TokenType::invalid;
-            t.str = file_content.substr(0, 1);
         }
+        t.type = TokenType::comment;
+        t.str = file_content.substr(0, comment_count);
     } else if (file_content[0] == '{') {
         debug_msg(TokenType::block_l);
         t.type = TokenType::block_l;
@@ -163,11 +161,6 @@ Token Lexer::next_token() {
     } else if (file_content[0] == ')') {
         debug_msg(TokenType::par_r);
         t.type = TokenType::par_r;
-        t.str = file_content.substr(0, 1);
-        advance();
-    } else if (file_content[0] == '*') {
-        debug_msg(TokenType::op_mult);
-        t.type = TokenType::op_mult;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ':') {
@@ -203,13 +196,69 @@ Token Lexer::next_token() {
         t.type = TokenType::return_type;
         t.str = file_content.substr(0, 2);
         advance(2);
+    } else if (file_content[0] == '+') {
+        debug_msg(TokenType::op_plus);
+        t.type = TokenType::op_plus;
+        t.str = file_content.substr(0, 1);
+        advance();
     } else if (file_content[0] == '-') {
         debug_msg(TokenType::op_minus);
         t.type = TokenType::op_minus;
         t.str = file_content.substr(0, 1);
         advance();
+    } else if (file_content[0] == '*') {
+        debug_msg(TokenType::op_mult);
+        t.type = TokenType::op_mult;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '/') {
+        debug_msg(TokenType::op_div);
+        t.type = TokenType::op_div;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content.substr(0, 2) == "&&") {
+        debug_msg(TokenType::op_and);
+        t.type = TokenType::op_and;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content.substr(0, 2) == "||") {
+        debug_msg(TokenType::op_or);
+        t.type = TokenType::op_or;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content.substr(0, 2) == "==") {
+        debug_msg(TokenType::op_equal);
+        t.type = TokenType::op_equal;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content.substr(0, 2) == "<=") {
+        debug_msg(TokenType::op_less_eq);
+        t.type = TokenType::op_less_eq;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content.substr(0, 2) == ">=") {
+        debug_msg(TokenType::op_more_eq);
+        t.type = TokenType::op_more_eq;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content[0] == '<') {
+        debug_msg(TokenType::op_less);
+        t.type = TokenType::op_less;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '>') {
+        debug_msg(TokenType::op_more);
+        t.type = TokenType::op_more;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '!') {
+        debug_msg(TokenType::op_not);
+        t.type = TokenType::op_not;
+        t.str = file_content.substr(0, 1);
+        advance();
     } else {
-        TODO("Unexpected token ");
+        println("Unexpected token " << (int) file_content[0]);
+        TODO("Unexpected token");
     }
     debug_msg("End " << t);
     return t;

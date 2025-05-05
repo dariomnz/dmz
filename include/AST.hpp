@@ -100,6 +100,35 @@ struct ReturnStmt : public Statement {
     void dump(size_t level = 0) const override;
 };
 
+struct BinaryOperator : public Expr {
+    std::unique_ptr<Expr> lhs;
+    std::unique_ptr<Expr> rhs;
+    TokenType op;
+
+    BinaryOperator(SourceLocation location, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs, TokenType op)
+        : Expr(location), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct UnaryOperator : public Expr {
+    std::unique_ptr<Expr> operand;
+    TokenType op;
+
+    UnaryOperator(SourceLocation location, std::unique_ptr<Expr> operand, TokenType op)
+        : Expr(location), operand(std::move(operand)), op(op) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct GroupingExpr : public Expr {
+    std::unique_ptr<Expr> expr;
+
+    GroupingExpr(SourceLocation location, std::unique_ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
 struct NumberLiteral : public Expr {
     std::string_view value;
 
@@ -205,6 +234,37 @@ struct ResolvedReturnStmt : public ResolvedStmt {
 
     ResolvedReturnStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> expr = nullptr)
         : ResolvedStmt(location), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedBinaryOperator : public ResolvedExpr {
+    TokenType op;
+    std::unique_ptr<ResolvedExpr> lhs;
+    std::unique_ptr<ResolvedExpr> rhs;
+
+    ResolvedBinaryOperator(SourceLocation location, TokenType op, std::unique_ptr<ResolvedExpr> lhs,
+                           std::unique_ptr<ResolvedExpr> rhs)
+        : ResolvedExpr(location, lhs->type), op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedUnaryOperator : public ResolvedExpr {
+    TokenType op;
+    std::unique_ptr<ResolvedExpr> operand;
+
+    ResolvedUnaryOperator(SourceLocation location, TokenType op, std::unique_ptr<ResolvedExpr> operand)
+        : ResolvedExpr(location, operand->type), op(op), operand(std::move(operand)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedGroupingExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedGroupingExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedExpr(location, expr->type), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
