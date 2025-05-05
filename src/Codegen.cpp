@@ -137,19 +137,21 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return generate_expr(*expr);
     }
-
     if (auto *returnStmt = dynamic_cast<const ResolvedReturnStmt *>(&stmt)) {
         return generate_return_stmt(*returnStmt);
     }
-
     if (auto *ifStmt = dynamic_cast<const ResolvedIfStmt *>(&stmt)) {
         return generate_if_stmt(*ifStmt);
     }
-
     if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
         return generate_while_stmt(*whileStmt);
     }
-
+    if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
+        return generate_decl_stmt(*declStmt);
+    }
+    if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
+        return generate_assignment(*assignment);
+    }
     llvm_unreachable("unknown statement");
 }
 
@@ -378,5 +380,22 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
     m_builder.SetInsertPoint(exit);
     return nullptr;
+}
+
+llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
+    const auto *decl = stmt.varDecl.get();
+
+    llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
+
+    if (const auto &init = decl->initializer) {
+        m_builder.CreateStore(generate_expr(*init), var);
+    }
+
+    m_declarations[decl] = var;
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
+    return m_builder.CreateStore(generate_expr(*stmt.expr), m_declarations[&stmt.variable->decl]);
 }
 }  // namespace C

@@ -1,7 +1,8 @@
-fn puts(ptr char) -> int;
-
-// Example of comment
-fn main() -> int {
-    puts("Hello world!");  // Comment of hello world
-    // puts(1234);            // Comment of put 1234
+fn main() -> void {
+    println(1);
+    println(12);
+    println(123);
+    println(1234);
+    println(12345);
+    println(123456);
 }

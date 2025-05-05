@@ -1,10 +1,10 @@
 #pragma once
 
 #include "AST.hpp"
+#include "CFG.hpp"
 #include "Constexpr.hpp"
 #include "PH.hpp"
 #include "Utils.hpp"
-#include "CFG.hpp"
 
 namespace C {
 
@@ -48,5 +48,9 @@ class Sema {
     std::unique_ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
     bool run_flow_sensitive_checks(const ResolvedFunctionDecl &fn);
     bool check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg);
+    std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
+    std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
+    std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
+    bool check_variable_initialization(const CFG &cfg);
 };
 }  // namespace C

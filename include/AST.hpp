@@ -175,6 +175,40 @@ struct WhileStmt : public Statement {
     void dump(size_t level = 0) const override;
 };
 
+struct VarDecl : public Decl {
+    std::optional<Type> type;
+    std::unique_ptr<Expr> initializer;
+    bool isMutable;
+
+    VarDecl(SourceLocation location, std::string_view identifier, std::optional<Type> type, bool isMutable,
+            std::unique_ptr<Expr> initializer = nullptr)
+        : Decl(location, std::move(identifier)),
+          type(std::move(type)),
+          initializer(std::move(initializer)),
+          isMutable(isMutable) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct DeclStmt : public Statement {
+    std::unique_ptr<VarDecl> varDecl;
+
+    DeclStmt(SourceLocation location, std::unique_ptr<VarDecl> varDecl)
+        : Statement(location), varDecl(std::move(varDecl)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct Assignment : public Statement {
+    std::unique_ptr<DeclRefExpr> variable;
+    std::unique_ptr<Expr> expr;
+
+    Assignment(SourceLocation location, std::unique_ptr<DeclRefExpr> variable, std::unique_ptr<Expr> expr)
+        : Statement(location), variable(std::move(variable)), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
 struct ResolvedStmt {
     SourceLocation location;
 
@@ -321,6 +355,39 @@ struct ResolvedWhileStmt : public ResolvedStmt {
     ResolvedWhileStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
                       std::unique_ptr<ResolvedBlock> body)
         : ResolvedStmt(location), condition(std::move(condition)), body(std::move(body)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedVarDecl : public ResolvedDecl {
+    std::unique_ptr<ResolvedExpr> initializer;
+    bool isMutable;
+
+    ResolvedVarDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
+                    std::unique_ptr<ResolvedExpr> initializer = nullptr)
+        : ResolvedDecl(location, std::move(identifier), type),
+          initializer(std::move(initializer)),
+          isMutable(isMutable) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedDeclStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedVarDecl> varDecl;
+
+    ResolvedDeclStmt(SourceLocation location, std::unique_ptr<ResolvedVarDecl> varDecl)
+        : ResolvedStmt(location), varDecl(std::move(varDecl)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedAssignment : public ResolvedStmt {
+    std::unique_ptr<ResolvedDeclRefExpr> variable;
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedAssignment(SourceLocation location, std::unique_ptr<ResolvedDeclRefExpr> variable,
+                       std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedStmt(location), variable(std::move(variable)), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };

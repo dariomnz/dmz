@@ -165,13 +165,8 @@ std::unique_ptr<Statement> Parser::parse_statement() {
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
-
-    varOrReturn(expr, parse_expr());
-
-    matchOrReturn(TokenType::semicolon, "expected ';' at the end of expression");
-    eat_next_token();  // eat ';'
-
-    return expr;
+    if (m_nextToken.type == TokenType::kw_let) return parse_decl_stmt();
+    return parse_assignment_or_expr();
 }
 
 std::unique_ptr<Expr> Parser::parse_primary() {
@@ -374,5 +369,80 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
     varOrReturn(body, parse_block());
 
     return std::make_unique<WhileStmt>(location, std::move(cond), std::move(body));
+}
+
+std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
+    Token tok = m_nextToken;
+    eat_next_token();  // eat 'let'
+
+    bool isConst = false;
+    if (m_nextToken.type == TokenType::kw_const) {
+        eat_next_token();  // eat 'const'
+        isConst = true;
+    }
+
+    matchOrReturn(TokenType::id, "expected identifier");
+    varOrReturn(varDecl, parse_var_decl(isConst));
+
+    matchOrReturn(TokenType::semicolon, "expected ';' after declaration");
+    eat_next_token();  // eat ';'
+
+    return std::make_unique<DeclStmt>(tok.loc, std::move(varDecl));
+}
+
+std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
+    SourceLocation location = m_nextToken.loc;
+
+    std::string_view identifier = m_nextToken.str;
+    eat_next_token();  // eat identifier
+
+    std::optional<Type> type;
+    if (m_nextToken.type == TokenType::colon) {
+        eat_next_token();  // eat ':'
+
+        type = parse_type();
+        if (!type) return nullptr;
+    }
+
+    if (m_nextToken.type != TokenType::op_assign) {
+        return std::make_unique<VarDecl>(location, identifier, type, !isConst);
+    }
+    eat_next_token();  // eat '='
+
+    varOrReturn(initializer, parse_expr());
+
+    return std::make_unique<VarDecl>(location, identifier, type, !isConst, std::move(initializer));
+}
+
+std::unique_ptr<Statement> Parser::parse_assignment_or_expr() {
+    varOrReturn(lhs, parse_prefix_expr());
+
+    if (m_nextToken.type != TokenType::op_assign) {
+        varOrReturn(expr, parse_expr_rhs(std::move(lhs), 0));
+
+        matchOrReturn(TokenType::semicolon, "expected ';' at the end of expression");
+        eat_next_token();  // eat ';'
+
+        return expr;
+    }
+    auto *dre = dynamic_cast<DeclRefExpr *>(lhs.get());
+    if (!dre) return report(lhs->location, "expected variable on the LHS of an assignment");
+    std::ignore = lhs.release();
+
+    varOrReturn(assignment, parse_assignment_rhs(std::unique_ptr<DeclRefExpr>(dre)));
+
+    matchOrReturn(TokenType::semicolon, "expected ';' at the end of assignment");
+    eat_next_token();  // eat ';'
+
+    return assignment;
+}
+
+std::unique_ptr<Assignment> Parser::parse_assignment_rhs(std::unique_ptr<DeclRefExpr> lhs) {
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat '='
+
+    varOrReturn(rhs, parse_expr());
+
+    return std::make_unique<Assignment>(location, std::move(lhs), std::move(rhs));
 }
 }  // namespace C

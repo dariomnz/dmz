@@ -52,5 +52,7 @@ class CFGBuilder {
     int insert_expr(const ResolvedExpr &expr, int block);
     int insert_if_stmt(const ResolvedIfStmt &stmt, int exit);
     int insert_while_stmt(const ResolvedWhileStmt &stmt, int exit);
+    int insert_decl_stmt(const ResolvedDeclStmt &stmt, int block);
+    int insert_assignment(const ResolvedAssignment &stmt, int block);
 };
 }  // namespace C

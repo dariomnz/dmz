@@ -26,6 +26,7 @@ enum class TokenType {
     op_equal,
     op_not_equal,
     op_not,
+    op_assign,
     block_l,
     block_r,
     par_l,

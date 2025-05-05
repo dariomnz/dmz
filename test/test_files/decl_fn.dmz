@@ -1,17 +1,23 @@
 fn wrapper(n: int) -> int {
-    if (n < 100){
-        return 100;
-    }else if (n < 1000) {
-        return 1000;
-    }else if (n < 10000){
-        return 10000;
+    let n1 = 100;
+    let const n2 = 1000;
+    let n3 = 10000;
+    let n4 = 100000;
+    n1 = 1+1;
+    if (n < n1){
+        return n1;
+    }else if (n < n2) {
+        return n2;
+    }else if (n < n3){
+        return n3;
     }else{
-        return 100000;
+        return n4;
     }
 }
 
 fn wrapper2(n: int, n2: int) -> int {
-    return wrapper(n + n2);
+    let const x = 1;
+    return wrapper(x);
 }
 
 fn main()-> void {

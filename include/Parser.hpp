@@ -43,5 +43,9 @@ class Parser {
     std::unique_ptr<std::vector<std::unique_ptr<ParamDecl>>> parse_parameter_list();
     std::unique_ptr<IfStmt> parse_if_stmt();
     std::unique_ptr<WhileStmt> parse_while_stmt();
+    std::unique_ptr<DeclStmt> parse_decl_stmt();
+    std::unique_ptr<VarDecl> parse_var_decl(bool isLet);
+    std::unique_ptr<Statement> parse_assignment_or_expr();
+    std::unique_ptr<Assignment> parse_assignment_rhs(std::unique_ptr<DeclRefExpr> lhs);
 };
 }  // namespace C

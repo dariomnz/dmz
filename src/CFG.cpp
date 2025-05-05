@@ -34,17 +34,20 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *ifStmt = dynamic_cast<const ResolvedIfStmt *>(&stmt)) {
         return insert_if_stmt(*ifStmt, block);
     }
-
     if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
         return insert_while_stmt(*whileStmt, block);
     }
-
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return insert_expr(*expr, block);
     }
-
     if (auto *returnStmt = dynamic_cast<const ResolvedReturnStmt *>(&stmt)) {
         return insert_return_stmt(*returnStmt, block);
+    }
+    if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
+        return insert_decl_stmt(*declStmt, block);
+    }
+    if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
+        return insert_assignment(*assignment, block);
     }
     llvm_unreachable("unexpected expression");
 }
@@ -115,6 +118,21 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
     insert_expr(*stmt.condition, header);
 
     return header;
+}
+
+int CFGBuilder::insert_decl_stmt(const ResolvedDeclStmt &stmt, int block) {
+    cfg.insert_stmt(&stmt, block);
+
+    if (const auto &init = stmt.varDecl->initializer) {
+        return insert_expr(*init, block);
+    }
+
+    return block;
+}
+
+int CFGBuilder::insert_assignment(const ResolvedAssignment &stmt, int block) {
+    cfg.insert_stmt(&stmt, block);
+    return insert_expr(*stmt.expr, block);
 }
 
 void CFG::dump() const {

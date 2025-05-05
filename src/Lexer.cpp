@@ -27,6 +27,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(op_equal);
         CASE_TYPE(op_not_equal);
         CASE_TYPE(op_not);
+        CASE_TYPE(op_assign);
         CASE_TYPE(block_l);
         CASE_TYPE(block_r);
         CASE_TYPE(par_l);
@@ -42,6 +43,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_if);
         CASE_TYPE(kw_else);
         CASE_TYPE(kw_let);
+        CASE_TYPE(kw_const);
         CASE_TYPE(kw_while);
         CASE_TYPE(kw_return);
         CASE_TYPE(kw_struct);
@@ -227,6 +229,11 @@ Token Lexer::next_token() {
         t.type = TokenType::op_equal;
         t.str = file_content.substr(0, 2);
         advance(2);
+    } else if (file_content[0] == '=') {
+        debug_msg(TokenType::op_assign);
+        t.type = TokenType::op_assign;
+        t.str = file_content.substr(0, 1);
+        advance();
     } else if (file_content.substr(0, 2) == "!=") {
         debug_msg(TokenType::op_not_equal);
         t.type = TokenType::op_not_equal;

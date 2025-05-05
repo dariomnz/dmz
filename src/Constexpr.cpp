@@ -27,6 +27,10 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
         return evaluate_binary_operator(*binaryOperator, allowSideEffects);
     }
 
+    if (const auto *declRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
+        return evaluate_decl_ref_expr(*declRefExpr, allowSideEffects);
+    }
+
     return std::nullopt;
 }
 
@@ -96,5 +100,13 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
         default:
             llvm_unreachable("unexpected binary operator");
     }
+}
+
+std::optional<int> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
+                                                                       bool allowSideEffects) {
+    const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl);
+    if (!rvd || rvd->isMutable || !rvd->initializer) return std::nullopt;
+
+    return evaluate(*rvd->initializer, allowSideEffects);
 }
 }  // namespace C

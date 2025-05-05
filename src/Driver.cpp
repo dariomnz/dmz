@@ -144,6 +144,7 @@ int main(int argc, char *argv[]) {
     command << "clang " << llvmIRPath;
     if (!options.output.empty()) command << " -o " << options.output;
 
+    println(command.str());
     int ret = std::system(command.str().c_str());
 
     std::filesystem::remove(llvmIRPath);

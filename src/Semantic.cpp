@@ -105,23 +105,24 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 }
 
 std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Statement &stmt) {
-    if (auto *expr = dynamic_cast<const Expr *>(&stmt)) return resolve_expr(*expr);
-
+    if (auto *expr = dynamic_cast<const Expr *>(&stmt)) {
+        return resolve_expr(*expr);
+    }
     if (auto *ifStmt = dynamic_cast<const IfStmt *>(&stmt)) {
         return resolve_if_stmt(*ifStmt);
     }
-
-    //   if (auto *assignment = dynamic_cast<const Assignment *>(&stmt))
-    //     return resolveAssignment(*assignment);
-
-    //   if (auto *declStmt = dynamic_cast<const DeclStmt *>(&stmt))
-    //     return resolveDeclStmt(*declStmt);
-
+    if (auto *assignment = dynamic_cast<const Assignment *>(&stmt)) {
+        return resolve_assignment(*assignment);
+    }
+    if (auto *declStmt = dynamic_cast<const DeclStmt *>(&stmt)) {
+        return resolve_decl_stmt(*declStmt);
+    }
     if (auto *whileStmt = dynamic_cast<const WhileStmt *>(&stmt)) {
         return resolve_while_stmt(*whileStmt);
     }
-
-    if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) return resolve_return_stmt(*returnStmt);
+    if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) {
+        return resolve_return_stmt(*returnStmt);
+    }
 
     llvm_unreachable("unexpected statement");
 }
@@ -399,6 +400,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
 
     bool error = false;
     error |= check_return_on_all_paths(fn, cfg);
+    error |= check_variable_initialization(cfg);
 
     return error;
 };
@@ -437,5 +439,139 @@ bool Sema::check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &
     }
 
     return exitReached || returnCount == 0;
+}
+
+std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
+    varOrReturn(resolvedVarDecl, resolve_var_decl(*declStmt.varDecl));
+
+    if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
+
+    return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
+}
+
+std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
+    if (!varDecl.type && !varDecl.initializer)
+        return report(varDecl.location, "an uninitialized variable is expected to have a type specifier");
+
+    std::unique_ptr<ResolvedExpr> resolvedInitializer = nullptr;
+    if (varDecl.initializer) {
+        resolvedInitializer = resolve_expr(*varDecl.initializer);
+        if (!resolvedInitializer) return nullptr;
+    }
+
+    Type resolvableType = varDecl.type.value_or(resolvedInitializer->type);
+    std::optional<Type> type = resolve_type(resolvableType);
+
+    if (!type || type->kind == Type::Kind::Void)
+        return report(varDecl.location, "variable '" + std::string(varDecl.identifier) + "' has invalid '" +
+                                            std::string(resolvableType.name) + "' type");
+
+    if (resolvedInitializer) {
+        if (resolvedInitializer->type.kind != type->kind)
+            return report(resolvedInitializer->location, "initializer type mismatch");
+
+        resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
+    }
+    return std::make_unique<ResolvedVarDecl>(varDecl.location, varDecl.identifier, *type, varDecl.isMutable,
+                                             std::move(resolvedInitializer));
+}
+
+std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
+    varOrReturn(resolvedLHS, resolve_decl_ref_expr(*assignment.variable));
+    varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
+    if (dynamic_cast<const ResolvedParamDecl *>(&resolvedLHS->decl))
+        return report(resolvedLHS->location, "parameters are immutable and cannot be assigned");
+    // auto *var = dynamic_cast<const ResolvedVarDecl *>(&resolvedLHS->decl);
+
+    if (resolvedRHS->type.kind != resolvedLHS->type.kind)
+        return report(resolvedRHS->location, "assigned value type doesn't match variable type");
+
+    resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
+
+    return std::make_unique<ResolvedAssignment>(assignment.location, std::move(resolvedLHS), std::move(resolvedRHS));
+}
+
+bool Sema::check_variable_initialization(const CFG &cfg) {
+    enum class State { Bottom, Unassigned, Assigned, Top };
+
+    using Lattice = std::map<const ResolvedDecl *, State>;
+
+    auto joinStates = [](State s1, State s2) {
+        if (s1 == s2) return s1;
+
+        if (s1 == State::Bottom) return s2;
+
+        if (s2 == State::Bottom) return s1;
+
+        return State::Top;
+    };
+
+    std::vector<Lattice> curLattices(cfg.m_basicBlocks.size());
+    std::vector<std::pair<SourceLocation, std::string>> pendingErrors;
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        pendingErrors.clear();
+
+        for (int bb = cfg.entry; bb != cfg.exit; --bb) {
+            const auto &[preds, succs, stmts] = cfg.m_basicBlocks[bb];
+
+            Lattice tmp;
+            for (auto &&pred : preds)
+                for (auto &&[decl, state] : curLattices[pred.first]) tmp[decl] = joinStates(tmp[decl], state);
+
+            for (auto it = stmts.rbegin(); it != stmts.rend(); ++it) {
+                const ResolvedStmt *stmt = *it;
+
+                if (auto *decl = dynamic_cast<const ResolvedDeclStmt *>(stmt)) {
+                    tmp[decl->varDecl.get()] = decl->varDecl->initializer ? State::Assigned : State::Unassigned;
+                    continue;
+                }
+
+                if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(stmt)) {
+                    const ResolvedExpr *base = assignment->variable.get();
+                    // while (const auto *member = dynamic_cast<const ResolvedMemberExpr *>(base))
+                    //     base = member->base.get();
+
+                    const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(base);
+
+                    // The base of the expression is not a variable, but a temporary,
+                    // which can be mutated.
+                    if (!dre) continue;
+
+                    const auto *decl = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+
+                    if (!decl->isMutable && tmp[decl] != State::Unassigned) {
+                        std::string msg = '\'' + std::string(decl->identifier) + "' cannot be mutated";
+                        pendingErrors.emplace_back(assignment->location, std::move(msg));
+                    }
+
+                    tmp[decl] = State::Assigned;
+                    continue;
+                }
+
+                if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(stmt)) {
+                    const auto *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+
+                    if (var && tmp[var] != State::Assigned) {
+                        std::string msg = '\'' + std::string(var->identifier) + "' is not initialized";
+                        pendingErrors.emplace_back(dre->location, std::move(msg));
+                    }
+
+                    continue;
+                }
+            }
+
+            if (curLattices[bb] != tmp) {
+                curLattices[bb] = tmp;
+                changed = true;
+            }
+        }
+    }
+
+    for (auto &&[loc, msg] : pendingErrors) report(loc, msg);
+
+    return !pendingErrors.empty();
 }
 }  // namespace C

@@ -90,6 +90,25 @@ void WhileStmt::dump(size_t level) const {
     body->dump(level + 1);
 }
 
+void VarDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "VarDecl" << (isMutable ? "" : " const") << ": " << identifier;
+    if (type) std::cerr << ':' << type->name;
+    std::cerr << '\n';
+
+    if (initializer) initializer->dump(level + 1);
+}
+
+void DeclStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "DeclStmt:\n";
+    varDecl->dump(level + 1);
+}
+
+void Assignment::dump(size_t level) const {
+    std::cerr << indent(level) << "Assignment:\n";
+    variable->dump(level + 1);
+    expr->dump(level + 1);
+}
+
 void ResolvedNumberLiteral::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedNumberLiteral: '" << value << "'\n";
     if (auto val = get_constant_value()) {
@@ -179,5 +198,21 @@ void ResolvedWhileStmt::dump(size_t level) const {
 
     condition->dump(level + 1);
     body->dump(level + 1);
+}
+
+void ResolvedVarDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedVarDecl" << (isMutable ? "" : " const") << ": " << identifier << ':' << '\n';
+    if (initializer) initializer->dump(level + 1);
+}
+
+void ResolvedDeclStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedDeclStmt:\n";
+    varDecl->dump(level + 1);
+}
+
+void ResolvedAssignment::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedAssignment:\n";
+    variable->dump(level + 1);
+    expr->dump(level + 1);
 }
 }  // namespace C
