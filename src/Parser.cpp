@@ -1,7 +1,5 @@
 #include "Parser.hpp"
 
-#include <iostream>
-
 namespace C {
 
 [[maybe_unused]] static inline int get_token_precedence(TokenType tok) {

@@ -1,10 +1,5 @@
 #include "Lexer.hpp"
 
-#include <filesystem>
-#include <fstream>
-
-#include "debug.hpp"
-
 namespace C {
 std::ostream& operator<<(std::ostream& os, const TokenType& t) {
 #define CASE_TYPE(name)     \
@@ -257,7 +252,7 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, 1);
         advance();
     } else {
-        println("Unexpected token " << (int) file_content[0]);
+        println("Unexpected token " << (int)file_content[0]);
         TODO("Unexpected token");
     }
     debug_msg("End " << t);

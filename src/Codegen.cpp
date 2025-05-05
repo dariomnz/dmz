@@ -1,9 +1,5 @@
 #include "Codegen.hpp"
 
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/Host.h>
-
 namespace C {
 Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath)
     : m_resolvedTree(std::move(resolvedTree)), m_builder(m_context), m_module("<translation_unit>", m_context) {
@@ -193,7 +189,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 }
 
 void Codegen::generate_builtin_println_body(const ResolvedFunctionDecl &println) {
-    auto *type = llvm::FunctionType::get(m_builder.getInt32Ty(), {m_builder.getInt8PtrTy()}, true);
+    auto *type = llvm::FunctionType::get(m_builder.getInt32Ty(), {m_builder.getInt8Ty()->getPointerTo()}, true);
     auto *printf = llvm::Function::Create(type, llvm::Function::ExternalLinkage, "printf", m_module);
     auto *format = m_builder.CreateGlobalStringPtr("%d\n");
     llvm::Value *param = m_builder.CreateLoad(m_builder.getInt32Ty(), m_declarations[println.params[0].get()]);

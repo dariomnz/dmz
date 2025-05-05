@@ -1,13 +1,9 @@
 #include "Driver.hpp"
 
-#include <fstream>
-#include <iostream>
-
 #include "Codegen.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
 #include "Semantic.hpp"
-#include "debug.hpp"
 
 namespace C {
 static void displayHelp() {
@@ -88,10 +84,10 @@ int main(int argc, char *argv[]) {
 
     if (options.lexerDump) {
         Token tok;
-        do{
+        do {
             tok = lexer.next_token();
             println(tok);
-        }while(tok.type != TokenType::eof);
+        } while (tok.type != TokenType::eof);
         return 0;
     }
 

@@ -1,12 +1,5 @@
 #include "Semantic.hpp"
 
-#include <cassert>
-#include <map>
-#include <set>
-#include <stack>
-
-#include "Utils.hpp"
-
 namespace C {
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {

@@ -1,15 +1,5 @@
 #pragma once
 
-#include <assert.h>
-
-#include <chrono>
-#include <cstring>
-#include <iomanip>
-#include <iostream>
-#include <mutex>
-#ifdef DEBUG
-#include <thread>
-#endif  // DEBUG
 
 namespace C {
 

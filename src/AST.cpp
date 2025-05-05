@@ -1,9 +1,5 @@
 #include "AST.hpp"
 
-#include <iostream>
-
-#include "Utils.hpp"
-
 namespace C {
 
 [[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
