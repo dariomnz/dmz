@@ -11,7 +11,7 @@ namespace C {
 class Sema {
    private:
     ConstantExpressionEvaluator cee;
-    std::vector<std::unique_ptr<FunctionDecl>> m_ast;
+    std::vector<std::unique_ptr<Decl>> m_ast;
     std::vector<std::vector<ResolvedDecl *>> m_scopes;
     ResolvedFunctionDecl *currentFunction;
     class ScopeRAII {
@@ -23,7 +23,7 @@ class Sema {
     };
 
    public:
-    explicit Sema(std::vector<std::unique_ptr<FunctionDecl>> &ast) : m_ast(std::move(ast)) {}
+    explicit Sema(std::vector<std::unique_ptr<Decl>> &ast) : m_ast(std::move(ast)) {}
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
 
    private:
@@ -36,7 +36,7 @@ class Sema {
     std::unique_ptr<ResolvedFunctionDecl> resolve_function_decl(const FunctionDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);
-    std::unique_ptr<ResolvedStmt> resolve_stmt(const Statement &stmt);
+    std::unique_ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
     std::unique_ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     std::unique_ptr<ResolvedExpr> resolve_expr(const Expr &expr);
     std::unique_ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false);
@@ -52,5 +52,11 @@ class Sema {
     std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
     std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
+    std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
+    std::unique_ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
+    std::unique_ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
+        const StructInstantiationExpr &structInstantiation);
+    std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
+    bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
 };
 }  // namespace C

@@ -105,8 +105,35 @@ void DeclStmt::dump(size_t level) const {
 
 void Assignment::dump(size_t level) const {
     std::cerr << indent(level) << "Assignment:\n";
-    variable->dump(level + 1);
+    assignee->dump(level + 1);
     expr->dump(level + 1);
+}
+
+void FieldDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "FieldDecl: " << identifier << ':' << type.name << '\n';
+}
+
+void StructDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "StructDecl: " << identifier << '\n';
+
+    for (auto &&field : fields) field->dump(level + 1);
+}
+
+void MemberExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "MemberExpr: ." << field << '\n';
+
+    base->dump(level + 1);
+}
+
+void StructInstantiationExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "StructInstantiationExpr: " << identifier << '\n';
+
+    for (auto &&field : fieldInitializers) field->dump(level + 1);
+}
+
+void FieldInitStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "FieldInitStmt: " << identifier << '\n';
+    initializer->dump(level + 1);
 }
 
 void ResolvedNumberLiteral::dump(size_t level) const {
@@ -139,7 +166,7 @@ void ResolvedBlock::dump(size_t level) const {
 }
 
 void ResolvedParamDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": " << type.name << '\n';
 }
 
 void ResolvedFunctionDecl::dump(size_t level) const {
@@ -212,7 +239,35 @@ void ResolvedDeclStmt::dump(size_t level) const {
 
 void ResolvedAssignment::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedAssignment:\n";
-    variable->dump(level + 1);
+    assignee->dump(level + 1);
     expr->dump(level + 1);
+}
+
+void ResolvedFieldDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedFieldDecl: " << identifier << '\n';
+}
+
+void ResolvedStructDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedStructDecl: " << identifier << ':' << '\n';
+
+    for (auto &&field : fields) field->dump(level + 1);
+}
+
+void ResolvedMemberExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedMemberExpr: " << field.identifier << '\n';
+
+    base->dump(level + 1);
+}
+
+void ResolvedFieldInitStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedFieldInitStmt: " << field.identifier << '\n';
+
+    initializer->dump(level + 1);
+}
+
+void ResolvedStructInstantiationExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedStructInstantiationExpr:\n";
+
+    for (auto &&field : fieldInitializers) field->dump(level + 1);
 }
 }  // namespace C

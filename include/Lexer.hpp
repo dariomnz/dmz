@@ -34,6 +34,7 @@ enum class TokenType {
     colon,
     semicolon,
     comma,
+    dot,
     kw_void,
     kw_fn,
     kw_int,

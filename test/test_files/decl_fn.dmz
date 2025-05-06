@@ -1,3 +1,20 @@
+struct RGBColor {
+  r: int,
+  g: int,
+  b: int,
+}
+
+fn rgbToGray(c: RGBColor) -> int {
+  return (c.r + c.g + c.b);
+}
+
+fn printRGBColor(c: RGBColor) -> RGBColor {
+    println(c.r);
+    println(c.g);
+    println(c.b);
+    return c;
+}
+
 fn wrapper(n: int) -> int {
     let n1 = 100;
     let const n2 = 1000;
@@ -23,4 +40,13 @@ fn wrapper2(n: int, n2: int) -> int {
 fn main()-> void {
     println(wrapper2(1234, 1234));
     println(1 >= 0 && 2<=20);
+    let color = RGBColor{r:1,b:3,g:wrapper(3)};
+    println(rgbToGray(color));
+    println(color.r);
+    println(color.g);
+    println(color.b);
+    let retColor = printRGBColor(color);
+    println(retColor.r);
+    println(retColor.g);
+    println(retColor.b);
 }

@@ -20,6 +20,7 @@ static void displayHelp() {
     println("  -res-dump    print the resolved syntax tree");
     println("  -cfg-dump    print the control flow graph");
     println("  -llvm-dump   print the llvm module");
+    println("  -run         runs the program with lli (Just In Time)");
 }
 
 static CompilerOptions parseArguments(int argc, char **argv) {
@@ -48,6 +49,8 @@ static CompilerOptions parseArguments(int argc, char **argv) {
                 options.llvmDump = true;
             else if (arg == "-cfg-dump")
                 options.cfgDump = true;
+            else if (arg == "-run")
+                options.run = true;
             else if (arg == "-o")
                 options.output = ++idx >= argc ? "" : argv[idx];
             else
@@ -153,14 +156,26 @@ int main(int argc, char *argv[]) {
         dup2(pipefd[0], STDIN_FILENO);
         close(pipefd[0]);
 
-        const char *cmd = "clang";
-        std::vector<const char *> args = {
-            "clang", "-O3", "-x", "ir", "-",
-        };
-        if (!options.output.empty()) {
-            args.emplace_back("-o");
-            args.emplace_back(options.output.c_str());
+        const char *cmd = nullptr;
+        std::vector<const char *> args;
+
+        if (options.run) {
+            cmd = "lli";
+            args.emplace_back("lli");
+            args.emplace_back("-O3");
+        } else {
+            cmd = "clang";
+            args.emplace_back("clang");
+            args.emplace_back("-O3");
+            args.emplace_back("-x");
+            args.emplace_back("ir");
+            args.emplace_back("-");
+            if (!options.output.empty()) {
+                args.emplace_back("-o");
+                args.emplace_back(options.output.c_str());
+            }
         }
+        args.emplace_back(nullptr);
 
         execvp(cmd, const_cast<char *const *>(args.data()));
         perror("execvp");

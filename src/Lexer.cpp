@@ -35,6 +35,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(colon);
         CASE_TYPE(semicolon);
         CASE_TYPE(comma);
+        CASE_TYPE(dot);
         CASE_TYPE(kw_void);
         CASE_TYPE(kw_fn);
         CASE_TYPE(kw_int);
@@ -262,6 +263,11 @@ Token Lexer::next_token() {
     } else if (file_content[0] == '!') {
         debug_msg(TokenType::op_not);
         t.type = TokenType::op_not;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '.') {
+        debug_msg(TokenType::dot);
+        t.type = TokenType::dot;
         t.str = file_content.substr(0, 1);
         advance();
     } else {

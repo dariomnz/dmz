@@ -49,6 +49,9 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
         return insert_assignment(*assignment, block);
     }
+    if (auto *fieldInit = dynamic_cast<const ResolvedFieldInitStmt *>(&stmt)) {
+        return insert_expr(*fieldInit->initializer, block);
+    }
     llvm_unreachable("unexpected expression");
 }
 
@@ -71,6 +74,10 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         return block;
     }
 
+    if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
+        return insert_expr(*memberExpr->base, block);
+    }
+
     if (const auto *grouping = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return insert_expr(*grouping->expr, block);
     }
@@ -81,6 +88,12 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
 
     if (const auto *unop = dynamic_cast<const ResolvedUnaryOperator *>(&expr)) {
         return insert_expr(*unop->operand, block);
+    }
+
+    if (const auto *structInst = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
+        for (auto it = structInst->fieldInitializers.rbegin(); it != structInst->fieldInitializers.rend(); ++it)
+            insert_stmt(**it, block);
+        return block;
     }
 
     return block;
@@ -132,6 +145,11 @@ int CFGBuilder::insert_decl_stmt(const ResolvedDeclStmt &stmt, int block) {
 
 int CFGBuilder::insert_assignment(const ResolvedAssignment &stmt, int block) {
     cfg.insert_stmt(&stmt, block);
+
+    if (!dynamic_cast<const ResolvedDeclRefExpr *>(stmt.assignee.get())) {
+        block = insert_expr(*stmt.assignee, block);
+    }
+
     return insert_expr(*stmt.expr, block);
 }
 

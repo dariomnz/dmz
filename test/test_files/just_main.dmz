@@ -1,1 +1,1 @@
-fn main() -> int {}
+fn main() -> void {}

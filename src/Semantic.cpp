@@ -37,7 +37,7 @@ std::pair<T *, int> Sema::lookup_decl(const std::string_view id) {
 std::unique_ptr<ResolvedFunctionDecl> Sema::create_builtin_println() {
     SourceLocation loc{"<builtin>", 0, 0};
 
-    auto param = std::make_unique<ResolvedParamDecl>(loc, "n", Type::builtinInt());
+    auto param = std::make_unique<ResolvedParamDecl>(loc, "n", Type::builtinInt(), false);
 
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
     params.emplace_back(std::move(param));
@@ -50,9 +50,8 @@ std::unique_ptr<ResolvedFunctionDecl> Sema::create_builtin_println() {
 
 std::optional<Type> Sema::resolve_type(Type parsedType) {
     if (parsedType.kind == Type::Kind::Custom) {
-        // TODO
-        //  if (auto *decl = lookupDecl<ResolvedStructDecl>(parsedType.name).first)
-        //    return Type::structType(decl->identifier);
+        if (auto *decl = lookup_decl<ResolvedStructDecl>(parsedType.name).first)
+            return Type::structType(decl->identifier);
 
         return std::nullopt;
     }
@@ -104,7 +103,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFunctionDecl, std::move(resolvedArguments));
 }
 
-std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Statement &stmt) {
+std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     if (auto *expr = dynamic_cast<const Expr *>(&stmt)) {
         return resolve_expr(*expr);
     }
@@ -174,12 +173,13 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         return resolve_unary_operator(*unaryOperator);
     }
 
-    //   if (const auto *structInstantiation =
-    //           dynamic_cast<const StructInstantiationExpr *>(&expr))
-    //     return resolveStructInstantiation(*structInstantiation);
+    if (const auto *structInstantiation = dynamic_cast<const StructInstantiationExpr *>(&expr)) {
+        return resolve_struct_instantiation(*structInstantiation);
+    }
 
-    //   if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr))
-    //     return resolveAssignableExpr(*assignableExpr);
+    if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
+        return resolve_assignable_expr(*assignableExpr);
+    }
 
     llvm_unreachable("unexpected expression");
 }
@@ -217,7 +217,7 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
         return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
                                           std::string(param.type.name) + "' type");
 
-    return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type);
+    return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable);
 }
 
 std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const FunctionDecl &function) {
@@ -264,17 +264,17 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
     // Resolve every struct first so that functions have access to them in their
     // signature.
     for (auto &&decl : m_ast) {
-        // if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
-        //   std::unique_ptr<ResolvedDecl> resolvedDecl = resolveStructDecl(*st);
+        if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
+            std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
 
-        //   if (!resolvedDecl || !insertDeclToCurrentScope(*resolvedDecl)) {
-        //     error = true;
-        //     continue;
-        //   }
+            if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                error = true;
+                continue;
+            }
 
-        //   resolvedTree.emplace_back(std::move(resolvedDecl));
-        //   continue;
-        // }
+            resolvedTree.emplace_back(std::move(resolvedDecl));
+            continue;
+        }
 
         if (const auto *fn = dynamic_cast<const FunctionDecl *>(decl.get())) {
             functionsToResolve.emplace_back(fn);
@@ -304,12 +304,11 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 
     auto nextFunctionDecl = functionsToResolve.begin();
     for (auto &&currentDecl : resolvedTree) {
-        // if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
-        //   if (!resolveStructFields(*st))
-        //     error = true;
+        if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
+            if (!resolve_struct_fields(*st)) error = true;
 
-        //   continue;
-        // }
+            continue;
+        }
 
         if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl.get())) {
             if (fn == printlnDecl) continue;
@@ -404,6 +403,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
 
     return error;
 };
+
 bool Sema::check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg) {
     if (fn.type.kind == Type::Kind::Void) return false;
 
@@ -477,18 +477,51 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
 }
 
 std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
-    varOrReturn(resolvedLHS, resolve_decl_ref_expr(*assignment.variable));
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
-    if (dynamic_cast<const ResolvedParamDecl *>(&resolvedLHS->decl))
-        return report(resolvedLHS->location, "parameters are immutable and cannot be assigned");
-    // auto *var = dynamic_cast<const ResolvedVarDecl *>(&resolvedLHS->decl);
+    varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
-    if (resolvedRHS->type.kind != resolvedLHS->type.kind)
+    assert(resolvedLHS->type.kind != Type::Kind::Void && "reference to void declaration in assignment LHS");
+
+    if (resolvedRHS->type.name != resolvedLHS->type.name)
         return report(resolvedRHS->location, "assigned value type doesn't match variable type");
 
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 
     return std::make_unique<ResolvedAssignment>(assignment.location, std::move(resolvedLHS), std::move(resolvedRHS));
+}
+
+std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &assignableExpr) {
+    if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&assignableExpr))
+        return resolve_decl_ref_expr(*declRefExpr);
+
+    if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
+        return resolve_member_expr(*memberExpr);
+
+    llvm_unreachable("unexpected assignable expression");
+}
+
+std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
+    auto resolvedBase = resolve_expr(*memberExpr.base);
+    if (!resolvedBase) return nullptr;
+
+    if (resolvedBase->type.kind != Type::Kind::Struct)
+        return report(memberExpr.base->location,
+                      "cannot access field of '" + std::string(resolvedBase->type.name) + '\'');
+
+    const auto *st = lookup_decl<ResolvedStructDecl>(resolvedBase->type.name).first;
+
+    assert(st && "failed to lookup struct");
+
+    const ResolvedFieldDecl *fieldDecl = nullptr;
+    for (auto &&field : st->fields) {
+        if (field->identifier == memberExpr.field) fieldDecl = field.get();
+    }
+
+    if (!fieldDecl)
+        return report(memberExpr.location, '\'' + std::string(resolvedBase->type.name) + "' has no field called '" +
+                                               std::string(memberExpr.field) + '\'');
+
+    return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *fieldDecl);
 }
 
 bool Sema::check_variable_initialization(const CFG &cfg) {
@@ -530,9 +563,9 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                 }
 
                 if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(stmt)) {
-                    const ResolvedExpr *base = assignment->variable.get();
-                    // while (const auto *member = dynamic_cast<const ResolvedMemberExpr *>(base))
-                    //     base = member->base.get();
+                    const ResolvedExpr *base = assignment->assignee.get();
+                    while (const auto *member = dynamic_cast<const ResolvedMemberExpr *>(base))
+                        base = member->base.get();
 
                     const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(base);
 
@@ -570,8 +603,136 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
         }
     }
 
-    for (auto &&[loc, msg] : pendingErrors) report(loc, msg);
+    for (auto &&[loc, msg] : pendingErrors) {
+        report(loc, msg);
+    }
 
     return !pendingErrors.empty();
 }
+
+std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
+    const StructInstantiationExpr &structInstantiation) {
+    const auto *st = lookup_decl<ResolvedStructDecl>(structInstantiation.identifier).first;
+
+    if (!st)
+        return report(structInstantiation.location,
+                      "'" + std::string(structInstantiation.identifier) + "' is not a struct type");
+
+    std::vector<std::unique_ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
+    std::map<std::string_view, const ResolvedFieldInitStmt *> inits;
+
+    std::map<std::string_view, const ResolvedFieldDecl *> fields;
+    for (auto &&fieldDecl : st->fields) fields[fieldDecl->identifier] = fieldDecl.get();
+
+    bool error = false;
+    for (auto &&initStmt : structInstantiation.fieldInitializers) {
+        std::string_view id = initStmt->identifier;
+        const SourceLocation &loc = initStmt->location;
+
+        if (inits.count(id)) {
+            report(loc, "field '" + std::string{id} + "' is already initialized");
+            error = true;
+            continue;
+        }
+
+        const ResolvedFieldDecl *fieldDecl = fields[id];
+        if (!fieldDecl) {
+            report(loc, "'" + std::string(st->identifier) + "' has no field named '" + std::string{id} + "'");
+            error = true;
+            continue;
+        }
+
+        auto resolvedInitExpr = resolve_expr(*initStmt->initializer);
+        if (!resolvedInitExpr) {
+            error = true;
+            continue;
+        }
+
+        if (resolvedInitExpr->type.name != fieldDecl->type.name) {
+            report(resolvedInitExpr->location, "'" + std::string(resolvedInitExpr->type.name) +
+                                                   "' cannot be used to initialize a field of type '" +
+                                                   std::string(fieldDecl->type.name) + "'");
+            error = true;
+            continue;
+        }
+
+        auto init = std::make_unique<ResolvedFieldInitStmt>(loc, *fieldDecl, std::move(resolvedInitExpr));
+        inits[id] = resolvedFieldInits.emplace_back(std::move(init)).get();
+    }
+
+    for (auto &&fieldDecl : st->fields) {
+        if (!inits.count(fieldDecl->identifier)) {
+            report(structInstantiation.location,
+                   "field '" + std::string(fieldDecl->identifier) + "' is not initialized");
+            error = true;
+            continue;
+        }
+
+        auto &initStmt = inits[fieldDecl->identifier];
+        initStmt->initializer->set_constant_value(cee.evaluate(*initStmt->initializer, false));
+    }
+
+    if (error) return nullptr;
+
+    return std::make_unique<ResolvedStructInstantiationExpr>(structInstantiation.location, *st,
+                                                             std::move(resolvedFieldInits));
+}
+
+std::unique_ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) {
+    std::set<std::string_view> identifiers;
+    std::vector<std::unique_ptr<ResolvedFieldDecl>> resolvedFields;
+
+    unsigned idx = 0;
+    for (auto &&field : structDecl.fields) {
+        if (!identifiers.emplace(field->identifier).second)
+            return report(field->location, "field '" + std::string(field->identifier) + "' is already declared");
+
+        resolvedFields.emplace_back(
+            std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, field->type, idx++));
+    }
+
+    return std::make_unique<ResolvedStructDecl>(structDecl.location, structDecl.identifier,
+                                                Type::structType(structDecl.identifier), std::move(resolvedFields));
+}
+
+bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
+    std::stack<std::pair<ResolvedStructDecl *, std::set<const ResolvedStructDecl *>>> worklist;
+    worklist.push({&resolvedStructDecl, {}});
+
+    while (!worklist.empty()) {
+        auto [currentDecl, visited] = worklist.top();
+        worklist.pop();
+
+        if (!visited.emplace(currentDecl).second) {
+            report(currentDecl->location, "struct '" + std::string(currentDecl->identifier) + "' contains itself");
+            return false;
+        }
+
+        for (auto &&field : currentDecl->fields) {
+            auto type = resolve_type(field->type);
+            if (!type) {
+                report(field->location,
+                       "unable to resolve '" + std::string(field->type.name) + "' type of struct field");
+                return false;
+            }
+
+            if (type->kind == Type::Kind::Void) {
+                report(field->location, "struct field cannot be void");
+                return false;
+            }
+
+            if (type->kind == Type::Kind::Struct) {
+                auto *nestedStruct = lookup_decl<ResolvedStructDecl>(type->name).first;
+                assert(nestedStruct && "unexpected type");
+
+                worklist.push({nestedStruct, visited});
+            }
+
+            field->type = *type;
+        }
+    }
+
+    return true;
+}
+
 }  // namespace C

@@ -13,6 +13,28 @@ class Parser {
     Token m_nextToken;
     bool m_incompleteAST = false;
 
+    using RestrictionType = unsigned char;
+    RestrictionType restrictions = 0;
+
+    enum RestrictionKind : RestrictionType { StructNotAllowed = 1 };
+
+    template <typename T>
+    T with_restrictions(RestrictionType rests, T (Parser::*f)()) {
+        restrictions |= rests;
+        auto res = (this->*f)();
+        restrictions &= ~rests;
+        return res;
+    }
+
+    template <typename T>
+    T with_no_restrictions(T (Parser::*f)()) {
+        RestrictionType prevRestrictions = restrictions;
+        restrictions = 0;
+        auto res = (this->*f)();
+        restrictions = prevRestrictions;
+        return res;
+    }
+
     void eat_next_token() {
         do {
             m_nextToken = m_lexer.next_token();
@@ -22,7 +44,7 @@ class Parser {
     void synchronize();
 
    public:
-    std::pair<std::vector<std::unique_ptr<FunctionDecl>>, bool> parse_source_file();
+    std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file();
 
    public:
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
@@ -32,10 +54,12 @@ class Parser {
     std::optional<Type> parse_type();
     std::unique_ptr<Block> parse_block();
     std::unique_ptr<ReturnStmt> parse_return_stmt();
-    std::unique_ptr<Statement> parse_statement();
+    std::unique_ptr<Stmt> parse_statement();
     std::unique_ptr<Expr> parse_primary();
     std::unique_ptr<Expr> parse_postfix_expr();
-    std::unique_ptr<std::vector<std::unique_ptr<Expr>>> parse_argument_list();
+    template <typename T, typename F>
+    std::unique_ptr<std::vector<std::unique_ptr<T>>> parse_list_with_trailing_comma(
+        std::pair<TokenType, const char *> openingToken, F parser, std::pair<TokenType, const char *> closingToken);
     std::unique_ptr<Expr> parse_prefix_expr();
     std::unique_ptr<Expr> parse_expr();
     std::unique_ptr<Expr> parse_expr_rhs(std::unique_ptr<Expr> lhs, int precedence);
@@ -45,7 +69,10 @@ class Parser {
     std::unique_ptr<WhileStmt> parse_while_stmt();
     std::unique_ptr<DeclStmt> parse_decl_stmt();
     std::unique_ptr<VarDecl> parse_var_decl(bool isLet);
-    std::unique_ptr<Statement> parse_assignment_or_expr();
-    std::unique_ptr<Assignment> parse_assignment_rhs(std::unique_ptr<DeclRefExpr> lhs);
+    std::unique_ptr<Stmt> parse_assignment_or_expr();
+    std::unique_ptr<Assignment> parse_assignment_rhs(std::unique_ptr<AssignableExpr> lhs);
+    std::unique_ptr<StructDecl> parse_struct_decl();
+    std::unique_ptr<FieldDecl> parse_field_decl();
+    std::unique_ptr<FieldInitStmt> parse_field_init_stmt();
 };
 }  // namespace C
