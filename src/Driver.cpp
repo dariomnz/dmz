@@ -1,5 +1,7 @@
 #include "Driver.hpp"
 
+#include <wait.h>
+
 #include "CFG.hpp"
 #include "Codegen.hpp"
 #include "Lexer.hpp"
@@ -132,22 +134,50 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    std::stringstream path;
-    path << "tmp-" << std::filesystem::hash_value(options.source) << ".ll";
-    const std::string &llvmIRPath = path.str();
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        return 1;
+    }
 
-    std::error_code errorCode;
-    llvm::raw_fd_ostream f(llvmIRPath, errorCode);
-    llvmIR->print(f, nullptr);
+    pid_t pid = fork();
 
-    std::stringstream command;
-    command << "clang " << llvmIRPath;
-    if (!options.output.empty()) command << " -o " << options.output;
+    int status;
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    } else if (pid == 0) {
+        // child
+        close(pipefd[1]);
 
-    println(command.str());
-    int ret = std::system(command.str().c_str());
+        dup2(pipefd[0], STDIN_FILENO);
+        close(pipefd[0]);
 
-    std::filesystem::remove(llvmIRPath);
+        const char *cmd = "clang";
+        std::vector<const char *> args = {
+            "clang", "-O3", "-x", "ir", "-",
+        };
+        if (!options.output.empty()) {
+            args.emplace_back("-o");
+            args.emplace_back(options.output.c_str());
+        }
 
-    return ret;
+        execvp(cmd, const_cast<char *const *>(args.data()));
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    } else {
+        // parent
+        close(pipefd[0]);
+
+        llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
+
+        llvmIR->print(pipe_stream, nullptr);
+
+        close(pipefd[1]);
+
+        waitpid(pid, &status, 0);
+        return WEXITSTATUS(status);
+    }
+
+    return 1;
 }
