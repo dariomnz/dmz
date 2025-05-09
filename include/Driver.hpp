@@ -13,5 +13,6 @@ struct CompilerOptions {
     bool llvmDump = false;
     bool cfgDump = false;
     bool run = false;
+    bool printStats = false;
 };
 }  // namespace C

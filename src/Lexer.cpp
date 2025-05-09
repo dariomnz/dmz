@@ -109,7 +109,10 @@ Token Lexer::next_token() {
     file_content = file_content.substr(space_count);
 
     Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_name, .line = m_line, .col = m_col}};
-    if (std::isdigit(file_content[0])) {
+    if (file_content[0] == '\0') {
+        debug_msg(TokenType::eof);
+        t.type = TokenType::eof;
+    } else if (std::isdigit(file_content[0])) {
         debug_msg(TokenType::lit_int);
         size_t digit_count = 1;
         while (std::isdigit(file_content[digit_count])) {

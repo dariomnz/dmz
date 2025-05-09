@@ -8,6 +8,8 @@ Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::s
 }
 
 llvm::Module *Codegen::generate_ir() {
+    ScopedTimer st(Stats::type::codegenTime);
+    
     for (auto &&decl : m_resolvedTree) {
         if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_decl(*fn);

@@ -220,7 +220,7 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable);
 }
 
-std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const FunctionDecl &function) {
+std::unique_ptr<ResolvedFunctionDecl> Sema:: resolve_function_decl(const FunctionDecl &function) {
     std::optional<Type> type = resolve_type(function.type);
 
     if (!type)
@@ -255,6 +255,8 @@ std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const Function
 };
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
+    ScopedTimer st(Stats::type::semanticTime);
+
     ScopeRAII globalScope(*this);
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
 
@@ -263,25 +265,28 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 
     // Resolve every struct first so that functions have access to them in their
     // signature.
-    for (auto &&decl : m_ast) {
-        if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
-            std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
+    {
+        ScopedTimer st(Stats::type::semanticResolveStructsTime);
+        for (auto &&decl : m_ast) {
+            if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
+                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
 
-            if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
-                error = true;
+                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                    error = true;
+                    continue;
+                }
+
+                resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
 
-            resolvedTree.emplace_back(std::move(resolvedDecl));
-            continue;
-        }
+            if (const auto *fn = dynamic_cast<const FunctionDecl *>(decl.get())) {
+                functionsToResolve.emplace_back(fn);
+                continue;
+            }
 
-        if (const auto *fn = dynamic_cast<const FunctionDecl *>(decl.get())) {
-            functionsToResolve.emplace_back(fn);
-            continue;
+            llvm_unreachable("unexpected declaration");
         }
-
-        llvm_unreachable("unexpected declaration");
     }
 
     if (error) return {};
@@ -289,37 +294,12 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
     // Insert println first to be able to detect a possible redeclaration.
     auto *printlnDecl = resolvedTree.emplace_back(create_builtin_println()).get();
     insert_decl_to_current_scope(*printlnDecl);
-
-    for (auto &&fn : functionsToResolve) {
-        if (auto resolvedDecl = resolve_function_decl(*fn);
-            resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
-            resolvedTree.emplace_back(std::move(resolvedDecl));
-            continue;
-        }
-
-        error = true;
-    }
-
-    if (error) return {};
-
-    auto nextFunctionDecl = functionsToResolve.begin();
-    for (auto &&currentDecl : resolvedTree) {
-        if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
-            if (!resolve_struct_fields(*st)) error = true;
-
-            continue;
-        }
-
-        if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl.get())) {
-            if (fn == printlnDecl) continue;
-
-            ScopeRAII paramScope(*this);
-            for (auto &&param : fn->params) insert_decl_to_current_scope(*param);
-
-            currentFunction = fn;
-            if (auto resolvedBody = resolve_block(*(*nextFunctionDecl++)->body)) {
-                fn->body = std::move(resolvedBody);
-                error |= run_flow_sensitive_checks(*fn);
+    {
+        ScopedTimer st(Stats::type::semanticResolveFunctionsTime);
+        for (auto &&fn : functionsToResolve) {
+            if (auto resolvedDecl = resolve_function_decl(*fn);
+                resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
+                resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
 
@@ -327,6 +307,34 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
         }
     }
 
+    if (error) return {};
+    {
+        ScopedTimer st(Stats::type::semanticResolveBodysTime);
+        auto nextFunctionDecl = functionsToResolve.begin();
+        for (auto &&currentDecl : resolvedTree) {
+            if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
+                if (!resolve_struct_fields(*st)) error = true;
+
+                continue;
+            }
+
+            if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl.get())) {
+                if (fn == printlnDecl) continue;
+
+                ScopeRAII paramScope(*this);
+                for (auto &&param : fn->params) insert_decl_to_current_scope(*param);
+
+                currentFunction = fn;
+                if (auto resolvedBody = resolve_block(*(*nextFunctionDecl++)->body)) {
+                    fn->body = std::move(resolvedBody);
+                    error |= run_flow_sensitive_checks(*fn);
+                    continue;
+                }
+
+                error = true;
+            }
+        }
+    }
     if (error) return {};
 
     return resolvedTree;

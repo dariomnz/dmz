@@ -13,14 +13,15 @@ static void displayHelp() {
     println("Usage:");
     println("  compiler [options] <source_file>\n");
     println("Options:");
-    println("  -h, -help    display this message");
-    println("  -o <file>    write executable to <file>");
-    println("  -lexer-dump    print the lexer dump");
-    println("  -ast-dump    print the abstract syntax tree");
-    println("  -res-dump    print the resolved syntax tree");
-    println("  -cfg-dump    print the control flow graph");
-    println("  -llvm-dump   print the llvm module");
-    println("  -run         runs the program with lli (Just In Time)");
+    println("  -h, -help        display this message");
+    println("  -o <file>        write executable to <file>");
+    println("  -lexer-dump      print the lexer dump");
+    println("  -ast-dump        print the abstract syntax tree");
+    println("  -res-dump        print the resolved syntax tree");
+    println("  -cfg-dump        print the control flow graph");
+    println("  -llvm-dump       print the llvm module");
+    println("  -print-stats     print the llvm module");
+    println("  -run             runs the program with lli (Just In Time)");
 }
 
 static CompilerOptions parseArguments(int argc, char **argv) {
@@ -51,6 +52,8 @@ static CompilerOptions parseArguments(int argc, char **argv) {
                 options.cfgDump = true;
             else if (arg == "-run")
                 options.run = true;
+            else if (arg == "-print-stats")
+                options.printStats = true;
             else if (arg == "-o")
                 options.output = ++idx >= argc ? "" : argv[idx];
             else
@@ -68,6 +71,9 @@ using namespace C;
 
 int main(int argc, char *argv[]) {
     CompilerOptions options = parseArguments(argc, argv);
+    defer([&options] {
+        if (options.printStats) Stats::instance().dump();
+    });
 
     if (options.displayHelp) {
         displayHelp();
@@ -141,6 +147,13 @@ int main(int argc, char *argv[]) {
     if (pipe(pipefd) == -1) {
         perror("pipe");
         return 1;
+    }
+
+    std::unique_ptr<ScopedTimer> timer;
+    if (options.run){
+        timer = std::make_unique<ScopedTimer>(Stats::type::runTime);
+    }else{
+        timer = std::make_unique<ScopedTimer>(Stats::type::compileTime);
     }
 
     pid_t pid = fork();

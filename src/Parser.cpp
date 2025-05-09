@@ -36,6 +36,7 @@ void Parser::synchronize_on(std::unordered_set<TokenType> types) {
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
 std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() {
+    ScopedTimer st(Stats::type::parseTime);
     std::vector<std::unique_ptr<Decl>> declarations;
 
     while (m_nextToken.type != TokenType::eof) {

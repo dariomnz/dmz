@@ -11,6 +11,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -26,4 +27,5 @@
 #include <unordered_set>
 #include <vector>
 
+#include "Stats.hpp"
 #include "debug.hpp"

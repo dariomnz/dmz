@@ -2,6 +2,7 @@
 
 namespace C {
 CFG CFGBuilder::build(const ResolvedFunctionDecl &fn) {
+    ScopedTimer st(Stats::type::CFGTime);
     cfg = {};
     cfg.exit = cfg.insert_new_block();
 
