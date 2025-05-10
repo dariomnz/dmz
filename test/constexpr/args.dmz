@@ -1,0 +1,24 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
+fn foo(x: int) -> void {}
+
+fn bar(x: int) -> void {
+    foo(x);
+}
+
+fn main() -> void {
+    bar(1);
+}
+
+// CHECK: ResolvedFunctionDecl: foo:
+// CHECK-NEXT:   ResolvedParamDecl: x: int
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT: ResolvedFunctionDecl: bar:
+// CHECK-NEXT:   ResolvedParamDecl: x: int
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:       ResolvedDeclRefExpr: x
+// CHECK-NEXT: ResolvedFunctionDecl: main:
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedCallExpr: bar
+// CHECK-NEXT:       ResolvedNumberLiteral: '1'
+// CHECK-NEXT:       | value: 1

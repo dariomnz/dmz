@@ -1,0 +1,22 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn error(x: int) -> void {
+    
+    // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
+    if x == {
+        if x == 2 {
+
+        } else {
+
+        }
+    // CHECK: [[# @LINE + 1 ]]:7: error: expected expression
+    } else {
+        1;
+    }
+
+    2;
+}
+
+// CHECK: FunctionDecl: error -> void
+// CHECK-NEXT:   ParamDecl: x:int
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     NumberLiteral: '2'

@@ -28,6 +28,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(op_not_equal);
         CASE_TYPE(op_not);
         CASE_TYPE(op_assign);
+        CASE_TYPE(op_bin_and);
+        CASE_TYPE(op_bin_or);
         CASE_TYPE(block_l);
         CASE_TYPE(block_r);
         CASE_TYPE(par_l);
@@ -48,6 +50,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_while);
         CASE_TYPE(kw_return);
         CASE_TYPE(kw_struct);
+        CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
     return os;
@@ -118,13 +121,30 @@ Token Lexer::next_token() {
         while (std::isdigit(file_content[digit_count])) {
             digit_count++;
         }
-        t.type = TokenType::lit_int;
+        if (file_content[digit_count] != '.') {
+            t.type = TokenType::lit_int;
+            t.str = file_content.substr(0, digit_count);
+            advance(digit_count);
+            return t;
+        }
+        digit_count++;  // the '.'
+        if (!std::isdigit(file_content[digit_count])) {
+            t.type = TokenType::unknown;
+            t.str = file_content.substr(0, digit_count);
+            advance(digit_count);
+            return t;
+        }
+        while (std::isdigit(file_content[digit_count])) {
+            digit_count++;
+        }
+        t.type = TokenType::lit_float;
         t.str = file_content.substr(0, digit_count);
         advance(digit_count);
+
     } else if (std::isalpha(file_content[0])) {
         debug_msg(TokenType::id);
         size_t alpha_count = 1;
-        while (std::isalnum(file_content[alpha_count])) {
+        while (std::isalnum(file_content[alpha_count]) || file_content[alpha_count] == '_') {
             alpha_count++;
         }
         t.type = TokenType::id;
@@ -273,9 +293,21 @@ Token Lexer::next_token() {
         t.type = TokenType::dot;
         t.str = file_content.substr(0, 1);
         advance();
+    } else if (file_content[0] == '|') {
+        debug_msg(TokenType::op_bin_or);
+        t.type = TokenType::op_bin_or;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '&') {
+        debug_msg(TokenType::op_bin_and);
+        t.type = TokenType::op_bin_and;
+        t.str = file_content.substr(0, 1);
+        advance();
     } else {
-        println("Unexpected token " << (int)file_content[0]);
-        TODO("Unexpected token");
+        debug_msg(TokenType::unknown);
+        t.type = TokenType::unknown;
+        t.str = file_content.substr(0, 1);
+        advance();
     }
     debug_msg("End " << t);
     return t;

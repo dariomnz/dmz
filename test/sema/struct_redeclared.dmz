@@ -1,0 +1,15 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+struct S {
+  x: int,
+}
+
+fn S() -> void {
+}
+
+struct S {
+// CHECK: [[# @LINE - 1 ]]:1: error: redeclaration of 'S'
+  x: int,
+}
+
+fn main() -> void {
+}

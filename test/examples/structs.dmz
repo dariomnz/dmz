@@ -1,0 +1,36 @@
+// RUN: compiler %s -run | filecheck %s
+
+// CHECK: 1
+// CHECK-NEXT: 2
+// CHECK-NEXT: 3
+// CHECK-NEXT: 41
+// CHECK-NEXT: 42
+// CHECK-NEXT: 43
+
+// CHECK-NOT: {{.*}}
+
+struct Color {
+    r: int,
+    g: int,
+    b: int,
+}
+
+fn print_color(const n: Color) -> void {
+    println(n.r);
+    println(n.g);
+    println(n.b);
+}
+
+fn add_color(n:Color, add:int) -> Color {
+    n.r = n.r + add;
+    n.g = n.g + add;
+    n.b = n.b + add;
+    return n;
+}
+
+fn main() -> void {
+    let c = Color{r:1,g:2,b:3};
+    print_color(c);
+    let c2 = add_color(c, 40);
+    print_color(c2);
+}

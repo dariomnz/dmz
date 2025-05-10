@@ -1,0 +1,18 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:8: error: expected ';' at the end of expression
+    !1 |;
+
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected ';' at the end of expression
+    !!1 !0;
+
+    !1;
+    // CHECK: UnaryOperator: '!'
+    // CHECK-NEXT:   NumberLiteral: '1'
+    
+    !!1;
+    // CHECK-NEXT: UnaryOperator: '!'
+    // CHECK-NEXT:   UnaryOperator: '!'
+    // CHECK-NEXT:     NumberLiteral: '1'
+}

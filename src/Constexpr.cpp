@@ -9,28 +9,24 @@ static inline std::optional<bool> to_bool(std::optional<int> d) {
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &expr, bool allowSideEffects) {
-    if (std::optional<int> val = expr.get_constant_value()) return val;
-
+    if (std::optional<int> val = expr.get_constant_value()) {
+        return val;
+    }
     if (const auto *numberLiteral = dynamic_cast<const ResolvedNumberLiteral *>(&expr)) {
         return numberLiteral->value;
     }
-
     if (const auto *groupingExpr = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return evaluate(*groupingExpr->expr, allowSideEffects);
     }
-
     if (const auto *unaryOperator = dynamic_cast<const ResolvedUnaryOperator *>(&expr)) {
         return evaluate_unary_operator(*unaryOperator, allowSideEffects);
     }
-
     if (const auto *binaryOperator = dynamic_cast<const ResolvedBinaryOperator *>(&expr)) {
         return evaluate_binary_operator(*binaryOperator, allowSideEffects);
     }
-
     if (const auto *declRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return evaluate_decl_ref_expr(*declRefExpr, allowSideEffects);
     }
-
     return std::nullopt;
 }
 

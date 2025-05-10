@@ -1,0 +1,15 @@
+// RUN: compiler -h 2>&1 | filecheck %s --strict-whitespace
+
+// CHECK: Usage:
+// CHECK-NEXT:   compiler [options] <source_file>
+// CHECK-NEXT: 
+// CHECK-NEXT: Options:
+// CHECK-NEXT:   -h, -help        display this message
+// CHECK-NEXT:   -o <file>        write executable to <file>
+// CHECK-NEXT:   -lexer-dump      print the lexer dump
+// CHECK-NEXT:   -ast-dump        print the abstract syntax tree
+// CHECK-NEXT:   -res-dump        print the resolved syntax tree
+// CHECK-NEXT:   -cfg-dump        print the control flow graph
+// CHECK-NEXT:   -llvm-dump       print the llvm module
+// CHECK-NEXT:   -print-stats     print the llvm module
+// CHECK-NEXT:   -run             runs the program with lli (Just In Time)

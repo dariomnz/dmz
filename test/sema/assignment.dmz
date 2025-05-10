@@ -1,0 +1,30 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> void {}
+
+fn bar() -> int { return 1; }
+
+fn main() -> void {
+    let x: int = 1;
+
+    // CHECK: [[# @LINE + 1 ]]:12: error: assigned value type doesn't match variable type
+    x = foo();
+
+    let y: int = 3;
+    
+    y = 3;
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'bar'
+    bar = 3;
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
+    foo = 3;
+
+    let z: int;
+    z = 3;
+}
+
+fn assignParam(const x: int) -> void {
+    // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
+    x = 1;
+}
+// CHECK-NOT: {{.*}}

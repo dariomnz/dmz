@@ -1,0 +1,147 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn main() -> void {
+    let const x: int;
+    
+    if 1 {
+        x = 2;
+    } else {
+        x = 3;
+    }
+
+    x;
+}
+
+fn modifyImmutable() -> void {
+    let const x: int = 1;
+    
+    if 1 {
+        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
+        x = 1;
+    } else {
+        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
+        x = 2;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
+    x = 3;
+}
+
+fn uninitOneBranch() -> void {
+    let const x: int;
+    
+    if 1 {
+        let const x: int;
+        x = 1; // init inner 'x'
+    } else {
+        x = 2;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' is not initialized
+    x;
+}
+
+fn initEveryBranch() -> void {
+    let x: int;
+    
+    if 1 {
+        x = 1;
+    } else {
+        x = 2;
+    }
+
+    // CHECK-NOT: [[# @LINE + 1 ]]:5: error
+    x;
+}
+
+fn initConditionVar() -> void {
+    let x: int;
+    
+    // CHECK: [[# @LINE + 1 ]]:13: error: 'x' is not initialized
+    if 1 || x {
+        x = 1;
+    // CHECK: [[# @LINE + 1 ]]:20: error: 'x' is not initialized
+    } else if 0 && x == 2 {
+        x = 3;
+    } else {
+        x = 2;
+    }
+
+    // CHECK-NOT: [[# @LINE + 1 ]]:5: error
+    x;
+}
+
+fn loop() -> void {
+    let const x: int;
+    let y: int;
+    
+    while 1 {
+        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
+        x = 1;
+
+        // CHECK-NOT: [[# @LINE + 1 ]]:11: error
+        y = 1;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' is not initialized
+    x;
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'y' is not initialized
+    y;
+}
+
+fn shadowInitialization() -> void {
+    let const x: int;
+    
+    if 1 {
+        let const x: int;
+        x = 1;
+    } else {
+        x = 2;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' is not initialized
+    x;
+}
+
+fn shadowInitialized() -> void {
+    let const x: int;
+    
+    if 1 {
+        x = 1;
+        let const x: int;
+        // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
+        x;
+    } else {
+        x = 2;
+    }
+
+    x;
+}
+
+fn nestedInLoop(param: int) -> void {
+    let x: int;
+
+    if param {
+        while param {
+            if param {
+                x = param - 1;
+            }
+
+            // CHECK: [[# @LINE + 1 ]]:26: error: 'x' is not initialized
+            let y: int = x;
+        }
+    } else {
+        while param {
+            if param {
+                x = param - 1;
+            }
+
+            // CHECK: [[# @LINE + 1 ]]:26: error: 'x' is not initialized
+            let y: int = x;
+        }
+    }
+
+    // CHECK: [[# @LINE + 2 ]]:5: error: 'x' is not initialized
+    // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
+    x + x;
+}
+// CHECK-NOT: {{.*}}

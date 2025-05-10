@@ -1,0 +1,72 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected expression
+    ;
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected expression
+    0.;
+
+    // CHECK: [[# @LINE + 1 ]]:6: error: expected expression
+    ();
+
+    // CHECK: [[# @LINE + 1 ]]:10: error: expected expression
+    ((((()))));
+
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected ')'
+    ((1);
+
+    // CHECK: [[# @LINE + 1 ]]:7: error: expected expression
+    a(;
+
+    // CHECK: [[# @LINE + 1 ]]:8: error: expected ')'
+    a(x;
+
+    // CHECK: [[# @LINE + 1 ]]:7: error: expected expression
+    a(,);
+
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected expression
+    a(x,;
+
+    1;
+    // CHECK: NumberLiteral: '1'
+
+    1;
+    // CHECK: NumberLiteral: '1'
+    
+    (2);
+    // CHECK: GroupingExpr:
+    // CHECK-NEXT:   NumberLiteral: '2'
+
+    (((((2)))));
+    // CHECK: GroupingExpr:
+    // CHECK-NEXT:   GroupingExpr:
+    // CHECK-NEXT:     GroupingExpr:
+    // CHECK-NEXT:       GroupingExpr:
+    // CHECK-NEXT:         GroupingExpr:
+    // CHECK-NEXT:           NumberLiteral: '2'
+
+    a;
+    // CHECK: DeclRefExpr: a
+
+    a();
+    // CHECK: CallExpr:
+    // CHECK-NEXT:   DeclRefExpr: a
+
+    a(x,);
+    // CHECK: CallExpr:
+    // CHECK-NEXT:   DeclRefExpr: a
+    // CHECK-NEXT:   DeclRefExpr: x
+
+    a(1, 2,);
+    // CHECK: CallExpr:
+    // CHECK-NEXT:   DeclRefExpr: a
+    // CHECK-NEXT:   NumberLiteral: '1'
+    // CHECK-NEXT:   NumberLiteral: '2'
+
+    a(1, 2);
+    // CHECK: CallExpr:
+    // CHECK-NEXT:   DeclRefExpr: a
+    // CHECK-NEXT:   NumberLiteral: '1'
+    // CHECK-NEXT:   NumberLiteral: '2'
+}

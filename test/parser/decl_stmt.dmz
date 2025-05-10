@@ -1,0 +1,27 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:20: error: expected ';' after declaration
+    let x: int = 0 |;
+
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected identifier
+    let ;
+
+    // CHECK: [[# @LINE + 1 ]]:11: error: expected type specifier
+    let x:;
+
+    // CHECK: [[# @LINE + 1 ]]:17: error: expected expression
+    let x: int =;
+
+    let x;
+    // CHECK: DeclStmt:
+    // CHECK-NEXT:   VarDecl: x
+
+    let x: int;
+    // CHECK: DeclStmt:
+    // CHECK-NEXT:   VarDecl: x:int
+    
+    let x: int = 1;
+    // CHECK: DeclStmt:
+    // CHECK-NEXT:   VarDecl: x:int
+    // CHECK-NEXT:     NumberLiteral: '1'
+}

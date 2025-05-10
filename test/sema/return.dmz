@@ -1,0 +1,30 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> int {
+    if 0 {
+        return 1;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected a return value
+    return;
+
+    // CHECK: [[# @LINE + 1 ]]:16: error: unexpected return type
+    return main();
+}
+
+fn bar() -> int {
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected a return value
+    return;
+
+    // CHECK: [[# @LINE + 1 ]]:12: error: symbol 'y' not found
+    return y;
+}
+
+fn main() -> void {
+    if 1 {
+        return;
+    }
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: unexpected return value in void function
+    return 1;
+}
+// CHECK-NOT: {{.*}}

@@ -1,0 +1,33 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn error(x: int) -> void {
+    
+    if x == 0 {
+        if x == 2 {
+            0;
+            let
+        // CHECK: [[# @LINE + 1 ]]:9: error: expected identifier
+        } else {
+            1;
+        }
+    }
+
+    2;
+}
+
+// CHECK: FunctionDecl: error -> void
+// CHECK-NEXT:   ParamDecl: x:int
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     IfStmt
+// CHECK-NEXT:       BinaryOperator: '=='
+// CHECK-NEXT:         DeclRefExpr: x
+// CHECK-NEXT:         NumberLiteral: '0'
+// CHECK-NEXT:       Block
+// CHECK-NEXT:         IfStmt
+// CHECK-NEXT:           BinaryOperator: '=='
+// CHECK-NEXT:             DeclRefExpr: x
+// CHECK-NEXT:             NumberLiteral: '2
+// CHECK-NEXT:           Block
+// CHECK-NEXT:             NumberLiteral: '0'
+// CHECK-NEXT:           Block
+// CHECK-NEXT:             NumberLiteral: '1'
+// CHECK-NEXT:     NumberLiteral: '2'

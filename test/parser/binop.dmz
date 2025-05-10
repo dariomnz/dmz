@@ -1,0 +1,118 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected expression
+    1 + |;
+
+    // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
+    1 + 1 + |;
+
+    // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
+    1 + 1 * |;
+
+    1 * 2 * 3;
+    // CHECK: BinaryOperator: '*'
+    // CHECK-NEXT:   BinaryOperator: '*'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 / 2 / 3;
+    // CHECK: BinaryOperator: '/'
+    // CHECK-NEXT:   BinaryOperator: '/'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 / 2 * 3;
+    // CHECK: BinaryOperator: '*'
+    // CHECK-NEXT:   BinaryOperator: '/'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 + 2 + 3;
+    // CHECK: BinaryOperator: '+'
+    // CHECK-NEXT:   BinaryOperator: '+'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+    
+    1 - 2 - 3;
+    // CHECK: BinaryOperator: '-'
+    // CHECK-NEXT:   BinaryOperator: '-'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 + 2 - 3;
+    // CHECK: BinaryOperator: '-'
+    // CHECK-NEXT:   BinaryOperator: '+'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 + 2 * 3 + 4;
+    // CHECK: BinaryOperator: '+'
+    // CHECK-NEXT:   BinaryOperator: '+'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     BinaryOperator: '*'
+    // CHECK-NEXT:       NumberLiteral: '2'
+    // CHECK-NEXT:       NumberLiteral: '3'
+    // CHECK-NEXT:   NumberLiteral: '4'
+
+    1 + 2 / 3 - 4;
+    // CHECK: BinaryOperator: '-'
+    // CHECK-NEXT:   BinaryOperator: '+'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     BinaryOperator: '/'
+    // CHECK-NEXT:       NumberLiteral: '2'
+    // CHECK-NEXT:       NumberLiteral: '3'
+    // CHECK-NEXT:   NumberLiteral: '4'
+
+    1 < 2 < 3;
+    // CHECK: BinaryOperator: '<'
+    // CHECK-NEXT:   BinaryOperator: '<'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 > 2 > 3;
+    // CHECK: BinaryOperator: '>'
+    // CHECK-NEXT:   BinaryOperator: '>'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 == 2 == 3;
+    // CHECK: BinaryOperator: '=='
+    // CHECK-NEXT:   BinaryOperator: '=='
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 && 2 && 3;
+    // CHECK: BinaryOperator: '&&'
+    // CHECK-NEXT:   BinaryOperator: '&&'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 || 2 || 3;
+    // CHECK: BinaryOperator: '||'
+    // CHECK-NEXT:   BinaryOperator: '||'
+    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:   NumberLiteral: '3'
+
+    1 || 2 && 3 && (4 || 5);
+    // CHECK: BinaryOperator: '||'
+    // CHECK-NEXT:   NumberLiteral: '1'
+    // CHECK-NEXT:   BinaryOperator: '&&'
+    // CHECK-NEXT:     BinaryOperator: '&&'
+    // CHECK-NEXT:       NumberLiteral: '2'
+    // CHECK-NEXT:       NumberLiteral: '3'
+    // CHECK-NEXT:     GroupingExpr:
+    // CHECK-NEXT:       BinaryOperator: '||'
+    // CHECK-NEXT:         NumberLiteral: '4'
+    // CHECK-NEXT:         NumberLiteral: '5'
+}

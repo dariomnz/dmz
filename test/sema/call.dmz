@@ -1,0 +1,36 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> void {}
+
+fn bar(x: int, y: int) -> void {}
+
+fn main() -> void {
+    let x: int = 1;
+
+    // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol
+    x();
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
+    y();
+
+    // CHECK: [[# @LINE + 1 ]]:6: error: expression cannot be called as a function
+    0();
+
+    // CHECK: [[# @LINE + 1 ]]:8: error: argument count mismatch in function call
+    foo(x);
+
+    // CHECK: [[# @LINE + 1 ]]:12: error: unexpected type of argument
+    bar(foo(), foo());
+
+    // CHECK: [[# @LINE + 1 ]]:15: error: unexpected type of argument
+    bar(1, foo());
+    
+    // CHECK: [[# @LINE + 1 ]]:8: error: argument count mismatch in function call
+    bar();
+
+    // CHECK: [[# @LINE + 1 ]]:8: error: argument count mismatch in function call
+    bar(1, 2, 3);
+
+    bar(1, 2);
+    foo();
+}
+// CHECK-NOT: {{.*}}

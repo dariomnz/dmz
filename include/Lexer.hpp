@@ -27,6 +27,8 @@ enum class TokenType {
     op_not_equal,
     op_not,
     op_assign,
+    op_bin_and,
+    op_bin_or,
     block_l,
     block_r,
     par_l,
@@ -47,6 +49,7 @@ enum class TokenType {
     kw_while,
     kw_return,
     kw_struct,
+    unknown,
     eof,
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);

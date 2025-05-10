@@ -1,0 +1,21 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s --implicit-check-not error --match-full-lines
+fn foo() -> int {
+    return 1;
+}
+
+fn main() -> void {
+    let x = 1;
+    let y = foo() + 1;
+
+    let x2: int;
+    let y2: int;
+}
+// CHECK: ResolvedDeclStmt:
+// CHECK-NEXT:   ResolvedVarDecl: x:
+// CHECK-NEXT:     ResolvedNumberLiteral: '1'
+// CHECK-NEXT:     | value: 1
+// CHECK-NEXT: ResolvedDeclStmt:
+// CHECK-NEXT:   ResolvedVarDecl: y:
+// CHECK-NEXT:     ResolvedBinaryOperator: '+'
+// CHECK-NEXT:       ResolvedCallExpr: foo
+// CHECK-NEXT:       ResolvedNumberLiteral: '1'

@@ -1,0 +1,74 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
+fn binaryLhsKnown(y: int) -> int {
+    let x: int = 2;
+
+    return (0 && y) + (1 || x);
+}
+// CHECK:       ResolvedBinaryOperator: '+'
+// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:         ResolvedGroupingExpr:
+// CHECK-NEXT:           ResolvedBinaryOperator: '&&'
+// CHECK-NEXT:             ResolvedNumberLiteral: '0'
+// CHECK-NEXT:             ResolvedDeclRefExpr: y
+// CHECK-NEXT:         ResolvedGroupingExpr:
+// CHECK-NEXT:           ResolvedBinaryOperator: '||'
+// CHECK-NEXT:             ResolvedNumberLiteral: '1'
+// CHECK-NEXT:             ResolvedDeclRefExpr: x
+
+fn unaryNonConst() -> int {
+    let x: int = 2;
+
+    return !x;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedUnaryOperator: '!'
+// CHECK-NEXT:        ResolvedDeclRefExpr: x
+
+fn ret() -> int {
+    return 1;
+}
+
+fn call() -> void {
+    if !ret() {
+        return;
+    }
+}
+// CHECK:    ResolvedIfStmt
+// CHECK-NEXT:      ResolvedUnaryOperator: '!'
+// CHECK-NEXT:        ResolvedCallExpr: ret
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedReturnStmt
+
+fn lhsKnownRhsNot(y: int) -> int {
+    return 1 && y;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedBinaryOperator: '&&'
+// CHECK-NEXT:        ResolvedNumberLiteral: '1'
+// CHECK-NEXT:        ResolvedDeclRefExpr: y
+
+fn lhsUnknownRhsFalse(x: int) -> int {
+    return x && 0;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedBinaryOperator: '&&'
+// CHECK-NEXT:        ResolvedDeclRefExpr: x
+// CHECK-NEXT:        ResolvedNumberLiteral: '0'
+
+fn lhsUnknownRhsTrue(x: int) -> int {
+    return x || 1;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedBinaryOperator: '||'
+// CHECK-NEXT:        ResolvedDeclRefExpr: x
+// CHECK-NEXT:        ResolvedNumberLiteral: '1'
+
+fn lhsUnknownRhsFalseOr(x: int) -> int {
+    return x || 0;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedBinaryOperator: '||'
+// CHECK-NEXT:        ResolvedDeclRefExpr: x
+// CHECK-NEXT:        ResolvedNumberLiteral: '0'
+
+fn main() -> void {}

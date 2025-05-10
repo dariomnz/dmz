@@ -66,9 +66,8 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     if (!isCallee && dynamic_cast<ResolvedFunctionDecl *>(decl))
         return report(declRefExpr.location, "expected to call function '" + std::string(declRefExpr.identifier) + "'");
 
-    //   if (dynamic_cast<ResolvedStructDecl *>(decl))
-    //     return report(declRefExpr.location,
-    //                   "expected an instance of '" + decl->type.name + '\'');
+    if (dynamic_cast<ResolvedStructDecl *>(decl))
+        return report(declRefExpr.location, "expected an instance of '" + std::string(decl->type.name) + '\'');
 
     return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl);
 }
@@ -220,7 +219,7 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable);
 }
 
-std::unique_ptr<ResolvedFunctionDecl> Sema:: resolve_function_decl(const FunctionDecl &function) {
+std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const FunctionDecl &function) {
     std::optional<Type> type = resolve_type(function.type);
 
     if (!type)
@@ -343,8 +342,9 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    if (resolvedRHS->type.kind == Type::Kind::Void)
-        return report(resolvedRHS->location, "void expression cannot be used as an operand to unary operator");
+    if (resolvedRHS->type.kind != Type::Kind::Int)
+        return report(resolvedRHS->location,
+                      '\'' + std::string(resolvedRHS->type.name) + "' cannot be used as an operand to unary operator");
 
     return std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
 }
@@ -353,11 +353,16 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (resolvedLHS->type.kind == Type::Kind::Void)
-        return report(resolvedLHS->location, "void expression cannot be used as LHS operand to binary operator");
+    if (resolvedLHS->type.kind != Type::Kind::Int)
+        return report(resolvedLHS->location, '\'' + std::string(resolvedLHS->type.name) +
+                                                 "' cannot be used as LHS operand to binary operator");
 
-    if (resolvedRHS->type.kind == Type::Kind::Void)
-        return report(resolvedRHS->location, "void expression cannot be used as RHS operand to binary operator");
+    if (resolvedRHS->type.kind != Type::Kind::Int)
+        return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
+                                                 "' cannot be used as RHS operand to binary operator");
+
+    assert(resolvedLHS->type.kind == resolvedRHS->type.kind && resolvedLHS->type.kind == Type::Kind::Int &&
+           "unexpected type in binop");
 
     return std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
                                                     std::move(resolvedRHS));
@@ -372,7 +377,7 @@ std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
     if (condition->type.kind != Type::Kind::Int) {
-        return report(condition->location, "expected number in condition");
+        return report(condition->location, "expected int in condition");
     }
     varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
 
@@ -392,7 +397,7 @@ std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whi
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
     if (condition->type.kind != Type::Kind::Int) {
-        return report(condition->location, "expected number in condition");
+        return report(condition->location, "expected int in condition");
     }
 
     varOrReturn(body, resolve_block(*whileStmt.body));
@@ -475,7 +480,7 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
                                             std::string(resolvableType.name) + "' type");
 
     if (resolvedInitializer) {
-        if (resolvedInitializer->type.kind != type->kind)
+        if (resolvedInitializer->type.name != type->name)
             return report(resolvedInitializer->location, "initializer type mismatch");
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
@@ -559,8 +564,11 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
             const auto &[preds, succs, stmts] = cfg.m_basicBlocks[bb];
 
             Lattice tmp;
-            for (auto &&pred : preds)
-                for (auto &&[decl, state] : curLattices[pred.first]) tmp[decl] = joinStates(tmp[decl], state);
+            for (auto &&pred : preds) {
+                for (auto &&[decl, state] : curLattices[pred.first]) {
+                    tmp[decl] = joinStates(tmp[decl], state);
+                }
+            }
 
             for (auto it = stmts.rbegin(); it != stmts.rend(); ++it) {
                 const ResolvedStmt *stmt = *it;
@@ -581,7 +589,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                     // which can be mutated.
                     if (!dre) continue;
 
-                    const auto *decl = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+                    const auto *decl = dynamic_cast<const ResolvedDecl *>(&dre->decl);
 
                     if (!decl->isMutable && tmp[decl] != State::Unassigned) {
                         std::string msg = '\'' + std::string(decl->identifier) + "' cannot be mutated";

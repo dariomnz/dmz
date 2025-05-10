@@ -10,13 +10,13 @@ struct Type {
     enum class Kind { Void, Int, Char, Struct, Custom };
 
     Kind kind;
-    std::string name;
+    std::string_view name;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
     static Type builtinChar() { return {Kind::Char, "char"}; }
-    static Type custom(const std::string_view &name) { return {Kind::Custom, std::string(name)}; }
-    static Type structType(const std::string_view &name) { return {Kind::Struct, std::string(name)}; }
+    static Type custom(const std::string_view &name) { return {Kind::Custom, name}; }
+    static Type structType(const std::string_view &name) { return {Kind::Struct, name}; }
 };
 
 template <typename Ty>

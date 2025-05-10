@@ -1,0 +1,39 @@
+// RUN: compiler %s -run | filecheck %s
+
+// CHECK: 0
+// CHECK-NEXT: 1
+// CHECK-NEXT: 1
+// CHECK-NEXT: 2
+// CHECK-NEXT: 3
+// CHECK-NEXT: 5
+// CHECK-NEXT: 8
+// CHECK-NEXT: 13
+// CHECK-NEXT: 21
+// CHECK-NEXT: 34
+// CHECK-NEXT: 55
+// CHECK-NEXT: 89
+// CHECK-NEXT: 144
+// CHECK-NEXT: 233
+// CHECK-NEXT: 377
+// CHECK-NEXT: 610
+// CHECK-NEXT: 987
+// CHECK-NEXT: 1597
+// CHECK-NEXT: 2584
+// CHECK-NEXT: 4181
+
+// CHECK-NOT: {{.*}}
+fn fib(n: int) -> int {
+    if n == 0 || n == 1 {
+        return n;
+    }
+
+    return fib(n - 1) + fib(n - 2);
+}
+
+fn main() -> void {
+    let i = 0;
+    while i < 20 {
+        println(fib(i));
+        i = i + 1;
+    }
+}

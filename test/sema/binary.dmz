@@ -1,0 +1,18 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> void {}
+
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:8: error: 'void' cannot be used as LHS operand to binary operator
+    foo() + 1;
+    
+    // CHECK: [[# @LINE + 1 ]]:12: error: 'void' cannot be used as RHS operand to binary operator
+    1 + foo();
+    
+    // CHECK: [[# @LINE + 1 ]]:8: error: 'void' cannot be used as LHS operand to binary operator
+    foo() + foo();
+
+    1 + 3;
+    2 + (10 * (3 > 2));
+
+}
+// CHECK-NOT: {{.*}}

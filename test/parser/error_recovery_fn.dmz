@@ -1,0 +1,38 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// CHECK: [[# @LINE + 1 ]]:15: error: expected type specifier
+fn error() -> {
+    let y: int = 1 + 2;
+}
+
+fn main() -> void {
+    let y: int = 1 + 2;
+}
+
+// CHECK: [[# @LINE + 1 ]]:12: error: expected parameter declaration
+fn error2( {
+    let y: int = 1 + 2;
+}
+
+fn error3() -> void {
+    let y: int =
+
+// CHECK: [[# @LINE + 2 ]]:1: error: expected expression
+// CHECK: [[# @LINE + 1 ]]:1: error: expected '}' at the end of a block
+fn pass() -> int {
+    let y: int = 1 + 2;
+}
+
+// CHECK: FunctionDecl: main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt:
+// CHECK-NEXT:       VarDecl: y:int
+// CHECK-NEXT:         BinaryOperator: '+'
+// CHECK-NEXT:           NumberLiteral: '1'
+// CHECK-NEXT:           NumberLiteral: '2'
+// CHECK-NEXT: FunctionDecl: pass -> int
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt:
+// CHECK-NEXT:       VarDecl: y:int
+// CHECK-NEXT:         BinaryOperator: '+'
+// CHECK-NEXT:           NumberLiteral: '1'
+// CHECK-NEXT:           NumberLiteral: '2'

@@ -1,10 +1,9 @@
 
-set(TEST_LIST
-    # test_files/just_main.dmz
-    test_files/decl_fn.dmz
-)
 
-# add the executables cpp
-foreach (test_name ${TEST_LIST})
-    add_test(NAME "${test_name}" COMMAND compiler -res-dump ${CMAKE_CURRENT_LIST_DIR}/${test_name})
-endforeach (test_name)
+cmake_host_system_information(RESULT NUM_PROCS QUERY NUMBER_OF_PHYSICAL_CORES)
+math(EXPR NUM_JOBS "${NUM_PROCS} * 2")
+
+add_custom_target(check
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/lit-runner.py ${CMAKE_CURRENT_SOURCE_DIR} -v -s -j ${NUM_JOBS} --per-test-coverage --path=${CMAKE_BINARY_DIR}/bin
+    DEPENDS compiler
+    USES_TERMINAL)

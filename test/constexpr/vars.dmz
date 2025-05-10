@@ -1,0 +1,39 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
+fn pass() -> int {
+    let const x: int = 2;
+    return x * 10;
+}
+// CHECK:     ResolvedReturnStmt
+// CHECK-NEXT:       ResolvedBinaryOperator: '*'
+// CHECK-NEXT:       | value: 20
+// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedNumberLiteral: '10'
+
+fn pass2() -> int {
+    let const x: int = 2;
+    return x;
+}
+// CHECK:     ResolvedReturnStmt
+// CHECK-NEXT:       ResolvedDeclRefExpr: x
+// CHECK-NEXT:       | value: 2
+
+fn err() -> int {
+    let const x: int;
+    x = 2;
+    return x * 10;
+}
+// CHECK:     ResolvedReturnStmt
+// CHECK-NEXT:       ResolvedBinaryOperator: '*'
+// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedNumberLiteral: '10'
+
+fn err2() -> int {
+    let x: int = 2;
+    return x * 10;
+}
+// CHECK:    ResolvedReturnStmt
+// CHECK-NEXT:      ResolvedBinaryOperator: '*'
+// CHECK-NEXT:        ResolvedDeclRefExpr: x
+// CHECK-NEXT:        ResolvedNumberLiteral: '10'
+
+fn main() -> void {}

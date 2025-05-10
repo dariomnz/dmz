@@ -39,7 +39,7 @@ llvm::Type *Codegen::generate_type(const Type &type) {
     }
 
     if (type.kind == Type::Kind::Struct) {
-        return llvm::StructType::getTypeByName(m_context, "struct." + type.name);
+        return llvm::StructType::getTypeByName(m_context, "struct." + std::string(type.name));
     }
 
     return m_builder.getVoidTy();

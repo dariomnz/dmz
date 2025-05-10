@@ -1,0 +1,27 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> void {}
+
+fn main() -> void {
+    let x: int = 1;
+
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
+    foo;
+    
+    x;
+    
+    // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
+    y;
+
+    let foo: int = 2;
+
+    // CHECK: [[# @LINE + 1 ]]:8: error: calling non-function symbol
+    foo();
+}
+
+fn bar(x: int) -> void {
+    x;
+
+    // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol
+    x();
+}
+// CHECK-NOT: {{.*}}

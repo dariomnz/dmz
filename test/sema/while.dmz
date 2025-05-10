@@ -1,0 +1,12 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+fn foo() -> void {}
+
+fn bar() -> int { return 1; }
+
+fn main() -> void {
+    while bar() {}
+
+    // CHECK: [[# @LINE + 1 ]]:14: error: expected int in condition
+    while foo() {}
+}
+// CHECK-NOT: {{.*}}

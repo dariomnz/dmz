@@ -22,9 +22,11 @@ int CFGBuilder::insert_block(const ResolvedBlock &block, int succ) {
 
     bool insertNewBlock = true;
     for (auto it = stmts.rbegin(); it != stmts.rend(); ++it) {
-        if (insertNewBlock && !is_terminator(**it)) succ = cfg.insert_new_block_before(succ, true);
+        if (insertNewBlock && !is_terminator(**it)) {
+            succ = cfg.insert_new_block_before(succ, true);
+        }
 
-        insertNewBlock = false;
+        insertNewBlock = dynamic_cast<const ResolvedWhileStmt *>(it->get());
         succ = insert_stmt(**it, succ);
     }
 
@@ -41,14 +43,14 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return insert_expr(*expr, block);
     }
-    if (auto *returnStmt = dynamic_cast<const ResolvedReturnStmt *>(&stmt)) {
-        return insert_return_stmt(*returnStmt, block);
+    if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
+        return insert_assignment(*assignment, block);
     }
     if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
         return insert_decl_stmt(*declStmt, block);
     }
-    if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
-        return insert_assignment(*assignment, block);
+    if (auto *returnStmt = dynamic_cast<const ResolvedReturnStmt *>(&stmt)) {
+        return insert_return_stmt(*returnStmt, block);
     }
     if (auto *fieldInit = dynamic_cast<const ResolvedFieldInitStmt *>(&stmt)) {
         return insert_expr(*fieldInit->initializer, block);
@@ -168,7 +170,7 @@ void CFG::dump() const {
         std::cerr << '\n';
 
         std::cerr << "  succs: ";
-        for (auto &&[id, reachable] : m_basicBlocks[i].successors) std::cerr << id << ((reachable) ? " (R) " : "(U) ");
+        for (auto &&[id, reachable] : m_basicBlocks[i].successors) std::cerr << id << ((reachable) ? " " : "(U) ");
         std::cerr << '\n';
 
         const auto &statements = m_basicBlocks[i].statements;

@@ -1,0 +1,2 @@
+// RUN: compiler %s -run
+fn main() -> void {}

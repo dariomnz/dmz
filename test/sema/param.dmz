@@ -1,0 +1,13 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+// CHECK: [[# @LINE + 1 ]]:8: error: parameter 'x' has invalid 'void' type
+fn foo(x: void, y: customType) -> void {}
+
+// CHECK: [[# @LINE + 1 ]]:16: error: parameter 'y' has invalid 'customType' type
+fn bar(x: int, y: customType) -> void {}
+
+// CHECK: [[# @LINE + 1 ]]:28: error: redeclaration of 'x'
+fn redeclaredParam(x: int, x: int) -> void {}
+
+fn main() -> void {}
+// CHECK-NOT: {{.*}}

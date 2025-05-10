@@ -1,0 +1,10 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn foo(const x: int) -> void {
+}
+// CHECK: FunctionDecl: foo -> void
+// CHECK-NEXT:   ParamDecl: x:int
+// CHECK-NEXT:   Block
+
+fn main() -> void {
+}
