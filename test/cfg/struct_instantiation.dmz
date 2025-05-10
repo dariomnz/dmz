@@ -21,27 +21,27 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedNumberLiteral: '1'
+// CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT:   | value: 1
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:
 // CHECK-NEXT:     ResolvedFieldInitStmt: y
-// CHECK-NEXT:       ResolvedNumberLiteral: '1'
+// CHECK-NEXT:       ResolvedIntLiteral: '1'
 // CHECK-NEXT:       | value: 1
-// CHECK-NEXT:   ResolvedNumberLiteral: '0'
+// CHECK-NEXT:   ResolvedIntLiteral: '0'
 // CHECK-NEXT:   | value: 0
-// CHECK-NEXT:   ResolvedNumberLiteral: '2'
+// CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   | value: 2
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:
 // CHECK-NEXT:     ResolvedFieldInitStmt: s2
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: y
-// CHECK-NEXT:           ResolvedNumberLiteral: '1'
+// CHECK-NEXT:           ResolvedIntLiteral: '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:     ResolvedFieldInitStmt: x
-// CHECK-NEXT:       ResolvedNumberLiteral: '0'
+// CHECK-NEXT:       ResolvedIntLiteral: '0'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:     ResolvedFieldInitStmt: y
-// CHECK-NEXT:       ResolvedNumberLiteral: '2'
+// CHECK-NEXT:       ResolvedIntLiteral: '2'
 // CHECK-NEXT:       | value: 2
 // CHECK-NEXT:   ResolvedDeclStmt:
 // CHECK-NEXT:     ResolvedVarDecl: s:
@@ -49,49 +49,49 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedFieldInitStmt: s2
 // CHECK-NEXT:           ResolvedStructInstantiationExpr:
 // CHECK-NEXT:             ResolvedFieldInitStmt: y
-// CHECK-NEXT:               ResolvedNumberLiteral: '1'
+// CHECK-NEXT:               ResolvedIntLiteral: '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:         ResolvedFieldInitStmt: x
-// CHECK-NEXT:           ResolvedNumberLiteral: '0'
+// CHECK-NEXT:           ResolvedIntLiteral: '0'
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:         ResolvedFieldInitStmt: y
-// CHECK-NEXT:           ResolvedNumberLiteral: '2'
+// CHECK-NEXT:           ResolvedIntLiteral: '2'
 // CHECK-NEXT:           | value: 2
-// CHECK-NEXT:   ResolvedNumberLiteral: '3'
+// CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   | value: 3
-// CHECK-NEXT:   ResolvedNumberLiteral: '4'
+// CHECK-NEXT:   ResolvedIntLiteral: '4'
 // CHECK-NEXT:   | value: 4
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:
 // CHECK-NEXT:     ResolvedFieldInitStmt: y
-// CHECK-NEXT:       ResolvedNumberLiteral: '4'
+// CHECK-NEXT:       ResolvedIntLiteral: '4'
 // CHECK-NEXT:       | value: 4
-// CHECK-NEXT:   ResolvedNumberLiteral: '5'
+// CHECK-NEXT:   ResolvedIntLiteral: '5'
 // CHECK-NEXT:   | value: 5
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:
 // CHECK-NEXT:     ResolvedFieldInitStmt: x
-// CHECK-NEXT:       ResolvedNumberLiteral: '3'
+// CHECK-NEXT:       ResolvedIntLiteral: '3'
 // CHECK-NEXT:       | value: 3
 // CHECK-NEXT:     ResolvedFieldInitStmt: s2
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: y
-// CHECK-NEXT:           ResolvedNumberLiteral: '4'
+// CHECK-NEXT:           ResolvedIntLiteral: '4'
 // CHECK-NEXT:           | value: 4
 // CHECK-NEXT:     ResolvedFieldInitStmt: y
-// CHECK-NEXT:       ResolvedNumberLiteral: '5'
+// CHECK-NEXT:       ResolvedIntLiteral: '5'
 // CHECK-NEXT:       | value: 5
 // CHECK-NEXT:   ResolvedDeclStmt:
 // CHECK-NEXT:     ResolvedVarDecl: s2:
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: x
-// CHECK-NEXT:           ResolvedNumberLiteral: '3'
+// CHECK-NEXT:           ResolvedIntLiteral: '3'
 // CHECK-NEXT:           | value: 3
 // CHECK-NEXT:         ResolvedFieldInitStmt: s2
 // CHECK-NEXT:           ResolvedStructInstantiationExpr:
 // CHECK-NEXT:             ResolvedFieldInitStmt: y
-// CHECK-NEXT:               ResolvedNumberLiteral: '4'
+// CHECK-NEXT:               ResolvedIntLiteral: '4'
 // CHECK-NEXT:               | value: 4
 // CHECK-NEXT:         ResolvedFieldInitStmt: y
-// CHECK-NEXT:           ResolvedNumberLiteral: '5'
+// CHECK-NEXT:           ResolvedIntLiteral: '5'
 // CHECK-NEXT:           | value: 5
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

@@ -194,8 +194,14 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     }
 
     if (m_nextToken.type == TokenType::lit_int) {
-        auto literal = std::make_unique<NumberLiteral>(location, m_nextToken.str);
-        eat_next_token();  // eat number
+        auto literal = std::make_unique<IntLiteral>(location, m_nextToken.str);
+        eat_next_token();  // eat int
+        return literal;
+    }
+
+    if (m_nextToken.type == TokenType::lit_char) {
+        auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
+        eat_next_token();  // eat char
         return literal;
     }
 

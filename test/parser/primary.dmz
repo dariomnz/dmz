@@ -29,14 +29,14 @@ fn main() -> void {
     a(x,;
 
     1;
-    // CHECK: NumberLiteral: '1'
+    // CHECK: IntLiteral: '1'
 
     1;
-    // CHECK: NumberLiteral: '1'
+    // CHECK: IntLiteral: '1'
     
     (2);
     // CHECK: GroupingExpr:
-    // CHECK-NEXT:   NumberLiteral: '2'
+    // CHECK-NEXT:   IntLiteral: '2'
 
     (((((2)))));
     // CHECK: GroupingExpr:
@@ -44,7 +44,7 @@ fn main() -> void {
     // CHECK-NEXT:     GroupingExpr:
     // CHECK-NEXT:       GroupingExpr:
     // CHECK-NEXT:         GroupingExpr:
-    // CHECK-NEXT:           NumberLiteral: '2'
+    // CHECK-NEXT:           IntLiteral: '2'
 
     a;
     // CHECK: DeclRefExpr: a
@@ -61,12 +61,12 @@ fn main() -> void {
     a(1, 2,);
     // CHECK: CallExpr:
     // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   NumberLiteral: '1'
-    // CHECK-NEXT:   NumberLiteral: '2'
+    // CHECK-NEXT:   IntLiteral: '1'
+    // CHECK-NEXT:   IntLiteral: '2'
 
     a(1, 2);
     // CHECK: CallExpr:
     // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   NumberLiteral: '1'
-    // CHECK-NEXT:   NumberLiteral: '2'
+    // CHECK-NEXT:   IntLiteral: '1'
+    // CHECK-NEXT:   IntLiteral: '2'
 }

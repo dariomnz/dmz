@@ -13,6 +13,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(return_type);
         CASE_TYPE(lit_int);
         CASE_TYPE(lit_float);
+        CASE_TYPE(lit_char);
         CASE_TYPE(lit_string);
         CASE_TYPE(op_plus);
         CASE_TYPE(op_minus);
@@ -213,6 +214,23 @@ Token Lexer::next_token() {
         advance();
         t.type = TokenType::lit_string;
         t.str = file_content.substr(0, str_count);
+    } else if (file_content[0] == '\'') {
+        debug_msg(TokenType::lit_char);
+        int char_size = 1;
+        if (file_content[char_size] == '\\'){
+            char_size++;
+        }
+        char_size++;
+        advance(char_size);
+        if (file_content[char_size] != '\''){
+            t.type = TokenType::unknown;
+            t.str = file_content.substr(1, char_size);
+            return t;
+        }
+        advance();
+        char_size++;
+        t.type = TokenType::lit_char;
+        t.str = file_content.substr(0, char_size);
     } else if (file_content.substr(0, 2) == "->") {
         debug_msg(TokenType::return_type);
         t.type = TokenType::return_type;

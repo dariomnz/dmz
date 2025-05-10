@@ -19,4 +19,4 @@ fn error(x: int) -> void {
 // CHECK: FunctionDecl: error -> void
 // CHECK-NEXT:   ParamDecl: x:int
 // CHECK-NEXT:   Block
-// CHECK-NEXT:     NumberLiteral: '2'
+// CHECK-NEXT:     IntLiteral: '2'

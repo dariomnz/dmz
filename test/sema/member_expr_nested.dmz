@@ -27,12 +27,12 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedVarDecl: s:
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:
 // CHECK-NEXT:           ResolvedFieldInitStmt: x
-// CHECK-NEXT:             ResolvedNumberLiteral: '0'
+// CHECK-NEXT:             ResolvedIntLiteral: '0'
 // CHECK-NEXT:             | value: 0
 // CHECK-NEXT:           ResolvedFieldInitStmt: n
 // CHECK-NEXT:             ResolvedStructInstantiationExpr:
 // CHECK-NEXT:               ResolvedFieldInitStmt: x
-// CHECK-NEXT:                 ResolvedNumberLiteral: '1'
+// CHECK-NEXT:                 ResolvedIntLiteral: '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:     ResolvedDeclStmt:
 // CHECK-NEXT:       ResolvedVarDecl: x:

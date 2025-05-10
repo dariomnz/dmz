@@ -8,11 +8,11 @@ fn binaryLhsKnown(y: int) -> int {
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedGroupingExpr:
 // CHECK-NEXT:           ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:             ResolvedNumberLiteral: '0'
+// CHECK-NEXT:             ResolvedIntLiteral: '0'
 // CHECK-NEXT:             ResolvedDeclRefExpr: y
 // CHECK-NEXT:         ResolvedGroupingExpr:
 // CHECK-NEXT:           ResolvedBinaryOperator: '||'
-// CHECK-NEXT:             ResolvedNumberLiteral: '1'
+// CHECK-NEXT:             ResolvedIntLiteral: '1'
 // CHECK-NEXT:             ResolvedDeclRefExpr: x
 
 fn unaryNonConst() -> int {
@@ -44,7 +44,7 @@ fn lhsKnownRhsNot(y: int) -> int {
 }
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:        ResolvedNumberLiteral: '1'
+// CHECK-NEXT:        ResolvedIntLiteral: '1'
 // CHECK-NEXT:        ResolvedDeclRefExpr: y
 
 fn lhsUnknownRhsFalse(x: int) -> int {
@@ -53,7 +53,7 @@ fn lhsUnknownRhsFalse(x: int) -> int {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator: '&&'
 // CHECK-NEXT:        ResolvedDeclRefExpr: x
-// CHECK-NEXT:        ResolvedNumberLiteral: '0'
+// CHECK-NEXT:        ResolvedIntLiteral: '0'
 
 fn lhsUnknownRhsTrue(x: int) -> int {
     return x || 1;
@@ -61,7 +61,7 @@ fn lhsUnknownRhsTrue(x: int) -> int {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator: '||'
 // CHECK-NEXT:        ResolvedDeclRefExpr: x
-// CHECK-NEXT:        ResolvedNumberLiteral: '1'
+// CHECK-NEXT:        ResolvedIntLiteral: '1'
 
 fn lhsUnknownRhsFalseOr(x: int) -> int {
     return x || 0;
@@ -69,6 +69,6 @@ fn lhsUnknownRhsFalseOr(x: int) -> int {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator: '||'
 // CHECK-NEXT:        ResolvedDeclRefExpr: x
-// CHECK-NEXT:        ResolvedNumberLiteral: '0'
+// CHECK-NEXT:        ResolvedIntLiteral: '0'
 
 fn main() -> void {}

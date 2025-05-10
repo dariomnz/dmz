@@ -111,9 +111,9 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
     int trueBlock = insert_block(*stmt.trueBlock, exit);
     int entry = cfg.insert_new_block();
 
-    std::optional<int> val = cee.evaluate(*stmt.condition, true);
-    cfg.insert_edge(entry, trueBlock, val != 0);
-    cfg.insert_edge(entry, falseBlock, val.value_or(0) == 0);
+    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    cfg.insert_edge(entry, trueBlock, ConstantExpressionEvaluator::to_bool(val));
+    cfg.insert_edge(entry, falseBlock, !ConstantExpressionEvaluator::to_bool(val));
 
     cfg.insert_stmt(&stmt, entry);
     return insert_expr(*stmt.condition, entry);
@@ -126,9 +126,9 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
     int header = cfg.insert_new_block();
     cfg.insert_edge(latch, header, true);
 
-    std::optional<int> val = cee.evaluate(*stmt.condition, true);
-    cfg.insert_edge(header, body, val != 0);
-    cfg.insert_edge(header, exit, val.value_or(0) == 0);
+    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    cfg.insert_edge(header, body, ConstantExpressionEvaluator::to_bool(val));
+    cfg.insert_edge(header, exit, !ConstantExpressionEvaluator::to_bool(val));
 
     cfg.insert_stmt(&stmt, header);
     insert_expr(*stmt.condition, header);

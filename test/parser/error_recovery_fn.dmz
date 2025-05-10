@@ -27,12 +27,12 @@ fn pass() -> int {
 // CHECK-NEXT:     DeclStmt:
 // CHECK-NEXT:       VarDecl: y:int
 // CHECK-NEXT:         BinaryOperator: '+'
-// CHECK-NEXT:           NumberLiteral: '1'
-// CHECK-NEXT:           NumberLiteral: '2'
+// CHECK-NEXT:           IntLiteral: '1'
+// CHECK-NEXT:           IntLiteral: '2'
 // CHECK-NEXT: FunctionDecl: pass -> int
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt:
 // CHECK-NEXT:       VarDecl: y:int
 // CHECK-NEXT:         BinaryOperator: '+'
-// CHECK-NEXT:           NumberLiteral: '1'
-// CHECK-NEXT:           NumberLiteral: '2'
+// CHECK-NEXT:           IntLiteral: '1'
+// CHECK-NEXT:           IntLiteral: '2'

@@ -148,9 +148,48 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
     return std::make_unique<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr));
 }
 
+static inline std::optional<char> str_view_to_char(std::string_view sv) {
+    if (sv[1] != '\\') return sv[1];
+    switch (sv[2]) {
+        case '\'':
+            return '\'';
+        case '\"':
+            return '\"';
+        case '\\':
+            return '\\';
+        case 'n':
+            return '\n';
+        case 'r':
+            return '\r';
+        case 't':
+            return '\t';
+        case 'v':
+            return '\v';
+        case 'b':
+            return '\b';
+        case 'f':
+            return '\f';
+        case 'a':
+            return '\a';
+        case '0':
+            return '\0';
+        default:
+            return std::nullopt;
+    }
+    llvm_unreachable("unexpected char literal");
+}
+
 std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
-    if (const auto *number = dynamic_cast<const NumberLiteral *>(&expr))
-        return std::make_unique<ResolvedNumberLiteral>(number->location, std::stod(std::string(number->value)));
+    if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
+        return std::make_unique<ResolvedIntLiteral>(number->location, std::stod(std::string(number->value)));
+    }
+    if (const auto *character = dynamic_cast<const CharLiteral *>(&expr)) {
+        if (auto c = str_view_to_char(character->value)) {
+            return std::make_unique<ResolvedCharLiteral>(character->location, *c);
+        } else {
+            return nullptr;
+        }
+    }
 
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
         return resolve_decl_ref_expr(*declRefExpr);

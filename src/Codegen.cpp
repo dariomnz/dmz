@@ -9,7 +9,7 @@ Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::s
 
 llvm::Module *Codegen::generate_ir() {
     ScopedTimer st(Stats::type::codegenTime);
-    
+
     for (auto &&decl : m_resolvedTree) {
         if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_decl(*fn);
@@ -195,10 +195,17 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
     if (auto val = expr.get_constant_value()) {
-        return llvm::ConstantInt::get(m_builder.getInt32Ty(), *val);
+        if (std::holds_alternative<int>(*val)) {
+            return llvm::ConstantInt::get(m_builder.getInt32Ty(), std::get<int>(*val));
+        } else if (std::holds_alternative<char>(*val)) {
+            return llvm::ConstantInt::get(m_builder.getInt8Ty(), std::get<char>(*val));
+        }
     }
-    if (auto *number = dynamic_cast<const ResolvedNumberLiteral *>(&expr)) {
+    if (auto *number = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
         return llvm::ConstantInt::get(m_builder.getInt32Ty(), number->value);
+    }
+    if (auto *number = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
+        return llvm::ConstantInt::get(m_builder.getInt8Ty(), number->value);
     }
     if (auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return generate_decl_ref_expr(*dre, keepPointer);

@@ -3,19 +3,27 @@ fn foo() -> int {
     return 1;
 }
 
+fn bar() -> char {
+    return 'a';
+}
+
 fn main() -> void {
     let x = 1;
     let y = foo() + 1;
 
     let x2: int;
     let y2: int;
+
+    let c1 = 'a';
+    let c2 = bar();
+    let c3: char;
 }
 // CHECK: ResolvedDeclStmt:
 // CHECK-NEXT:   ResolvedVarDecl: x:
-// CHECK-NEXT:     ResolvedNumberLiteral: '1'
+// CHECK-NEXT:     ResolvedIntLiteral: '1'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt:
 // CHECK-NEXT:   ResolvedVarDecl: y:
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
 // CHECK-NEXT:       ResolvedCallExpr: foo
-// CHECK-NEXT:       ResolvedNumberLiteral: '1'
+// CHECK-NEXT:       ResolvedIntLiteral: '1'

@@ -33,23 +33,23 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedVarDecl: x:
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:
 // CHECK-NEXT:           ResolvedFieldInitStmt: r
-// CHECK-NEXT:             ResolvedNumberLiteral: '0'
+// CHECK-NEXT:             ResolvedIntLiteral: '0'
 // CHECK-NEXT:             | value: 0
 // CHECK-NEXT:           ResolvedFieldInitStmt: g
-// CHECK-NEXT:             ResolvedNumberLiteral: '1'
+// CHECK-NEXT:             ResolvedIntLiteral: '1'
 // CHECK-NEXT:             | value: 1
 // CHECK-NEXT:           ResolvedFieldInitStmt: b
-// CHECK-NEXT:             ResolvedNumberLiteral: '2'
+// CHECK-NEXT:             ResolvedIntLiteral: '2'
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:           ResolvedFieldInitStmt: p
 // CHECK-NEXT:             ResolvedStructInstantiationExpr:
 // CHECK-NEXT:               ResolvedFieldInitStmt: x
 // CHECK-NEXT:                 ResolvedBinaryOperator: '+'
 // CHECK-NEXT:                 | value: 7
-// CHECK-NEXT:                   ResolvedNumberLiteral: '3'
-// CHECK-NEXT:                   ResolvedNumberLiteral: '4'
+// CHECK-NEXT:                   ResolvedIntLiteral: '3'
+// CHECK-NEXT:                   ResolvedIntLiteral: '4'
 // CHECK-NEXT:               ResolvedFieldInitStmt: y
 // CHECK-NEXT:                 ResolvedBinaryOperator: '*'
 // CHECK-NEXT:                 | value: 36
-// CHECK-NEXT:                   ResolvedNumberLiteral: '4'
-// CHECK-NEXT:                   ResolvedNumberLiteral: '9'
+// CHECK-NEXT:                   ResolvedIntLiteral: '4'
+// CHECK-NEXT:                   ResolvedIntLiteral: '9'

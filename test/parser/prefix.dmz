@@ -9,10 +9,10 @@ fn main() -> void {
 
     !1;
     // CHECK: UnaryOperator: '!'
-    // CHECK-NEXT:   NumberLiteral: '1'
+    // CHECK-NEXT:   IntLiteral: '1'
     
     !!1;
     // CHECK-NEXT: UnaryOperator: '!'
     // CHECK-NEXT:   UnaryOperator: '!'
-    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     IntLiteral: '1'
 }

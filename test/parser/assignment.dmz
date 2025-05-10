@@ -11,5 +11,5 @@ fn main() -> void {
     a = 4;
     // CHECK: Assignment:
     // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   NumberLiteral: '4'
+    // CHECK-NEXT:   IntLiteral: '4'
 }

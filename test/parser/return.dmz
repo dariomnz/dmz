@@ -9,8 +9,8 @@ fn main() -> void {
     return 1 + 2;
     // CHECK: ReturnStmt
     // CHECK-NEXT:   BinaryOperator: '+'
-    // CHECK-NEXT:     NumberLiteral: '1'
-    // CHECK-NEXT:     NumberLiteral: '2'
+    // CHECK-NEXT:     IntLiteral: '1'
+    // CHECK-NEXT:     IntLiteral: '2'
     
     return;
     // CHECK: ReturnStmt

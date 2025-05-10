@@ -116,10 +116,18 @@ struct StructInstantiationExpr : public Expr {
     void dump(size_t level = 0) const override;
 };
 
-struct NumberLiteral : public Expr {
+struct IntLiteral : public Expr {
     std::string_view value;
 
-    NumberLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+    IntLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct CharLiteral : public Expr {
+    std::string_view value;
+
+    CharLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -272,7 +280,9 @@ struct ResolvedStmt {
     virtual void dump(size_t level = 0) const = 0;
 };
 
-struct ResolvedExpr : public ConstantValueContainer<double>, public ResolvedStmt {
+using ConstValue = std::variant<int, char>;
+
+struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public ResolvedStmt {
     Type type;
 
     ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type) {}
@@ -378,11 +388,19 @@ struct ResolvedStructDecl : public ResolvedDecl {
     void dump(size_t level = 0) const override;
 };
 
-struct ResolvedNumberLiteral : public ResolvedExpr {
-    double value;
+struct ResolvedIntLiteral : public ResolvedExpr {
+    int value;
 
-    ResolvedNumberLiteral(SourceLocation location, double value)
-        : ResolvedExpr(location, Type::builtinInt()), value(value) {}
+    ResolvedIntLiteral(SourceLocation location, int value) : ResolvedExpr(location, Type::builtinInt()), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedCharLiteral : public ResolvedExpr {
+    char value;
+
+    ResolvedCharLiteral(SourceLocation location, char value)
+        : ResolvedExpr(location, Type::builtinChar()), value(value) {}
 
     void dump(size_t level = 0) const override;
 };

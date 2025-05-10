@@ -12,6 +12,7 @@ enum class TokenType {
     return_type,
     lit_int,
     lit_float,
+    lit_char,
     lit_string,
     op_plus,
     op_minus,

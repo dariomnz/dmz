@@ -10,7 +10,7 @@ fn main() -> void {
         1;
     }
     // CHECK: WhileStmt
-    // CHECK-NEXT:   NumberLiteral: '0'
+    // CHECK-NEXT:   IntLiteral: '0'
     // CHECK-NEXT:   Block
-    // CHECK-NEXT:     NumberLiteral: '1'
+    // CHECK-NEXT:     IntLiteral: '1'
 }

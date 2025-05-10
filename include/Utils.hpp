@@ -50,4 +50,12 @@ class DeferAction {
 #define ____defer(action, line) DeferAction defer_object_##line(action)
 #define __defer(action, line) ____defer(action, line)
 #define defer(action) __defer(action, __LINE__)
+
+
+// helper type for the visitor #4
+template<class... Ts>
+struct overload : Ts... { using Ts::operator()...; };
+// explicit deduction guide (not needed as of C++20)
+template<class... Ts>
+overload(Ts...) -> overload<Ts...>;
 }  // namespace C
