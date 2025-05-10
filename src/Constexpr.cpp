@@ -2,10 +2,14 @@
 
 namespace C {
 
-bool ConstantExpressionEvaluator::to_bool(std::optional<ConstValue> d) {
-    if (!d) return false;
+std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<ConstValue> &d) {
+    if (!d) return std::nullopt;
     bool retval;
-    std::visit([&retval](auto val) { retval = val != 0; }, *d);
+    std::visit(overload{
+                   [&retval](int val) { retval = val != 0; },
+                   [&retval](char val) { retval = val != 0; },
+               },
+               *d);
     return retval;
 }
 
@@ -13,8 +17,11 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate(const ResolvedEx
     if (std::optional<ConstValue> val = expr.get_constant_value()) {
         return val;
     }
-    if (const auto *numberLiteral = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
-        return numberLiteral->value;
+    if (const auto *intLiteral = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
+        return intLiteral->value;
+    }
+    if (const auto *charLiteral = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
+        return charLiteral->value;
     }
     if (const auto *groupingExpr = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return evaluate(*groupingExpr->expr, allowSideEffects);
@@ -37,6 +44,8 @@ T do_unary_op(TokenType type, ConstValue &cval) {
     switch (type) {
         case TokenType::op_minus:
             return -val;
+        case TokenType::op_not:
+            return !val;
         default:
             llvm_unreachable("unexpected binary operator");
     }
@@ -47,16 +56,12 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_unary_operator(c
     std::optional<ConstValue> operand = evaluate(*unop.operand, allowSideEffects);
     if (!operand) return std::nullopt;
 
-    if (unop.op == TokenType::op_not) return !to_bool(operand);
-
-    if (unop.op == TokenType::op_minus) {
-        if (std::holds_alternative<int>(*operand)) {
-            return do_unary_op<int>(unop.op, *operand);
-        } else if (std::holds_alternative<char>(*operand)) {
-            return do_unary_op<char>(unop.op, *operand);
-        } else {
-            llvm_unreachable("unexpected type in ConstValue");
-        }
+    if (std::holds_alternative<int>(*operand)) {
+        return do_unary_op<int>(unop.op, *operand);
+    } else if (std::holds_alternative<char>(*operand)) {
+        return do_unary_op<char>(unop.op, *operand);
+    } else {
+        llvm_unreachable("unexpected type in ConstValue");
     }
 
     llvm_unreachable("unexpected unary operator");
