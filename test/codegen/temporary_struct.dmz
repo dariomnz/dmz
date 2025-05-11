@@ -1,0 +1,103 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '3\n3\n1\n2\n3\n'
+struct S {
+  x: int,
+  s2: S2,
+}
+
+struct S2 {
+  x: int,
+  y: int,
+  z: int,
+}
+
+fn foo() -> void {
+  println(S2 { x: 1, y: 2, z: 3 }.z);
+  println(S{ x: 1, s2: S2 { x: 2, y: 3, z: 4 } }.s2.y);
+}
+// CHECK: define void @foo() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %S2.tmp = alloca %struct.S2, align 8
+// CHECK-NEXT:   %S.tmp = alloca %struct.S, align 8
+// CHECK-NEXT:   %S2.tmp1 = alloca %struct.S2, align 8
+
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 2
+// CHECK-NEXT:   store i32 3, ptr %2, align 4
+
+// CHECK-NEXT:   %3 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 2
+// CHECK-NEXT:   %4 = load i32, ptr %3, align 4
+// CHECK-NEXT:   call void @println(i32 %4)
+// CHECK-NEXT:   %5 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 0
+// CHECK-NEXT:   store i32 2, ptr %5, align 4
+// CHECK-NEXT:   %6 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 1
+// CHECK-NEXT:   store i32 3, ptr %6, align 4
+// CHECK-NEXT:   %7 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 2
+// CHECK-NEXT:   store i32 4, ptr %7, align 4
+// CHECK-NEXT:   %8 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %8, align 4
+// CHECK-NEXT:   %9 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 1
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %9, ptr align 4 %S2.tmp1, i64 12, i1 false)
+
+// CHECK-NEXT:   %10 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 1
+// CHECK-NEXT:   %11 = getelementptr inbounds %struct.S2, ptr %10, i32 0, i32 1
+// CHECK-NEXT:   %12 = load i32, ptr %11, align 4
+// CHECK-NEXT:   call void @println(i32 %12)
+
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn bar() -> void {
+  println(S2 { x: 1, y: 2, z: 3 }.x);
+  println(S2 { x: 1, y: 2, z: 3 }.y);
+  println(S2 { x: 1, y: 2, z: 3 }.z);
+}
+// CHECK: define void @bar() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %S2.tmp = alloca %struct.S2, align 8
+// CHECK-NEXT:   %S2.tmp1 = alloca %struct.S2, align 8
+// CHECK-NEXT:   %S2.tmp2 = alloca %struct.S2, align 8
+
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 2
+// CHECK-NEXT:   store i32 3, ptr %2, align 4
+
+// CHECK-NEXT:   %3 = getelementptr inbounds %struct.S2, ptr %S2.tmp, i32 0, i32 0
+// CHECK-NEXT:   %4 = load i32, ptr %3, align 4
+// CHECK-NEXT:   call void @println(i32 %4)
+
+// CHECK-NEXT:   %5 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %5, align 4
+// CHECK-NEXT:   %6 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %6, align 4
+// CHECK-NEXT:   %7 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 2
+// CHECK-NEXT:   store i32 3, ptr %7, align 4
+
+// CHECK-NEXT:   %8 = getelementptr inbounds %struct.S2, ptr %S2.tmp1, i32 0, i32 1
+// CHECK-NEXT:   %9 = load i32, ptr %8, align 4
+// CHECK-NEXT:   call void @println(i32 %9)
+
+// CHECK-NEXT:   %10 = getelementptr inbounds %struct.S2, ptr %S2.tmp2, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %10, align 4
+// CHECK-NEXT:   %11 = getelementptr inbounds %struct.S2, ptr %S2.tmp2, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %11, align 4
+// CHECK-NEXT:   %12 = getelementptr inbounds %struct.S2, ptr %S2.tmp2, i32 0, i32 2
+// CHECK-NEXT:   store i32 3, ptr %12, align 4
+
+// CHECK-NEXT:   %13 = getelementptr inbounds %struct.S2, ptr %S2.tmp2, i32 0, i32 2
+// CHECK-NEXT:   %14 = load i32, ptr %13, align 4
+// CHECK-NEXT:   call void @println(i32 %14)
+
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn main() -> void {
+  foo();
+  bar();
+}

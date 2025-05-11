@@ -1,0 +1,61 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '1\n2\n'
+struct S {
+  x: int,
+  y: int,
+}
+
+fn foo(const s: S) -> void {
+  println(s.x);
+  println(s.y);
+}
+// CHECK: define void @foo(ptr readonly %s) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %s, i32 0, i32 0
+// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
+// CHECK-NEXT:   call void @println(i32 %1)
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.S, ptr %s, i32 0, i32 1
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   call void @println(i32 %3)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn bar(s: S) -> S {
+  return s;
+}
+// CHECK: define void @bar(ptr sret(%struct.S) %ret, ptr byval(%struct.S) %s) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ret, ptr align 4 %s, i64 8, i1 false)
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: return:                                           ; preds = %entry
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn main() -> void {
+  let s = S { x: 1, y: 2 };
+  foo(s);
+  s = bar(s);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %s = alloca %struct.S, align 8
+// CHECK-NEXT:   %S.tmp = alloca %struct.S, align 8
+
+// CHECK-NEXT:   %struct.ret.tmp = alloca %struct.S, align 8
+// CHECK-NEXT:   %struct.arg.tmp = alloca %struct.S, align 8
+
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %1, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %S.tmp, i64 8, i1 false)
+
+// CHECK-NEXT:   call void @foo(ptr readonly %s)
+
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %struct.arg.tmp, ptr align 4 %s, i64 8, i1 false)
+// CHECK-NEXT:   call void @bar(ptr sret(%struct.S) %struct.ret.tmp, ptr byval(%struct.S) %struct.arg.tmp)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %struct.ret.tmp, i64 8, i1 false)
+
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

@@ -1,0 +1,30 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | ( ! grep ^ )
+fn foo(x: int) -> void {
+    if x == 0 {
+        return;
+    }
+}
+
+fn main() -> void {
+    foo(2);
+}
+// CHECK: define void @foo(i32 %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   %1 = icmp eq i32 %0, 0
+// CHECK-NEXT:   %bool.to.int = zext i1 %1 to i32
+// CHECK-NEXT:   %int.to.bool = icmp ne i32 %bool.to.int, 0
+// CHECK-NEXT:   br i1 %int.to.bool, label %if.true, label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %entry
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %entry
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: return:                                           ; preds = %if.exit, %if.true
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

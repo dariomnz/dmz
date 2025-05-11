@@ -1,0 +1,34 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzxe '-234\n456\n-12\n'
+fn negate(x: int) -> int {
+    return -x;
+    
+    // CHECK: %0 = load i32, ptr %x1, align 4
+    // CHECK-NEXT: %1 = sub i32 0, %0
+}
+
+fn null(x: int) -> int {
+    return --x;
+
+    // CHECK: %0 = load i32, ptr %x1, align 4
+    // CHECK-NEXT: %1 = sub i32 0, %0
+    // CHECK-NEXT: %2 = sub i32 0, %1
+}
+
+fn timesNeg3(x: int) -> int {
+    return -(x - -x -(-x));
+    // CHECK: %0 = load i32, ptr %x1, align 4
+    // CHECK-NEXT: %1 = load i32, ptr %x1, align 4
+    // CHECK-NEXT: %2 = sub i32 0, %1
+    // CHECK-NEXT: %3 = sub i32 %0, %2
+    // CHECK-NEXT: %4 = load i32, ptr %x1, align 4
+    // CHECK-NEXT: %5 = sub i32 0, %4
+    // CHECK-NEXT: %6 = sub i32 %3, %5
+    // CHECK-NEXT: %7 = sub i32 0, %6
+}
+
+fn main() -> void {
+    println(negate(234));
+    println(null(456));
+    println(timesNeg3(4));
+}

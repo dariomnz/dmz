@@ -1,0 +1,22 @@
+// RUN: compiler %s -run | grep -Plzx '1\n-1\n-9\n'
+fn foo(x: int) -> int {
+    if x < (0 - 5) {
+        return (0 - 1);
+    } else if x > 5 {
+        return 1;
+    }
+
+    let const x: int = 2 + 3;
+    
+    let y: int = !x;
+    
+    y = 3 * !y / (1 + 2);
+
+    return y - 10;
+}
+
+fn main() -> void {
+    println(foo(6));
+    println(foo(0 - 6));
+    println(foo(1));
+}

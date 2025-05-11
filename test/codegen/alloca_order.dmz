@@ -1,0 +1,40 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '1\n2\n3\n'
+fn foo(x: int, y: int, z: int) -> void {
+    let x: int = x;
+    let y: int = y;
+    let z: int = z;
+
+    println(x);
+    println(y);
+    println(z);
+}
+// CHECK: define void @foo(i32 %x, i32 %y, i32 %z) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   %y2 = alloca i32, align 4
+// CHECK-NEXT:   %z3 = alloca i32, align 4
+// CHECK-NEXT:   %x4 = alloca i32, align 4
+// CHECK-NEXT:   %y5 = alloca i32, align 4
+// CHECK-NEXT:   %z6 = alloca i32, align 4
+// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
+// CHECK-NEXT:   store i32 %y, ptr %y2, align 4
+// CHECK-NEXT:   store i32 %z, ptr %z3, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   store i32 %0, ptr %x4, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %y2, align 4
+// CHECK-NEXT:   store i32 %1, ptr %y5, align 4
+// CHECK-NEXT:   %2 = load i32, ptr %z3, align 4
+// CHECK-NEXT:   store i32 %2, ptr %z6, align 4
+// CHECK-NEXT:   %3 = load i32, ptr %x4, align 4
+// CHECK-NEXT:   call void @println(i32 %3)
+// CHECK-NEXT:   %4 = load i32, ptr %y5, align 4
+// CHECK-NEXT:   call void @println(i32 %4)
+// CHECK-NEXT:   %5 = load i32, ptr %z6, align 4
+// CHECK-NEXT:   call void @println(i32 %5)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn main() -> void {
+    foo(1, 2, 3);
+}

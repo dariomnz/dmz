@@ -1,0 +1,17 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '0\n10\n12345\n10002345\n123456789\n'
+fn main() -> void {
+    println(0);
+    println(10);
+    println(12345);
+    println(10002345);
+    println(123456789);
+}
+
+// CHECK: define void @println(i32 %n) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @0, i32 %n)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+// CHECK: declare i32 @printf(ptr %0, ...)
