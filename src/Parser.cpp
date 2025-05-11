@@ -27,9 +27,9 @@ namespace C {
     }
 }
 
-[[maybe_unused]] constexpr static inline bool is_top_level_token(TokenType tok) {
-    return tok == TokenType::eof || tok == TokenType::kw_fn || tok == TokenType::kw_struct;
-}
+static const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof, TokenType::kw_fn, TokenType::kw_struct,
+                                                               TokenType::kw_extern};
+[[maybe_unused]] static inline bool is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
     m_incompleteAST = true;
@@ -44,7 +44,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
     std::vector<std::unique_ptr<Decl>> declarations;
 
     while (m_nextToken.type != TokenType::eof) {
-        if (m_nextToken.type == TokenType::kw_fn) {
+        if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
             if (auto fn = parse_function_decl()) {
                 declarations.emplace_back(std::move(fn));
                 continue;
@@ -58,7 +58,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
             report(m_nextToken.loc, "expected function or struct declaration on the top level");
         }
 
-        synchronize_on({TokenType::kw_fn, TokenType::kw_struct});
+        synchronize_on(top_level_tokens);
         continue;
     }
 
@@ -71,9 +71,18 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
 }
 
 // <functionDecl>
-//  ::= 'fn' <identifier> '(' ')' '->' <type> <block>
-std::unique_ptr<FunctionDecl> Parser::parse_function_decl() {
+//  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
+std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     SourceLocation loc = m_nextToken.loc;
+    bool isExtern = false;
+
+    if (m_nextToken.type == TokenType::kw_extern) {
+        isExtern = true;
+        eat_next_token();  // eat extern
+    }
+
+    matchOrReturn(TokenType::kw_fn, "expected 'fn'");
+
     eat_next_token();  // eat fn
 
     matchOrReturn(TokenType::id, "expected identifier");
@@ -89,6 +98,12 @@ std::unique_ptr<FunctionDecl> Parser::parse_function_decl() {
     eat_next_token();  // eat '->'
 
     varOrReturn(type, parse_type());
+
+    if (isExtern) {
+        matchOrReturn(TokenType::semicolon, "expected ';'");
+        eat_next_token();
+        return std::make_unique<ExternFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList));
+    }
 
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
@@ -111,12 +126,12 @@ std::optional<Type> Parser::parse_type() {
         TokenType::kw_char,
         TokenType::id,
     };
-    
+
     if (types.count(type) == 0) {
         report(m_nextToken.loc, "expected type specifier");
         return std::nullopt;
     }
-    eat_next_token();  // eat type
+    eat_next_token();      // eat type
 
     if (m_nextToken.type == TokenType::bracket_l) {
         eat_next_token();  // eat '['
@@ -141,7 +156,7 @@ std::optional<Type> Parser::parse_type() {
     if (type == TokenType::id) {
         t = Type::custom(name);
     }
-    
+
     t.isSlice = isSlice;
     return t;
 }

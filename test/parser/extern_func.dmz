@@ -1,0 +1,14 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+extern fn puts(str: char[]) -> int;
+// CHECK: ExternFunctionDecl: puts -> int
+// CHECK-NEXT:  ParamDecl: str:char[]
+
+extern fn dprintf(fd:int, format: char[], value:int) -> int;
+
+fn main() -> void {
+    puts("Hello, world");
+    puts("Hello, world");
+
+    dprintf(1, "The value ten in number: '%d'\n", 10);
+}

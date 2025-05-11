@@ -1,10 +1,11 @@
 # TODO
 
-- [ ] More types
+- [x] More types
 - [ ] Arrays, vectors and slice
 - [ ] Error handling
-- [ ] External functions
-- [ ] Traits 
-- [ ] Generics 
+- [x] External functions
+- [ ] External functions tests
+- [ ] Traits
+- [ ] Generics
 - [ ] Modules
-- [ ] std 
+- [ ] std

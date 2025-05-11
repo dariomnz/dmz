@@ -23,7 +23,7 @@ class Codegen {
 
     llvm::Module *generate_ir();
     llvm::Type *generate_type(const Type &type);
-    void generate_function_decl(const ResolvedFunctionDecl &functionDecl);
+    void generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFunctionDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
     void generate_block(const ResolvedBlock &block);
@@ -33,7 +33,7 @@ class Codegen {
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
     void generate_builtin_println_body(const ResolvedFunctionDecl &println);
     void generate_main_wrapper();
-    llvm::AttributeList construct_attr_list(const ResolvedFunctionDecl &fn);
+    llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
     llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
     llvm::Value *int_to_bool(llvm::Value *v);

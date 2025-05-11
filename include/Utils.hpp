@@ -48,14 +48,58 @@ class DeferAction {
 };
 
 #define ____defer(action, line) DeferAction defer_object_##line(action)
-#define __defer(action, line) ____defer(action, line)
-#define defer(action) __defer(action, __LINE__)
-
+#define __defer(action, line)   ____defer(action, line)
+#define defer(action)           __defer(action, __LINE__)
 
 // helper type for the visitor #4
-template<class... Ts>
-struct overload : Ts... { using Ts::operator()...; };
+template <class... Ts>
+struct overload : Ts... {
+    using Ts::operator()...;
+};
 // explicit deduction guide (not needed as of C++20)
-template<class... Ts>
+template <class... Ts>
 overload(Ts...) -> overload<Ts...>;
+
+[[maybe_unused]] static std::optional<std::string> str_from_source(std::string_view literal) {
+    std::string res = "";
+    static const std::unordered_map<char, char> specialChars = {
+        {'n', '\n'}, {'t', '\t'}, {'r', '\r'},  {'v', '\v'},  {'b', '\b'},  {'f', '\f'},
+        {'a', '\a'}, {'0', '\0'}, {'\\', '\\'}, {'\"', '\"'}, {'\'', '\''},
+    };
+    for (size_t i = 0; i < literal.length(); ++i) {
+        if (literal[i] == '\\') {
+            i++;
+            if (i < literal.length()) {
+                auto it = specialChars.find(literal[i]);
+                if (it != specialChars.end()) {
+                    res += it->second;
+                }
+            } else {
+                // Error end '\'
+                return std::nullopt;
+            }
+        } else {
+            res += literal[i];
+        }
+    }
+    return res;
+}
+
+[[maybe_unused]] static std::string str_to_source(std::string_view str) {
+    std::string res = "";
+    static const std::unordered_map<char, const char*> specialChars = {
+        {'\n', "\\n"}, {'\t', "\\t"}, {'\r', "\\r"},  {'\v', "\\v"},  {'\b', "\\b"},  {'\f', "\\f"},
+        {'\a', "\\a"}, {'\0', "\\0"}, {'\\', "\\\\"}, {'\"', "\\\""}, {'\'', "\\\'"},
+    };
+    for (size_t i = 0; i < str.length(); ++i) {
+        auto it = specialChars.find(str[i]);
+        if (it != specialChars.end()) {
+            res += it->second;
+        } else {
+            res += str[i];
+        }
+    }
+    return res;
+}
+
 }  // namespace C

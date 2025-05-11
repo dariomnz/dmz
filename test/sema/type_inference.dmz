@@ -4,7 +4,11 @@ fn foo() -> int {
 }
 
 fn bar() -> char {
-    return 'a';
+    return '\n';
+}
+
+fn str() -> char[] {
+    return "hello\n";
 }
 
 fn main() -> void {
@@ -17,9 +21,12 @@ fn main() -> void {
     let c1 = 'a';
     let c2 = bar();
     let c3: char;
+
+    let str1 = "something\n";
+    let str2 = str();
 }
-// CHECK: ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedVarDecl: x:
+
+// CHECK:   ResolvedVarDecl: x:
 // CHECK-NEXT:     ResolvedIntLiteral: '1'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt:
@@ -27,3 +34,9 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
 // CHECK-NEXT:       ResolvedCallExpr: foo
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
+
+// CHECK:      ResolvedVarDecl: str1:
+// CHECK-NEXT:        ResolvedStringLiteral: 'something\n'
+// CHECK-NEXT:    ResolvedDeclStmt:
+// CHECK-NEXT:      ResolvedVarDecl: str2:
+// CHECK-NEXT:        ResolvedCallExpr: str

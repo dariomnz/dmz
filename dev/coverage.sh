@@ -7,9 +7,11 @@ cmake --build ./build -j $(nproc)
 
 cmake --build ./build -t check
 
-mkdir coverage_report
+mkdir -p coverage_report
 COV_FILE=./coverage_report/compiler.profdata
 llvm-profdata merge -output=${COV_FILE} $(find ./test -name *.profraw)
 
 llvm-cov show ./build/bin/compiler -instr-profile=${COV_FILE} -format=html -output-dir=coverage_report
 llvm-cov show ./build/bin/compiler -instr-profile=${COV_FILE} -format=text -output-dir=coverage_report
+
+google-chrome file://wsl.localhost/Ubuntu/$(pwd)/coverage_report/index.html

@@ -11,7 +11,7 @@ llvm::Module *Codegen::generate_ir() {
     ScopedTimer st(Stats::type::codegenTime);
 
     for (auto &&decl : m_resolvedTree) {
-        if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
+        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get()))
             generate_function_decl(*fn);
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_decl(*sd);
@@ -20,7 +20,9 @@ llvm::Module *Codegen::generate_ir() {
     }
 
     for (auto &&decl : m_resolvedTree) {
-        if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
+        if (const auto *fn = dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()))
+            continue;
+        else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_body(*fn);
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_definition(*sd);
@@ -34,18 +36,25 @@ llvm::Module *Codegen::generate_ir() {
 }
 
 llvm::Type *Codegen::generate_type(const Type &type) {
+    llvm::Type *ret = nullptr;
     if (type.kind == Type::Kind::Int) {
-        return m_builder.getInt32Ty();
+        ret = m_builder.getInt32Ty();
     }
-
+    if (type.kind == Type::Kind::Char) {
+        ret = m_builder.getInt8Ty();
+    }
     if (type.kind == Type::Kind::Struct) {
-        return llvm::StructType::getTypeByName(m_context, "struct." + std::string(type.name));
+        ret = llvm::StructType::getTypeByName(m_context, "struct." + std::string(type.name));
     }
+    if (ret == nullptr) return m_builder.getVoidTy();
 
-    return m_builder.getVoidTy();
+    if (ret != nullptr && type.isSlice) {
+        ret = llvm::PointerType::get(ret, 0);
+    }
+    return ret;
 }
 
-void Codegen::generate_function_decl(const ResolvedFunctionDecl &functionDecl) {
+void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     llvm::Type *retType = generate_type(functionDecl.type);
     std::vector<llvm::Type *> paramTypes;
 
@@ -65,7 +74,7 @@ void Codegen::generate_function_decl(const ResolvedFunctionDecl &functionDecl) {
     fn->setAttributes(construct_attr_list(functionDecl));
 }
 
-llvm::AttributeList Codegen::construct_attr_list(const ResolvedFunctionDecl &fn) {
+llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
     bool isReturningStruct = fn.type.kind == Type::Kind::Struct;
     std::vector<llvm::AttributeSet> argsAttrSets;
 
@@ -207,6 +216,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *number = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
         return llvm::ConstantInt::get(m_builder.getInt8Ty(), number->value);
     }
+    if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
+        return m_builder.CreateGlobalStringPtr(str->value, "global.str");
+    }
     if (auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return generate_decl_ref_expr(*dre, keepPointer);
     }
@@ -232,7 +244,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
-    const ResolvedFunctionDecl &calleeDecl = call.callee;
+    const ResolvedFuncDecl &calleeDecl = call.callee;
     llvm::Function *callee = m_module.getFunction(calleeDecl.identifier);
 
     bool isReturningStruct = calleeDecl.type.kind == Type::Kind::Struct;
@@ -361,7 +373,9 @@ llvm::Value *Codegen::int_to_bool(llvm::Value *v) {
     return m_builder.CreateICmpNE(v, llvm::ConstantInt::get(m_builder.getInt32Ty(), 0), "int.to.bool");
 }
 
-llvm::Value *Codegen::bool_to_int(llvm::Value *v) { return m_builder.CreateIntCast(v, m_builder.getInt32Ty(), false); }
+llvm::Value *Codegen::bool_to_int(llvm::Value *v) {
+    return m_builder.CreateIntCast(v, m_builder.getInt32Ty(), false, "bool.to.int");
+}
 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };
 
@@ -479,6 +493,10 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type
 llvm::Value *Codegen::load_value(llvm::Value *v, const Type &type) {
     if (type.kind == Type::Kind::Int) {
         return m_builder.CreateLoad(m_builder.getInt32Ty(), v);
+    }
+
+    if (type.kind == Type::Kind::Char) {
+        return m_builder.CreateLoad(m_builder.getInt8Ty(), v);
     }
 
     return v;

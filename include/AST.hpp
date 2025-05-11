@@ -24,6 +24,7 @@ struct Type {
 
 template <typename Ty>
 class ConstantValueContainer {
+   protected:
     std::optional<Ty> value = std::nullopt;
 
    public:
@@ -248,17 +249,29 @@ struct VarDecl : public Decl {
     void dump(size_t level = 0) const override;
 };
 
-struct FunctionDecl : public Decl {
+struct FuncDecl : public Decl {
     Type type;
     std::vector<std::unique_ptr<ParamDecl>> params;
+
+    FuncDecl(SourceLocation location, std::string_view identifier, Type type,
+             std::vector<std::unique_ptr<ParamDecl>> params)
+        : Decl(location, std::move(identifier)), type(std::move(type)), params(std::move(params)) {}
+};
+
+struct ExternFunctionDecl : public FuncDecl {
+    ExternFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                       std::vector<std::unique_ptr<ParamDecl>> params)
+        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FunctionDecl : public FuncDecl {
     std::unique_ptr<Block> body;
 
     FunctionDecl(SourceLocation location, std::string_view identifier, Type type,
                  std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body)
-        : Decl(location, std::move(identifier)),
-          type(std::move(type)),
-          params(std::move(params)),
-          body(std::move(body)) {}
+        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)), body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -299,6 +312,8 @@ struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public Resolved
     ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type) {}
 
     virtual ~ResolvedExpr() = default;
+
+    void dump_constant_value(size_t level) const;
 };
 
 struct ResolvedDecl {
@@ -376,15 +391,29 @@ struct ResolvedVarDecl : public ResolvedDecl {
     void dump(size_t level = 0) const override;
 };
 
-struct ResolvedFunctionDecl : public ResolvedDecl {
+struct ResolvedFuncDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
+
+    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, Type type,
+                     std::vector<std::unique_ptr<ResolvedParamDecl>> params)
+        : ResolvedDecl(location, std::move(identifier), type, false), params(std::move(params)) {}
+
+};
+
+struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
+    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                               std::vector<std::unique_ptr<ResolvedParamDecl>> params)
+        : ResolvedFuncDecl(location, std::move(identifier), type, std::move(params)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     std::unique_ptr<ResolvedBlock> body;
 
     ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
                          std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
-        : ResolvedDecl(location, std::move(identifier), type, false),
-          params(std::move(params)),
-          body(std::move(body)) {}
+        : ResolvedFuncDecl(location, std::move(identifier), type, std::move(params)), body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -417,7 +446,7 @@ struct ResolvedCharLiteral : public ResolvedExpr {
 };
 
 struct ResolvedStringLiteral : public ResolvedExpr {
-    std::string_view value;
+    std::string value;
 
     ResolvedStringLiteral(SourceLocation location, std::string_view value)
         : ResolvedExpr(location, Type::builtinChar()), value(value) {}
@@ -426,10 +455,10 @@ struct ResolvedStringLiteral : public ResolvedExpr {
 };
 
 struct ResolvedCallExpr : public ResolvedExpr {
-    const ResolvedFunctionDecl &callee;
+    const ResolvedFuncDecl &callee;
     std::vector<std::unique_ptr<ResolvedExpr>> arguments;
 
-    ResolvedCallExpr(SourceLocation location, const ResolvedFunctionDecl &callee,
+    ResolvedCallExpr(SourceLocation location, const ResolvedFuncDecl &callee,
                      std::vector<std::unique_ptr<ResolvedExpr>> arguments)
         : ResolvedExpr(location, callee.type), callee(callee), arguments(std::move(arguments)) {}
 

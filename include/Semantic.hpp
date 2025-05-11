@@ -31,9 +31,9 @@ class Sema {
     std::pair<T *, int> lookup_decl(const std::string_view id);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
-    std::vector<std::unique_ptr<ResolvedFunctionDecl>> resolve_source_file();
+    std::vector<std::unique_ptr<ResolvedFuncDecl>> resolve_source_file();
     std::optional<Type> resolve_type(Type parsedType);
-    std::unique_ptr<ResolvedFunctionDecl> resolve_function_decl(const FunctionDecl &function);
+    std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);
     std::unique_ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);

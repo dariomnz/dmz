@@ -63,7 +63,7 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     ResolvedDecl *decl = lookup_decl<ResolvedDecl>(declRefExpr.identifier).first;
     if (!decl) return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
 
-    if (!isCallee && dynamic_cast<ResolvedFunctionDecl *>(decl))
+    if (!isCallee && dynamic_cast<ResolvedFuncDecl *>(decl))
         return report(declRefExpr.location, "expected to call function '" + std::string(declRefExpr.identifier) + "'");
 
     if (dynamic_cast<ResolvedStructDecl *>(decl))
@@ -78,11 +78,11 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
     varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
 
-    const auto *resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&resolvedCallee->decl);
+    const auto *resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
 
-    if (!resolvedFunctionDecl) return report(call.location, "calling non-function symbol");
+    if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
-    if (call.arguments.size() != resolvedFunctionDecl->params.size())
+    if (call.arguments.size() != resolvedFuncDecl->params.size())
         return report(call.location, "argument count mismatch in function call");
 
     std::vector<std::unique_ptr<ResolvedExpr>> resolvedArguments;
@@ -90,7 +90,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     for (auto &&arg : call.arguments) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
 
-        if (resolvedArg->type.name != resolvedFunctionDecl->params[idx]->type.name)
+        if (resolvedArg->type.name != resolvedFuncDecl->params[idx]->type.name)
             return report(resolvedArg->location, "unexpected type of argument");
 
         resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
@@ -99,7 +99,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         resolvedArguments.emplace_back(std::move(resolvedArg));
     }
 
-    return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFunctionDecl, std::move(resolvedArguments));
+    return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
 }
 
 std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
@@ -148,46 +148,23 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
     return std::make_unique<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr));
 }
 
-static inline std::optional<char> str_view_to_char(std::string_view sv) {
-    if (sv[1] != '\\') return sv[1];
-    switch (sv[2]) {
-        case '\'':
-            return '\'';
-        case '\"':
-            return '\"';
-        case '\\':
-            return '\\';
-        case 'n':
-            return '\n';
-        case 'r':
-            return '\r';
-        case 't':
-            return '\t';
-        case 'v':
-            return '\v';
-        case 'b':
-            return '\b';
-        case 'f':
-            return '\f';
-        case 'a':
-            return '\a';
-        case '0':
-            return '\0';
-        default:
-            return std::nullopt;
-    }
-    llvm_unreachable("unexpected char literal");
-}
-
 std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
         return std::make_unique<ResolvedIntLiteral>(number->location, std::stod(std::string(number->value)));
     }
     if (const auto *character = dynamic_cast<const CharLiteral *>(&expr)) {
-        if (auto c = str_view_to_char(character->value)) {
-            return std::make_unique<ResolvedCharLiteral>(character->location, *c);
+        if (auto c = str_from_source(character->value.substr(1, character->value.size() - 1))) {
+            return std::make_unique<ResolvedCharLiteral>(character->location, (*c)[0]);
         } else {
-            return nullptr;
+            return report(character->location, "malformed char");
+        }
+    }
+
+    if (const auto *str = dynamic_cast<const StringLiteral *>(&expr)) {
+        if (auto c = str_from_source(str->value.substr(1, str->value.size() - 2))) {
+            return std::make_unique<ResolvedStringLiteral>(str->location, *c);
+        } else {
+            return report(str->location, "malformed string");
         }
     }
 
@@ -258,7 +235,7 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable);
 }
 
-std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const FunctionDecl &function) {
+std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     std::optional<Type> type = resolve_type(function.type);
 
     if (!type)
@@ -288,8 +265,16 @@ std::unique_ptr<ResolvedFunctionDecl> Sema::resolve_function_decl(const Function
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    return std::make_unique<ResolvedFunctionDecl>(function.location, function.identifier, *type,
-                                                  std::move(resolvedParams), nullptr);
+    if (auto func = dynamic_cast<const ExternFunctionDecl *>(&function)) {
+        return std::make_unique<ResolvedExternFunctionDecl>(function.location, function.identifier, *type,
+                                                            std::move(resolvedParams));
+    }
+    if (auto func = dynamic_cast<const FunctionDecl *>(&function)) {
+        return std::make_unique<ResolvedFunctionDecl>(function.location, function.identifier, *type,
+                                                      std::move(resolvedParams), nullptr);
+    }
+
+    llvm_unreachable("unexpected function");
 };
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
@@ -299,7 +284,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
 
     bool error = false;
-    std::vector<const FunctionDecl *> functionsToResolve;
+    std::vector<const FuncDecl *> functionsToResolve;
 
     // Resolve every struct first so that functions have access to them in their
     // signature.
@@ -318,7 +303,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
                 continue;
             }
 
-            if (const auto *fn = dynamic_cast<const FunctionDecl *>(decl.get())) {
+            if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
                 functionsToResolve.emplace_back(fn);
                 continue;
             }
@@ -345,6 +330,10 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
         }
     }
 
+    // Clear the extern functions
+    std::erase_if(functionsToResolve,
+                  [](const FuncDecl *func) { return dynamic_cast<const ExternFunctionDecl *>(func); });
+
     if (error) return {};
     {
         ScopedTimer st(Stats::type::semanticResolveBodysTime);
@@ -363,9 +352,13 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
                 for (auto &&param : fn->params) insert_decl_to_current_scope(*param);
 
                 currentFunction = fn;
-                if (auto resolvedBody = resolve_block(*(*nextFunctionDecl++)->body)) {
-                    fn->body = std::move(resolvedBody);
-                    error |= run_flow_sensitive_checks(*fn);
+                if (auto nextFunc = dynamic_cast<const FunctionDecl *>(*nextFunctionDecl++)) {
+                    if (auto resolvedBody = resolve_block(*nextFunc->body)) {
+                        fn->body = std::move(resolvedBody);
+                        error |= run_flow_sensitive_checks(*fn);
+                        continue;
+                    }
+                } else {
                     continue;
                 }
 

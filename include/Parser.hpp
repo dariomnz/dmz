@@ -50,7 +50,7 @@ class Parser {
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
 
    private:
-    std::unique_ptr<FunctionDecl> parse_function_decl();
+    std::unique_ptr<FuncDecl> parse_function_decl();
     std::optional<Type> parse_type();
     std::unique_ptr<Block> parse_block();
     std::unique_ptr<ReturnStmt> parse_return_stmt();

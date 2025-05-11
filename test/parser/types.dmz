@@ -1,15 +1,18 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     let i: int = 10;
+    // CHECK: VarDecl: i:int
+    // CHECK-NEXT:   IntLiteral: '10'
+
     let c1: char = 'c';
+    // CHECK: VarDecl: c1:char
+    // CHECK-NEXT:   CharLiteral: ''c''
+
     let c2: char = '\n';
+    // CHECK: VarDecl: c2:char
+    // CHECK-NEXT:   CharLiteral: ''\n''
+
     let c3: char[] = "Hello, world\n";
-    
-    // CHECK: [[# @LINE + 1 ]]:20: error: expected expression
-    let c3: char = 'c;
+    // CHECK: VarDecl: c3:char[]
+    // CHECK-NEXT:   StringLiteral: '"Hello, world\n"'
 }
-// CHECK: VarDecl: i:int
-// CHECK: VarDecl: c1:char
-// CHECK:   CharLiteral: ''c''
-// CHECK: VarDecl: c2:char
-// CHECK:   CharLiteral: ''\n''

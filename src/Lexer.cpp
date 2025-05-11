@@ -53,6 +53,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_while);
         CASE_TYPE(kw_return);
         CASE_TYPE(kw_struct);
+        CASE_TYPE(kw_extern);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -217,7 +218,7 @@ Token Lexer::next_token() {
         debug_msg(TokenType::lit_string);
         size_t str_count = 1;
         advance();
-        while (file_content[str_count] != '\"') {
+        while (file_content[str_count] != '\"' && file_content[str_count] != '\n') {
             str_count++;
             advance();
         }
