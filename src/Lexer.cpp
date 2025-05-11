@@ -35,6 +35,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(block_r);
         CASE_TYPE(par_l);
         CASE_TYPE(par_r);
+        CASE_TYPE(bracket_l);
+        CASE_TYPE(bracket_r);
         CASE_TYPE(colon);
         CASE_TYPE(semicolon);
         CASE_TYPE(comma);
@@ -160,7 +162,7 @@ Token Lexer::next_token() {
         size_t comment_count = 2;
         // For the //
         advance(2);
-        while (file_content[comment_count] != '\n') {
+        while (comment_count < file_content.size() && file_content[comment_count] != '\n') {
             comment_count++;
             advance();
         }
@@ -184,6 +186,16 @@ Token Lexer::next_token() {
     } else if (file_content[0] == ')') {
         debug_msg(TokenType::par_r);
         t.type = TokenType::par_r;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '[') {
+        debug_msg(TokenType::bracket_l);
+        t.type = TokenType::bracket_l;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == ']') {
+        debug_msg(TokenType::bracket_r);
+        t.type = TokenType::bracket_r;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ':') {

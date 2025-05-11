@@ -34,6 +34,8 @@ enum class TokenType {
     block_r,
     par_l,
     par_r,
+    bracket_l,
+    bracket_r,
     colon,
     semicolon,
     comma,

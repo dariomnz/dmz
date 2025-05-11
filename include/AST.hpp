@@ -11,12 +11,15 @@ struct Type {
 
     Kind kind;
     std::string_view name;
+    bool isSlice = false;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
     static Type builtinChar() { return {Kind::Char, "char"}; }
     static Type custom(const std::string_view &name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view &name) { return {Kind::Struct, name}; }
+
+    void dump() const;
 };
 
 template <typename Ty>
@@ -128,6 +131,14 @@ struct CharLiteral : public Expr {
     std::string_view value;
 
     CharLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct StringLiteral : public Expr {
+    std::string_view value;
+
+    StringLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -400,6 +411,15 @@ struct ResolvedCharLiteral : public ResolvedExpr {
     char value;
 
     ResolvedCharLiteral(SourceLocation location, char value)
+        : ResolvedExpr(location, Type::builtinChar()), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedStringLiteral : public ResolvedExpr {
+    std::string_view value;
+
+    ResolvedStringLiteral(SourceLocation location, std::string_view value)
         : ResolvedExpr(location, Type::builtinChar()), value(value) {}
 
     void dump(size_t level = 0) const override;

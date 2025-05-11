@@ -103,28 +103,47 @@ std::unique_ptr<FunctionDecl> Parser::parse_function_decl() {
 //  |   <identifier>
 std::optional<Type> Parser::parse_type() {
     TokenType type = m_nextToken.type;
+    std::string_view name = m_nextToken.str;
+    bool isSlice = false;
+    std::unordered_set<TokenType> types = {
+        TokenType::kw_void,
+        TokenType::kw_int,
+        TokenType::kw_char,
+        TokenType::id,
+    };
+    
+    if (types.count(type) == 0) {
+        report(m_nextToken.loc, "expected type specifier");
+        return std::nullopt;
+    }
+    eat_next_token();  // eat type
 
+    if (m_nextToken.type == TokenType::bracket_l) {
+        eat_next_token();  // eat '['
+        if (m_nextToken.type != TokenType::bracket_r) {
+            report(m_nextToken.loc, "expected ']' next to a '[' in a type");
+            return std::nullopt;
+        }
+        eat_next_token();  // eat ']'
+        isSlice = true;
+    }
+    Type t;
     if (type == TokenType::kw_void) {
-        eat_next_token();  // eat 'void'
-        return Type::builtinVoid();
+        t = Type::builtinVoid();
     }
     if (type == TokenType::kw_char) {
-        eat_next_token();  // eat 'void'
-        return Type::builtinChar();
+        t = Type::builtinChar();
     }
     if (type == TokenType::kw_int) {
-        eat_next_token();  // eat 'void'
-        return Type::builtinInt();
+        t = Type::builtinInt();
     }
 
     if (type == TokenType::id) {
-        auto t = Type::custom(m_nextToken.str);
-        eat_next_token();  // eat identifier
-        return t;
+        t = Type::custom(name);
     }
-
-    report(m_nextToken.loc, "expected type specifier");
-    return std::nullopt;
+    
+    t.isSlice = isSlice;
+    return t;
 }
 
 // <block>
@@ -201,6 +220,12 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
     if (m_nextToken.type == TokenType::lit_char) {
         auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
+        eat_next_token();  // eat char
+        return literal;
+    }
+
+    if (m_nextToken.type == TokenType::lit_string) {
+        auto literal = std::make_unique<StringLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat char
         return literal;
     }

@@ -2,6 +2,11 @@
 
 namespace C {
 
+void Type::dump() const {
+    std::cerr << name;
+    if (isSlice) std::cerr << "[]";
+}
+
 [[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
     if (op == TokenType::op_plus) return "+";
     if (op == TokenType::op_minus) return "-";
@@ -22,7 +27,9 @@ namespace C {
 }
 
 void FunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FunctionDecl: " << identifier << " -> " << type.name << '\n';
+    std::cerr << indent(level) << "FunctionDecl: " << identifier << " -> ";
+    type.dump();
+    std::cerr << '\n';
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -44,6 +51,8 @@ void IntLiteral::dump(size_t level) const { std::cerr << indent(level) << "IntLi
 
 void CharLiteral::dump(size_t level) const { std::cerr << indent(level) << "CharLiteral: '" << value << "'\n"; }
 
+void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "StringLiteral: '" << value << "'\n"; }
+
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr: " << identifier << '\n'; }
 
 void CallExpr::dump(size_t level) const {
@@ -55,7 +64,9 @@ void CallExpr::dump(size_t level) const {
 }
 
 void ParamDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ParamDecl: " << identifier << ':' << type.name << '\n';
+    std::cerr << indent(level) << "ParamDecl: " << identifier << ':';
+    type.dump();
+    std::cerr << '\n';
 }
 
 void BinaryOperator::dump(size_t level) const {
@@ -94,7 +105,10 @@ void WhileStmt::dump(size_t level) const {
 
 void VarDecl::dump(size_t level) const {
     std::cerr << indent(level) << "VarDecl" << (isMutable ? "" : " const") << ": " << identifier;
-    if (type) std::cerr << ':' << type->name;
+    if (type) {
+        std::cerr << ':';
+        type->dump();
+    }
     std::cerr << '\n';
 
     if (initializer) initializer->dump(level + 1);
@@ -112,7 +126,9 @@ void Assignment::dump(size_t level) const {
 }
 
 void FieldDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FieldDecl: " << identifier << ':' << type.name << '\n';
+    std::cerr << indent(level) << "FieldDecl: " << identifier << ':';
+    type.dump();
+    std::cerr << '\n';
 }
 
 void StructDecl::dump(size_t level) const {
@@ -142,15 +158,25 @@ void ResolvedIntLiteral::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedIntLiteral: '" << value << "'\n";
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
 }
+
 void ResolvedCharLiteral::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedCharLiteral: '" << value << "'\n";
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
+        std::cerr << '\n';
+    }
+}
+
+void ResolvedStringLiteral::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedStringLiteral: '" << value << "'\n";
+    if (auto val = get_constant_value()) {
+        std::cerr << indent(level) << "| value: ";
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
 }
@@ -159,7 +185,7 @@ void ResolvedDeclRefExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedDeclRefExpr: " << decl.identifier << '\n';
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
 }
@@ -169,7 +195,7 @@ void ResolvedCallExpr::dump(size_t level) const {
 
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
     for (auto &&arg : arguments) arg->dump(level + 1);
@@ -182,7 +208,9 @@ void ResolvedBlock::dump(size_t level) const {
 }
 
 void ResolvedParamDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": " << type.name << '\n';
+    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": ";
+    type.dump();
+    std::cerr << '\n';
 }
 
 void ResolvedFunctionDecl::dump(size_t level) const {
@@ -204,7 +232,7 @@ void ResolvedBinaryOperator::dump(size_t level) const {
 
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
     lhs->dump(level + 1);
@@ -216,7 +244,7 @@ void ResolvedUnaryOperator::dump(size_t level) const {
 
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
 
@@ -228,7 +256,7 @@ void ResolvedGroupingExpr::dump(size_t level) const {
 
     if (auto val = get_constant_value()) {
         std::cerr << indent(level) << "| value: ";
-        std::visit([](auto&& i) { std::cerr << i; }, *val);
+        std::visit([](auto &&i) { std::cerr << i; }, *val);
         std::cerr << '\n';
     }
     expr->dump(level + 1);
