@@ -118,9 +118,16 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
 //  |   'void'
 //  |   <identifier>
 std::optional<Type> Parser::parse_type() {
-    TokenType type = m_nextToken.type;
     std::string_view name = m_nextToken.str;
-    bool isSlice = false;
+    bool isArray = false;
+    bool isRef = false;
+
+    if (m_nextToken.type == TokenType::amp) {
+        isRef = true;
+        eat_next_token();  // eat '&'
+    }
+    TokenType type = m_nextToken.type;
+
     std::unordered_set<TokenType> types = {
         TokenType::kw_void,
         TokenType::kw_int,
@@ -141,7 +148,7 @@ std::optional<Type> Parser::parse_type() {
             return std::nullopt;
         }
         eat_next_token();  // eat ']'
-        isSlice = true;
+        isArray = true;
     }
     Type t;
     if (type == TokenType::kw_void) {
@@ -158,7 +165,8 @@ std::optional<Type> Parser::parse_type() {
         t = Type::custom(name);
     }
 
-    t.isSlice = isSlice;
+    if (isArray) t.isArray = 0;
+    t.isRef = isRef;
     return t;
 }
 
@@ -242,7 +250,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
     if (m_nextToken.type == TokenType::lit_string) {
         auto literal = std::make_unique<StringLiteral>(location, m_nextToken.str);
-        eat_next_token();  // eat char
+        eat_next_token();  // eat string
         return literal;
     }
 
@@ -266,6 +274,16 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         }
 
         auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
+        return declRefExpr;
+    }
+
+    if (m_nextToken.type == TokenType::amp) {
+        eat_next_token();  // eat '&'
+        matchOrReturn(TokenType::id, "expected identifier after '&'");
+        std::string_view identifier = m_nextToken.str;
+        eat_next_token();  // eat identifier
+
+        auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier), true);
         return declRefExpr;
     }
 

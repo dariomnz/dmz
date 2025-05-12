@@ -2,9 +2,20 @@
 
 namespace C {
 
-void Type::dump() const {
-    std::cerr << name;
-    if (isSlice) std::cerr << "[]";
+void Type::dump() const { std::cerr << to_str(); }
+
+std::string Type::to_str() const {
+    std::stringstream out;
+    if (isRef) out << "&";
+    out << name;
+    if (isArray) {
+        out << "[";
+        if (*isArray != 0) {
+            out << *isArray;
+        }
+        out << "]";
+    }
+    return out.str();
 }
 
 [[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
@@ -61,7 +72,11 @@ void CharLiteral::dump(size_t level) const { std::cerr << indent(level) << "Char
 
 void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "StringLiteral: '" << value << "'\n"; }
 
-void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr: " << identifier << '\n'; }
+void DeclRefExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "DeclRefExpr: ";
+    if (isRef) std::cerr << "&";
+    std::cerr << identifier << '\n';
+}
 
 void CallExpr::dump(size_t level) const {
     std::cerr << indent(level) << "CallExpr:\n";
@@ -73,9 +88,9 @@ void CallExpr::dump(size_t level) const {
 
 void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl: " << identifier << ':';
-    if (isVararg){
+    if (isVararg) {
         std::cerr << "vararg";
-    }else{
+    } else {
         type.dump();
     }
     std::cerr << '\n';
@@ -194,7 +209,9 @@ void ResolvedStringLiteral::dump(size_t level) const {
 }
 
 void ResolvedDeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedDeclRefExpr: " << decl.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedDeclRefExpr: ";
+    if (decl.isRef) std::cerr << "&";
+    std::cerr << decl.identifier << '\n';
     dump_constant_value(level);
 }
 
@@ -213,9 +230,9 @@ void ResolvedBlock::dump(size_t level) const {
 
 void ResolvedParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": ";
-    if (isVararg){
+    if (isVararg) {
         std::cerr << "vararg";
-    }else{
+    } else {
         type.dump();
     }
     std::cerr << '\n';
@@ -279,7 +296,11 @@ void ResolvedWhileStmt::dump(size_t level) const {
 }
 
 void ResolvedVarDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedVarDecl" << (isMutable ? "" : " const") << ": " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedVarDecl" << (isMutable ? "" : " const") << ": " << identifier << ':';
+    if (initializer) {
+        initializer->type.dump();
+    }
+    std::cerr << '\n';
     if (initializer) initializer->dump(level + 1);
 }
 

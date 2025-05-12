@@ -2,14 +2,24 @@
 fn main() -> void {
     putchar(97); // a
     putchar(10); // \n
-    dprintf(1, "Test %d\n", 10);
+    let fmt = "Test %d\n";
+    let fd = 1;
+    dprintf(fd, &fmt, 10);
+    dprintf(fd, "Hello\n");
 }
 
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
+// CHECK-NEXT:   %fmt = alloca [9 x i8], align 1
+// CHECK-NEXT:   %fd = alloca i32, align 4
 // CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
 // CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
-// CHECK-NEXT:   %2 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str, i32 10)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %fmt, ptr align 1 @global.str, i64 9, i1 false)
+// CHECK-NEXT:   store i32 1, ptr %fd, align 4
+// CHECK-NEXT:   %2 = load i32, ptr %fd, align 4
+// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr %fmt, i32 10)
+// CHECK-NEXT:   %4 = load i32, ptr %fd, align 4
+// CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 %4, ptr @global.str.1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -18,4 +28,4 @@ fn main() -> void {
 extern fn putchar(c:int) -> int;
 
 // CHECK: declare i32 @dprintf(i32 %0, ptr %1, ...)
-extern fn dprintf(fd:int, fmt:char[], ...) -> int;
+extern fn dprintf(fd:int, fmt:&char[], ...) -> int;

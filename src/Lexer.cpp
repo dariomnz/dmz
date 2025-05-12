@@ -29,8 +29,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(op_not_equal);
         CASE_TYPE(op_not);
         CASE_TYPE(op_assign);
-        CASE_TYPE(op_bin_and);
-        CASE_TYPE(op_bin_or);
+        CASE_TYPE(amp);
+        CASE_TYPE(pipe);
         CASE_TYPE(block_l);
         CASE_TYPE(block_r);
         CASE_TYPE(par_l);
@@ -331,13 +331,13 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '|') {
-        debug_msg(TokenType::op_bin_or);
-        t.type = TokenType::op_bin_or;
+        debug_msg(TokenType::pipe);
+        t.type = TokenType::pipe;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '&') {
-        debug_msg(TokenType::op_bin_and);
-        t.type = TokenType::op_bin_and;
+        debug_msg(TokenType::amp);
+        t.type = TokenType::amp;
         t.str = file_content.substr(0, 1);
         advance();
     } else {

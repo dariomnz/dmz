@@ -44,7 +44,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral: '2'
 // CHECK-NEXT:       | value: 2
 // CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:     ResolvedVarDecl: s:
+// CHECK-NEXT:     ResolvedVarDecl: s:S
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: s2
 // CHECK-NEXT:           ResolvedStructInstantiationExpr:
@@ -80,7 +80,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral: '5'
 // CHECK-NEXT:       | value: 5
 // CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:     ResolvedVarDecl: s2:
+// CHECK-NEXT:     ResolvedVarDecl: s2:S
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: x
 // CHECK-NEXT:           ResolvedIntLiteral: '3'

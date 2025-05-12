@@ -29,7 +29,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:     ResolvedVarDecl: s:
+// CHECK-NEXT:     ResolvedVarDecl: s:S
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
 // CHECK-NEXT:         ResolvedFieldInitStmt: y
 // CHECK-NEXT:           ResolvedIntLiteral: '2'

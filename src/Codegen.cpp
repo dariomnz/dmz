@@ -48,7 +48,14 @@ llvm::Type *Codegen::generate_type(const Type &type) {
     }
     if (ret == nullptr) return m_builder.getVoidTy();
 
-    if (ret != nullptr && type.isSlice) {
+    if (ret != nullptr && type.isArray) {
+        if (*type.isArray != 0) {
+            ret = llvm::ArrayType::get(ret, *type.isArray);
+        } else {
+            ret = llvm::PointerType::get(ret, 0);
+        }
+    }
+    if (ret != nullptr && type.isRef) {
         ret = llvm::PointerType::get(ret, 0);
     }
     return ret;
@@ -487,15 +494,26 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &type) {
-    if (type.kind != Type::Kind::Struct) return m_builder.CreateStore(val, ptr);
+    if (type.kind == Type::Kind::Struct) {
+        const llvm::DataLayout &dl = m_module.getDataLayout();
+        const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(type)));
 
-    const llvm::DataLayout &dl = m_module.getDataLayout();
-    const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(type)));
+        return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
+    }
+    if (type.isArray && !type.isRef) {
+        const llvm::DataLayout &dl = m_module.getDataLayout();
+        auto t = generate_type(type);
 
-    return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
+        return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t), dl.getTypeAllocSize(t));
+    }
+
+    return m_builder.CreateStore(val, ptr);
 }
 
 llvm::Value *Codegen::load_value(llvm::Value *v, const Type &type) {
+    if (type.isRef || (type.isArray && *type.isArray != 0)) {
+        return m_builder.CreateLoad(m_builder.getPtrTy(), v);
+    }
     if (type.kind == Type::Kind::Int) {
         return m_builder.CreateLoad(m_builder.getInt32Ty(), v);
     }
@@ -513,6 +531,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 
     keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
     keepPointer |= dre.type.kind == Type::Kind::Struct;
+    keepPointer |= decl.isRef;
 
     return keepPointer ? val : load_value(val, dre.type);
 }

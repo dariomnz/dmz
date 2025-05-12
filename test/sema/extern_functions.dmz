@@ -7,10 +7,10 @@ extern fn bar(a:int) -> void;
 // CHECK: ResolvedExternFunctionDecl: bar:
 // CHECK-NEXT:  ResolvedParamDecl: a: int
 
-extern fn dprintf(fd:int, format: char[], ...) -> int;
+extern fn dprintf(fd:int, format: &char[], ...) -> int;
 // CHECK: ResolvedExternFunctionDecl: dprintf:
 // CHECK-NEXT:  ResolvedParamDecl: fd: int
-// CHECK-NEXT:  ResolvedParamDecl: format: char[]
+// CHECK-NEXT:  ResolvedParamDecl: format: &char[]
 // CHECK-NEXT:  ResolvedParamDecl: ...: vararg
 
 fn main() -> void {

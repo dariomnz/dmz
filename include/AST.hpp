@@ -11,15 +11,36 @@ struct Type {
 
     Kind kind;
     std::string_view name;
-    bool isSlice = false;
+    std::optional<int> isArray = std::nullopt;
+    bool isRef = false;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
     static Type builtinChar() { return {Kind::Char, "char"}; }
+    static Type builtinString(int size) {
+        return Type{.kind = Kind::Char, .name = "char", .isArray = size, .isRef = true};
+    }
     static Type custom(const std::string_view &name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view &name) { return {Kind::Struct, name}; }
 
+    bool operator==(const Type &other) const {
+        bool equalArray = false;
+
+        if (isArray && *isArray == 0) {
+            equalArray = true;
+        } else if (other.isArray && *other.isArray == 0) {
+            equalArray = true;
+        } else if (isArray == other.isArray) {
+            equalArray = true;
+        } else if (isRef && other.isRef) {
+            equalArray = true;
+        }
+
+        return kind == other.kind && name == other.name && equalArray && isRef == other.isRef;
+    }
+
     void dump() const;
+    std::string to_str() const;
 };
 
 template <typename Ty>
@@ -160,9 +181,10 @@ struct AssignableExpr : public Expr {
 
 struct DeclRefExpr : public AssignableExpr {
     std::string_view identifier;
+    bool isRef = false;
 
-    DeclRefExpr(SourceLocation location, std::string_view identifier)
-        : AssignableExpr(location), identifier(identifier) {}
+    DeclRefExpr(SourceLocation location, std::string_view identifier, bool isRef = false)
+        : AssignableExpr(location), identifier(identifier), isRef(isRef) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -322,9 +344,10 @@ struct ResolvedDecl {
     std::string_view identifier;
     Type type;
     bool isMutable;
+    bool isRef;
 
-    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
-        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable) {}
+    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable, bool isRef = false)
+        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable), isRef(isRef) {}
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0) const = 0;
@@ -369,7 +392,8 @@ struct ResolvedWhileStmt : public ResolvedStmt {
 struct ResolvedParamDecl : public ResolvedDecl {
     bool isVararg = false;
 
-    ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable, bool isVararg = false)
+    ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
+                      bool isVararg = false)
         : ResolvedDecl(location, std::move(identifier), type, isMutable), isVararg(isVararg) {}
 
     void dump(size_t level = 0) const override;
@@ -400,7 +424,6 @@ struct ResolvedFuncDecl : public ResolvedDecl {
     ResolvedFuncDecl(SourceLocation location, std::string_view identifier, Type type,
                      std::vector<std::unique_ptr<ResolvedParamDecl>> params)
         : ResolvedDecl(location, std::move(identifier), type, false), params(std::move(params)) {}
-
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
@@ -452,7 +475,7 @@ struct ResolvedStringLiteral : public ResolvedExpr {
     std::string value;
 
     ResolvedStringLiteral(SourceLocation location, std::string_view value)
-        : ResolvedExpr(location, Type::builtinChar()), value(value) {}
+        : ResolvedExpr(location, Type::builtinString(value.size() + 1)), value(value) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -475,8 +498,11 @@ struct ResolvedAssignableExpr : public ResolvedExpr {
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &decl;
 
-    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl)
-        : ResolvedAssignableExpr(location, decl.type), decl(decl) {}
+    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl, bool isRef)
+        : ResolvedAssignableExpr(location, decl.type), decl(decl) {
+        decl.isRef = isRef;
+        type.isRef = isRef;
+    }
 
     void dump(size_t level = 0) const override;
 };

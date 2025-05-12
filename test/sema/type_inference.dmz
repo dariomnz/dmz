@@ -26,17 +26,17 @@ fn main() -> void {
     let str2 = str();
 }
 
-// CHECK:   ResolvedVarDecl: x:
+// CHECK:   ResolvedVarDecl: x:int
 // CHECK-NEXT:     ResolvedIntLiteral: '1'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedVarDecl: y:
+// CHECK-NEXT:   ResolvedVarDecl: y:int
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
 // CHECK-NEXT:       ResolvedCallExpr: foo
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
 
-// CHECK:      ResolvedVarDecl: str1:
+// CHECK:      ResolvedVarDecl: str1:char[11]
 // CHECK-NEXT:        ResolvedStringLiteral: 'something\n'
 // CHECK-NEXT:    ResolvedDeclStmt:
-// CHECK-NEXT:      ResolvedVarDecl: str2:
+// CHECK-NEXT:      ResolvedVarDecl: str2:char[]
 // CHECK-NEXT:        ResolvedCallExpr: str

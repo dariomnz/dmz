@@ -6,7 +6,7 @@ fn bar() -> int { return 1; }
 fn main() -> void {
     let x: int = 1;
 
-    // CHECK: [[# @LINE + 1 ]]:12: error: assigned value type doesn't match variable type
+    // CHECK: [[# @LINE + 1 ]]:12: error: assigned value type 'void' doesn't match variable type 'int'
     x = foo();
 
     let y: int = 3;
