@@ -15,7 +15,7 @@ struct SourceLocation {
     size_t line = 0, col = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const SourceLocation& s) {
-        os << get_file_name(s.file_name.data()) << ":" << s.line + 1 << ":" << s.col + 1;
+        os << s.file_name.data() << ":" << s.line + 1 << ":" << s.col + 1;
         return os;
     }
 };

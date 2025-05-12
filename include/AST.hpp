@@ -227,9 +227,10 @@ struct StructDecl : public Decl {
 struct ParamDecl : public Decl {
     Type type;
     bool isMutable;
+    bool isVararg = false;
 
-    ParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
-        : Decl(location, std::move(identifier)), type(std::move(type)), isMutable(isMutable) {}
+    ParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable, bool isVararg = false)
+        : Decl(location, std::move(identifier)), type(std::move(type)), isMutable(isMutable), isVararg(isVararg) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -366,8 +367,10 @@ struct ResolvedWhileStmt : public ResolvedStmt {
 };
 
 struct ResolvedParamDecl : public ResolvedDecl {
-    ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
-        : ResolvedDecl(location, std::move(identifier), type, isMutable) {}
+    bool isVararg = false;
+
+    ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable, bool isVararg = false)
+        : ResolvedDecl(location, std::move(identifier), type, isMutable), isVararg(isVararg) {}
 
     void dump(size_t level = 0) const override;
 };

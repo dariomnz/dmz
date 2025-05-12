@@ -63,13 +63,18 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
         retType = m_builder.getVoidTy();
     }
 
+    bool isVararg = false;
     for (auto &&param : functionDecl.params) {
+        if (param->isVararg) {
+            isVararg = true;
+            continue;
+        }
         llvm::Type *paramType = generate_type(param->type);
         if (param->type.kind == Type::Kind::Struct) paramType = llvm::PointerType::get(paramType, 0);
         paramTypes.emplace_back(paramType);
     }
 
-    auto *type = llvm::FunctionType::get(retType, paramTypes, false);
+    auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, functionDecl.identifier, m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }

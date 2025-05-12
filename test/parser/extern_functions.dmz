@@ -1,0 +1,42 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+// CHECK: [[# @LINE + 1 ]]:8: error: expected 'fn'
+extern ;
+
+// CHECK: [[# @LINE + 1 ]]:11: error: expected identifier
+extern fn ;
+
+// CHECK: [[# @LINE + 1 ]]:13: error: expected '('
+extern fn f ;
+
+// CHECK: [[# @LINE + 1 ]]:15: error: expected '->'
+extern fn f() ;
+
+// CHECK: [[# @LINE + 1 ]]:18: error: expected type specifier
+extern fn f() -> ;
+
+// CHECK: [[# @LINE + 1 ]]:18: error: expected type specifier
+extern fn f() -> 1;
+
+// CHECK: [[# @LINE + 4 ]]:1: error: expected ';'
+extern fn f() -> void
+
+// CHECK: [[# @LINE + 1 ]]:23: error: extern fn cannot have a body
+extern fn f() -> void {}
+
+extern fn puts(str: char[]) -> int;
+// CHECK: ExternFunctionDecl: puts -> int
+// CHECK-NEXT:  ParamDecl: str:char[]
+
+extern fn dprintf(fd:int, format: char[], ...) -> int;
+// CHECK: ExternFunctionDecl: dprintf -> int
+// CHECK-NEXT:  ParamDecl: fd:int
+// CHECK-NEXT:  ParamDecl: format:char[]
+// CHECK-NEXT:  ParamDecl: ...:vararg
+
+fn main() -> void {
+    puts("Hello, world");
+    puts("Hello, world");
+
+    dprintf(1, "The value ten in number: '%d'\n", 10);
+}

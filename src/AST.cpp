@@ -73,7 +73,11 @@ void CallExpr::dump(size_t level) const {
 
 void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl: " << identifier << ':';
-    type.dump();
+    if (isVararg){
+        std::cerr << "vararg";
+    }else{
+        type.dump();
+    }
     std::cerr << '\n';
 }
 
@@ -209,7 +213,11 @@ void ResolvedBlock::dump(size_t level) const {
 
 void ResolvedParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": ";
-    type.dump();
+    if (isVararg){
+        std::cerr << "vararg";
+    }else{
+        type.dump();
+    }
     std::cerr << '\n';
 }
 

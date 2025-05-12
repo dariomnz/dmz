@@ -1,0 +1,18 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn foo() -> void;
+// CHECK: ResolvedExternFunctionDecl: foo:
+
+extern fn bar(a:int) -> void;
+// CHECK: ResolvedExternFunctionDecl: bar:
+// CHECK-NEXT:  ResolvedParamDecl: a: int
+
+extern fn dprintf(fd:int, format: char[], ...) -> int;
+// CHECK: ResolvedExternFunctionDecl: dprintf:
+// CHECK-NEXT:  ResolvedParamDecl: fd: int
+// CHECK-NEXT:  ResolvedParamDecl: format: char[]
+// CHECK-NEXT:  ResolvedParamDecl: ...: vararg
+
+fn main() -> void {
+    dprintf(1, "Hello %d %d %d\n", 1, 2, 3);
+}

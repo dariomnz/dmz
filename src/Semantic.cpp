@@ -82,15 +82,20 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
-    if (call.arguments.size() != resolvedFuncDecl->params.size())
-        return report(call.location, "argument count mismatch in function call");
+    bool isVararg = resolvedFuncDecl->params.back()->isVararg;
+    size_t funcDeclArgs = isVararg ? (resolvedFuncDecl->params.size() - 1) : resolvedFuncDecl->params.size();
+    println(resolvedFuncDecl->identifier << " " << isVararg << " " << funcDeclArgs);
+    if (call.arguments.size() != resolvedFuncDecl->params.size()) {
+        if (!isVararg || (isVararg && call.arguments.size() < funcDeclArgs))
+            return report(call.location, "argument count mismatch in function call");
+    }
 
     std::vector<std::unique_ptr<ResolvedExpr>> resolvedArguments;
-    int idx = 0;
+    size_t idx = 0;
     for (auto &&arg : call.arguments) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
-
-        if (resolvedArg->type.name != resolvedFuncDecl->params[idx]->type.name)
+        // Only check until vararg
+        if (idx < funcDeclArgs && resolvedArg->type.name != resolvedFuncDecl->params[idx]->type.name)
             return report(resolvedArg->location, "unexpected type of argument");
 
         resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
@@ -228,11 +233,13 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     std::optional<Type> type = resolve_type(param.type);
 
-    if (!type || type->kind == Type::Kind::Void)
-        return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
-                                          std::string(param.type.name) + "' type");
+    if (!param.isVararg)
+        if (!type || type->kind == Type::Kind::Void)
+            return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
+                                              std::string(param.type.name) + "' type");
 
-    return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable);
+    return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable,
+                                               param.isVararg);
 }
 
 std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
@@ -257,10 +264,19 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
     std::vector<std::unique_ptr<ResolvedParamDecl>> resolvedParams;
 
     ScopeRAII paramScope(*this);
+    bool haveVararg = false;
     for (auto &&param : function.params) {
         auto resolvedParam = resolve_param_decl(*param);
+        if (haveVararg) {
+            report(resolvedParam->location, "vararg '...' can only be in the last argument");
+            return nullptr;
+        }
 
         if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam)) return nullptr;
+
+        if (resolvedParam->isVararg) {
+            haveVararg = true;
+        }
 
         resolvedParams.emplace_back(std::move(resolvedParam));
     }

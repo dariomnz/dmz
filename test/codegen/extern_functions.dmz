@@ -1,0 +1,19 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+fn main() -> void {
+    putchar(97); // a
+    putchar(10); // \n
+}
+
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
+// CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+
+// CHECK: declare i32 @putchar(i32 %0)
+extern fn putchar(c:int) -> int;
+
+// CHECK: declare i32 @dprintf(i32 %0, ptr %1, ...)
+extern fn dprintf(fd:int, fmt:char[], ...) -> int;

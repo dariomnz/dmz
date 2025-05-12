@@ -100,6 +100,7 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     varOrReturn(type, parse_type());
 
     if (isExtern) {
+        if (m_nextToken.type == TokenType::block_l) return report(m_nextToken.loc, "extern fn cannot have a body");
         matchOrReturn(TokenType::semicolon, "expected ';'");
         eat_next_token();
         return std::make_unique<ExternFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList));
@@ -369,6 +370,12 @@ std::unique_ptr<Expr> Parser::parse_expr_rhs(std::unique_ptr<Expr> lhs, int prec
 //  ::= 'const'? <identifier> ':' <type>
 std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
     SourceLocation location = m_nextToken.loc;
+
+    if (m_nextToken.type == TokenType::dotdotdot) {
+        std::string_view identifier = m_nextToken.str;
+        eat_next_token();  // eat '...'
+        return std::make_unique<ParamDecl>(location, std::move(identifier), Type::builtinVoid(), false, true);
+    }
 
     bool isConst = m_nextToken.type == TokenType::kw_const;
     if (isConst) eat_next_token();  // eat 'const'
