@@ -265,11 +265,11 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    if (auto func = dynamic_cast<const ExternFunctionDecl *>(&function)) {
+    if (dynamic_cast<const ExternFunctionDecl *>(&function)) {
         return std::make_unique<ResolvedExternFunctionDecl>(function.location, function.identifier, *type,
                                                             std::move(resolvedParams));
     }
-    if (auto func = dynamic_cast<const FunctionDecl *>(&function)) {
+    if (dynamic_cast<const FunctionDecl *>(&function)) {
         return std::make_unique<ResolvedFunctionDecl>(function.location, function.identifier, *type,
                                                       std::move(resolvedParams), nullptr);
     }

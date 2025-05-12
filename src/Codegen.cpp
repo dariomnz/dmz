@@ -20,7 +20,7 @@ llvm::Module *Codegen::generate_ir() {
     }
 
     for (auto &&decl : m_resolvedTree) {
-        if (const auto *fn = dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()))
+        if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()))
             continue;
         else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_body(*fn);
