@@ -2,12 +2,14 @@
 fn main() -> void {
     putchar(97); // a
     putchar(10); // \n
+    dprintf(1, "Test %d\n", 10);
 }
 
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
 // CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
+// CHECK-NEXT:   %2 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str, i32 10)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

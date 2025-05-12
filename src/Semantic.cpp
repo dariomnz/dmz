@@ -82,9 +82,8 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
-    bool isVararg = resolvedFuncDecl->params.back()->isVararg;
+    bool isVararg = (resolvedFuncDecl->params.size() != 0) ? resolvedFuncDecl->params.back()->isVararg : false;
     size_t funcDeclArgs = isVararg ? (resolvedFuncDecl->params.size() - 1) : resolvedFuncDecl->params.size();
-    println(resolvedFuncDecl->identifier << " " << isVararg << " " << funcDeclArgs);
     if (call.arguments.size() != resolvedFuncDecl->params.size()) {
         if (!isVararg || (isVararg && call.arguments.size() < funcDeclArgs))
             return report(call.location, "argument count mismatch in function call");
