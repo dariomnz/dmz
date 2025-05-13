@@ -1,9 +1,8 @@
 #pragma once
 
-#include "PH.hpp"
 #include "Utils.hpp"
 
-namespace C {
+namespace DMZ {
 
 enum class TokenType {
     invalid,
@@ -96,4 +95,4 @@ class Lexer {
     size_t m_line = 0;
     size_t m_col = 0;
 };
-}  // namespace C
+}  // namespace DMZ

@@ -1,6 +1,6 @@
-#include "Parser.hpp"
+#include "parser/Parser.hpp"
 
-namespace C {
+namespace DMZ {
 
 [[maybe_unused]] constexpr static inline int get_token_precedence(TokenType tok) {
     switch (tok) {
@@ -617,4 +617,4 @@ std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
 
     return std::make_unique<FieldInitStmt>(location, std::move(identifier), std::move(init));
 }
-}  // namespace C
+}  // namespace DMZ

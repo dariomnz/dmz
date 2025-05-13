@@ -1,14 +1,23 @@
 #pragma once
 
-#include "PH.hpp"
+#include <functional>
+#include <iostream>
+#include <optional>
 
-namespace C {
+namespace DMZ {
 
 #define varOrReturn(var, init) \
     auto var = (init);         \
     if (!var) return nullptr;
 #define matchOrReturn(tok, msg) \
     if (m_nextToken.type != tok) return report(m_nextToken.loc, msg);
+
+#define dmz_unreachable(msg) ::DMZ::__internal_unreachable(msg, __FILE__, __LINE__)
+
+[[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(const char* msg, const char* source, int line) {
+    std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
+    std::abort();
+}
 
 struct SourceLocation {
     std::string_view file_name = {};
@@ -102,4 +111,4 @@ overload(Ts...) -> overload<Ts...>;
     return res;
 }
 
-}  // namespace C
+}  // namespace DMZ

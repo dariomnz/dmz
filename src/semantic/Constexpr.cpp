@@ -1,6 +1,6 @@
-#include "Constexpr.hpp"
+#include "semantic/Constexpr.hpp"
 
-namespace C {
+namespace DMZ {
 
 std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<ConstValue> &d) {
     if (!d) return std::nullopt;
@@ -47,7 +47,7 @@ T do_unary_op(TokenType type, ConstValue &cval) {
         case TokenType::op_not:
             return !val;
         default:
-            llvm_unreachable("unexpected binary operator");
+            dmz_unreachable("unexpected binary operator");
     }
 }
 
@@ -61,10 +61,10 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_unary_operator(c
     } else if (std::holds_alternative<char>(*operand)) {
         return do_unary_op<char>(unop.op, *operand);
     } else {
-        llvm_unreachable("unexpected type in ConstValue");
+        dmz_unreachable("unexpected type in ConstValue");
     }
 
-    llvm_unreachable("unexpected unary operator");
+    dmz_unreachable("unexpected unary operator");
 }
 
 template <typename T>
@@ -93,7 +93,7 @@ T do_binary_op(TokenType type, ConstValue &cval1, ConstValue &cval2) {
         case TokenType::op_not_equal:
             return val1 != val2;
         default:
-            llvm_unreachable("unexpected binary operator");
+            dmz_unreachable("unexpected binary operator");
     }
 }
 
@@ -134,7 +134,7 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_binary_operator(
     } else if (std::holds_alternative<char>(*lhs)) {
         return do_binary_op<char>(binop.op, *lhs, *rhs);
     } else {
-        llvm_unreachable("unexpected type in ConstValue");
+        dmz_unreachable("unexpected type in ConstValue");
     }
 }
 
@@ -145,4 +145,4 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_decl_ref_expr(co
 
     return evaluate(*rvd->initializer, allowSideEffects);
 }
-}  // namespace C
+}  // namespace DMZ

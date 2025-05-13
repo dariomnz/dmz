@@ -1,6 +1,11 @@
-#include "Lexer.hpp"
+#include "lexer/Lexer.hpp"
 
-namespace C {
+#include <filesystem>
+#include <fstream>
+
+#include "Debug.hpp"
+
+namespace DMZ {
 std::ostream& operator<<(std::ostream& os, const TokenType& t) {
 #define CASE_TYPE(name)     \
     case TokenType::name:   \
@@ -231,12 +236,12 @@ Token Lexer::next_token() {
     } else if (file_content[0] == '\'') {
         debug_msg(TokenType::lit_char);
         int char_size = 1;
-        if (file_content[char_size] == '\\'){
+        if (file_content[char_size] == '\\') {
             char_size++;
         }
         char_size++;
         advance(char_size);
-        if (file_content[char_size] != '\''){
+        if (file_content[char_size] != '\'') {
             t.type = TokenType::unknown;
             t.str = file_content.substr(1, char_size);
             return t;
@@ -367,4 +372,4 @@ std::vector<Token> Lexer::tokenize_file() {
     return v_tokens;
 }
 
-}  // namespace C
+}  // namespace DMZ

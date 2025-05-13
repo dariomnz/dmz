@@ -1,9 +1,10 @@
 #pragma once
 
-#include "AST.hpp"
-#include "PH.hpp"
+#include <optional>
 
-namespace C {
+#include "semantic/SemanticSymbols.hpp"
+
+namespace DMZ {
 
 class ConstantExpressionEvaluator {
    public:
@@ -13,4 +14,4 @@ class ConstantExpressionEvaluator {
     std::optional<ConstValue> evaluate_binary_operator(const ResolvedBinaryOperator &binop, bool allowSideEffects);
     std::optional<ConstValue> evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool allowSideEffects);
 };
-}  // namespace C
+}  // namespace DMZ

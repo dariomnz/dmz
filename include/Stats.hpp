@@ -1,11 +1,12 @@
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
 
-namespace C {
+namespace DMZ {
 class Stats {
    public:
     enum type : int {
@@ -30,16 +31,15 @@ class Stats {
         friend std::ostream& operator<<(std::ostream& os, const dump_value& val) {
             int64_t time = Stats::instance().times[val.t];
             int64_t total_time = Stats::instance().times[type::total];
-            double percentage = (double)time/(double)total_time * 100.0;
+            double percentage = (double)time / (double)total_time * 100.0;
             os << std::fixed << std::setprecision(2) << std::setw(6) << percentage << " % ";
-            os << std::fixed << std::setprecision(6) << std::setw(10) << (time * 0.000000001)<< " s";
+            os << std::fixed << std::setprecision(6) << std::setw(10) << (time * 0.000000001) << " s";
 
             return os;
         }
     };
 
-    
-    public:
+   public:
     std::array<std::atomic_int64_t, static_cast<size_t>(type::size)> times;
     void dump() {
         times[type::total] = 0;
@@ -82,4 +82,4 @@ class ScopedTimer {
         Stats::instance().add_time(type, to_add);
     }
 };
-}  // namespace C
+}  // namespace DMZ

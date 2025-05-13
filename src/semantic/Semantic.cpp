@@ -1,6 +1,9 @@
-#include "Semantic.hpp"
+#include "semantic/Semantic.hpp"
 
-namespace C {
+#include <map>
+#include <stack>
+
+namespace DMZ {
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     const auto &[foundDecl, scopeIdx] = lookup_decl<ResolvedDecl>(decl.identifier);
@@ -128,11 +131,13 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
         return resolve_return_stmt(*returnStmt);
     }
 
-    llvm_unreachable("unexpected statement");
+    dmz_unreachable("unexpected statement");
 }
 
 std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {
-    assert(currentFunction && "return stmt outside a function");
+    if (!currentFunction) {
+        return report(returnStmt.location, "unexpected return stmt outside a function");
+    }
 
     if (currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
         return report(returnStmt.location, "unexpected return value in void function");
@@ -202,7 +207,7 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         return resolve_assignable_expr(*assignableExpr);
     }
 
-    llvm_unreachable("unexpected expression");
+    dmz_unreachable("unexpected expression");
 }
 
 std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
@@ -291,7 +296,7 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
                                                       std::move(resolvedParams), nullptr);
     }
 
-    llvm_unreachable("unexpected function");
+    dmz_unreachable("unexpected function");
 };
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
@@ -325,7 +330,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
                 continue;
             }
 
-            llvm_unreachable("unexpected declaration");
+            dmz_unreachable("unexpected declaration");
         }
     }
 
@@ -346,10 +351,21 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
             error = true;
         }
     }
+    {
+        decltype(functionsToResolve) aux_vec;
+        aux_vec.reserve(functionsToResolve.size());
 
+        for (auto &func : functionsToResolve) {
+            if (!dynamic_cast<const ExternFunctionDecl *>(func)) {
+                aux_vec.emplace_back(func);
+            }
+        }
+
+        functionsToResolve.swap(aux_vec);
+    }
     // Clear the extern functions
-    std::erase_if(functionsToResolve,
-                  [](const FuncDecl *func) { return dynamic_cast<const ExternFunctionDecl *>(func); });
+    // std::erase_if(functionsToResolve,
+    //               [](const FuncDecl *func) { return dynamic_cast<const ExternFunctionDecl *>(func); });
 
     if (error) return {};
     {
@@ -402,16 +418,17 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (resolvedLHS->type.kind != Type::Kind::Int)
+    if (resolvedLHS->type.kind != Type::Kind::Int) {
         return report(resolvedLHS->location, '\'' + std::string(resolvedLHS->type.name) +
                                                  "' cannot be used as LHS operand to binary operator");
-
-    if (resolvedRHS->type.kind != Type::Kind::Int)
+    }
+    if (resolvedRHS->type.kind != Type::Kind::Int) {
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
                                                  "' cannot be used as RHS operand to binary operator");
-
-    assert(resolvedLHS->type.kind == resolvedRHS->type.kind && resolvedLHS->type.kind == Type::Kind::Int &&
-           "unexpected type in binop");
+    }
+    if (resolvedLHS->type.kind != resolvedRHS->type.kind || resolvedLHS->type.kind != Type::Kind::Int) {
+        return report(binop.location, "unexpected type " + resolvedLHS->type.to_str() + " in binop");
+    }
 
     return std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
                                                     std::move(resolvedRHS));
@@ -550,7 +567,8 @@ std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &a
     }
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
-    assert(resolvedLHS->type.kind != Type::Kind::Void && "reference to void declaration in assignment LHS");
+    if (resolvedLHS->type.kind == Type::Kind::Void)
+        return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
 
     if (resolvedRHS->type != resolvedLHS->type)
         return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type.to_str() +
@@ -568,7 +586,7 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
         return resolve_member_expr(*memberExpr);
 
-    llvm_unreachable("unexpected assignable expression");
+    dmz_unreachable("unexpected assignable expression");
 }
 
 std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
@@ -581,7 +599,9 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
 
     const auto *st = lookup_decl<ResolvedStructDecl>(resolvedBase->type.name).first;
 
-    assert(st && "failed to lookup struct");
+    if (!st) {
+        return report(memberExpr.location, "failed to lookup struct");
+    }
 
     const ResolvedFieldDecl *fieldDecl = nullptr;
     for (auto &&field : st->fields) {
@@ -797,7 +817,10 @@ bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
 
             if (type->kind == Type::Kind::Struct) {
                 auto *nestedStruct = lookup_decl<ResolvedStructDecl>(type->name).first;
-                assert(nestedStruct && "unexpected type");
+                if (!nestedStruct) {
+                    report(field->location, "unexpected type");
+                    return false;
+                }
 
                 worklist.push({nestedStruct, visited});
             }
@@ -809,4 +832,4 @@ bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
     return true;
 }
 
-}  // namespace C
+}  // namespace DMZ

@@ -2,13 +2,15 @@
 
 #include <wait.h>
 
-#include "CFG.hpp"
-#include "Codegen.hpp"
-#include "Lexer.hpp"
-#include "Parser.hpp"
-#include "Semantic.hpp"
+#include <filesystem>
 
-namespace C {
+#include "codegen/Codegen.hpp"
+#include "lexer/Lexer.hpp"
+#include "parser/Parser.hpp"
+#include "semantic/CFG.hpp"
+#include "semantic/Semantic.hpp"
+
+namespace DMZ {
 static void displayHelp() {
     println("Usage:");
     println("  compiler [options] <source_file>\n");
@@ -65,9 +67,9 @@ static CompilerOptions parseArguments(int argc, char **argv) {
 
     return options;
 }
-}  // namespace C
+}  // namespace DMZ
 
-using namespace C;
+using namespace DMZ;
 
 int main(int argc, char *argv[]) {
     CompilerOptions options = parseArguments(argc, argv);
@@ -88,8 +90,7 @@ int main(int argc, char *argv[]) {
         error("unexpected source file extension '" + options.source.extension().string() + "'");
     }
 
-    std::ifstream file(options.source);
-    if (!file) {
+    if (!std::filesystem::exists(options.source)) {
         error("failed to open '" + options.source.string() + '\'');
     }
 
@@ -150,9 +151,9 @@ int main(int argc, char *argv[]) {
     }
 
     std::unique_ptr<ScopedTimer> timer;
-    if (options.run){
+    if (options.run) {
         timer = std::make_unique<ScopedTimer>(Stats::type::runTime);
-    }else{
+    } else {
         timer = std::make_unique<ScopedTimer>(Stats::type::compileTime);
     }
 

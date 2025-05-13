@@ -1,6 +1,6 @@
-#include "CFG.hpp"
+#include "semantic/CFG.hpp"
 
-namespace C {
+namespace DMZ {
 CFG CFGBuilder::build(const ResolvedFunctionDecl &fn) {
     ScopedTimer st(Stats::type::CFGTime);
     cfg = {};
@@ -55,7 +55,7 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *fieldInit = dynamic_cast<const ResolvedFieldInitStmt *>(&stmt)) {
         return insert_expr(*fieldInit->initializer, block);
     }
-    llvm_unreachable("unexpected expression");
+    dmz_unreachable("unexpected expression");
 }
 
 int CFGBuilder::insert_return_stmt(const ResolvedReturnStmt &stmt, int block) {
@@ -180,4 +180,4 @@ void CFG::dump() const {
         std::cerr << '\n';
     }
 }
-}  // namespace C
+}  // namespace DMZ

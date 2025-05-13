@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-namespace C {
+namespace DMZ {
 struct CompilerOptions {
     std::filesystem::path source;
     std::filesystem::path output;
@@ -15,4 +15,4 @@ struct CompilerOptions {
     bool run = false;
     bool printStats = false;
 };
-}  // namespace C
+}  // namespace DMZ

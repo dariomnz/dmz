@@ -1,12 +1,14 @@
 #pragma once
 
-#include "AST.hpp"
-#include "CFG.hpp"
-#include "Constexpr.hpp"
-#include "PH.hpp"
+#include <memory>
+#include <vector>
+
+#include "semantic/CFG.hpp"
+#include "semantic/Constexpr.hpp"
+#include "semantic/SemanticSymbols.hpp"
 #include "Utils.hpp"
 
-namespace C {
+namespace DMZ {
 
 class Sema {
    private:
@@ -59,4 +61,4 @@ class Sema {
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
 };
-}  // namespace C
+}  // namespace DMZ

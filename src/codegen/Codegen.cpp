@@ -1,6 +1,10 @@
-#include "Codegen.hpp"
+#include "codegen/Codegen.hpp"
 
-namespace C {
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/TargetParser/Host.h>
+
+namespace DMZ {
 Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath)
     : m_resolvedTree(std::move(resolvedTree)), m_builder(m_context), m_module("<translation_unit>", m_context) {
     m_module.setSourceFileName(sourcePath);
@@ -16,7 +20,7 @@ llvm::Module *Codegen::generate_ir() {
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_decl(*sd);
         else
-            llvm_unreachable("unexpected top level declaration");
+            dmz_unreachable("unexpected top level declaration");
     }
 
     for (auto &&decl : m_resolvedTree) {
@@ -27,7 +31,7 @@ llvm::Module *Codegen::generate_ir() {
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_definition(*sd);
         else
-            llvm_unreachable("unexpected top level declaration");
+            dmz_unreachable("unexpected top level declaration");
     }
 
     generate_main_wrapper();
@@ -203,7 +207,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
         return generate_assignment(*assignment);
     }
-    llvm_unreachable("unknown statement");
+    dmz_unreachable("unknown statement");
 }
 
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
@@ -252,7 +256,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sie = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         return generate_temporary_struct(*sie);
     }
-    llvm_unreachable("unexpected expression");
+    dmz_unreachable("unexpected expression");
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
@@ -316,7 +320,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
 
     if (unop.op == TokenType::op_not) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
 
-    llvm_unreachable("unknown unary op");
+    dmz_unreachable("unknown unary op");
     return nullptr;
 }
 
@@ -377,7 +381,7 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
     if (op == TokenType::op_equal) return bool_to_int(m_builder.CreateICmpEQ(lhs, rhs));
     if (op == TokenType::op_not_equal) return bool_to_int(m_builder.CreateICmpNE(lhs, rhs));
 
-    llvm_unreachable("unexpected binary operator");
+    dmz_unreachable("unexpected binary operator");
     return nullptr;
 }
 
@@ -579,4 +583,4 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
 
     type->setBody(fieldTypes);
 }
-}  // namespace C
+}  // namespace DMZ

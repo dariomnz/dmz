@@ -1,10 +1,11 @@
 #pragma once
 
-#include "AST.hpp"
-#include "Constexpr.hpp"
-#include "PH.hpp"
+#include <set>
 
-namespace C {
+#include "semantic/Constexpr.hpp"
+#include "semantic/SemanticSymbols.hpp"
+
+namespace DMZ {
 
 struct BasicBlock {
     std::set<std::pair<int, bool>> predecessors;
@@ -55,4 +56,4 @@ class CFGBuilder {
     int insert_decl_stmt(const ResolvedDeclStmt &stmt, int block);
     int insert_assignment(const ResolvedAssignment &stmt, int block);
 };
-}  // namespace C
+}  // namespace DMZ

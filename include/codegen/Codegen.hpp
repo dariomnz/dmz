@@ -1,9 +1,15 @@
 #pragma once
 
-#include "AST.hpp"
-#include "PH.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/IRBuilder.h>
+#pragma GCC diagnostic pop
 
-namespace C {
+#include <map>
+
+#include "semantic/SemanticSymbols.hpp"
+
+namespace DMZ {
 
 class Codegen {
     std::vector<std::unique_ptr<ResolvedDecl>> m_resolvedTree;
@@ -53,4 +59,4 @@ class Codegen {
     void generate_struct_definition(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
 };
-}  // namespace C
+}  // namespace DMZ

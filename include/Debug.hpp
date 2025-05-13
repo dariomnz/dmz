@@ -1,7 +1,11 @@
 #pragma once
 
+#include <chrono>
+#include <mutex>
+#include <ostream>
+#include <iomanip>
 
-namespace C {
+namespace DMZ {
 
 constexpr const char *get_file_name(const char *path) {
     const char *file = path;
@@ -49,21 +53,21 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
     os << "]";
     return os;
 }
-#define debug_msg(out_format)                                                                                   \
-    {                                                                                                           \
-        std::unique_lock internal_debug_lock(::C::debug_lock::get_lock());                                   \
-        std::cerr << std::dec << ::C::time_stamp() << " [" << ::C::get_file_name(__FILE__) << ":" << __LINE__ \
-                  << "] [" << __func__ << "] " << out_format << std::endl;                                      \
+#define debug_msg(out_format)                                                                                     \
+    {                                                                                                             \
+        std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock());                                      \
+        std::cerr << std::dec << ::DMZ::time_stamp() << " [" << ::DMZ::get_file_name(__FILE__) << ":" << __LINE__ \
+                  << "] [" << __func__ << "] " << out_format << std::endl;                                        \
     }
 #else
 #define debug_msg(out_format)
 #endif
 
-#define println(out_format)                                                     \
-    {                                                                         \
-        std::unique_lock internal_debug_lock(::C::debug_lock::get_lock()); \
-        std::cout << std::dec << out_format << std::endl;                     \
+#define println(out_format)                                                  \
+    {                                                                        \
+        std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock()); \
+        std::cout << std::dec << out_format << std::endl;                    \
     }
 
 #define TODO(msg) assert(false && "TODO" && msg)
-}  // namespace RECK
+}  // namespace DMZ

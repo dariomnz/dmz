@@ -1,11 +1,12 @@
 #pragma once
 
-#include "AST.hpp"
-#include "Lexer.hpp"
-#include "PH.hpp"
+#include <unordered_set>
+
+#include "lexer/Lexer.hpp"
+#include "parser/ParserSymbols.hpp"
 #include "Utils.hpp"
 
-namespace C {
+namespace DMZ {
 
 class Parser {
    private:
@@ -75,4 +76,4 @@ class Parser {
     std::unique_ptr<FieldDecl> parse_field_decl();
     std::unique_ptr<FieldInitStmt> parse_field_init_stmt();
 };
-}  // namespace C
+}  // namespace DMZ
