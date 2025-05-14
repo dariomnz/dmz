@@ -378,24 +378,24 @@ fn ifWhileFirstStmt(p: int) -> void {
 // CHECK-NEXT: [5]
 // CHECK-NEXT:   preds: 6 
 // CHECK-NEXT:   succs: 2 4 
-// CHECK-NEXT:   ResolvedDeclRefExpr: p
+// CHECK-NEXT:   ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:   ResolvedIfStmt
-// CHECK-NEXT:     ResolvedDeclRefExpr: p
+// CHECK-NEXT:     ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedWhileStmt
-// CHECK-NEXT:         ResolvedDeclRefExpr: p
+// CHECK-NEXT:         ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedWhileStmt
-// CHECK-NEXT:         ResolvedDeclRefExpr: p
+// CHECK-NEXT:         ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]
 // CHECK-NEXT:   preds: 3 5 
 // CHECK-NEXT:   succs: 0 3 
-// CHECK-NEXT:   ResolvedDeclRefExpr: p
+// CHECK-NEXT:   ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:   ResolvedWhileStmt
-// CHECK-NEXT:     ResolvedDeclRefExpr: p
+// CHECK-NEXT:     ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT: 
 // CHECK-NEXT: [3]
@@ -405,9 +405,9 @@ fn ifWhileFirstStmt(p: int) -> void {
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 1 5
 // CHECK-NEXT:   succs: 0 1 
-// CHECK-NEXT:   ResolvedDeclRefExpr: p
+// CHECK-NEXT:   ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:   ResolvedWhileStmt
-// CHECK-NEXT:     ResolvedDeclRefExpr: p
+// CHECK-NEXT:     ResolvedDeclRefExpr: p:int
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]

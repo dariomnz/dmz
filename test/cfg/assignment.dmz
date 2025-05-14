@@ -17,28 +17,28 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
 // CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:     ResolvedVarDecl: x:
+// CHECK-NEXT:     ResolvedVarDecl: x:int
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   | value: 2
 // CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:     ResolvedDeclRefExpr: x
+// CHECK-NEXT:     ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:     | value: 2
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   | value: 3
 // CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:     ResolvedDeclRefExpr: x
+// CHECK-NEXT:     ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:     ResolvedIntLiteral: '3'
 // CHECK-NEXT:     | value: 3
-// CHECK-NEXT:   ResolvedDeclRefExpr: x
+// CHECK-NEXT:   ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT:   ResolvedBinaryOperator: '+'
-// CHECK-NEXT:     ResolvedDeclRefExpr: x
+// CHECK-NEXT:     ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:     ResolvedIntLiteral: '1'
 // CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:     ResolvedDeclRefExpr: x
+// CHECK-NEXT:     ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
-// CHECK-NEXT:       ResolvedDeclRefExpr: x
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

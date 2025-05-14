@@ -51,7 +51,7 @@ class Codegen {
     llvm::Value *generate_decl_stmt(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_assignment(const ResolvedAssignment &stmt);
     llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const Type &type);
-    llvm::Value *load_value(llvm::Value *v, const Type &type);
+    llvm::Value *load_value(llvm::Value *v, Type type);
     llvm::Value *generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer);
     llvm::Value *generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer);
     llvm::Value *generate_temporary_struct(const ResolvedStructInstantiationExpr &sie);

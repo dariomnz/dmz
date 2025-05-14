@@ -24,7 +24,7 @@ fn main() -> void {
 // CHECK-NEXT:   | value: 7
 // CHECK-NEXT:     ResolvedIntLiteral: '3'
 // CHECK-NEXT:     ResolvedIntLiteral: '4'
-// CHECK-NEXT:   ResolvedCallExpr: foo
+// CHECK-NEXT:   ResolvedCallExpr: foo:void
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
 // CHECK-NEXT:     | value: 3
 // CHECK-NEXT:       ResolvedIntLiteral: '1'

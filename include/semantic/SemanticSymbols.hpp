@@ -5,10 +5,10 @@
 #include <variant>
 
 #include "Debug.hpp"
-#include "lexer/Lexer.hpp"
-#include "parser/ParserSymbols.hpp"
 #include "Stats.hpp"
 #include "Utils.hpp"
+#include "lexer/Lexer.hpp"
+#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -39,10 +39,9 @@ struct ResolvedDecl {
     std::string_view identifier;
     Type type;
     bool isMutable;
-    bool isRef;
 
-    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable, bool isRef = false)
-        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable), isRef(isRef) {}
+    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
+        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable) {}
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0) const = 0;
@@ -193,11 +192,8 @@ struct ResolvedAssignableExpr : public ResolvedExpr {
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &decl;
 
-    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl, bool isRef)
-        : ResolvedAssignableExpr(location, decl.type), decl(decl) {
-        decl.isRef = isRef;
-        type.isRef = isRef;
-    }
+    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl)
+        : ResolvedAssignableExpr(location, decl.type), decl(decl) {}
 
     void dump(size_t level = 0) const override;
 };

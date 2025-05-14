@@ -15,11 +15,11 @@ struct S2 { x: int, y:int}
 // CHECK-NEXT:   ResolvedFieldDecl: x
 // CHECK-NEXT:   ResolvedFieldDecl: y
 
-// CHECK-NEXT: ResolvedFunctionDecl: println:
+// CHECK-NEXT: ResolvedFunctionDecl: println -> void
 // CHECK-NEXT:   ResolvedParamDecl: n:
 // CHECK-NEXT:   ResolvedBlock
 
-// CHECK-NEXT: ResolvedFunctionDecl: foo:
+// CHECK-NEXT: ResolvedFunctionDecl: foo -> S2
 // CHECK-NEXT:   ResolvedParamDecl: s:
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
@@ -31,5 +31,5 @@ struct S2 { x: int, y:int}
 // CHECK-NEXT:           ResolvedMemberExpr: y
 // CHECK-NEXT:             ResolvedDeclRefExpr: s
 
-// CHECK-NEXT: ResolvedFunctionDecl: main:
+// CHECK-NEXT: ResolvedFunctionDecl: main -> void
 // CHECK-NEXT:   ResolvedBlock

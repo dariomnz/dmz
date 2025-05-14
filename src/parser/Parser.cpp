@@ -120,10 +120,10 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
 std::optional<Type> Parser::parse_type() {
     std::string_view name = m_nextToken.str;
     bool isArray = false;
-    bool isRef = false;
+    Type::Ref isRef = Type::Ref::No;
 
     if (m_nextToken.type == TokenType::amp) {
-        isRef = true;
+        isRef = Type::Ref::Ref;
         eat_next_token();  // eat '&'
     }
     TokenType type = m_nextToken.type;
@@ -277,16 +277,6 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return declRefExpr;
     }
 
-    if (m_nextToken.type == TokenType::amp) {
-        eat_next_token();  // eat '&'
-        matchOrReturn(TokenType::id, "expected identifier after '&'");
-        std::string_view identifier = m_nextToken.str;
-        eat_next_token();  // eat identifier
-
-        auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier), true);
-        return declRefExpr;
-    }
-
     return report(location, "expected expression");
 }
 
@@ -349,11 +339,16 @@ std::unique_ptr<std::vector<std::unique_ptr<T>>> Parser::parse_list_with_trailin
 
 std::unique_ptr<Expr> Parser::parse_prefix_expr() {
     Token tok = m_nextToken;
+    std::unordered_set<TokenType> unaryOps = {
+        TokenType::op_minus,
+        TokenType::op_not,
+        TokenType::amp,
+    };
 
-    if (tok.type != TokenType::op_minus && tok.type != TokenType::op_not) {
+    if (unaryOps.count(tok.type) == 0) {
         return parse_postfix_expr();
     }
-    eat_next_token();  // eat '!' or '-'
+    eat_next_token();  // eat unaryOps
 
     varOrReturn(rhs, parse_prefix_expr());
 

@@ -30,14 +30,17 @@ void ResolvedStringLiteral::dump(size_t level) const {
 }
 
 void ResolvedDeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedDeclRefExpr: ";
-    if (decl.isRef) std::cerr << "&";
-    std::cerr << decl.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedDeclRefExpr: " << decl.identifier << ":";
+    type.dump();
+    std::cerr << '\n';
     dump_constant_value(level);
 }
 
 void ResolvedCallExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedCallExpr: " << callee.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedCallExpr: " << callee.identifier << ":";
+    type.dump();
+    std::cerr << '\n';
+
     dump_constant_value(level);
 
     for (auto &&arg : arguments) arg->dump(level + 1);
@@ -50,7 +53,7 @@ void ResolvedBlock::dump(size_t level) const {
 }
 
 void ResolvedParamDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ": ";
+    std::cerr << indent(level) << "ResolvedParamDecl: " << identifier << ":";
     if (isVararg) {
         std::cerr << "vararg";
     } else {
@@ -60,13 +63,17 @@ void ResolvedParamDecl::dump(size_t level) const {
 }
 
 void ResolvedExternFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedExternFunctionDecl: " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedExternFunctionDecl: " << identifier << " -> ";
+    type.dump();
+    std::cerr << '\n';
 
     for (auto &&param : params) param->dump(level + 1);
 }
 
 void ResolvedFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedFunctionDecl: " << identifier << ':' << '\n';
+    std::cerr << indent(level) << "ResolvedFunctionDecl: " << identifier << " -> ";
+    type.dump();
+    std::cerr << '\n';
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -118,9 +125,7 @@ void ResolvedWhileStmt::dump(size_t level) const {
 
 void ResolvedVarDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedVarDecl" << (isMutable ? "" : " const") << ": " << identifier << ':';
-    if (initializer) {
-        initializer->type.dump();
-    }
+    type.dump();
     std::cerr << '\n';
     if (initializer) initializer->dump(level + 1);
 }
@@ -137,7 +142,9 @@ void ResolvedAssignment::dump(size_t level) const {
 }
 
 void ResolvedFieldDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedFieldDecl: " << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedFieldDecl: " << identifier << ':';
+    type.dump();
+    std::cerr << '\n';
 }
 
 void ResolvedStructDecl::dump(size_t level) const {
@@ -147,13 +154,17 @@ void ResolvedStructDecl::dump(size_t level) const {
 }
 
 void ResolvedMemberExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedMemberExpr: " << field.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedMemberExpr: " << field.identifier << ':';
+    type.dump();
+    std::cerr << '\n';
 
     base->dump(level + 1);
 }
 
 void ResolvedFieldInitStmt::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedFieldInitStmt: " << field.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedFieldInitStmt: " << field.identifier << ':';
+    field.type.dump();
+    std::cerr << '\n';
 
     initializer->dump(level + 1);
 }

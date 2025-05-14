@@ -16,7 +16,7 @@ fn main() -> void {
     b: 2,
   };
 }
-// CHECK: ResolvedFunctionDecl: main:
+// CHECK: ResolvedFunctionDecl: main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt:
 // CHECK-NEXT:       ResolvedVarDecl: x:

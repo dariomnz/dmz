@@ -1,7 +1,7 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
-    // CHECK: [[# @LINE + 1 ]]:13: error: expected identifier after '&'
-    while & {}
+    // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
+    while - {}
     
     // CHECK: [[# @LINE + 1 ]]:13: error: expected 'while' body
     while 0 ;

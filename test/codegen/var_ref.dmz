@@ -1,0 +1,44 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\n'
+
+fn foo(x: &int) -> void {
+    println(x);
+    x = 20;
+    println(x);
+}
+// CHECK: define void @foo(ptr byref(i32) %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
+// CHECK-NEXT:   call void @println(i32 %0)
+// CHECK-NEXT:   store i32 20, ptr %x, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   call void @println(i32 %1)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+
+fn main() -> void {
+    let i = 10;
+    let i_ref = &i;
+    println(i_ref);
+    foo(&i_ref);
+    println(i);
+}
+
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %i = alloca i32, align 4
+// CHECK-NEXT:   %i_ref = alloca ptr, align 8
+// CHECK-NEXT:   store i32 10, ptr %i, align 4
+// CHECK-NEXT:   %0 = getelementptr ptr, ptr %i, i32 0
+// CHECK-NEXT:   store ptr %0, ptr %i_ref, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %i_ref, align 8
+// CHECK-NEXT:   %2 = load i32, ptr %1, align 4
+// CHECK-NEXT:   call void @println(i32 %2)
+// CHECK-NEXT:   %3 = load ptr, ptr %i_ref, align 8
+// CHECK-NEXT:   call void @foo(ptr byref(i32) %3)
+// CHECK-NEXT:   %4 = load i32, ptr %i, align 4
+// CHECK-NEXT:   call void @println(i32 %4)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

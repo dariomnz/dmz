@@ -6,7 +6,7 @@ fn pass() -> int {
 // CHECK:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedBinaryOperator: '*'
 // CHECK-NEXT:       | value: 20
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:         ResolvedIntLiteral: '10'
 
 fn pass2() -> int {
@@ -14,7 +14,7 @@ fn pass2() -> int {
     return x;
 }
 // CHECK:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedDeclRefExpr: x
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:       | value: 2
 
 fn err() -> int {
@@ -24,7 +24,7 @@ fn err() -> int {
 }
 // CHECK:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedBinaryOperator: '*'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:         ResolvedIntLiteral: '10'
 
 fn err2() -> int {
@@ -33,7 +33,7 @@ fn err2() -> int {
 }
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator: '*'
-// CHECK-NEXT:        ResolvedDeclRefExpr: x
+// CHECK-NEXT:        ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:        ResolvedIntLiteral: '10'
 
 fn main() -> void {}

@@ -6,7 +6,8 @@ void Type::dump() const { std::cerr << to_str(); }
 
 std::string Type::to_str() const {
     std::stringstream out;
-    if (isRef) out << "&";
+    if (isRef==Ref::Ref) out << "&";
+    if (isRef==Ref::ParamRef) out << "i&";
     out << name;
     if (isArray) {
         out << "[";
@@ -55,7 +56,6 @@ void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "St
 
 void DeclRefExpr::dump(size_t level) const {
     std::cerr << indent(level) << "DeclRefExpr: ";
-    if (isRef) std::cerr << "&";
     std::cerr << identifier << '\n';
 }
 

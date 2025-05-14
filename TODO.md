@@ -2,7 +2,7 @@
 
 - [x] More types
 - [x] External functions
-- [ ] References
+- [x] References
 - [ ] Arrays, vectors and slice
 - [ ] Error handling
 - [ ] Traits

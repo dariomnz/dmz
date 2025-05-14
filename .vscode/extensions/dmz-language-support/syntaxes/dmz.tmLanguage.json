@@ -41,7 +41,7 @@
 					"match": "\\b(if|while|for|return|fn|extern)\\b"
 				},
 				{
-					"name": "keyword.other",
+					"name": "keyword.other.dmz",
 					"match": "\\b(const|let|struct)\\b"
 				}
 			]
@@ -49,7 +49,7 @@
 		"types": {
 			"patterns": [
 				{
-					"name": "keyword.other.types",
+					"name": "keyword.other.types.dmz",
 					"match": "\\b(int|char|void)\\b"
 				}
 			]
@@ -82,6 +82,10 @@
 				{
 					"name": "constant.character.escape.dmz",
 					"match": "\\\\."
+				},
+				{
+					"name": "constant.other.placeholder.dmz",
+					"match": "%[diouxXeEfFgGaAcspn%]"
 				}
 			]
 		},

@@ -5,9 +5,9 @@
 #include <variant>
 
 #include "Debug.hpp"
-#include "lexer/Lexer.hpp"
 #include "Stats.hpp"
 #include "Utils.hpp"
+#include "lexer/Lexer.hpp"
 
 namespace DMZ {
 
@@ -16,6 +16,7 @@ namespace DMZ {
     if (op == TokenType::op_minus) return "-";
     if (op == TokenType::op_mult) return "*";
     if (op == TokenType::op_div) return "/";
+    if (op == TokenType::amp) return "&";
 
     if (op == TokenType::op_not_equal) return "!=";
     if (op == TokenType::op_equal) return "==";
@@ -32,36 +33,29 @@ namespace DMZ {
 
 struct Type {
     enum class Kind { Void, Int, Char, Struct, Custom };
+    enum class Ref { No, Ref, ParamRef };
 
     Kind kind;
     std::string_view name;
     std::optional<int> isArray = std::nullopt;
-    bool isRef = false;
+    Ref isRef = Ref::No;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
     static Type builtinChar() { return {Kind::Char, "char"}; }
-    static Type builtinString(int size) {
-        return Type{.kind = Kind::Char, .name = "char", .isArray = size, .isRef = true};
-    }
-    static Type custom(const std::string_view &name) { return {Kind::Custom, name}; }
-    static Type structType(const std::string_view &name) { return {Kind::Struct, name}; }
+    static Type builtinString(int size) { return Type{.kind = Kind::Char, .name = "char", .isArray = size}; }
+    static Type custom(const std::string_view& name) { return {Kind::Custom, name}; }
+    static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
 
-    bool operator!=(const Type &other) const { return !(*this == other); }
-    bool operator==(const Type &other) const {
+    static bool compare(const Type& lhs, const Type& rhs) {
         bool equalArray = false;
 
-        if (isArray && *isArray == 0) {
-            equalArray = true;
-        } else if (other.isArray && *other.isArray == 0) {
-            equalArray = true;
-        } else if (isArray == other.isArray) {
-            equalArray = true;
-        } else if (isRef && other.isRef) {
-            equalArray = true;
-        }
+        equalArray |= (lhs.isArray && *lhs.isArray == 0);
+        equalArray |= (rhs.isArray && *rhs.isArray == 0);
+        equalArray |= (lhs.isArray == rhs.isArray);
+        equalArray |= (lhs.isRef == Ref::Ref && rhs.isRef == Ref::Ref);
 
-        return kind == other.kind && name == other.name && equalArray && isRef == other.isRef;
+        return lhs.kind == rhs.kind && lhs.name == rhs.name && equalArray;
     }
 
     void dump() const;
@@ -206,10 +200,9 @@ struct AssignableExpr : public Expr {
 
 struct DeclRefExpr : public AssignableExpr {
     std::string_view identifier;
-    bool isRef = false;
 
-    DeclRefExpr(SourceLocation location, std::string_view identifier, bool isRef = false)
-        : AssignableExpr(location), identifier(identifier), isRef(isRef) {}
+    DeclRefExpr(SourceLocation location, std::string_view identifier)
+        : AssignableExpr(location), identifier(identifier) {}
 
     void dump(size_t level = 0) const override;
 };

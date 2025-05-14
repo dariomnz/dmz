@@ -1,0 +1,13 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+fn foo(x: &int) -> void {
+    x = 20;
+}
+
+fn main() -> void {
+    let i = 10;
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected to reference the value with '&'
+    foo(i);
+}
+
+// CHECK-NOT: {{.*}}

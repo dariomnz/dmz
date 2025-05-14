@@ -72,7 +72,7 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     if (dynamic_cast<ResolvedStructDecl *>(decl))
         return report(declRefExpr.location, "expected an instance of '" + std::string(decl->type.name) + '\'');
 
-    return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl, declRefExpr.isRef);
+    return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl);
 }
 
 std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
@@ -97,11 +97,19 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     for (auto &&arg : call.arguments) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
         // Only check until vararg
-        if (idx < funcDeclArgs && resolvedArg->type != resolvedFuncDecl->params[idx]->type)
-            return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type.to_str() +
-                                                     "' expected '" + resolvedFuncDecl->params[idx]->type.to_str() +
-                                                     "'");
-
+        if (idx < funcDeclArgs) {
+            if (!Type::compare(resolvedFuncDecl->params[idx]->type, resolvedArg->type)) {
+                return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type.to_str() +
+                                                         "' expected '" + resolvedFuncDecl->params[idx]->type.to_str() +
+                                                         "'");
+            }
+            if (resolvedFuncDecl->params[idx]->type.isRef == Type::Ref::ParamRef) {
+                auto unary = dynamic_cast<const ResolvedUnaryOperator *>(resolvedArg.get());
+                if (!unary || (unary && unary->op != TokenType::amp)) {
+                    return report(resolvedArg->location, "expected to reference the value with '&'");
+                }
+            }
+        }
         resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
 
         ++idx;
@@ -243,6 +251,10 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
         if (!type || type->kind == Type::Kind::Void)
             return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
                                               std::string(param.type.name) + "' type");
+
+    if (type && (*type).isRef == Type::Ref::Ref) {
+        (*type).isRef = Type::Ref::ParamRef;
+    }
 
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable,
                                                param.isVararg);
@@ -407,11 +419,15 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    if (resolvedRHS->type.kind != Type::Kind::Int)
-        return report(resolvedRHS->location,
-                      '\'' + std::string(resolvedRHS->type.name) + "' cannot be used as an operand to unary operator");
-
-    return std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
+    if (unary.op != TokenType::amp && resolvedRHS->type.kind != Type::Kind::Int)
+        return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
+                                                 "' cannot be used as an operand to unary operator " +
+                                                 std::string(get_op_str(unary.op)));
+    auto ret = std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
+    if (unary.op == TokenType::amp) {
+        ret->type.isRef = Type::Ref::Ref;
+    }
+    return ret;
 }
 
 std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &binop) {
@@ -536,10 +552,6 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
     if (varDecl.initializer) {
         resolvedInitializer = resolve_expr(*varDecl.initializer);
         if (!resolvedInitializer) return nullptr;
-        // In initialization or assigment the string literal is an array not a ptr
-        if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(resolvedInitializer.get())) {
-            strLit->type.isRef = false;
-        }
     }
 
     Type resolvableType = varDecl.type.value_or(resolvedInitializer->type);
@@ -561,18 +573,15 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
 
 std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
-    // In initialization or assigment the string literal is an array not a ptr
-    if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(resolvedRHS.get())) {
-        strLit->type.isRef = false;
-    }
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
-    if (resolvedLHS->type.kind == Type::Kind::Void)
+    if (resolvedLHS->type.kind == Type::Kind::Void) {
         return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
-
-    if (resolvedRHS->type != resolvedLHS->type)
+    }
+    if (!Type::compare(resolvedLHS->type, resolvedRHS->type)) {
         return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type.to_str() +
                                                  "' doesn't match variable type '" + resolvedLHS->type.to_str() + "'");
+    }
 
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 

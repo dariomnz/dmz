@@ -59,7 +59,7 @@ llvm::Type *Codegen::generate_type(const Type &type) {
             ret = llvm::PointerType::get(ret, 0);
         }
     }
-    if (ret != nullptr && type.isRef) {
+    if (ret != nullptr && (type.isRef == Type::Ref::Ref || type.isRef == Type::Ref::ParamRef)) {
         ret = llvm::PointerType::get(ret, 0);
     }
     return ret;
@@ -81,7 +81,9 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             continue;
         }
         llvm::Type *paramType = generate_type(param->type);
-        if (param->type.kind == Type::Kind::Struct) paramType = llvm::PointerType::get(paramType, 0);
+        if (param->type.kind == Type::Kind::Struct) {
+            paramType = llvm::PointerType::get(paramType, 0);
+        }
         paramTypes.emplace_back(paramType);
     }
 
@@ -107,6 +109,11 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
                 paramAttrs.addByValAttr(generate_type(param->type));
             else
                 paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
+        }
+        if (param->type.isRef == Type::Ref::ParamRef) {
+            auto deref = param->type;
+            deref.isRef = Type::Ref::No;
+            paramAttrs.addByRefAttr(generate_type(deref));
         }
         argsAttrSets.emplace_back(llvm::AttributeSet::get(m_context, paramAttrs));
     }
@@ -140,7 +147,8 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (paramDecl->type.kind != Type::Kind::Struct && paramDecl->isMutable) {
+        if (paramDecl->type.kind != Type::Kind::Struct && paramDecl->type.isRef == Type::Ref::No &&
+            paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, paramDecl->type);
             store_value(&arg, declVal, paramDecl->type);
         }
@@ -314,11 +322,20 @@ void Codegen::generate_main_wrapper() {
 }
 
 llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop) {
-    llvm::Value *rhs = generate_expr(*unop.operand);
+    bool keepPointer = unop.op == TokenType::amp;
+    llvm::Value *rhs = generate_expr(*unop.operand, keepPointer);
 
     if (unop.op == TokenType::op_minus) return m_builder.CreateNeg(rhs);
 
     if (unop.op == TokenType::op_not) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
+
+    if (unop.op == TokenType::amp) {
+        if (unop.operand->type.isRef == Type::Ref::Ref) {
+            return m_builder.CreateLoad(llvm::PointerType::get(m_context, 0), rhs);
+        } else {
+            return rhs;
+        }
+    }
 
     dmz_unreachable("unknown unary op");
     return nullptr;
@@ -498,13 +515,18 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &type) {
+    if (type.isRef == Type::Ref::Ref) {
+        auto GEPVal = m_builder.CreateGEP(generate_type(type), val, llvm::ConstantInt::get(m_builder.getInt32Ty(), 0));
+        return m_builder.CreateStore(GEPVal, ptr);
+    }
+
     if (type.kind == Type::Kind::Struct) {
         const llvm::DataLayout &dl = m_module.getDataLayout();
         const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(type)));
 
         return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
     }
-    if (type.isArray && !type.isRef) {
+    if (type.isArray) {
         const llvm::DataLayout &dl = m_module.getDataLayout();
         auto t = generate_type(type);
 
@@ -514,19 +536,15 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type
     return m_builder.CreateStore(val, ptr);
 }
 
-llvm::Value *Codegen::load_value(llvm::Value *v, const Type &type) {
-    if (type.isRef || (type.isArray && *type.isArray != 0)) {
-        return m_builder.CreateLoad(m_builder.getPtrTy(), v);
+llvm::Value *Codegen::load_value(llvm::Value *v, Type type) {
+    if (type.isRef == Type::Ref::Ref) {
+        v = m_builder.CreateLoad(llvm::PointerType::get(m_context, 0), v);
+        type.isRef = Type::Ref::No;
     }
-    if (type.kind == Type::Kind::Int) {
-        return m_builder.CreateLoad(m_builder.getInt32Ty(), v);
+    if (type.isRef == Type::Ref::ParamRef) {
+        type.isRef = Type::Ref::No;
     }
-
-    if (type.kind == Type::Kind::Char) {
-        return m_builder.CreateLoad(m_builder.getInt8Ty(), v);
-    }
-
-    return v;
+    return m_builder.CreateLoad(generate_type(type), v);
 }
 
 llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer) {
@@ -535,7 +553,6 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 
     keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
     keepPointer |= dre.type.kind == Type::Kind::Struct;
-    keepPointer |= decl.isRef;
 
     return keepPointer ? val : load_value(val, dre.type);
 }

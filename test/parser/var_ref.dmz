@@ -1,0 +1,18 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn foo(x: &int) -> void {
+    x = 20;
+}
+// CHECK: FunctionDecl: foo -> void
+// CHECK-NEXT:   ParamDecl: x:&int
+// CHECK-NEXT:   Block
+
+fn main() -> void {
+    let i = 10;
+    foo(&i);
+}
+
+// CHECK:      CallExpr:
+// CHECK-NEXT:   DeclRefExpr: foo
+// CHECK-NEXT:   UnaryOperator: '&'
+// CHECK-NEXT:     DeclRefExpr: i

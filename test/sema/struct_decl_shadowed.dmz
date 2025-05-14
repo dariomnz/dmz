@@ -7,7 +7,7 @@ fn main() -> void {
 
   println(S);
 }
-// CHECK: ResolvedFunctionDecl: main:
+// CHECK: ResolvedFunctionDecl: main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt:
 // CHECK-NEXT:       ResolvedVarDecl const: S:int

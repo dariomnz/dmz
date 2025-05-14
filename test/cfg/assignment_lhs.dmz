@@ -22,29 +22,29 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT:   | value: 1
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:     ResolvedFieldInitStmt: y
+// CHECK-NEXT:     ResolvedFieldInitStmt: y:int
 // CHECK-NEXT:       ResolvedIntLiteral: '2'
 // CHECK-NEXT:       | value: 2
-// CHECK-NEXT:     ResolvedFieldInitStmt: x
+// CHECK-NEXT:     ResolvedFieldInitStmt: x:int
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:   ResolvedDeclStmt:
 // CHECK-NEXT:     ResolvedVarDecl: s:S
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:
-// CHECK-NEXT:         ResolvedFieldInitStmt: y
+// CHECK-NEXT:         ResolvedFieldInitStmt: y:int
 // CHECK-NEXT:           ResolvedIntLiteral: '2'
 // CHECK-NEXT:           | value: 2
-// CHECK-NEXT:         ResolvedFieldInitStmt: x
+// CHECK-NEXT:         ResolvedFieldInitStmt: x:int
 // CHECK-NEXT:           ResolvedIntLiteral: '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:   ResolvedIntLiteral: '0'
 // CHECK-NEXT:   | value: 0
-// CHECK-NEXT:   ResolvedDeclRefExpr: s
-// CHECK-NEXT:   ResolvedMemberExpr: x
-// CHECK-NEXT:     ResolvedDeclRefExpr: s
+// CHECK-NEXT:   ResolvedDeclRefExpr: s:S
+// CHECK-NEXT:   ResolvedMemberExpr: x:int
+// CHECK-NEXT:     ResolvedDeclRefExpr: s:S
 // CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:     ResolvedMemberExpr: x
-// CHECK-NEXT:       ResolvedDeclRefExpr: s
+// CHECK-NEXT:     ResolvedMemberExpr: x:int
+// CHECK-NEXT:       ResolvedDeclRefExpr: s:S
 // CHECK-NEXT:     ResolvedIntLiteral: '0'
 // CHECK-NEXT:     | value: 0
 // CHECK-NEXT: 

@@ -1,0 +1,47 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\n'
+
+fn foo(x: &int) -> void {
+    println(x);
+    x = 20;
+    println(x);
+}
+// CHECK: ResolvedFunctionDecl: foo -> void
+// CHECK-NEXT:   ResolvedParamDecl: x:i&int
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+// CHECK-NEXT:     ResolvedAssignment:
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+// CHECK-NEXT:       ResolvedIntLiteral: '20'
+// CHECK-NEXT:       | value: 20
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+
+extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+
+fn main() -> void {
+    let i = 10;
+    let i_ref = &i;
+    println(i_ref);
+    foo(&i_ref);
+    println(i);
+}
+
+// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt:
+// CHECK-NEXT:       ResolvedVarDecl: i:int
+// CHECK-NEXT:         ResolvedIntLiteral: '10'
+// CHECK-NEXT:         | value: 10
+// CHECK-NEXT:     ResolvedDeclStmt:
+// CHECK-NEXT:       ResolvedVarDecl: i_ref:&int
+// CHECK-NEXT:         ResolvedUnaryOperator: '&'
+// CHECK-NEXT:           ResolvedDeclRefExpr: i:int
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: i_ref:&int
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
+// CHECK-NEXT:       ResolvedUnaryOperator: '&'
+// CHECK-NEXT:         ResolvedDeclRefExpr: i_ref:&int
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: i:int

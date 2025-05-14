@@ -32,11 +32,11 @@ fn main() -> void {
 // CHECK-NEXT: ResolvedDeclStmt:
 // CHECK-NEXT:   ResolvedVarDecl: y:int
 // CHECK-NEXT:     ResolvedBinaryOperator: '+'
-// CHECK-NEXT:       ResolvedCallExpr: foo
+// CHECK-NEXT:       ResolvedCallExpr: foo:int
 // CHECK-NEXT:       ResolvedIntLiteral: '1'
 
 // CHECK:      ResolvedVarDecl: str1:char[11]
 // CHECK-NEXT:        ResolvedStringLiteral: 'something\n'
 // CHECK-NEXT:    ResolvedDeclStmt:
 // CHECK-NEXT:      ResolvedVarDecl: str2:char[]
-// CHECK-NEXT:        ResolvedCallExpr: str
+// CHECK-NEXT:        ResolvedCallExpr: str:char[]

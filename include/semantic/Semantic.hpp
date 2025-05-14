@@ -3,10 +3,10 @@
 #include <memory>
 #include <vector>
 
+#include "Utils.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
 #include "semantic/SemanticSymbols.hpp"
-#include "Utils.hpp"
 
 namespace DMZ {
 

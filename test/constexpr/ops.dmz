@@ -8,24 +8,24 @@ fn prefix(x: int) -> void {
     foo(-x);
     foo(-1);
 }
-// CHECK: ResolvedFunctionDecl: prefix:
-// CHECK-NEXT:   ResolvedParamDecl: x: int
+// CHECK: ResolvedFunctionDecl: prefix -> void
+// CHECK-NEXT:   ResolvedParamDecl: x:int
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedUnaryOperator: '!'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedUnaryOperator: '!'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedUnaryOperator: '!'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedUnaryOperator: '-'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedUnaryOperator: '-'
 // CHECK-NEXT:       | value: -1
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
@@ -37,40 +37,40 @@ fn multiplicative(x: int) -> void {
     foo(x * 1);
     foo(1 * x);
 }
-// CHECK: ResolvedFunctionDecl: multiplicative:
-// CHECK-NEXT:   ResolvedParamDecl: x: int
+// CHECK: ResolvedFunctionDecl: multiplicative -> void
+// CHECK-NEXT:   ResolvedParamDecl: x:int
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '*'
 // CHECK-NEXT:       | value: 15
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
 // CHECK-NEXT:         ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '/'
 // CHECK-NEXT:       | value: 5
 // CHECK-NEXT:         ResolvedIntLiteral: '20'
 // CHECK-NEXT:         ResolvedIntLiteral: '4'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '*'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '*'
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x
+// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
 
 fn additive() -> void {
     foo(5 + 3);
     foo(20 - 4);
 }
-// CHECK: ResolvedFunctionDecl: additive:
+// CHECK: ResolvedFunctionDecl: additive -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '+'
 // CHECK-NEXT:       | value: 8
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
 // CHECK-NEXT:         ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '-'
 // CHECK-NEXT:       | value: 16
 // CHECK-NEXT:         ResolvedIntLiteral: '20'
@@ -83,24 +83,24 @@ fn comparison() -> void {
     foo(2 > 5);
     foo(5 > 2);
 }
-// CHECK: ResolvedFunctionDecl: comparison:
+// CHECK: ResolvedFunctionDecl: comparison -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '<'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '<'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '>'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '>'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
@@ -110,14 +110,14 @@ fn equality() -> void {
     foo(2 == 2);
     foo(5 == 3);
 }
-// CHECK: ResolvedFunctionDecl: equality:
+// CHECK: ResolvedFunctionDecl: equality -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '=='
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '=='
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '5'
@@ -129,24 +129,24 @@ fn conjunction() -> void {
     foo(1 && 0);
     foo(0 && 0);
 }
-// CHECK: ResolvedFunctionDecl: conjunction:
+// CHECK: ResolvedFunctionDecl: conjunction -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '&&'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
@@ -158,24 +158,24 @@ fn disjunction() -> void {
     foo(2 || 3);
     foo(0 || 0);
 }
-// CHECK: ResolvedFunctionDecl: disjunction:
+// CHECK: ResolvedFunctionDecl: disjunction -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral: '2'
 // CHECK-NEXT:         ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedCallExpr: foo
+// CHECK-NEXT:     ResolvedCallExpr: foo:void
 // CHECK-NEXT:       ResolvedBinaryOperator: '||'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral: '0'
