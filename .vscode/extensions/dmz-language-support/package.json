@@ -1,0 +1,25 @@
+{
+  "name": "dmz-language-support",
+  "displayName": "DMZ language support",
+  "description": "DMZ programming language support extension",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "dmz",
+      "aliases": ["DMZ", "dmz"],
+      "extensions": [".dmz"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "dmz",
+      "scopeName": "source.dmz",
+      "path": "./syntaxes/dmz.tmLanguage.json"
+    }]
+  }
+}
