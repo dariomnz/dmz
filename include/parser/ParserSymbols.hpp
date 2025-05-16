@@ -33,12 +33,11 @@ namespace DMZ {
 
 struct Type {
     enum class Kind { Void, Int, Char, Struct, Custom };
-    enum class Ref { No, Ref, ParamRef };
 
     Kind kind;
     std::string_view name;
     std::optional<int> isArray = std::nullopt;
-    Ref isRef = Ref::No;
+    bool isRef = false;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
@@ -46,6 +45,10 @@ struct Type {
     static Type builtinString(int size) { return Type{.kind = Kind::Char, .name = "char", .isArray = size}; }
     static Type custom(const std::string_view& name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
+    static Type structType(Type t) {
+        t.kind = Kind::Struct;
+        return t;
+    }
 
     static bool compare(const Type& lhs, const Type& rhs) {
         bool equalArray = false;
@@ -53,7 +56,7 @@ struct Type {
         equalArray |= (lhs.isArray && *lhs.isArray == 0);
         equalArray |= (rhs.isArray && *rhs.isArray == 0);
         equalArray |= (lhs.isArray == rhs.isArray);
-        equalArray |= (lhs.isRef == Ref::Ref && rhs.isRef == Ref::Ref);
+        equalArray |= (lhs.isRef && rhs.isRef);
 
         return lhs.kind == rhs.kind && lhs.name == rhs.name && equalArray;
     }

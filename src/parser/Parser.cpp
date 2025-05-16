@@ -118,15 +118,15 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
 //  |   'void'
 //  |   <identifier>
 std::optional<Type> Parser::parse_type() {
-    std::string_view name = m_nextToken.str;
     bool isArray = false;
-    Type::Ref isRef = Type::Ref::No;
-
+    bool isRef = false;
+    
     if (m_nextToken.type == TokenType::amp) {
-        isRef = Type::Ref::Ref;
+        isRef = true;
         eat_next_token();  // eat '&'
     }
     TokenType type = m_nextToken.type;
+    std::string_view name = m_nextToken.str;
 
     std::unordered_set<TokenType> types = {
         TokenType::kw_void,

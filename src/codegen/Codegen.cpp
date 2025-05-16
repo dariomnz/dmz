@@ -59,9 +59,6 @@ llvm::Type *Codegen::generate_type(const Type &type) {
             ret = llvm::PointerType::get(ret, 0);
         }
     }
-    if (ret != nullptr && (type.isRef == Type::Ref::Ref || type.isRef == Type::Ref::ParamRef)) {
-        ret = llvm::PointerType::get(ret, 0);
-    }
     return ret;
 }
 
@@ -81,7 +78,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             continue;
         }
         llvm::Type *paramType = generate_type(param->type);
-        if (param->type.kind == Type::Kind::Struct) {
+        if (param->type.kind == Type::Kind::Struct || param->type.isRef) {
             paramType = llvm::PointerType::get(paramType, 0);
         }
         paramTypes.emplace_back(paramType);
@@ -105,15 +102,19 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
     for ([[maybe_unused]] auto &&param : fn.params) {
         llvm::AttrBuilder paramAttrs(m_context);
         if (param->type.kind == Type::Kind::Struct) {
-            if (param->isMutable)
-                paramAttrs.addByValAttr(generate_type(param->type));
-            else
+            if (param->isMutable) {
+                if (param->type.isRef) {
+                    paramAttrs.addByRefAttr(generate_type(param->type));
+                } else {
+                    paramAttrs.addByValAttr(generate_type(param->type));
+                }
+            } else {
                 paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
-        }
-        if (param->type.isRef == Type::Ref::ParamRef) {
-            auto deref = param->type;
-            deref.isRef = Type::Ref::No;
-            paramAttrs.addByRefAttr(generate_type(deref));
+            }
+        } else {
+            if (param->type.isRef) {
+                paramAttrs.addByRefAttr(generate_type(param->type));
+            }
         }
         argsAttrSets.emplace_back(llvm::AttributeSet::get(m_context, paramAttrs));
     }
@@ -147,8 +148,7 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (paramDecl->type.kind != Type::Kind::Struct && paramDecl->type.isRef == Type::Ref::No &&
-            paramDecl->isMutable) {
+        if (paramDecl->type.kind != Type::Kind::Struct && !paramDecl->type.isRef && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, paramDecl->type);
             store_value(&arg, declVal, paramDecl->type);
         }
@@ -281,7 +281,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     for (auto &&arg : call.arguments) {
         llvm::Value *val = generate_expr(*arg);
 
-        if (arg->type.kind == Type::Kind::Struct && calleeDecl.params[argIdx]->isMutable) {
+        if (arg->type.kind == Type::Kind::Struct && calleeDecl.params[argIdx]->isMutable && !arg->type.isRef) {
             llvm::Value *tmpVar = allocate_stack_variable("struct.arg.tmp", arg->type);
             store_value(val, tmpVar, arg->type);
             val = tmpVar;
@@ -330,11 +330,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
     if (unop.op == TokenType::op_not) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
 
     if (unop.op == TokenType::amp) {
-        if (unop.operand->type.isRef == Type::Ref::Ref) {
-            return m_builder.CreateLoad(llvm::PointerType::get(m_context, 0), rhs);
-        } else {
-            return rhs;
-        }
+        return rhs;
     }
 
     dmz_unreachable("unknown unary op");
@@ -491,13 +487,25 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
 llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     const auto *decl = stmt.varDecl.get();
-    llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
+    if (!decl->type.isRef) {
+        llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
 
-    if (const auto &init = decl->initializer) {
-        store_value(generate_expr(*init), var, init->type);
+        if (const auto &init = decl->initializer) {
+            store_value(generate_expr(*init), var, init->type);
+        }
+        m_declarations[decl] = var;
+        return nullptr;
+    } else {
+        // Only permit ref with a unary operator
+        if (const auto init = dynamic_cast<ResolvedUnaryOperator *>(decl->initializer.get())) {
+            if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->operand.get())) {
+                m_declarations[decl] = m_declarations[&operand->decl];
+                return nullptr;
+            }
+        }
+        dmz_unreachable("Only permit ref with a unary operator");
     }
 
-    m_declarations[decl] = var;
     return nullptr;
 }
 
@@ -515,11 +523,6 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &type) {
-    if (type.isRef == Type::Ref::Ref) {
-        auto GEPVal = m_builder.CreateGEP(generate_type(type), val, llvm::ConstantInt::get(m_builder.getInt32Ty(), 0));
-        return m_builder.CreateStore(GEPVal, ptr);
-    }
-
     if (type.kind == Type::Kind::Struct) {
         const llvm::DataLayout &dl = m_module.getDataLayout();
         const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(type)));
@@ -536,16 +539,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type
     return m_builder.CreateStore(val, ptr);
 }
 
-llvm::Value *Codegen::load_value(llvm::Value *v, Type type) {
-    if (type.isRef == Type::Ref::Ref) {
-        v = m_builder.CreateLoad(llvm::PointerType::get(m_context, 0), v);
-        type.isRef = Type::Ref::No;
-    }
-    if (type.isRef == Type::Ref::ParamRef) {
-        type.isRef = Type::Ref::No;
-    }
-    return m_builder.CreateLoad(generate_type(type), v);
-}
+llvm::Value *Codegen::load_value(llvm::Value *v, Type type) { return m_builder.CreateLoad(generate_type(type), v); }
 
 llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer) {
     const ResolvedDecl &decl = dre.decl;

@@ -7,16 +7,16 @@ fn foo(x: &int) -> void {
     println(x);
 }
 // CHECK: ResolvedFunctionDecl: foo -> void
-// CHECK-NEXT:   ResolvedParamDecl: x:i&int
+// CHECK-NEXT:   ResolvedParamDecl: x:&int
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
 // CHECK-NEXT:     ResolvedAssignment:
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
 // CHECK-NEXT:       ResolvedIntLiteral: '20'
 // CHECK-NEXT:       | value: 20
 // CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:i&int
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 

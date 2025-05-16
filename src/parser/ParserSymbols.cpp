@@ -6,8 +6,7 @@ void Type::dump() const { std::cerr << to_str(); }
 
 std::string Type::to_str() const {
     std::stringstream out;
-    if (isRef==Ref::Ref) out << "&";
-    if (isRef==Ref::ParamRef) out << "i&";
+    if (isRef) out << "&";
     out << name;
     if (isArray) {
         out << "[";

@@ -1,18 +1,55 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\n'
+// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n'
+
+struct Color {
+    r: int,
+    g: int,
+    b: int,
+}
+
+fn bar(c: &Color) -> void {
+    c.r = 10;
+    c.g = 10;
+    c.b = 10;
+}
+// CHECK: define void @bar(ptr byref(%struct.Color) %c) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 0
+// CHECK-NEXT:   store i32 10, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 1
+// CHECK-NEXT:   store i32 10, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 2
+// CHECK-NEXT:   store i32 10, ptr %2, align 4
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn printColor(const c: &Color) -> void {
+    dprintf(1, &"Color{%d,%d,%d}\n", c.r, c.g, c.b);
+}
+// CHECK: define void @printColor(ptr readonly %c) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 0
+// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 1
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   %4 = getelementptr inbounds %struct.Color, ptr %c, i32 0, i32 2
+// CHECK-NEXT:   %5 = load i32, ptr %4, align 4
+// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str, i32 %1, i32 %3, i32 %5)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
 
 fn foo(x: &int) -> void {
-    println(x);
+    dprintf(1, &"%d\n", x);
     x = 20;
-    println(x);
+    dprintf(1, &"%d\n", x);
 }
 // CHECK: define void @foo(ptr byref(i32) %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = load i32, ptr %x, align 4
-// CHECK-NEXT:   call void @println(i32 %0)
+// CHECK-NEXT:   %1 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.1, i32 %0)
 // CHECK-NEXT:   store i32 20, ptr %x, align 4
-// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
-// CHECK-NEXT:   call void @println(i32 %1)
+// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.2, i32 %2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -21,24 +58,36 @@ extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 fn main() -> void {
     let i = 10;
     let i_ref = &i;
-    println(i_ref);
+    dprintf(1, &"%d\n", i);
     foo(&i_ref);
-    println(i);
-}
+    dprintf(1, &"%d\n", i_ref);
 
+    let col = Color{r:1, g:1, b:1};
+    let col_ref = &col;
+    printColor(&col);
+    bar(&col_ref);
+    printColor(&col_ref);
+}
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %i = alloca i32, align 4
-// CHECK-NEXT:   %i_ref = alloca ptr, align 8
+// CHECK-NEXT:   %col = alloca %struct.Color, align 8
+// CHECK-NEXT:   %Color.tmp = alloca %struct.Color, align 8
 // CHECK-NEXT:   store i32 10, ptr %i, align 4
-// CHECK-NEXT:   %0 = getelementptr ptr, ptr %i, i32 0
-// CHECK-NEXT:   store ptr %0, ptr %i_ref, align 8
-// CHECK-NEXT:   %1 = load ptr, ptr %i_ref, align 8
-// CHECK-NEXT:   %2 = load i32, ptr %1, align 4
-// CHECK-NEXT:   call void @println(i32 %2)
-// CHECK-NEXT:   %3 = load ptr, ptr %i_ref, align 8
-// CHECK-NEXT:   call void @foo(ptr byref(i32) %3)
-// CHECK-NEXT:   %4 = load i32, ptr %i, align 4
-// CHECK-NEXT:   call void @println(i32 %4)
+// CHECK-NEXT:   %0 = load i32, ptr %i, align 4
+// CHECK-NEXT:   %1 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.3, i32 %0)
+// CHECK-NEXT:   call void @foo(ptr byref(i32) %i)
+// CHECK-NEXT:   %2 = load i32, ptr %i, align 4
+// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.4, i32 %2)
+// CHECK-NEXT:   %4 = getelementptr inbounds %struct.Color, ptr %Color.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %4, align 4
+// CHECK-NEXT:   %5 = getelementptr inbounds %struct.Color, ptr %Color.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 1, ptr %5, align 4
+// CHECK-NEXT:   %6 = getelementptr inbounds %struct.Color, ptr %Color.tmp, i32 0, i32 2
+// CHECK-NEXT:   store i32 1, ptr %6, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %col, ptr align 4 %Color.tmp, i64 12, i1 false)
+// CHECK-NEXT:   call void @printColor(ptr readonly %col)
+// CHECK-NEXT:   call void @bar(ptr byref(%struct.Color) %col)
+// CHECK-NEXT:   call void @printColor(ptr readonly %col)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

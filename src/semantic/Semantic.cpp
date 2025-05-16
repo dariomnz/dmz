@@ -53,8 +53,9 @@ std::unique_ptr<ResolvedFunctionDecl> Sema::create_builtin_println() {
 
 std::optional<Type> Sema::resolve_type(Type parsedType) {
     if (parsedType.kind == Type::Kind::Custom) {
-        if (auto *decl = lookup_decl<ResolvedStructDecl>(parsedType.name).first)
-            return Type::structType(decl->identifier);
+        if (lookup_decl<ResolvedStructDecl>(parsedType.name).first) {
+            return Type::structType(parsedType);
+        }
 
         return std::nullopt;
     }
@@ -103,7 +104,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
                                                          "' expected '" + resolvedFuncDecl->params[idx]->type.to_str() +
                                                          "'");
             }
-            if (resolvedFuncDecl->params[idx]->type.isRef == Type::Ref::ParamRef) {
+            if (resolvedFuncDecl->params[idx]->type.isRef) {
                 auto unary = dynamic_cast<const ResolvedUnaryOperator *>(resolvedArg.get());
                 if (!unary || (unary && unary->op != TokenType::amp)) {
                     return report(resolvedArg->location, "expected to reference the value with '&'");
@@ -251,10 +252,6 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
         if (!type || type->kind == Type::Kind::Void)
             return report(param.location, "parameter '" + std::string(param.identifier) + "' has invalid '" +
                                               std::string(param.type.name) + "' type");
-
-    if (type && (*type).isRef == Type::Ref::Ref) {
-        (*type).isRef = Type::Ref::ParamRef;
-    }
 
     return std::make_unique<ResolvedParamDecl>(param.location, param.identifier, *type, param.isMutable,
                                                param.isVararg);
@@ -425,7 +422,7 @@ std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryO
                                                  std::string(get_op_str(unary.op)));
     auto ret = std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
     if (unary.op == TokenType::amp) {
-        ret->type.isRef = Type::Ref::Ref;
+        ret->type.isRef = true;
     }
     return ret;
 }
