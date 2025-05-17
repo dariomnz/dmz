@@ -2,8 +2,8 @@
 fn error(x: int) -> void {
     
     // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
-    if x == {
-        if x == 2 {
+    if (x ==) {
+        if (x == 2) {
 
         } else {
 

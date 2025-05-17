@@ -174,4 +174,9 @@ void ResolvedStructInstantiationExpr::dump(size_t level) const {
 
     for (auto &&field : fieldInitializers) field->dump(level + 1);
 }
+
+void ResolvedDeferStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedDeferStmt:\n";
+    block->dump(level + 1);
+}
 }  // namespace DMZ

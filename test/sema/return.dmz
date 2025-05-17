@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn foo() -> int {
-    if 0 {
+    if (0) {
         return 1;
     }
 
@@ -20,7 +20,7 @@ fn bar() -> int {
 }
 
 fn main() -> void {
-    if 1 {
+    if (1) {
         return;
     }
 

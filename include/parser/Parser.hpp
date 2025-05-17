@@ -2,9 +2,9 @@
 
 #include <unordered_set>
 
+#include "Utils.hpp"
 #include "lexer/Lexer.hpp"
 #include "parser/ParserSymbols.hpp"
-#include "Utils.hpp"
 
 namespace DMZ {
 
@@ -17,21 +17,21 @@ class Parser {
     using RestrictionType = unsigned char;
     RestrictionType restrictions = 0;
 
-    enum RestrictionKind : RestrictionType { StructNotAllowed = 1 };
+    enum RestrictionKind : RestrictionType { StructNotAllowed = 0b1, ReturnNotAllowed = 0b10 };
 
     template <typename T>
-    T with_restrictions(RestrictionType rests, T (Parser::*f)()) {
+    T with_restrictions(RestrictionType rests, std::function<T()> func) {
         restrictions |= rests;
-        auto res = (this->*f)();
+        auto res = (func)();
         restrictions &= ~rests;
         return res;
     }
 
     template <typename T>
-    T with_no_restrictions(T (Parser::*f)()) {
+    T with_no_restrictions(std::function<T()> func) {
         RestrictionType prevRestrictions = restrictions;
         restrictions = 0;
-        auto res = (this->*f)();
+        auto res = (func)();
         restrictions = prevRestrictions;
         return res;
     }
@@ -53,7 +53,7 @@ class Parser {
    private:
     std::unique_ptr<FuncDecl> parse_function_decl();
     std::optional<Type> parse_type();
-    std::unique_ptr<Block> parse_block();
+    std::unique_ptr<Block> parse_block(bool oneStmt = false);
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<Stmt> parse_statement();
     std::unique_ptr<Expr> parse_primary();
@@ -75,5 +75,6 @@ class Parser {
     std::unique_ptr<StructDecl> parse_struct_decl();
     std::unique_ptr<FieldDecl> parse_field_decl();
     std::unique_ptr<FieldInitStmt> parse_field_init_stmt();
+    std::unique_ptr<DeferStmt> parse_defer_stmt();
 };
 }  // namespace DMZ

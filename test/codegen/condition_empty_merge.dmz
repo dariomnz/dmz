@@ -1,7 +1,7 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: compiler %s -run | ( ! grep ^ )
 fn foo(x: int) -> void {
-    if x == 0 {
+    if (x == 0) {
         return;
     }
 }

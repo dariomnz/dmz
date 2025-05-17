@@ -2,7 +2,7 @@
 fn main() -> void {
     let const x: int;
     
-    if 1 {
+    if (1) {
         x = 2;
     } else {
         x = 3;
@@ -14,7 +14,7 @@ fn main() -> void {
 fn modifyImmutable() -> void {
     let const x: int = 1;
     
-    if 1 {
+    if (1) {
         // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
         x = 1;
     } else {
@@ -29,7 +29,7 @@ fn modifyImmutable() -> void {
 fn uninitOneBranch() -> void {
     let const x: int;
     
-    if 1 {
+    if (1) {
         let const x: int;
         x = 1; // init inner 'x'
     } else {
@@ -43,7 +43,7 @@ fn uninitOneBranch() -> void {
 fn initEveryBranch() -> void {
     let x: int;
     
-    if 1 {
+    if (1) {
         x = 1;
     } else {
         x = 2;
@@ -56,11 +56,11 @@ fn initEveryBranch() -> void {
 fn initConditionVar() -> void {
     let x: int;
     
-    // CHECK: [[# @LINE + 1 ]]:13: error: 'x' is not initialized
-    if 1 || x {
+    // CHECK: [[# @LINE + 1 ]]:14: error: 'x' is not initialized
+    if (1 || x) {
         x = 1;
-    // CHECK: [[# @LINE + 1 ]]:20: error: 'x' is not initialized
-    } else if 0 && x == 2 {
+    // CHECK: [[# @LINE + 1 ]]:21: error: 'x' is not initialized
+    } else if (0 && x == 2) {
         x = 3;
     } else {
         x = 2;
@@ -74,7 +74,7 @@ fn loop() -> void {
     let const x: int;
     let y: int;
     
-    while 1 {
+    while (1) {
         // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
         x = 1;
 
@@ -91,7 +91,7 @@ fn loop() -> void {
 fn shadowInitialization() -> void {
     let const x: int;
     
-    if 1 {
+    if (1) {
         let const x: int;
         x = 1;
     } else {
@@ -105,7 +105,7 @@ fn shadowInitialization() -> void {
 fn shadowInitialized() -> void {
     let const x: int;
     
-    if 1 {
+    if (1) {
         x = 1;
         let const x: int;
         // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
@@ -120,9 +120,9 @@ fn shadowInitialized() -> void {
 fn nestedInLoop(param: int) -> void {
     let x: int;
 
-    if param {
-        while param {
-            if param {
+    if (param) {
+        while (param) {
+            if (param) {
                 x = param - 1;
             }
 
@@ -130,8 +130,8 @@ fn nestedInLoop(param: int) -> void {
             let y: int = x;
         }
     } else {
-        while param {
-            if param {
+        while (param) {
+            if (param) {
                 x = param - 1;
             }
 

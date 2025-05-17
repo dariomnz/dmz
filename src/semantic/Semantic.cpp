@@ -139,6 +139,12 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) {
         return resolve_return_stmt(*returnStmt);
     }
+    if (auto *deferStmt = dynamic_cast<const DeferStmt *>(&stmt)) {
+        return resolve_defer_stmt(*deferStmt);
+    }
+    if (auto *block = dynamic_cast<const Block *>(&stmt)) {
+        return resolve_block(*block);
+    }
 
     dmz_unreachable("unexpected statement");
 }
@@ -228,19 +234,42 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
     ScopeRAII blockScope(*this);
     for (auto &&stmt : block.statements) {
         auto resolvedStmt = resolve_stmt(*stmt);
-
-        error |= !resolvedStatements.emplace_back(std::move(resolvedStmt));
-        if (error) continue;
+        if (dynamic_cast<ResolvedDeferStmt *>(resolvedStmt.get())) {
+            m_defers.back().emplace_back(std::move(resolvedStmt));
+        } else {
+            error |= !resolvedStatements.emplace_back(std::move(resolvedStmt));
+            if (error) continue;
+        }
 
         if (reportUnreachableCount == 1) {
             report(stmt->location, "unreachable statement", true);
             ++reportUnreachableCount;
         }
 
-        if (dynamic_cast<ReturnStmt *>(stmt.get())) ++reportUnreachableCount;
+        if (dynamic_cast<ReturnStmt *>(stmt.get())) {
+            ++reportUnreachableCount;
+            // Traversing in reverse the defers vector
+            for (int i = m_defers.size() - 1; i >= 0; --i) {
+                for (int j = m_defers[i].size() - 1; j >= 0; --j) {
+                    auto deferStmt = dynamic_cast<const ResolvedDeferStmt *>(m_defers[i][j].get());
+                    if (!deferStmt) dmz_unreachable("internal error in defers can only be ResolvedDeferStmt");
+                    resolvedStatements.insert(resolvedStatements.end() - 1,
+                                              std::make_unique<ResolvedDeferStmt>(*deferStmt));
+                }
+            }
+        }
     }
 
     if (error) return nullptr;
+
+    if (resolvedStatements.size() == 0 || !dynamic_cast<ResolvedReturnStmt *>(resolvedStatements.back().get())) {
+        // Traversing in reverse the defers vector
+        for (int i = m_defers.back().size() - 1; i >= 0; --i) {
+            auto deferStmt = dynamic_cast<const ResolvedDeferStmt *>(m_defers.back()[i].get());
+            if (!deferStmt) dmz_unreachable("internal error in defers can only be ResolvedDeferStmt");
+            resolvedStatements.emplace_back(std::make_unique<ResolvedDeferStmt>(*deferStmt));
+        }
+    }
 
     return std::make_unique<ResolvedBlock>(block.location, std::move(resolvedStatements));
 }
@@ -838,4 +867,9 @@ bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
     return true;
 }
 
+std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
+    varOrReturn(block, resolve_block(*deferStmt.block));
+    std::shared_ptr<ResolvedBlock> sharedBlock = std::move(block);
+    return std::make_unique<ResolvedDeferStmt>(deferStmt.location, sharedBlock);
+}
 }  // namespace DMZ

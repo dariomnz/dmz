@@ -160,4 +160,9 @@ void FieldInitStmt::dump(size_t level) const {
     std::cerr << indent(level) << "FieldInitStmt: " << identifier << '\n';
     initializer->dump(level + 1);
 }
+
+void DeferStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "DeferStmt: " << '\n';
+    block->dump(level + 1);
+}
 }  // namespace DMZ

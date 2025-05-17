@@ -1,6 +1,6 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 fn foo(x: int) -> void {
-    if x == 1 || x == 2 && x > 3 {
+    if (x == 1 || x == 2 && x > 3) {
 
     }
 }

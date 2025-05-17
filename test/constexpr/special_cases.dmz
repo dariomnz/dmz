@@ -29,7 +29,7 @@ fn ret() -> int {
 }
 
 fn call() -> void {
-    if !ret() {
+    if (!ret()) {
         return;
     }
 }

@@ -2,15 +2,15 @@
 // RUN: compiler %s -run | grep -Plzx '0\n5\n3\n'
 fn foo(x: int) -> int {
     let n: int = x;
-    while n > 10 {
+    while (n > 10) {
         n = n - 1;
         
-        if x == 15 {
+        if (x == 15) {
             return 3;
 
             return 1;
             
-            if 0 {
+            if (0) {
 
             } else {
                 return 2;

@@ -1,0 +1,14 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    defer println(1);
+    defer println(2);
+    {
+        defer println(3);
+        defer {
+            println(4);
+            // CHECK: [[# @LINE + 1 ]]:13: error: unexpected return statement
+            return;
+        }
+    }
+}

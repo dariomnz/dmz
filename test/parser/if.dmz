@@ -1,36 +1,40 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
-    // CHECK: [[# @LINE + 1 ]]:8: error: expected expression
+    // CHECK: [[# @LINE + 1 ]]:8: error: expected '('
     if {}
+    // CHECK: [[# @LINE + 1 ]]:10: error: expected expression
+    if ( {}
+    // CHECK: [[# @LINE + 1 ]]:11: error: expected ')'
+    if (0 {}
 
-    // CHECK: [[# @LINE + 1 ]]:10: error: expected 'if' body
-    if 0 #{}
+    // CHECK: [[# @LINE + 1 ]]:12: error: expected 'if' body
+    if (0) #{}
 
-    if 0 {}
+    if (0) {}
     // CHECK: [[# @LINE + 1 ]]:10: error: expected 'else' body
     else ({}
 
-    if 0 {}
-    // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
-    else if {}
+    if (0) {}
+    // CHECK: [[# @LINE + 1 ]]:14: error: expected expression
+    else if () {}
     // CHECK: [[# @LINE + 1 ]]:5: error: expected expression
     else {}
 
-    if 0 {}
+    if (0) {}
     // CHECK: IfStmt
     // CHECK-NEXT:   IntLiteral: '0'
     // CHECK-NEXT:   Block
 
-    if 0 {}
+    if (0) {}
     else {}
     // CHECK: IfStmt
     // CHECK-NEXT:   IntLiteral: '0'
     // CHECK-NEXT:   Block
     // CHECK-NEXT:   Block
 
-    if 0 {}
-    else if 1 {}
-    else if 2 {}
+    if (0) {}
+    else if (1) {}
+    else if (2) {}
     else {}
     // CHECK: IfStmt
     // CHECK-NEXT:   IntLiteral: '0'

@@ -5,9 +5,9 @@ struct S2 {}
 fn main() -> void {
   let x = S {};
 
-  if x {}
-  // CHECK: [[# @LINE - 1 ]]:6: error: expected int in condition
+  if (x) {}
+  // CHECK: [[# @LINE - 1 ]]:7: error: expected int in condition
 
-  while x {}
-  // CHECK: [[# @LINE - 1 ]]:9: error: expected int in condition
+  while (x) {}
+  // CHECK: [[# @LINE - 1 ]]:10: error: expected int in condition
 }

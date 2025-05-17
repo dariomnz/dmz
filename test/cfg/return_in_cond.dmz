@@ -1,6 +1,6 @@
 // RUN: compiler %s -cfg-dump 2>&1 | filecheck %s
 fn foo() -> int {
-    if 0 {
+    if (0) {
 
     } else {
         return 2;

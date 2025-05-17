@@ -1,6 +1,6 @@
 // RUN: compiler %s -cfg-dump 2>&1 | filecheck %s --match-full-lines
 fn main() -> void {
-    if 0 {}
+    if (0) {}
 }
 // CHECK: main:
 // CHECK-NEXT: [2 (entry)]
@@ -22,7 +22,7 @@ fn main() -> void {
 // CHECK-NEXT:   succs: 
 
 fn body() -> void {
-    if 0 {
+    if (0) {
         1;
     }
 }
@@ -52,7 +52,7 @@ fn body() -> void {
 // CHECK-NEXT:   succs: 
 
 fn additionalBlockAfterIf() -> void {
-    if 0 {
+    if (0) {
         1;
     }
 
@@ -89,11 +89,11 @@ fn additionalBlockAfterIf() -> void {
 // CHECK-NEXT:   succs: 
 
 fn multipleBranches() -> void {
-    if 8 {
+    if (8) {
         7;
-    } else if 6 {
+    } else if (6) {
         5;
-    } else if 4 {
+    } else if (4) {
         3;
     } else {
         2;
@@ -193,8 +193,8 @@ fn multipleBranches() -> void {
 // CHECK-NEXT:   succs:
 
 fn nestedIfStatements() -> void {
-    if 5 {
-        if 4 {
+    if (5) {
+        if (4) {
             3;
         } else {
             2;
@@ -259,7 +259,7 @@ fn nestedIfStatements() -> void {
 
 fn orCondition() -> void {
     5;
-    if 5 || 4 || 3 {
+    if (5 || 4 || 3) {
         2;
     }
 
@@ -312,7 +312,7 @@ fn orCondition() -> void {
 
 fn andCondition() -> void {
     5;
-    if 5 && 4 && 3 {
+    if (5 && 4 && 3) {
         2;
     }
 
@@ -364,10 +364,10 @@ fn andCondition() -> void {
 // CHECK-NEXT:   succs: 
 
 fn ifWhileFirstStmt(p: int) -> void {
-    if p {
-        while p {}
+    if (p) {
+        while (p) {}
     } else {
-        while p {}
+        while (p) {}
     }
 }
 // CHECK: ifWhileFirstStmt:
@@ -419,12 +419,12 @@ fn ifWhileFirstStmt(p: int) -> void {
 // CHECK-NEXT:   succs:
 
 fn nestedInLoopConditionalOps() -> void {
-    if 8 || 8 {
-        while 7 {}
-    } else if 5 && 5 {
-        while 4 {}
+    if (8 || 8) {
+        while (7) {}
+    } else if (5 && 5) {
+        while (4) {}
     } else {
-        while 2 {}
+        while (2) {}
     }
 }
 // CHECK: nestedInLoopConditionalOps:

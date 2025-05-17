@@ -55,6 +55,12 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *fieldInit = dynamic_cast<const ResolvedFieldInitStmt *>(&stmt)) {
         return insert_expr(*fieldInit->initializer, block);
     }
+    if (auto *blockStmt = dynamic_cast<const ResolvedBlock *>(&stmt)) {
+        return insert_block(*blockStmt, block);
+    }
+    if (auto *deferStmt = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
+        return insert_block(*deferStmt->block, block);
+    }
     dmz_unreachable("unexpected expression");
 }
 

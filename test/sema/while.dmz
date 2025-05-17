@@ -4,9 +4,9 @@ fn foo() -> void {}
 fn bar() -> int { return 1; }
 
 fn main() -> void {
-    while bar() {}
+    while (bar()) {}
 
-    // CHECK: [[# @LINE + 1 ]]:14: error: expected int in condition
-    while foo() {}
+    // CHECK: [[# @LINE + 1 ]]:15: error: expected int in condition
+    while (foo()) {}
 }
 // CHECK-NOT: {{.*}}

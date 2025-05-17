@@ -3,7 +3,7 @@
 fn foo(n: int) -> void {
     let x: int;
 
-    if n > 2 {
+    if (n > 2) {
         x = 1;
     } else {
         x = 2;

@@ -1,0 +1,32 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    let x = 1;
+    println(x);
+    {
+        let y = 2;
+        println(y);
+    }
+    println(x);
+}
+
+// CHECK: ResolvedFunctionDecl: println -> void
+// CHECK-NEXT:   ResolvedParamDecl: n:int
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt:
+// CHECK-NEXT:       ResolvedVarDecl: x:int
+// CHECK-NEXT:         ResolvedIntLiteral: '1'
+// CHECK-NEXT:         | value: 1
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt:
+// CHECK-NEXT:         ResolvedVarDecl: y:int
+// CHECK-NEXT:           ResolvedIntLiteral: '2'
+// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:       ResolvedCallExpr: println:void
+// CHECK-NEXT:         ResolvedDeclRefExpr: y:int
+// CHECK-NEXT:     ResolvedCallExpr: println:void
+// CHECK-NEXT:       ResolvedDeclRefExpr: x:int

@@ -215,6 +215,14 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
         return generate_assignment(*assignment);
     }
+    if (auto *block = dynamic_cast<const ResolvedBlock *>(&stmt)) {
+        generate_block(*block);
+        return nullptr;
+    }
+    if (auto *defer = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
+        generate_block(*defer->block);
+        return nullptr;
+    }
     dmz_unreachable("unknown statement");
 }
 

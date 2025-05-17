@@ -47,12 +47,11 @@ struct ResolvedDecl {
     virtual void dump(size_t level = 0) const = 0;
 };
 
-struct ResolvedBlock {
-    SourceLocation location;
+struct ResolvedBlock : public ResolvedStmt {
     std::vector<std::unique_ptr<ResolvedStmt>> statements;
 
     ResolvedBlock(SourceLocation location, std::vector<std::unique_ptr<ResolvedStmt>> statements)
-        : location(location), statements(std::move(statements)) {}
+        : ResolvedStmt(location), statements(std::move(statements)) {}
 
     void dump(size_t level = 0) const;
 };
@@ -291,4 +290,17 @@ struct ResolvedStructInstantiationExpr : public ResolvedExpr {
 
     void dump(size_t level = 0) const override;
 };
+
+struct ResolvedDeferStmt : public ResolvedStmt {
+    std::shared_ptr<ResolvedBlock> block;
+
+    ResolvedDeferStmt(SourceLocation location, std::shared_ptr<ResolvedBlock> block)
+        : ResolvedStmt(location), block(block) {}
+
+    ResolvedDeferStmt(const ResolvedDeferStmt& deferStmt)
+        : ResolvedStmt(deferStmt.location), block(deferStmt.block) {}
+
+    void dump(size_t level = 0) const override;
+};
+
 }  // namespace DMZ

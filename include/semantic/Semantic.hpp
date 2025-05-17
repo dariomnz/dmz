@@ -15,13 +15,20 @@ class Sema {
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
     std::vector<std::vector<ResolvedDecl *>> m_scopes;
+    std::vector<std::vector<std::unique_ptr<ResolvedStmt>>> m_defers;
     ResolvedFunctionDecl *currentFunction;
     class ScopeRAII {
         Sema &m_sema;
 
        public:
-        explicit ScopeRAII(Sema &sema) : m_sema(sema) { m_sema.m_scopes.emplace_back(); }
-        ~ScopeRAII() { m_sema.m_scopes.pop_back(); }
+        explicit ScopeRAII(Sema &sema) : m_sema(sema) {
+            m_sema.m_scopes.emplace_back();
+            m_sema.m_defers.emplace_back();
+        }
+        ~ScopeRAII() {
+            m_sema.m_scopes.pop_back();
+            m_sema.m_defers.pop_back();
+        }
     };
 
    public:
@@ -60,5 +67,6 @@ class Sema {
         const StructInstantiationExpr &structInstantiation);
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
+    std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
 };
 }  // namespace DMZ

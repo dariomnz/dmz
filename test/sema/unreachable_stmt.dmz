@@ -22,7 +22,7 @@ fn multipleReturnsAfterEachOther() -> void {
 }
 
 fn branch(x: int) -> void {
-    if 1 || x {
+    if (1 || x) {
         1;
         return;
         // CHECK: [[# @LINE + 1 ]]:9: warning: unreachable statement
@@ -35,7 +35,7 @@ fn branch(x: int) -> void {
 }
 
 fn loop(x: int) -> void {
-    while x {
+    while (x) {
         return;
         // CHECK: [[# @LINE + 1 ]]:9: warning: unreachable statement
         1;

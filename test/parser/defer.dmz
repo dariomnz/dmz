@@ -1,0 +1,33 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    defer println(1);
+    defer println(2);
+    {
+        defer println(3);
+        defer println(4);
+    }
+}
+// CHECK: FunctionDecl: main -> void
+// CHECK-NEXT:  Block
+// CHECK-NEXT:    DeferStmt: 
+// CHECK-NEXT:      Block
+// CHECK-NEXT:        CallExpr:
+// CHECK-NEXT:          DeclRefExpr: println
+// CHECK-NEXT:          IntLiteral: '1'
+// CHECK-NEXT:    DeferStmt: 
+// CHECK-NEXT:      Block
+// CHECK-NEXT:        CallExpr:
+// CHECK-NEXT:          DeclRefExpr: println
+// CHECK-NEXT:          IntLiteral: '2'
+// CHECK-NEXT:    Block
+// CHECK-NEXT:      DeferStmt: 
+// CHECK-NEXT:        Block
+// CHECK-NEXT:          CallExpr:
+// CHECK-NEXT:            DeclRefExpr: println
+// CHECK-NEXT:            IntLiteral: '3'
+// CHECK-NEXT:      DeferStmt: 
+// CHECK-NEXT:        Block
+// CHECK-NEXT:          CallExpr:
+// CHECK-NEXT:            DeclRefExpr: println
+// CHECK-NEXT:            IntLiteral: '4'

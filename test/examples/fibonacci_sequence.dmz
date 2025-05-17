@@ -23,7 +23,7 @@
 
 // CHECK-NOT: {{.*}}
 fn fib(n: int) -> int {
-    if n == 0 || n == 1 {
+    if (n == 0 || n == 1) {
         return n;
     }
 
@@ -32,7 +32,7 @@ fn fib(n: int) -> int {
 
 fn main() -> void {
     let i = 0;
-    while i < 20 {
+    while (i < 20) {
         println(fib(i));
         i = i + 1;
     }

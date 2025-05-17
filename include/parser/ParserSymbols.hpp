@@ -99,12 +99,11 @@ struct Expr : public Stmt {
     Expr(SourceLocation location) : Stmt(location) {}
 };
 
-struct Block {
-    SourceLocation location;
+struct Block : public Stmt {
     std::vector<std::unique_ptr<Stmt>> statements;
 
     Block(SourceLocation location, std::vector<std::unique_ptr<Stmt>> statements)
-        : location(location), statements(std::move(statements)) {}
+        : Stmt(location), statements(std::move(statements)) {}
 
     void dump(size_t level = 0) const;
 };
@@ -334,6 +333,15 @@ struct Assignment : public Stmt {
 
     Assignment(SourceLocation location, std::unique_ptr<AssignableExpr> assignee, std::unique_ptr<Expr> expr)
         : Stmt(location), assignee(std::move(assignee)), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct DeferStmt : public Stmt {
+    std::unique_ptr<Block> block;
+
+    DeferStmt(SourceLocation location, std::unique_ptr<Block> block)
+        : Stmt(location), block(std::move(block)) {}
 
     void dump(size_t level = 0) const override;
 };

@@ -1,12 +1,12 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
-    while - {}
+    while (-) {}
     
-    // CHECK: [[# @LINE + 1 ]]:13: error: expected 'while' body
-    while 0 ;
+    // CHECK: [[# @LINE + 1 ]]:15: error: expected 'while' body
+    while (0) ;
 
-    while 0 {
+    while (0) {
         1;
     }
     // CHECK: WhileStmt
