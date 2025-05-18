@@ -15,6 +15,7 @@ std::string Type::to_str() const {
         }
         out << "]";
     }
+    if (isOptional) out << "?";
     return out.str();
 }
 
@@ -164,5 +165,27 @@ void FieldInitStmt::dump(size_t level) const {
 void DeferStmt::dump(size_t level) const {
     std::cerr << indent(level) << "DeferStmt: " << '\n';
     block->dump(level + 1);
+}
+
+void ErrDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrDecl: " << identifier << '\n'; }
+
+void ErrDeclRef::dump(size_t level) const { std::cerr << indent(level) << "ErrDeclRef: " << identifier << '\n'; }
+
+void ErrGroupDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrGroupDecl: " << '\n';
+
+    for (auto &&err : errs) err->dump(level + 1);
+}
+
+void ErrUnwrapExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrUnwrapExpr: " << '\n';
+
+    errToUnwrap->dump(level + 1);
+}
+
+void CatchErrExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "CatchErrExpr: " << '\n';
+
+    errToCatch->dump(level + 1);
 }
 }  // namespace DMZ

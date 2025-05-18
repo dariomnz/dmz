@@ -6,7 +6,7 @@ struct Color {
 }
 
 fn main() -> void {
-    let err = Color {
+    let err1 = Color {
         r: 0, 
         +,
         // CHECK: [[# @LINE -1 ]]:9: error: expected field initialization

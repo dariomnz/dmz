@@ -70,11 +70,14 @@ class Parser {
     std::unique_ptr<WhileStmt> parse_while_stmt();
     std::unique_ptr<DeclStmt> parse_decl_stmt();
     std::unique_ptr<VarDecl> parse_var_decl(bool isLet);
-    std::unique_ptr<Stmt> parse_assignment_or_expr();
+    std::unique_ptr<Stmt> parse_assignment_or_expr(bool expectSemicolon = true);
     std::unique_ptr<Assignment> parse_assignment_rhs(std::unique_ptr<AssignableExpr> lhs);
     std::unique_ptr<StructDecl> parse_struct_decl();
     std::unique_ptr<FieldDecl> parse_field_decl();
     std::unique_ptr<FieldInitStmt> parse_field_init_stmt();
     std::unique_ptr<DeferStmt> parse_defer_stmt();
+    std::unique_ptr<ErrGroupDecl> parse_err_group_decl();
+    std::unique_ptr<ErrDecl> parse_err_decl();
+    std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
 };
 }  // namespace DMZ

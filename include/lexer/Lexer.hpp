@@ -25,8 +25,9 @@ enum class TokenType {
     op_more_eq,
     op_equal,
     op_not_equal,
-    op_not,
     op_assign,
+    op_quest_mark,
+    op_excla_mark,
     amp,
     pipe,
     block_l,
@@ -54,6 +55,8 @@ enum class TokenType {
     kw_struct,
     kw_extern,
     kw_defer,
+    kw_err,
+    kw_catch,
     unknown,
     eof,
 };
@@ -64,7 +67,8 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"char", TokenType::kw_char},     {"ptr", TokenType::kw_ptr},       {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},     {"let", TokenType::kw_let},       {"const", TokenType::kw_const},
     {"while", TokenType::kw_while},   {"return", TokenType::kw_return}, {"struct", TokenType::kw_struct},
-    {"extern", TokenType::kw_extern}, {"defer", TokenType::kw_defer}};
+    {"extern", TokenType::kw_extern}, {"defer", TokenType::kw_defer},   {"err", TokenType::kw_err},
+    {"catch", TokenType::kw_catch},};
 
 struct Token {
     TokenType type = TokenType::invalid;

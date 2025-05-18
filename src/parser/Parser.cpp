@@ -54,6 +54,11 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
                 declarations.emplace_back(std::move(st));
                 continue;
             }
+        } else if (m_nextToken.type == TokenType::kw_err) {
+            if (auto st = parse_err_group_decl()) {
+                declarations.emplace_back(std::move(st));
+                continue;
+            }
         } else {
             report(m_nextToken.loc, "expected function or struct declaration on the top level");
         }
@@ -167,6 +172,11 @@ std::optional<Type> Parser::parse_type() {
 
     if (isArray) t.isArray = 0;
     t.isRef = isRef;
+
+    if (m_nextToken.type == TokenType::op_quest_mark) {
+        t.isOptional = true;
+        eat_next_token();  // eat '?'
+    }
     return t;
 }
 
@@ -287,6 +297,10 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return declRefExpr;
     }
 
+    if (m_nextToken.type == TokenType::kw_catch) {
+        return parse_catch_err_expr();
+    }
+
     return report(location, "expected expression");
 }
 
@@ -321,6 +335,22 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         eat_next_token();  // eat identifier
     }
 
+    if (m_nextToken.type == TokenType::op_quest_mark) {
+        SourceLocation location = m_nextToken.loc;
+        if (auto declref = dynamic_cast<DeclRefExpr *>(expr.get())) {
+            eat_next_token();  // eat '?'
+            expr = std::make_unique<ErrDeclRef>(location, declref->identifier);
+        } else {
+            return report(location, "expected identifier");
+        }
+    }
+
+    if (m_nextToken.type == TokenType::op_excla_mark) {
+        SourceLocation location = m_nextToken.loc;
+        eat_next_token();  // eat '!'
+        expr = std::make_unique<ErrUnwrapExpr>(location, std::move(expr));
+    }
+
     return expr;
 }
 
@@ -351,7 +381,7 @@ std::unique_ptr<Expr> Parser::parse_prefix_expr() {
     Token tok = m_nextToken;
     std::unordered_set<TokenType> unaryOps = {
         TokenType::op_minus,
-        TokenType::op_not,
+        TokenType::op_excla_mark,
         TokenType::amp,
     };
 
@@ -544,14 +574,16 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     return std::make_unique<VarDecl>(location, identifier, type, !isConst, std::move(initializer));
 }
 
-std::unique_ptr<Stmt> Parser::parse_assignment_or_expr() {
+std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     varOrReturn(lhs, parse_prefix_expr());
 
     if (m_nextToken.type != TokenType::op_assign) {
         varOrReturn(expr, parse_expr_rhs(std::move(lhs), 0));
 
-        matchOrReturn(TokenType::semicolon, "expected ';' at the end of expression");
-        eat_next_token();  // eat ';'
+        if (expectSemicolon) {
+            matchOrReturn(TokenType::semicolon, "expected ';' at the end of expression");
+            eat_next_token();  // eat ';'
+        }
 
         return expr;
     }
@@ -561,8 +593,10 @@ std::unique_ptr<Stmt> Parser::parse_assignment_or_expr() {
 
     varOrReturn(assignment, parse_assignment_rhs(std::unique_ptr<AssignableExpr>(dre)));
 
-    matchOrReturn(TokenType::semicolon, "expected ';' at the end of assignment");
-    eat_next_token();  // eat ';'
+    if (expectSemicolon) {
+        matchOrReturn(TokenType::semicolon, "expected ';' at the end of assignment");
+        eat_next_token();  // eat ';'
+    }
 
     return assignment;
 }
@@ -636,7 +670,7 @@ std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
 }
 
 std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
-    matchOrReturn(TokenType::kw_defer, "expected field initialization");
+    matchOrReturn(TokenType::kw_defer, "expected defer");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat defer
 
@@ -644,5 +678,37 @@ std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
                            ReturnNotAllowed, [&]() { return parse_block(m_nextToken.type != TokenType::block_l); }));
 
     return std::make_unique<DeferStmt>(location, std::move(block));
+}
+
+std::unique_ptr<ErrGroupDecl> Parser::parse_err_group_decl() {
+    matchOrReturn(TokenType::kw_err, "expected 'err'");
+    auto location = m_nextToken.loc;
+    auto id = m_nextToken.str;
+
+    eat_next_token();  // eat err
+
+    varOrReturn(errs,
+                parse_list_with_trailing_comma<ErrDecl>({TokenType::block_l, "expected '{'"}, &Parser::parse_err_decl,
+                                                        {TokenType::block_r, "expected '}'"}));
+    return std::make_unique<ErrGroupDecl>(location, id, std::move(*errs));
+}
+
+std::unique_ptr<ErrDecl> Parser::parse_err_decl() {
+    matchOrReturn(TokenType::id, "expected identifier");
+    auto location = m_nextToken.loc;
+    auto id = m_nextToken.str;
+
+    eat_next_token();  // eat id
+    return std::make_unique<ErrDecl>(location, id);
+}
+
+std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
+    matchOrReturn(TokenType::kw_catch, "expected 'catch'");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat catch
+
+    varOrReturn(errToCatch, parse_assignment_or_expr(false));
+
+    return std::make_unique<CatchErrExpr>(location, std::move(errToCatch));
 }
 }  // namespace DMZ

@@ -26,7 +26,8 @@ namespace DMZ {
     if (op == TokenType::op_less_eq) return "<=";
     if (op == TokenType::op_more) return ">";
     if (op == TokenType::op_more_eq) return ">=";
-    if (op == TokenType::op_not) return "!";
+    if (op == TokenType::op_excla_mark) return "!";
+    if (op == TokenType::op_quest_mark) return "?";
 
     dmz_unreachable("unexpected operator");
 }
@@ -38,6 +39,7 @@ struct Type {
     std::string_view name;
     std::optional<int> isArray = std::nullopt;
     bool isRef = false;
+    bool isOptional = false;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
@@ -340,8 +342,48 @@ struct Assignment : public Stmt {
 struct DeferStmt : public Stmt {
     std::unique_ptr<Block> block;
 
-    DeferStmt(SourceLocation location, std::unique_ptr<Block> block)
-        : Stmt(location), block(std::move(block)) {}
+    DeferStmt(SourceLocation location, std::unique_ptr<Block> block) : Stmt(location), block(std::move(block)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ErrDecl : public Decl {
+    ErrDecl(SourceLocation location, std::string_view identifier) : Decl(location, std::move(identifier)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ErrDeclRef : public Expr {
+    std::string_view identifier;
+    ErrDeclRef(SourceLocation location, std::string_view identifier)
+        : Expr(location), identifier(std::move(identifier)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ErrGroupDecl : public Decl {
+    std::vector<std::unique_ptr<ErrDecl>> errs;
+
+    ErrGroupDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<ErrDecl>> errs)
+        : Decl(location, std::move(identifier)), errs(std::move(errs)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ErrUnwrapExpr : public Expr {
+    std::unique_ptr<Expr> errToUnwrap;
+
+    ErrUnwrapExpr(SourceLocation location, std::unique_ptr<Expr> errToUnwrap)
+        : Expr(location), errToUnwrap(std::move(errToUnwrap)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct CatchErrExpr : public Expr {
+    std::unique_ptr<Stmt> errToCatch;
+
+    CatchErrExpr(SourceLocation location, std::unique_ptr<Stmt> errToCatch)
+        : Expr(location), errToCatch(std::move(errToCatch)) {}
 
     void dump(size_t level = 0) const override;
 };

@@ -44,7 +44,7 @@ T do_unary_op(TokenType type, ConstValue &cval) {
     switch (type) {
         case TokenType::op_minus:
             return -val;
-        case TokenType::op_not:
+        case TokenType::op_excla_mark:
             return !val;
         default:
             dmz_unreachable("unexpected binary operator");

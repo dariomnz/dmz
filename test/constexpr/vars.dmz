@@ -17,7 +17,7 @@ fn pass2() -> int {
 // CHECK-NEXT:       ResolvedDeclRefExpr: x:int
 // CHECK-NEXT:       | value: 2
 
-fn err() -> int {
+fn error() -> int {
     let const x: int;
     x = 2;
     return x * 10;

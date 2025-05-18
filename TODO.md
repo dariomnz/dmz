@@ -3,9 +3,9 @@
 - [x] More types
 - [x] External functions
 - [x] References
-- [ ] defer
-- [ ] Arrays, vectors and slice
+- [x] defer
 - [ ] Error handling
+- [ ] Arrays, vectors and slice
 - [ ] Traits
 - [ ] Generics
 - [ ] Modules

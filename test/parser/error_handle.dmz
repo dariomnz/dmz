@@ -1,0 +1,83 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+err {
+    ERROR_ONE,
+    ERROR_TWO,
+    ERROR_THREE,
+}
+// CHECK: ErrGroupDecl: 
+// CHECK-NEXT:   ErrDecl: ERROR_ONE
+// CHECK-NEXT:   ErrDecl: ERROR_TWO
+// CHECK-NEXT:   ErrDecl: ERROR_THREE
+
+fn foo(x:int) -> int? {
+    if (x == 1){
+        return ERROR_ONE?;
+    }else if (x == 2){
+        return ERROR_TWO?;
+    }
+    return 10;
+}
+// CHECK: FunctionDecl: foo -> int?
+// CHECK-NEXT:   ParamDecl: x:int
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     IfStmt
+// CHECK-NEXT:       BinaryOperator: '=='
+// CHECK-NEXT:         DeclRefExpr: x
+// CHECK-NEXT:         IntLiteral: '1'
+// CHECK-NEXT:       Block
+// CHECK-NEXT:         ReturnStmt
+// CHECK-NEXT:           ErrDeclRef: ERROR_ONE
+// CHECK-NEXT:       Block
+// CHECK-NEXT:         IfStmt
+// CHECK-NEXT:           BinaryOperator: '=='
+// CHECK-NEXT:             DeclRefExpr: x
+// CHECK-NEXT:             IntLiteral: '2'
+// CHECK-NEXT:           Block
+// CHECK-NEXT:             ReturnStmt
+// CHECK-NEXT:               ErrDeclRef: ERROR_TWO
+// CHECK-NEXT:     ReturnStmt
+// CHECK-NEXT:       IntLiteral: '10'
+
+extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+
+fn main() -> void {
+    let result = foo();
+    if (catch error = result){
+        dprintf(1, "%s\n", &error);
+    }
+
+    dprintf(1, "No error %d\n", result);
+
+    dprintf(1, "No safe error %d\n", foo()!);
+}
+// CHECK: FunctionDecl: main -> void
+// CHECK-NEXT:  Block
+// CHECK-NEXT:    DeclStmt:
+// CHECK-NEXT:      VarDecl: result
+// CHECK-NEXT:        CallExpr:
+// CHECK-NEXT:          DeclRefExpr: foo
+// CHECK-NEXT:    IfStmt
+// CHECK-NEXT:      CatchErrExpr: 
+// CHECK-NEXT:        Assignment:
+// CHECK-NEXT:          DeclRefExpr: error
+// CHECK-NEXT:          DeclRefExpr: result
+// CHECK-NEXT:      Block
+// CHECK-NEXT:        CallExpr:
+// CHECK-NEXT:          DeclRefExpr: dprintf
+// CHECK-NEXT:          IntLiteral: '1'
+// CHECK-NEXT:          StringLiteral: '"%s\n"'
+// CHECK-NEXT:          UnaryOperator: '&'
+// CHECK-NEXT:            DeclRefExpr: error
+// CHECK-NEXT:    CallExpr:
+// CHECK-NEXT:      DeclRefExpr: dprintf
+// CHECK-NEXT:      IntLiteral: '1'
+// CHECK-NEXT:      StringLiteral: '"No error %d\n"'
+// CHECK-NEXT:      DeclRefExpr: result
+// CHECK-NEXT:    CallExpr:
+// CHECK-NEXT:      DeclRefExpr: dprintf
+// CHECK-NEXT:      IntLiteral: '1'
+// CHECK-NEXT:      StringLiteral: '"No safe error %d\n"'
+// CHECK-NEXT:      ErrUnwrapExpr: 
+// CHECK-NEXT:        CallExpr:
+// CHECK-NEXT:          DeclRefExpr: foo

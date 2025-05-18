@@ -335,7 +335,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
 
     if (unop.op == TokenType::op_minus) return m_builder.CreateNeg(rhs);
 
-    if (unop.op == TokenType::op_not) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
+    if (unop.op == TokenType::op_excla_mark) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
 
     if (unop.op == TokenType::amp) {
         return rhs;

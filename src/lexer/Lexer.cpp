@@ -32,8 +32,9 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(op_more_eq);
         CASE_TYPE(op_equal);
         CASE_TYPE(op_not_equal);
-        CASE_TYPE(op_not);
         CASE_TYPE(op_assign);
+        CASE_TYPE(op_quest_mark);
+        CASE_TYPE(op_excla_mark);
         CASE_TYPE(amp);
         CASE_TYPE(pipe);
         CASE_TYPE(block_l);
@@ -61,6 +62,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_struct);
         CASE_TYPE(kw_extern);
         CASE_TYPE(kw_defer);
+        CASE_TYPE(kw_err);
+        CASE_TYPE(kw_catch);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -321,11 +324,6 @@ Token Lexer::next_token() {
         t.type = TokenType::op_more;
         t.str = file_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '!') {
-        debug_msg(TokenType::op_not);
-        t.type = TokenType::op_not;
-        t.str = file_content.substr(0, 1);
-        advance();
     } else if (file_content.substr(0, 3) == "...") {
         debug_msg(TokenType::dotdotdot);
         t.type = TokenType::dotdotdot;
@@ -344,6 +342,16 @@ Token Lexer::next_token() {
     } else if (file_content[0] == '&') {
         debug_msg(TokenType::amp);
         t.type = TokenType::amp;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '?') {
+        debug_msg(TokenType::op_quest_mark);
+        t.type = TokenType::op_quest_mark;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '!') {
+        debug_msg(TokenType::op_excla_mark);
+        t.type = TokenType::op_excla_mark;
         t.str = file_content.substr(0, 1);
         advance();
     } else {
