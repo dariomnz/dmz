@@ -707,8 +707,24 @@ std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
     auto location = m_nextToken.loc;
     eat_next_token();  // eat catch
 
-    varOrReturn(errToCatch, parse_assignment_or_expr(false));
+    std::string_view identifier = m_nextToken.str;
+    auto idLocation = m_nextToken.loc;
+    varOrReturn(first_expr, parse_expr());
 
-    return std::make_unique<CatchErrExpr>(location, std::move(errToCatch));
+    Type type = Type::builtinErr("err");
+    std::unique_ptr<Expr> initializer;
+
+    if (m_nextToken.type != TokenType::op_assign) {
+        return std::make_unique<CatchErrExpr>(location, std::move(first_expr), nullptr);
+    }
+
+    matchOrReturn(TokenType::op_assign, "expected '='");
+    eat_next_token();  // eat '='
+
+    varOrReturn(errToCatch, parse_expr());
+
+    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, type, false, std::move(errToCatch));
+    auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
+    return std::make_unique<CatchErrExpr>(location, nullptr, std::move(declaration));
 }
 }  // namespace DMZ

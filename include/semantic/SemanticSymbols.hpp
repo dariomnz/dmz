@@ -297,10 +297,52 @@ struct ResolvedDeferStmt : public ResolvedStmt {
     ResolvedDeferStmt(SourceLocation location, std::shared_ptr<ResolvedBlock> block)
         : ResolvedStmt(location), block(block) {}
 
-    ResolvedDeferStmt(const ResolvedDeferStmt& deferStmt)
-        : ResolvedStmt(deferStmt.location), block(deferStmt.block) {}
+    ResolvedDeferStmt(const ResolvedDeferStmt &deferStmt) : ResolvedStmt(deferStmt.location), block(deferStmt.block) {}
 
     void dump(size_t level = 0) const override;
 };
 
+struct ResolvedErrDecl : public ResolvedDecl {
+    ResolvedErrDecl(SourceLocation location, std::string_view identifier)
+        : ResolvedDecl(location, std::move(identifier), Type::builtinErr(identifier), false) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedErrDeclRef : public ResolvedExpr {
+    std::string_view identifier;
+    ResolvedErrDeclRef(SourceLocation location, std::string_view identifier, Type errType)
+        : ResolvedExpr(location, errType), identifier(std::move(identifier)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedErrGroupDecl : public ResolvedDecl {
+    std::vector<std::unique_ptr<ResolvedErrDecl>> errs;
+
+    ResolvedErrGroupDecl(SourceLocation location, std::string_view identifier,
+                         std::vector<std::unique_ptr<ResolvedErrDecl>> errs)
+        : ResolvedDecl(location, std::move(identifier), Type::builtinErr("errGroup"), false), errs(std::move(errs)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedErrUnwrapExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errToUnwrap;
+
+    ResolvedErrUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errToUnwrap)
+        : ResolvedExpr(location, unwrapType), errToUnwrap(std::move(errToUnwrap)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedCatchErrExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errToCatch;
+    std::unique_ptr<ResolvedDeclStmt> declaration;
+
+    ResolvedCatchErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToCatch, std::unique_ptr<ResolvedDeclStmt> declaration)
+        : ResolvedExpr(location, Type::builtinInt()), errToCatch(std::move(errToCatch)), declaration(std::move(declaration)) {}
+
+    void dump(size_t level = 0) const override;
+};
 }  // namespace DMZ

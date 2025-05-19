@@ -186,6 +186,7 @@ void ErrUnwrapExpr::dump(size_t level) const {
 void CatchErrExpr::dump(size_t level) const {
     std::cerr << indent(level) << "CatchErrExpr: " << '\n';
 
-    errToCatch->dump(level + 1);
+    if (declaration) declaration->dump(level + 1);
+    if (errTocatch) errTocatch->dump(level + 1);
 }
 }  // namespace DMZ

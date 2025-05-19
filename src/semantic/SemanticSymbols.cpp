@@ -179,4 +179,29 @@ void ResolvedDeferStmt::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedDeferStmt:\n";
     block->dump(level + 1);
 }
+
+void ResolvedErrDecl::dump(size_t level) const { std::cerr << indent(level) << "ResolvedErrDecl: " << identifier << '\n'; }
+
+void ResolvedErrDeclRef::dump(size_t level) const { std::cerr << indent(level) << "ResolvedErrDeclRef: " << identifier << '\n'; }
+
+void ResolvedErrGroupDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedErrGroupDecl: " << '\n';
+
+    for (auto &&err : errs) err->dump(level + 1);
+}
+
+void ResolvedErrUnwrapExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedErrUnwrapExpr: ";
+    type.dump();
+    std::cerr << '\n';
+
+    errToUnwrap->dump(level + 1);
+}
+
+void ResolvedCatchErrExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedCatchErrExpr: " << '\n';
+
+    if (declaration) declaration->dump(level + 1);
+    if (errToCatch) errToCatch->dump(level + 1);
+}
 }  // namespace DMZ

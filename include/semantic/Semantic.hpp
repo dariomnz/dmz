@@ -68,5 +68,9 @@ class Sema {
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
+    std::unique_ptr<ResolvedErrGroupDecl> resolve_err_group_decl(const ErrGroupDecl& errGroupDecl);
+    std::unique_ptr<ResolvedErrDeclRef> resolve_err_decl_ref(const ErrDeclRef& errDeclRef);
+    std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr& errUnwrapExpr);
+    std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr& catchErrExpr);
 };
 }  // namespace DMZ

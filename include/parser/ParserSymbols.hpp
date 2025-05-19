@@ -33,7 +33,7 @@ namespace DMZ {
 }
 
 struct Type {
-    enum class Kind { Void, Int, Char, Struct, Custom };
+    enum class Kind { Void, Int, Char, Struct, Custom, Err };
 
     Kind kind;
     std::string_view name;
@@ -51,16 +51,25 @@ struct Type {
         t.kind = Kind::Struct;
         return t;
     }
+    static Type builtinErr(const std::string_view& name) { return {Kind::Err, name}; }
 
     static bool compare(const Type& lhs, const Type& rhs) {
+        println("Types: '"<< lhs.to_str() << "' '" << rhs.to_str() << "'");
         bool equalArray = false;
+        bool equalOptional = false;
+
+        if (lhs.isOptional && rhs.kind == Kind::Err) return true;
+        if (rhs.isOptional && lhs.kind == Kind::Err) return true;
 
         equalArray |= (lhs.isArray && *lhs.isArray == 0);
         equalArray |= (rhs.isArray && *rhs.isArray == 0);
         equalArray |= (lhs.isArray == rhs.isArray);
         equalArray |= (lhs.isRef && rhs.isRef);
 
-        return lhs.kind == rhs.kind && lhs.name == rhs.name && equalArray;
+        equalOptional |= lhs.isOptional == rhs.isOptional;
+        equalOptional |= lhs.isOptional == true && rhs.isOptional == false;
+
+        return lhs.kind == rhs.kind && lhs.name == rhs.name && equalArray && equalOptional;
     }
 
     void dump() const;
@@ -380,10 +389,11 @@ struct ErrUnwrapExpr : public Expr {
 };
 
 struct CatchErrExpr : public Expr {
-    std::unique_ptr<Stmt> errToCatch;
+    std::unique_ptr<Expr> errTocatch;
+    std::unique_ptr<DeclStmt> declaration;
 
-    CatchErrExpr(SourceLocation location, std::unique_ptr<Stmt> errToCatch)
-        : Expr(location), errToCatch(std::move(errToCatch)) {}
+    CatchErrExpr(SourceLocation location, std::unique_ptr<Expr> errTocatch, std::unique_ptr<DeclStmt> declaration)
+        : Expr(location), errTocatch(std::move(errTocatch)), declaration(std::move(declaration)) {}
 
     void dump(size_t level = 0) const override;
 };

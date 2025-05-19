@@ -165,7 +165,7 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
         resolvedExpr = resolve_expr(*returnStmt.expr);
         if (!resolvedExpr) return nullptr;
 
-        if (currentFunction->type.name != resolvedExpr->type.name)
+        if (!Type::compare(currentFunction->type, resolvedExpr->type))
             return report(resolvedExpr->location, "unexpected return type");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
@@ -194,6 +194,10 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         }
     }
 
+    if (const auto *errRef = dynamic_cast<const ErrDeclRef *>(&expr)) {
+        return resolve_err_decl_ref(*errRef);
+    }
+
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
         return resolve_decl_ref_expr(*declRefExpr);
     }
@@ -220,6 +224,14 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
 
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
+    }
+
+    if (const auto *errUnwrapExpr = dynamic_cast<const ErrUnwrapExpr *>(&expr)) {
+        return resolve_err_unwrap_expr(*errUnwrapExpr);
+    }
+
+    if (const auto *catchErrExpr = dynamic_cast<const CatchErrExpr *>(&expr)) {
+        return resolve_catch_err_expr(*catchErrExpr);
     }
 
     dmz_unreachable("unexpected expression");
@@ -365,6 +377,15 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 
             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
                 functionsToResolve.emplace_back(fn);
+                continue;
+            }
+            if (const auto *err = dynamic_cast<const ErrGroupDecl *>(decl.get())) {
+                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_err_group_decl(*err);
+                if (!resolvedDecl) {
+                    error = true;
+                    continue;
+                }
+                resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
 
@@ -588,7 +609,7 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
                                             std::string(resolvableType.name) + "' type");
 
     if (resolvedInitializer) {
-        if (resolvedInitializer->type.name != type->name)
+        if (!Type::compare(*type, resolvedInitializer->type))
             return report(resolvedInitializer->location, "initializer type mismatch");
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
@@ -871,5 +892,51 @@ std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &def
     varOrReturn(block, resolve_block(*deferStmt.block));
     std::shared_ptr<ResolvedBlock> sharedBlock = std::move(block);
     return std::make_unique<ResolvedDeferStmt>(deferStmt.location, sharedBlock);
+}
+
+std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGroupDecl &errGroupDecl) {
+    std::vector<std::unique_ptr<ResolvedErrDecl>> resolvedErrors;
+
+    for (auto &&err : errGroupDecl.errs) {
+        auto &errDecl = resolvedErrors.emplace_back(std::make_unique<ResolvedErrDecl>(err->location, err->identifier));
+        if (!insert_decl_to_current_scope(*errDecl)) return nullptr;
+    }
+
+    return std::make_unique<ResolvedErrGroupDecl>(errGroupDecl.location, errGroupDecl.identifier,
+                                                  std::move(resolvedErrors));
+}
+
+std::unique_ptr<ResolvedErrDeclRef> Sema::resolve_err_decl_ref(const ErrDeclRef &errDeclRef) {
+    auto lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
+
+    if (!lookupErr) {
+        return report(errDeclRef.location, "err '" + std::string(errDeclRef.identifier) + "' not found");
+    }
+
+    return std::make_unique<ResolvedErrDeclRef>(errDeclRef.location, lookupErr->identifier,
+                                                Type::builtinErr(lookupErr->identifier));
+}
+
+std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr) {
+    varOrReturn(resolvedToUnwrap, resolve_expr(*errUnwrapExpr.errToUnwrap));
+    if (!resolvedToUnwrap->type.isOptional)
+        return report(errUnwrapExpr.location,
+                      "unexpected type to unwrap that is not optional '" + resolvedToUnwrap->type.to_str() + "'");
+
+    Type unwrapType = resolvedToUnwrap->type;
+    unwrapType.isOptional = false;
+    return std::make_unique<ResolvedErrUnwrapExpr>(errUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap));
+}
+
+std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchErrExpr &catchErrExpr) {
+    if (catchErrExpr.errTocatch) {
+        auto resolvedErr = resolve_expr(*catchErrExpr.errTocatch);
+        return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, std::move(resolvedErr), nullptr);
+    }else if (catchErrExpr.declaration){
+        auto declaration = resolve_decl_stmt(*catchErrExpr.declaration);
+        return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, nullptr, std::move(declaration));
+    }else {
+        dmz_unreachable("malformed CatchErrExpr");
+    }
 }
 }  // namespace DMZ
