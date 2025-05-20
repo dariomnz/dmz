@@ -14,8 +14,6 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '||'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
@@ -37,8 +35,6 @@ fn and() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
@@ -60,14 +56,8 @@ fn multipleOr() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '4'
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedBinaryOperator: '||'
-// CHECK-NEXT:     ResolvedIntLiteral: '4'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '||'
-// CHECK-NEXT:     ResolvedBinaryOperator: '||'
-// CHECK-NEXT:       ResolvedIntLiteral: '4'
-// CHECK-NEXT:       ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
@@ -89,14 +79,8 @@ fn multipleAnd() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '4'
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:     ResolvedIntLiteral: '4'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:     ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:       ResolvedIntLiteral: '4'
-// CHECK-NEXT:       ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
@@ -118,14 +102,8 @@ fn andOr() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '4'
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:     ResolvedIntLiteral: '4'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '||'
-// CHECK-NEXT:     ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:       ResolvedIntLiteral: '4'
-// CHECK-NEXT:       ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
@@ -148,13 +126,7 @@ fn orAnd() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedBinaryOperator: '||'
-// CHECK-NEXT:     ResolvedIntLiteral: '4'
-// CHECK-NEXT:     ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:       ResolvedIntLiteral: '3'
-// CHECK-NEXT:       ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

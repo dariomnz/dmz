@@ -54,7 +54,7 @@ struct Type {
     static Type builtinErr(const std::string_view& name) { return {Kind::Err, name}; }
 
     static bool compare(const Type& lhs, const Type& rhs) {
-        println("Types: '"<< lhs.to_str() << "' '" << rhs.to_str() << "'");
+        // println("Types: '"<< lhs.to_str() << "' '" << rhs.to_str() << "'");
         bool equalArray = false;
         bool equalOptional = false;
 
@@ -74,6 +74,11 @@ struct Type {
 
     void dump() const;
     std::string to_str() const;
+    Type withoutOptional() const {
+        Type t = *this;
+        t.isOptional = false;
+        return t;
+    }
 };
 
 template <typename Ty>
@@ -362,9 +367,9 @@ struct ErrDecl : public Decl {
     void dump(size_t level = 0) const override;
 };
 
-struct ErrDeclRef : public Expr {
+struct ErrDeclRefExpr : public Expr {
     std::string_view identifier;
-    ErrDeclRef(SourceLocation location, std::string_view identifier)
+    ErrDeclRefExpr(SourceLocation location, std::string_view identifier)
         : Expr(location), identifier(std::move(identifier)) {}
 
     void dump(size_t level = 0) const override;

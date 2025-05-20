@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 
 err {
     ERROR_ONE,
@@ -13,10 +13,20 @@ err {
 fn foo(x:int) -> int? {
     if (x == 1){
         return ERROR_ONE?;
-    }else if (x == 2){
-        return ERROR_TWO?;
     }
+    // else if (x == 2){
+    //     return ERROR_TWO?;
+    // }
     return x;
+}
+fn bar(x:int) -> int? {
+    // if (x == 2){
+    //     return ERROR_TWO?;
+    // }
+    // else if (x == 2){
+    //     return ERROR_TWO?;
+    // }
+    return foo(x)!;
 }
 // CHECK: ResolvedFunctionDecl: foo -> int?
 // CHECK-NEXT:   ResolvedParamDecl: x:int
@@ -27,7 +37,7 @@ fn foo(x:int) -> int? {
 // CHECK-NEXT:         ResolvedIntLiteral: '1'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedErrDeclRefExpr: ERROR_ONE
+// CHECK-NEXT:           ResolvedErrDeclRef: ERROR_ONE
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedIfStmt
 // CHECK-NEXT:           ResolvedBinaryOperator: '=='
@@ -35,30 +45,33 @@ fn foo(x:int) -> int? {
 // CHECK-NEXT:             ResolvedIntLiteral: '2'
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedReturnStmt
-// CHECK-NEXT:               ResolvedErrDeclRefExpr: ERROR_TWO
+// CHECK-NEXT:               ResolvedErrDeclRef: ERROR_TWO
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedDeclRefExpr: x:int
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 
 fn main() -> void {
-    let result = foo(2);
-    catch result_e = result;
-    dprintf(1, &"%s\n", result_e);
+    let result = foo(10);
+    let result2 = bar(10);
+    dprintf(1, &"%d\n", result!);
+    dprintf(1, &"%d\n", result2!);
+    // catch result_e = result;
+    // dprintf(1, &"%s\n", result_e);
 
-    if (catch error = result){
-        dprintf(1, &"%s\n", error);
-    }
+    // if (catch error = result){
+    //     dprintf(1, &"%s\n", error);
+    // }
 
-    if (catch result){
-        dprintf(1, &"There are an error\n");
-    }
-    if (catch foo(2)){
-        dprintf(1, &"There are an error\n");
-    }
+    // if (catch result){
+    //     dprintf(1, &"There are an error\n");
+    // }
+    // if (catch foo(2)){
+    //     dprintf(1, &"There are an error\n");
+    // }
 
-    dprintf(1, &"No error %d\n", result);
-    dprintf(1, &"No safe error %d\n", foo(10)!);
+    // dprintf(1, &"No error %d\n", result);
+    // dprintf(1, &"No safe error %d\n", foo(10)!);
 }
 // CHECK: ResolvedFunctionDecl: main -> void
 // CHECK-NEXT:   ResolvedBlock

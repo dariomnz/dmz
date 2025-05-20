@@ -194,8 +194,8 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         }
     }
 
-    if (const auto *errRef = dynamic_cast<const ErrDeclRef *>(&expr)) {
-        return resolve_err_decl_ref(*errRef);
+    if (const auto *errRef = dynamic_cast<const ErrDeclRefExpr *>(&expr)) {
+        return resolve_err_decl_ref_expr(*errRef);
     }
 
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
@@ -906,15 +906,14 @@ std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGrou
                                                   std::move(resolvedErrors));
 }
 
-std::unique_ptr<ResolvedErrDeclRef> Sema::resolve_err_decl_ref(const ErrDeclRef &errDeclRef) {
+std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {
     auto lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
 
     if (!lookupErr) {
         return report(errDeclRef.location, "err '" + std::string(errDeclRef.identifier) + "' not found");
     }
 
-    return std::make_unique<ResolvedErrDeclRef>(errDeclRef.location, lookupErr->identifier,
-                                                Type::builtinErr(lookupErr->identifier));
+    return std::make_unique<ResolvedErrDeclRefExpr>(errDeclRef.location, *lookupErr);
 }
 
 std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr) {

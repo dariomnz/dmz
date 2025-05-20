@@ -339,7 +339,7 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         SourceLocation location = m_nextToken.loc;
         if (auto declref = dynamic_cast<DeclRefExpr *>(expr.get())) {
             eat_next_token();  // eat '?'
-            expr = std::make_unique<ErrDeclRef>(location, declref->identifier);
+            expr = std::make_unique<ErrDeclRefExpr>(location, declref->identifier);
         } else {
             return report(location, "expected identifier");
         }

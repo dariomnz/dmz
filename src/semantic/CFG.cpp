@@ -105,6 +105,16 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         return block;
     }
 
+    if (const auto *catchErrExpr = dynamic_cast<const ResolvedCatchErrExpr *>(&expr)) {
+        if (catchErrExpr->errToCatch) {
+            return insert_expr(*catchErrExpr->errToCatch, block);
+        } else if (catchErrExpr->declaration) {
+            return insert_stmt(*catchErrExpr->declaration, block);
+        } else {
+            dmz_unreachable("malformed CatchErrExpr");
+        }
+    }
+
     return block;
 }
 
@@ -181,7 +191,7 @@ void CFG::dump() const {
 
         const auto &statements = m_basicBlocks[i].statements;
         for (auto it = statements.rbegin(); it != statements.rend(); ++it) {
-            (*it)->dump(1);
+            (*it)->dump(1, true);
         }
         std::cerr << '\n';
     }

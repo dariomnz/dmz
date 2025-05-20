@@ -18,29 +18,20 @@ fn foo() -> int {
 // CHECK-NEXT:   succs: 0 
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
 // CHECK-NEXT:   ResolvedIntLiteral: '3'
-// CHECK-NEXT:   | value: 3
 // CHECK-NEXT:   ResolvedReturnStmt
-// CHECK-NEXT:     ResolvedIntLiteral: '3'
-// CHECK-NEXT:     | value: 3
 // CHECK-NEXT: 
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 
 // CHECK-NEXT:   succs: 0 
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
 // CHECK-NEXT:   ResolvedIntLiteral: '2'
-// CHECK-NEXT:   | value: 2
 // CHECK-NEXT:   ResolvedReturnStmt
-// CHECK-NEXT:     ResolvedIntLiteral: '2'
-// CHECK-NEXT:     | value: 2
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 
 // CHECK-NEXT:   succs: 0 
 // CHECK-NEXT:   ResolvedIntLiteral: '1'
-// CHECK-NEXT:   | value: 1
 // CHECK-NEXT:   ResolvedReturnStmt
-// CHECK-NEXT:     ResolvedIntLiteral: '1'
-// CHECK-NEXT:     | value: 1
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 2 3 

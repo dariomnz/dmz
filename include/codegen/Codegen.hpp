@@ -20,6 +20,7 @@ class Codegen {
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
+    const ResolvedFunctionDecl *m_currentFunction;
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
@@ -29,6 +30,7 @@ class Codegen {
 
     llvm::Module *generate_ir();
     llvm::Type *generate_type(const Type &type);
+    llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFunctionDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
@@ -58,5 +60,8 @@ class Codegen {
     void generate_struct_decl(const ResolvedStructDecl &structDecl);
     void generate_struct_definition(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
+    void generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl);
+    llvm::Value *generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &errDeclRefExpr);
+    llvm::Value *generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr);
 };
 }  // namespace DMZ

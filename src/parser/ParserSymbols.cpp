@@ -169,7 +169,9 @@ void DeferStmt::dump(size_t level) const {
 
 void ErrDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrDecl: " << identifier << '\n'; }
 
-void ErrDeclRef::dump(size_t level) const { std::cerr << indent(level) << "ErrDeclRef: " << identifier << '\n'; }
+void ErrDeclRefExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrDeclRefExpr: " << identifier << '\n';
+}
 
 void ErrGroupDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ErrGroupDecl: " << '\n';
