@@ -5,135 +5,267 @@ err {
     ERROR_TWO,
     ERROR_THREE,
 }
-// CHECK: ResolvedErrGroupDecl: 
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_ONE
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_TWO
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_THREE
+// CHECK: @err.str.NO_ERROR = private unnamed_addr constant [9 x i8] c"NO_ERROR\00", align 1
+// CHECK-NEXT: @err.str.ERROR_ONE = private unnamed_addr constant [10 x i8] c"ERROR_ONE\00", align 1
+// CHECK-NEXT: @err.str.ERROR_TWO = private unnamed_addr constant [10 x i8] c"ERROR_TWO\00", align 1
+// CHECK-NEXT: @err.str.ERROR_THREE = private unnamed_addr constant [12 x i8] c"ERROR_THREE\00", align 1
 
 fn foo(x:int) -> int? {
     if (x == 1){
         return ERROR_ONE?;
     }
-    // else if (x == 2){
-    //     return ERROR_TWO?;
-    // }
     return x;
 }
+// CHECK: define void @foo(ptr sret(%err.struct.int) %ret, i32 %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   %1 = icmp eq i32 %0, 1
+// CHECK-NEXT:   %bool.to.int = zext i1 %1 to i32
+// CHECK-NEXT:   %int.to.bool = icmp ne i32 %bool.to.int, 0
+// CHECK-NEXT:   br i1 %int.to.bool, label %if.true, label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %entry
+// CHECK-NEXT:   %2 = getelementptr inbounds %err.struct.int, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @err.str.ERROR_ONE, ptr %2, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %entry
+// CHECK-NEXT:   %3 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   store i32 %3, ptr %ret, align 4
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: return:                                           ; preds = %if.exit, %if.true
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
 fn bar(x:int) -> int? {
-    // if (x == 2){
-    //     return ERROR_TWO?;
-    // }
-    // else if (x == 2){
-    //     return ERROR_TWO?;
-    // }
+    if (x == 2){
+        return ERROR_TWO?;
+    }
     return foo(x)!;
 }
-// CHECK: ResolvedFunctionDecl: foo -> int?
-// CHECK-NEXT:   ResolvedParamDecl: x:int
-// CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedBinaryOperator: '=='
-// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedErrDeclRef: ERROR_ONE
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedIfStmt
-// CHECK-NEXT:           ResolvedBinaryOperator: '=='
-// CHECK-NEXT:             ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:             ResolvedIntLiteral: '2'
-// CHECK-NEXT:           ResolvedBlock
-// CHECK-NEXT:             ResolvedReturnStmt
-// CHECK-NEXT:               ResolvedErrDeclRef: ERROR_TWO
-// CHECK-NEXT:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
+// CHECK: define void @bar(ptr sret(%err.struct.int) %ret, i32 %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   %1 = icmp eq i32 %0, 2
+// CHECK-NEXT:   %bool.to.int = zext i1 %1 to i32
+// CHECK-NEXT:   %int.to.bool = icmp ne i32 %bool.to.int, 0
+// CHECK-NEXT:   br i1 %int.to.bool, label %if.true, label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %entry
+// CHECK-NEXT:   %2 = getelementptr inbounds %err.struct.int, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @err.str.ERROR_TWO, ptr %2, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %entry
+// CHECK-NEXT:   %3 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   call void @foo(ptr sret(%err.struct.int) %struct.ret.tmp, i32 %3)
+// CHECK-NEXT:   %4 = getelementptr inbounds %err.struct.int, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %5 = load ptr, ptr %4, align 8
+// CHECK-NEXT:   %6 = ptrtoint ptr %5 to i32
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i32 %6, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.unwrap, label %if.exit.unwrap
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.unwrap:                                   ; preds = %if.exit
+// CHECK-NEXT:   %7 = getelementptr inbounds %err.struct.int, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr %5, ptr %7, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.unwrap:                                   ; preds = %if.exit
+// CHECK-NEXT:   %8 = getelementptr inbounds %err.struct.int, ptr %struct.ret.tmp, i32 0, i32 0
+// CHECK-NEXT:   %9 = load i32, ptr %8, align 4
+// CHECK-NEXT:   store i32 %9, ptr %ret, align 4
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: return:                                           ; preds = %if.exit.unwrap, %if.true.unwrap, %if.true
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 
 fn main() -> void {
     let result = foo(10);
-    let result2 = bar(10);
+    let result2 = bar(2);
     dprintf(1, &"%d\n", result!);
-    dprintf(1, &"%d\n", result2!);
-    // catch result_e = result;
-    // dprintf(1, &"%s\n", result_e);
+    catch result_e = result2;
+    dprintf(1, &"%s\n", result_e);
 
-    // if (catch error = result){
-    //     dprintf(1, &"%s\n", error);
-    // }
+    if (catch error = result){
+        dprintf(1, &"%s\n", error);
+    } else {
+        dprintf(1, &"There was no error\n");
+    }
 
-    // if (catch result){
-    //     dprintf(1, &"There are an error\n");
-    // }
-    // if (catch foo(2)){
-    //     dprintf(1, &"There are an error\n");
-    // }
+    if (catch result){
+        dprintf(1, &"There are an error\n");
+    }
+    if (catch foo(1)){
+        dprintf(1, &"There are an error\n");
+    }
 
-    // dprintf(1, &"No error %d\n", result);
-    // dprintf(1, &"No safe error %d\n", foo(10)!);
+    dprintf(1, &"No error %d\n", result!);
+    dprintf(1, &"No safe error %d\n", foo(10)!);
 }
-// CHECK: ResolvedFunctionDecl: main -> void
-// CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: result:int?
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '2'
-// CHECK-NEXT:           | value: 2
-// CHECK-NEXT:     ResolvedCatchErrExpr: 
-// CHECK-NEXT:       ResolvedDeclStmt:
-// CHECK-NEXT:         ResolvedVarDecl const: result_e:err
-// CHECK-NEXT:           ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: '%s\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr: result_e:err
-// CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedDeclStmt:
-// CHECK-NEXT:           ResolvedVarDecl const: error:err
-// CHECK-NEXT:             ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: '%s\n'
-// CHECK-NEXT:           ResolvedDeclRefExpr: error:err
-// CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'There are an error\n'
-// CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '2'
-// CHECK-NEXT:           | value: 2
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'There are an error\n'
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: 'No error %d\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: 'No safe error %d\n'
-// CHECK-NEXT:       ResolvedErrUnwrapExpr: int
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '10'
-// CHECK-NEXT:           | value: 10
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %result = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %struct.ret.tmp = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %result2 = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result2, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %struct.ret.tmp1 = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %result_e = alloca ptr, align 8
+// CHECK-NEXT:   %catch.result = alloca i32, align 4
+// CHECK-NEXT:   %error = alloca ptr, align 8
+// CHECK-NEXT:   %catch.result3 = alloca i32, align 4
+// CHECK-NEXT:   %catch.result7 = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp14 = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp14, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %catch.result15 = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp25 = alloca %err.struct.int, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp25, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @foo(ptr sret(%err.struct.int) %struct.ret.tmp, i32 10)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result, ptr align 8 %struct.ret.tmp, i64 16, i1 false)
+// CHECK-NEXT:   call void @bar(ptr sret(%err.struct.int) %struct.ret.tmp1, i32 2)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result2, ptr align 8 %struct.ret.tmp1, i64 16, i1 false)
+// CHECK-NEXT:   %0 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 1
+// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
+// CHECK-NEXT:   %2 = ptrtoint ptr %1 to i32
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i32 %2, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.unwrap, label %if.exit.unwrap
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.unwrap:                                   ; preds = %entry
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   br label %if.exit.unwrap
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.unwrap:                                   ; preds = %if.true.unwrap, %entry
+// CHECK-NEXT:   %3 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 0
+// CHECK-NEXT:   %4 = load i32, ptr %3, align 4
+// CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str, i32 %4)
+// CHECK-NEXT:   %6 = getelementptr inbounds %err.struct.int, ptr %result2, i32 0, i32 1
+// CHECK-NEXT:   %7 = load ptr, ptr %6, align 8
+// CHECK-NEXT:   store ptr @err.str.NO_ERROR, ptr %result_e, align 8
+// CHECK-NEXT:   store i32 0, ptr %catch.result, align 4
+// CHECK-NEXT:   %8 = ptrtoint ptr %7 to i32
+// CHECK-NEXT:   %ptr.to.bool2 = icmp ne i32 %8, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool2, label %if.true.catch, label %if.exit.catch
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.catch:                                    ; preds = %if.exit.unwrap
+// CHECK-NEXT:   store i32 1, ptr %catch.result, align 4
+// CHECK-NEXT:   store ptr %7, ptr %result_e, align 8
+// CHECK-NEXT:   br label %if.exit.catch
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.catch:                                    ; preds = %if.true.catch, %if.exit.unwrap
+// CHECK-NEXT:   %9 = load i32, ptr %catch.result, align 4
+// CHECK-NEXT:   %10 = load ptr, ptr %result_e, align 8
+// CHECK-NEXT:   %11 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.1, ptr %10)
+// CHECK-NEXT:   %12 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 1
+// CHECK-NEXT:   %13 = load ptr, ptr %12, align 8
+// CHECK-NEXT:   store ptr @err.str.NO_ERROR, ptr %error, align 8
+// CHECK-NEXT:   store i32 0, ptr %catch.result3, align 4
+// CHECK-NEXT:   %14 = ptrtoint ptr %13 to i32
+// CHECK-NEXT:   %ptr.to.bool4 = icmp ne i32 %14, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool4, label %if.true.catch5, label %if.exit.catch6
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.catch5:                                   ; preds = %if.exit.catch
+// CHECK-NEXT:   store i32 1, ptr %catch.result3, align 4
+// CHECK-NEXT:   store ptr %13, ptr %error, align 8
+// CHECK-NEXT:   br label %if.exit.catch6
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.catch6:                                   ; preds = %if.true.catch5, %if.exit.catch
+// CHECK-NEXT:   %15 = load i32, ptr %catch.result3, align 4
+// CHECK-NEXT:   %int.to.bool = icmp ne i32 %15, 0
+// CHECK-NEXT:   br i1 %int.to.bool, label %if.true, label %if.false
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %if.exit.catch6
+// CHECK-NEXT:   %16 = load ptr, ptr %error, align 8
+// CHECK-NEXT:   %17 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.2, ptr %16)
+// CHECK-NEXT:   br label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.false:                                         ; preds = %if.exit.catch6
+// CHECK-NEXT:   %18 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.3)
+// CHECK-NEXT:   br label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true
+// CHECK-NEXT:   %19 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 1
+// CHECK-NEXT:   %20 = load ptr, ptr %19, align 8
+// CHECK-NEXT:   store i32 0, ptr %catch.result7, align 4
+// CHECK-NEXT:   %21 = ptrtoint ptr %20 to i32
+// CHECK-NEXT:   %ptr.to.bool8 = icmp ne i32 %21, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool8, label %if.true.catch9, label %if.exit.catch10
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.catch9:                                   ; preds = %if.exit
+// CHECK-NEXT:   store i32 1, ptr %catch.result7, align 4
+// CHECK-NEXT:   br label %if.exit.catch10
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.catch10:                                  ; preds = %if.true.catch9, %if.exit
+// CHECK-NEXT:   %22 = load i32, ptr %catch.result7, align 4
+// CHECK-NEXT:   %int.to.bool11 = icmp ne i32 %22, 0
+// CHECK-NEXT:   br i1 %int.to.bool11, label %if.true12, label %if.exit13
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true12:                                        ; preds = %if.exit.catch10
+// CHECK-NEXT:   %23 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.4)
+// CHECK-NEXT:   br label %if.exit13
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit13:                                        ; preds = %if.true12, %if.exit.catch10
+// CHECK-NEXT:   call void @foo(ptr sret(%err.struct.int) %struct.ret.tmp14, i32 1)
+// CHECK-NEXT:   %24 = getelementptr inbounds %err.struct.int, ptr %struct.ret.tmp14, i32 0, i32 1
+// CHECK-NEXT:   %25 = load ptr, ptr %24, align 8
+// CHECK-NEXT:   store i32 0, ptr %catch.result15, align 4
+// CHECK-NEXT:   %26 = ptrtoint ptr %25 to i32
+// CHECK-NEXT:   %ptr.to.bool16 = icmp ne i32 %26, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool16, label %if.true.catch17, label %if.exit.catch18
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.catch17:                                  ; preds = %if.exit13
+// CHECK-NEXT:   store i32 1, ptr %catch.result15, align 4
+// CHECK-NEXT:   br label %if.exit.catch18
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.catch18:                                  ; preds = %if.true.catch17, %if.exit13
+// CHECK-NEXT:   %27 = load i32, ptr %catch.result15, align 4
+// CHECK-NEXT:   %int.to.bool19 = icmp ne i32 %27, 0
+// CHECK-NEXT:   br i1 %int.to.bool19, label %if.true20, label %if.exit21
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true20:                                        ; preds = %if.exit.catch18
+// CHECK-NEXT:   %28 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.5)
+// CHECK-NEXT:   br label %if.exit21
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit21:                                        ; preds = %if.true20, %if.exit.catch18
+// CHECK-NEXT:   %29 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 1
+// CHECK-NEXT:   %30 = load ptr, ptr %29, align 8
+// CHECK-NEXT:   %31 = ptrtoint ptr %30 to i32
+// CHECK-NEXT:   %ptr.to.bool22 = icmp ne i32 %31, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool22, label %if.true.unwrap23, label %if.exit.unwrap24
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.unwrap23:                                 ; preds = %if.exit21
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   br label %if.exit.unwrap24
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.unwrap24:                                 ; preds = %if.true.unwrap23, %if.exit21
+// CHECK-NEXT:   %32 = getelementptr inbounds %err.struct.int, ptr %result, i32 0, i32 0
+// CHECK-NEXT:   %33 = load i32, ptr %32, align 4
+// CHECK-NEXT:   %34 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.6, i32 %33)
+// CHECK-NEXT:   call void @foo(ptr sret(%err.struct.int) %struct.ret.tmp25, i32 10)
+// CHECK-NEXT:   %35 = getelementptr inbounds %err.struct.int, ptr %struct.ret.tmp25, i32 0, i32 1
+// CHECK-NEXT:   %36 = load ptr, ptr %35, align 8
+// CHECK-NEXT:   %37 = ptrtoint ptr %36 to i32
+// CHECK-NEXT:   %ptr.to.bool26 = icmp ne i32 %37, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool26, label %if.true.unwrap27, label %if.exit.unwrap28
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.unwrap27:                                 ; preds = %if.exit.unwrap24
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   br label %if.exit.unwrap28
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.unwrap28:                                 ; preds = %if.true.unwrap27, %if.exit.unwrap24
+// CHECK-NEXT:   %38 = getelementptr inbounds %err.struct.int, ptr %struct.ret.tmp25, i32 0, i32 0
+// CHECK-NEXT:   %39 = load i32, ptr %38, align 4
+// CHECK-NEXT:   %40 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.7, i32 %39)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

@@ -5,6 +5,7 @@
 - [x] References
 - [x] defer
 - [ ] Error handling
+- [ ] Bool type
 - [ ] Arrays, vectors and slice
 - [ ] Traits
 - [ ] Generics

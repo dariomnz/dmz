@@ -19,7 +19,7 @@ llvm::Module *Codegen::generate_ir() {
             generate_function_decl(*fn);
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_decl(*sd);
-        else if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
+        else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
             continue;
         else
             dmz_unreachable("unexpected top level declaration");
@@ -27,6 +27,7 @@ llvm::Module *Codegen::generate_ir() {
 
     generate_main_wrapper();
 
+    generate_err_no_err();
     for (auto &&decl : m_resolvedTree) {
         if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
             generate_err_group_decl(*errGroup);
@@ -206,9 +207,11 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
     llvm::IRBuilder<> tmpBuilder(m_context);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
     auto value = tmpBuilder.CreateAlloca(generate_type(type), nullptr, identifier);
-    const llvm::DataLayout &dl = m_module.getDataLayout();
-    tmpBuilder.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilder.getInt8(0),
-                                  tmpBuilder.getInt64(*value->getAllocationSize(dl)));
+    if (type.isOptional) {
+        const llvm::DataLayout &dl = m_module.getDataLayout();
+        tmpBuilder.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilder.getInt8(0),
+                                      tmpBuilder.getInt64(*value->getAllocationSize(dl)));
+    }
     return value;
 }
 
@@ -256,9 +259,9 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
     if (stmt.expr) {
         if (stmt.expr->type.kind == Type::Kind::Err) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-            return store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"));
+            store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"));
         } else {
-            return store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional());
+            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional());
         }
     }
 
@@ -311,8 +314,8 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *errUnwrap = dynamic_cast<const ResolvedErrUnwrapExpr *>(&expr)) {
         return generate_err_unwrap_expr(*errUnwrap);
     }
-    if (auto *sie = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
-        return generate_temporary_struct(*sie);
+    if (auto *catchErr = dynamic_cast<const ResolvedCatchErrExpr *>(&expr)) {
+        return generate_catch_err_expr(*catchErr);
     }
     dmz_unreachable("unexpected expression");
 }
@@ -450,10 +453,12 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
 }
 
 llvm::Value *Codegen::int_to_bool(llvm::Value *v) {
-    if (v->getType()->isPointerTy()) {
-        v = m_builder.CreatePtrToInt(v, m_builder.getInt32Ty());
-    }
     return m_builder.CreateICmpNE(v, m_builder.getInt32(0), "int.to.bool");
+}
+
+llvm::Value *Codegen::ptr_to_bool(llvm::Value *v) {
+    v = m_builder.CreatePtrToInt(v, m_builder.getInt32Ty());
+    return m_builder.CreateICmpNE(v, m_builder.getInt32(0), "ptr.to.bool");
 }
 
 llvm::Value *Codegen::bool_to_int(llvm::Value *v) {
@@ -548,13 +553,13 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
             store_value(generate_expr(*init), var, init->type);
         }
         m_declarations[decl] = var;
-        return nullptr;
+        return var;
     } else {
         // Only permit ref with a unary operator
         if (const auto init = dynamic_cast<ResolvedUnaryOperator *>(decl->initializer.get())) {
             if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->operand.get())) {
                 m_declarations[decl] = m_declarations[&operand->decl];
-                return nullptr;
+                return m_declarations[&operand->decl];
             }
         }
         dmz_unreachable("Only permit ref with a unary operator");
@@ -663,6 +668,10 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
     return ret;
 }
 
+void Codegen::generate_err_no_err() {
+    m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR");
+}
+
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
         std::string str(err->identifier);
@@ -684,8 +693,8 @@ llvm::Value *Codegen::generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &e
 llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr) {
     llvm::Function *function = get_current_function();
 
-    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true");
-    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit");
+    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true.unwrap");
+    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit.unwrap");
 
     llvm::BasicBlock *elseBB = exitBB;
 
@@ -695,7 +704,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         m_builder.CreateStructGEP(generate_type(errUnwrapExpr.errToUnwrap->type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
 
-    m_builder.CreateCondBr(int_to_bool(err_value), trueBB, elseBB);
+    m_builder.CreateCondBr( ptr_to_bool(err_value), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -716,5 +725,58 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
 
     auto unwrapedValue = m_builder.CreateStructGEP(generate_type(errUnwrapExpr.errToUnwrap->type), err_struct, 0);
     return load_value(unwrapedValue, errUnwrapExpr.type);
+}
+
+llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchErrExpr) {
+    llvm::Function *function = get_current_function();
+
+    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true.catch");
+    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit.catch");
+
+    llvm::BasicBlock *elseBB = exitBB;
+    llvm::Value *err_struct = nullptr;
+    llvm::Value *decl_value = nullptr;
+    Type err_type;
+    if (catchErrExpr.errToCatch) {
+        err_struct = generate_expr(*catchErrExpr.errToCatch, true);
+        err_type = catchErrExpr.errToCatch->type;
+    }else if (catchErrExpr.declaration) {
+        err_struct = generate_expr(*catchErrExpr.declaration->varDecl->initializer, true);
+
+        decl_value = allocate_stack_variable(catchErrExpr.declaration->varDecl->identifier, catchErrExpr.declaration->varDecl->type);
+
+        m_declarations[catchErrExpr.declaration->varDecl.get()] = decl_value;
+
+        err_type = catchErrExpr.declaration->varDecl->initializer->type;
+    }else {
+        dmz_unreachable("malformed ResolvedCatchErrExpr");
+    }
+
+    llvm::Value *err_value_ptr = m_builder.CreateStructGEP(generate_type(err_type), err_struct, 1);
+    llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
+
+    if (catchErrExpr.declaration){
+        store_value(m_noError, decl_value, Type::builtinErr("err"));
+    }
+    llvm::Value *returnValue = allocate_stack_variable("catch.result", Type::builtinInt());
+    store_value(m_builder.getInt32(0), returnValue, Type::builtinInt());
+
+
+    m_builder.CreateCondBr(ptr_to_bool(err_value), trueBB, elseBB);
+
+    trueBB->insertInto(function);
+    m_builder.SetInsertPoint(trueBB);
+
+    store_value(m_builder.getInt32(1), returnValue, Type::builtinInt());
+    if (catchErrExpr.declaration){
+        store_value(err_value, decl_value, Type::builtinErr("err"));
+    }
+
+    break_into_bb(exitBB);
+
+    exitBB->insertInto(function);
+    m_builder.SetInsertPoint(exitBB);
+
+    return load_value(returnValue, Type::builtinInt());
 }
 }  // namespace DMZ

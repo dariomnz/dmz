@@ -21,6 +21,7 @@ class Codegen {
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
     const ResolvedFunctionDecl *m_currentFunction;
+    llvm::Value *m_noError;
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
@@ -45,6 +46,7 @@ class Codegen {
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
     llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
     llvm::Value *int_to_bool(llvm::Value *v);
+    llvm::Value *ptr_to_bool(llvm::Value *v);
     llvm::Value *bool_to_int(llvm::Value *v);
     void generate_conditional_operator(const ResolvedExpr &op, llvm::BasicBlock *trueBB, llvm::BasicBlock *falseBB);
     llvm::Function *get_current_function();
@@ -60,8 +62,10 @@ class Codegen {
     void generate_struct_decl(const ResolvedStructDecl &structDecl);
     void generate_struct_definition(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
+    void generate_err_no_err();
     void generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl);
     llvm::Value *generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &errDeclRefExpr);
     llvm::Value *generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr);
+    llvm::Value *generate_catch_err_expr(const ResolvedCatchErrExpr &catchErrExpr);
 };
 }  // namespace DMZ

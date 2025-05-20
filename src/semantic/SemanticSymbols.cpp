@@ -231,7 +231,9 @@ void ResolvedErrUnwrapExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedCatchErrExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedCatchErrExpr: " << '\n';
+    std::cerr << indent(level) << "ResolvedCatchErrExpr: ";
+    type.dump();
+    std::cerr << '\n';
 
     if (onlySelf) return;
     if (declaration) declaration->dump(level + 1);
