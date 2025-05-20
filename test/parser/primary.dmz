@@ -29,44 +29,44 @@ fn main() -> void {
     a(x,;
 
     1;
-    // CHECK: IntLiteral: '1'
+    // CHECK: IntLiteral '1'
 
     1;
-    // CHECK: IntLiteral: '1'
+    // CHECK: IntLiteral '1'
     
     (2);
-    // CHECK: GroupingExpr:
-    // CHECK-NEXT:   IntLiteral: '2'
+    // CHECK: GroupingExpr
+    // CHECK-NEXT:   IntLiteral '2'
 
     (((((2)))));
-    // CHECK: GroupingExpr:
-    // CHECK-NEXT:   GroupingExpr:
-    // CHECK-NEXT:     GroupingExpr:
-    // CHECK-NEXT:       GroupingExpr:
-    // CHECK-NEXT:         GroupingExpr:
-    // CHECK-NEXT:           IntLiteral: '2'
+    // CHECK: GroupingExpr
+    // CHECK-NEXT:   GroupingExpr
+    // CHECK-NEXT:     GroupingExpr
+    // CHECK-NEXT:       GroupingExpr
+    // CHECK-NEXT:         GroupingExpr
+    // CHECK-NEXT:           IntLiteral '2'
 
     a;
-    // CHECK: DeclRefExpr: a
+    // CHECK: DeclRefExpr a
 
     a();
-    // CHECK: CallExpr:
-    // CHECK-NEXT:   DeclRefExpr: a
+    // CHECK: CallExpr
+    // CHECK-NEXT:   DeclRefExpr a
 
     a(x,);
-    // CHECK: CallExpr:
-    // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   DeclRefExpr: x
+    // CHECK: CallExpr
+    // CHECK-NEXT:   DeclRefExpr a
+    // CHECK-NEXT:   DeclRefExpr x
 
     a(1, 2,);
-    // CHECK: CallExpr:
-    // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   IntLiteral: '1'
-    // CHECK-NEXT:   IntLiteral: '2'
+    // CHECK: CallExpr
+    // CHECK-NEXT:   DeclRefExpr a
+    // CHECK-NEXT:   IntLiteral '1'
+    // CHECK-NEXT:   IntLiteral '2'
 
     a(1, 2);
-    // CHECK: CallExpr:
-    // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   IntLiteral: '1'
-    // CHECK-NEXT:   IntLiteral: '2'
+    // CHECK: CallExpr
+    // CHECK-NEXT:   DeclRefExpr a
+    // CHECK-NEXT:   IntLiteral '1'
+    // CHECK-NEXT:   IntLiteral '2'
 }

@@ -6,8 +6,8 @@ fn foo() -> int {
     return (10 * (x + 4)) && (!(y == x) || x < y);
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator: '&&'
-// CHECK-NEXT:      | value: 1
+// CHECK-NEXT:      ResolvedBinaryOperator:int '&&'
+// CHECK-NEXT:      | value:int 1
 
 fn bar() -> int {
     let const x: int = 2;
@@ -16,7 +16,7 @@ fn bar() -> int {
 }
 // CHECK: ResolvedReturnStmt
 // CHECK-NEXT:   ResolvedGroupingExpr:
-// CHECK-NEXT:   | value: 2
-// CHECK-NEXT:     ResolvedDeclRefExpr: x
+// CHECK-NEXT:   | value:int 2
+// CHECK-NEXT:     ResolvedDeclRefExpr:int x
 
 fn main() -> void {}

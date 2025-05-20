@@ -21,23 +21,23 @@ fn f(x: int, 2) -> void {}
 fn f(,) -> void {}
 
 fn trailingComma(x:int,) -> void {}
-// CHECK: FunctionDecl: trailingComma -> void
-// CHECK-NEXT:   ParamDecl: x:int
+// CHECK: FunctionDecl trailingComma -> void
+// CHECK-NEXT:   ParamDecl:int x
 // CHECK-NEXT:   Block
 
 fn trailingComma2(
     x:int, 
     y:int,
 ) -> void {}
-// CHECK: FunctionDecl: trailingComma2 -> void
-// CHECK-NEXT:   ParamDecl: x:int
-// CHECK-NEXT:   ParamDecl: y:int
+// CHECK: FunctionDecl trailingComma2 -> void
+// CHECK-NEXT:   ParamDecl:int x
+// CHECK-NEXT:   ParamDecl:int y
 // CHECK-NEXT:   Block
 
 fn f(x: int, y: int) -> void {}
-// CHECK: FunctionDecl: f -> void
-// CHECK-NEXT:   ParamDecl: x:int
-// CHECK-NEXT:   ParamDecl: y:int
+// CHECK: FunctionDecl f -> void
+// CHECK-NEXT:   ParamDecl:int x
+// CHECK-NEXT:   ParamDecl:int y
 // CHECK-NEXT:   Block
 
 fn main() -> void {}

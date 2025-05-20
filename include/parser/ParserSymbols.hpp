@@ -33,7 +33,7 @@ namespace DMZ {
 }
 
 struct Type {
-    enum class Kind { Void, Int, Char, Struct, Custom, Err };
+    enum class Kind { Void, Int, Char, Bool, Struct, Custom, Err };
 
     Kind kind;
     std::string_view name;
@@ -44,6 +44,7 @@ struct Type {
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinInt() { return {Kind::Int, "int"}; }
     static Type builtinChar() { return {Kind::Char, "char"}; }
+    static Type builtinBool() { return {Kind::Bool, "bool"}; }
     static Type builtinString(int size) { return Type{.kind = Kind::Char, .name = "char", .isArray = size}; }
     static Type custom(const std::string_view& name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
@@ -79,6 +80,8 @@ struct Type {
         t.isOptional = false;
         return t;
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const Type& t);
 };
 
 template <typename Ty>
@@ -190,6 +193,14 @@ struct CharLiteral : public Expr {
     std::string_view value;
 
     CharLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct BoolLiteral : public Expr {
+    std::string_view value;
+
+    BoolLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
     void dump(size_t level = 0) const override;
 };

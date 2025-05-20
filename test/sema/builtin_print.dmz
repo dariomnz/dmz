@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn main() -> void {}
 
-// CHECK: ResolvedFunctionDecl: println -> void
-// CHECK-NEXT:  ResolvedParamDecl: n:
+// CHECK: ResolvedFunctionDecl println -> void
+// CHECK-NEXT:  ResolvedParamDecl:int n
 // CHECK-NEXT:  ResolvedBlock

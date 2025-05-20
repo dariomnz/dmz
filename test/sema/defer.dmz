@@ -1,5 +1,5 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '5\n4\n1\n3\n2\n1\nSecond-last\nThe last one\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '5\n4\n1\n3\n2\n1\nSecond-last\nThe last one\n')
 
 fn foo(x: int) -> void {
     defer dprintf(1, &"1\n");
@@ -13,58 +13,58 @@ fn foo(x: int) -> void {
     }
     return;
 }
-//CHECK: ResolvedFunctionDecl: foo -> void
-//CHECK-NEXT:  ResolvedParamDecl: x:int
+//CHECK: ResolvedFunctionDecl foo -> void
+//CHECK-NEXT:  ResolvedParamDecl:int x
 //CHECK-NEXT:  ResolvedBlock
 //CHECK-NEXT:    ResolvedIfStmt
-//CHECK-NEXT:      ResolvedBinaryOperator: '=='
-//CHECK-NEXT:        ResolvedDeclRefExpr: x:int
-//CHECK-NEXT:        ResolvedIntLiteral: '1'
+//CHECK-NEXT:      ResolvedBinaryOperator:int '=='
+//CHECK-NEXT:        ResolvedDeclRefExpr:int x
+//CHECK-NEXT:        ResolvedIntLiteral:int '1'
 //CHECK-NEXT:      ResolvedBlock
-//CHECK-NEXT:        ResolvedDeferStmt:
+//CHECK-NEXT:        ResolvedDeferStmt
 //CHECK-NEXT:          ResolvedBlock
-//CHECK-NEXT:            ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:              ResolvedIntLiteral: '1'
-//CHECK-NEXT:              | value: 1
-//CHECK-NEXT:              ResolvedUnaryOperator: '&'
-//CHECK-NEXT:                ResolvedStringLiteral: '3\n'
-//CHECK-NEXT:        ResolvedDeferStmt:
+//CHECK-NEXT:            ResolvedCallExpr:int dprintf
+//CHECK-NEXT:              ResolvedIntLiteral:int '1'
+//CHECK-NEXT:              | value:int 1
+//CHECK-NEXT:              ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:                ResolvedStringLiteral:char[3] '3\n'
+//CHECK-NEXT:        ResolvedDeferStmt
 //CHECK-NEXT:          ResolvedBlock
-//CHECK-NEXT:            ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:              ResolvedIntLiteral: '1'
-//CHECK-NEXT:              | value: 1
-//CHECK-NEXT:              ResolvedUnaryOperator: '&'
-//CHECK-NEXT:                ResolvedStringLiteral: '2\n'
-//CHECK-NEXT:        ResolvedDeferStmt:
+//CHECK-NEXT:            ResolvedCallExpr:int dprintf
+//CHECK-NEXT:              ResolvedIntLiteral:int '1'
+//CHECK-NEXT:              | value:int 1
+//CHECK-NEXT:              ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:                ResolvedStringLiteral:char[3] '2\n'
+//CHECK-NEXT:        ResolvedDeferStmt
 //CHECK-NEXT:          ResolvedBlock
-//CHECK-NEXT:            ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:              ResolvedIntLiteral: '1'
-//CHECK-NEXT:              | value: 1
-//CHECK-NEXT:              ResolvedUnaryOperator: '&'
-//CHECK-NEXT:                ResolvedStringLiteral: '1\n'
+//CHECK-NEXT:            ResolvedCallExpr:int dprintf
+//CHECK-NEXT:              ResolvedIntLiteral:int '1'
+//CHECK-NEXT:              | value:int 1
+//CHECK-NEXT:              ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:                ResolvedStringLiteral:char[3] '1\n'
 //CHECK-NEXT:        ResolvedReturnStmt
 //CHECK-NEXT:      ResolvedBlock
-//CHECK-NEXT:        ResolvedDeferStmt:
+//CHECK-NEXT:        ResolvedDeferStmt
 //CHECK-NEXT:          ResolvedBlock
-//CHECK-NEXT:            ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:              ResolvedIntLiteral: '1'
-//CHECK-NEXT:              | value: 1
-//CHECK-NEXT:              ResolvedUnaryOperator: '&'
-//CHECK-NEXT:                ResolvedStringLiteral: '5\n'
-//CHECK-NEXT:        ResolvedDeferStmt:
+//CHECK-NEXT:            ResolvedCallExpr:int dprintf
+//CHECK-NEXT:              ResolvedIntLiteral:int '1'
+//CHECK-NEXT:              | value:int 1
+//CHECK-NEXT:              ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:                ResolvedStringLiteral:char[3] '5\n'
+//CHECK-NEXT:        ResolvedDeferStmt
 //CHECK-NEXT:          ResolvedBlock
-//CHECK-NEXT:            ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:              ResolvedIntLiteral: '1'
-//CHECK-NEXT:              | value: 1
-//CHECK-NEXT:              ResolvedUnaryOperator: '&'
-//CHECK-NEXT:                ResolvedStringLiteral: '4\n'
-//CHECK-NEXT:    ResolvedDeferStmt:
+//CHECK-NEXT:            ResolvedCallExpr:int dprintf
+//CHECK-NEXT:              ResolvedIntLiteral:int '1'
+//CHECK-NEXT:              | value:int 1
+//CHECK-NEXT:              ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:                ResolvedStringLiteral:char[3] '4\n'
+//CHECK-NEXT:    ResolvedDeferStmt
 //CHECK-NEXT:      ResolvedBlock
-//CHECK-NEXT:        ResolvedCallExpr: dprintf:int
-//CHECK-NEXT:          ResolvedIntLiteral: '1'
-//CHECK-NEXT:          | value: 1
-//CHECK-NEXT:          ResolvedUnaryOperator: '&'
-//CHECK-NEXT:            ResolvedStringLiteral: '1\n'
+//CHECK-NEXT:        ResolvedCallExpr:int dprintf
+//CHECK-NEXT:          ResolvedIntLiteral:int '1'
+//CHECK-NEXT:          | value:int 1
+//CHECK-NEXT:          ResolvedUnaryOperator:&char[3] '&'
+//CHECK-NEXT:            ResolvedStringLiteral:char[3] '1\n'
 //CHECK-NEXT:    ResolvedReturnStmt
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
@@ -75,25 +75,25 @@ fn main() -> void {
     defer dprintf(1, &"Second-last\n");
     foo(1);
 }
-// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo:void
-// CHECK-NEXT:       ResolvedIntLiteral: '0'
-// CHECK-NEXT:       | value: 0
-// CHECK-NEXT:     ResolvedCallExpr: foo:void
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:     ResolvedDeferStmt:
+// CHECK-NEXT:     ResolvedCallExpr:void foo
+// CHECK-NEXT:       ResolvedIntLiteral:int '0'
+// CHECK-NEXT:       | value:int 0
+// CHECK-NEXT:     ResolvedCallExpr:void foo
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       | value:int 1
+// CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'Second-last\n'
-// CHECK-NEXT:     ResolvedDeferStmt:
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[13] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[13] 'Second-last\n'
+// CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'The last one\n'
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[14] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[14] 'The last one\n'

@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '0\n10\n12345\n10002345\n123456789\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '0\n10\n12345\n10002345\n123456789\n')
 fn main() -> void {
     println(0);
     println(10);

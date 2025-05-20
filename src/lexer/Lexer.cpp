@@ -52,6 +52,9 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_fn);
         CASE_TYPE(kw_int);
         CASE_TYPE(kw_char);
+        CASE_TYPE(kw_bool);
+        CASE_TYPE(kw_true);
+        CASE_TYPE(kw_false);
         CASE_TYPE(kw_ptr);
         CASE_TYPE(kw_if);
         CASE_TYPE(kw_else);

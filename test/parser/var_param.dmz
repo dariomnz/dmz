@@ -2,8 +2,8 @@
 
 fn foo(const x: int) -> void {
 }
-// CHECK: FunctionDecl: foo -> void
-// CHECK-NEXT:   ParamDecl: x:int
+// CHECK: FunctionDecl foo -> void
+// CHECK-NEXT:   ParamDecl:int x
 // CHECK-NEXT:   Block
 
 fn main() -> void {

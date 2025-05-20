@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n')
 
 struct Color {
     r: int,

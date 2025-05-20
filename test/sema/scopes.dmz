@@ -10,23 +10,23 @@ fn main() -> void {
     println(x);
 }
 
-// CHECK: ResolvedFunctionDecl: println -> void
-// CHECK-NEXT:   ResolvedParamDecl: n:int
+// CHECK: ResolvedFunctionDecl println -> void
+// CHECK-NEXT:   ResolvedParamDecl:int n
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: x:int
-// CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:         | value: 1
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int x
+// CHECK-NEXT:         ResolvedIntLiteral:int '1'
+// CHECK-NEXT:         | value:int 1
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:int x
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedDeclStmt:
-// CHECK-NEXT:         ResolvedVarDecl: y:int
-// CHECK-NEXT:           ResolvedIntLiteral: '2'
-// CHECK-NEXT:           | value: 2
-// CHECK-NEXT:       ResolvedCallExpr: println:void
-// CHECK-NEXT:         ResolvedDeclRefExpr: y:int
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:       ResolvedDeclStmt
+// CHECK-NEXT:         ResolvedVarDecl:int y
+// CHECK-NEXT:           ResolvedIntLiteral:int '2'
+// CHECK-NEXT:           | value:int 2
+// CHECK-NEXT:       ResolvedCallExpr:void println
+// CHECK-NEXT:         ResolvedDeclRefExpr:int y
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:int x

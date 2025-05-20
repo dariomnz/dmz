@@ -9,16 +9,16 @@ fn main() -> void {
     bar(1);
 }
 
-// CHECK: ResolvedFunctionDecl: foo -> void
-// CHECK-NEXT:   ResolvedParamDecl: x:int
+// CHECK: ResolvedFunctionDecl foo -> void
+// CHECK-NEXT:   ResolvedParamDecl:int x
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT: ResolvedFunctionDecl: bar -> void
-// CHECK-NEXT:   ResolvedParamDecl: x:int
+// CHECK-NEXT: ResolvedFunctionDecl bar -> void
+// CHECK-NEXT:   ResolvedParamDecl:int x
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: foo:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
-// CHECK-NEXT: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT:     ResolvedCallExpr:void foo
+// CHECK-NEXT:       ResolvedDeclRefExpr:int x
+// CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: bar:void
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:     ResolvedCallExpr:void bar
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       | value:int 1

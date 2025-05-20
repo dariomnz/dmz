@@ -9,33 +9,33 @@ struct Empty {}
 
 fn main() -> void {
     let empty = Empty {};
-    // CHECK: DeclStmt:
+    // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: empty
-    // CHECK-NEXT:     StructInstantiationExpr: Empty
+    // CHECK-NEXT:     StructInstantiationExpr Empty
 
     let withTrailingComma = Color {
         r: 0, 
         g: 1, 
         b: 2,
     };
-    // CHECK: DeclStmt:
+    // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: withTrailingComma
-    // CHECK-NEXT:     StructInstantiationExpr: Color
-    // CHECK-NEXT:       FieldInitStmt: r
-    // CHECK-NEXT:         IntLiteral: '0'
-    // CHECK-NEXT:       FieldInitStmt: g
-    // CHECK-NEXT:         IntLiteral: '1'
-    // CHECK-NEXT:       FieldInitStmt: b
-    // CHECK-NEXT:         IntLiteral: '2'
+    // CHECK-NEXT:     StructInstantiationExpr Color
+    // CHECK-NEXT:       FieldInitStmt r
+    // CHECK-NEXT:         IntLiteral '0'
+    // CHECK-NEXT:       FieldInitStmt g
+    // CHECK-NEXT:         IntLiteral '1'
+    // CHECK-NEXT:       FieldInitStmt b
+    // CHECK-NEXT:         IntLiteral '2'
 
     let withoutTrailingComma = Color {r: 0, g: 1, b: 2};
-    // CHECK: DeclStmt:
+    // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: withoutTrailingComma
-    // CHECK-NEXT:     StructInstantiationExpr: Color
-    // CHECK-NEXT:       FieldInitStmt: r
-    // CHECK-NEXT:         IntLiteral: '0'
-    // CHECK-NEXT:       FieldInitStmt: g
-    // CHECK-NEXT:         IntLiteral: '1'
-    // CHECK-NEXT:       FieldInitStmt: b
-    // CHECK-NEXT:         IntLiteral: '2'
+    // CHECK-NEXT:     StructInstantiationExpr Color
+    // CHECK-NEXT:       FieldInitStmt r
+    // CHECK-NEXT:         IntLiteral '0'
+    // CHECK-NEXT:       FieldInitStmt g
+    // CHECK-NEXT:         IntLiteral '1'
+    // CHECK-NEXT:       FieldInitStmt b
+    // CHECK-NEXT:         IntLiteral '2'
 }

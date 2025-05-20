@@ -1,22 +1,22 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '10\n10\n20\n20\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '10\n10\n20\n20\n')
 
 fn foo(x: &int) -> void {
     println(x);
     x = 20;
     println(x);
 }
-// CHECK: ResolvedFunctionDecl: foo -> void
-// CHECK-NEXT:   ResolvedParamDecl: x:&int
+// CHECK: ResolvedFunctionDecl foo -> void
+// CHECK-NEXT:   ResolvedParamDecl:&int x
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
-// CHECK-NEXT:     ResolvedAssignment:
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
-// CHECK-NEXT:       ResolvedIntLiteral: '20'
-// CHECK-NEXT:       | value: 20
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:&int
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:&int x
+// CHECK-NEXT:     ResolvedAssignment
+// CHECK-NEXT:       ResolvedDeclRefExpr:&int x
+// CHECK-NEXT:       ResolvedIntLiteral:int '20'
+// CHECK-NEXT:       | value:int 20
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:&int x
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 
@@ -28,20 +28,20 @@ fn main() -> void {
     println(i);
 }
 
-// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: i:int
-// CHECK-NEXT:         ResolvedIntLiteral: '10'
-// CHECK-NEXT:         | value: 10
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: i_ref:&int
-// CHECK-NEXT:         ResolvedUnaryOperator: '&'
-// CHECK-NEXT:           ResolvedDeclRefExpr: i:int
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: i_ref:&int
-// CHECK-NEXT:     ResolvedCallExpr: foo:void
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedDeclRefExpr: i_ref:&int
-// CHECK-NEXT:     ResolvedCallExpr: println:void
-// CHECK-NEXT:       ResolvedDeclRefExpr: i:int
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int i
+// CHECK-NEXT:         ResolvedIntLiteral:int '10'
+// CHECK-NEXT:         | value:int 10
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:&int i_ref
+// CHECK-NEXT:         ResolvedUnaryOperator:&int '&'
+// CHECK-NEXT:           ResolvedDeclRefExpr:int i
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:&int i_ref
+// CHECK-NEXT:     ResolvedCallExpr:void foo
+// CHECK-NEXT:       ResolvedUnaryOperator:&int '&'
+// CHECK-NEXT:         ResolvedDeclRefExpr:&int i_ref
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:int i

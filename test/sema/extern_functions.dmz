@@ -1,17 +1,17 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
 extern fn foo() -> void;
-// CHECK: ResolvedExternFunctionDecl: foo -> void
+// CHECK: ResolvedExternFunctionDecl foo -> void
 
 extern fn bar(a:int) -> void;
-// CHECK: ResolvedExternFunctionDecl: bar -> void
-// CHECK-NEXT:  ResolvedParamDecl: a:int
+// CHECK: ResolvedExternFunctionDecl bar -> void
+// CHECK-NEXT:  ResolvedParamDecl:int a
 
 extern fn dprintf(fd:int, format: &char[], ...) -> int;
-// CHECK: ResolvedExternFunctionDecl: dprintf -> int
-// CHECK-NEXT:  ResolvedParamDecl: fd:int
-// CHECK-NEXT:  ResolvedParamDecl: format:&char[]
-// CHECK-NEXT:  ResolvedParamDecl: ...:vararg
+// CHECK: ResolvedExternFunctionDecl dprintf -> int
+// CHECK-NEXT:  ResolvedParamDecl:int fd
+// CHECK-NEXT:  ResolvedParamDecl:&char[] format
+// CHECK-NEXT:  ResolvedParamDecl:vararg ...
 
 fn main() -> void {
     let i = 10;

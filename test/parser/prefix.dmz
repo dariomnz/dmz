@@ -8,11 +8,11 @@ fn main() -> void {
     !!1 !0;
 
     !1;
-    // CHECK: UnaryOperator: '!'
-    // CHECK-NEXT:   IntLiteral: '1'
+    // CHECK: UnaryOperator '!'
+    // CHECK-NEXT:   IntLiteral '1'
     
     !!1;
-    // CHECK-NEXT: UnaryOperator: '!'
-    // CHECK-NEXT:   UnaryOperator: '!'
-    // CHECK-NEXT:     IntLiteral: '1'
+    // CHECK-NEXT: UnaryOperator '!'
+    // CHECK-NEXT:   UnaryOperator '!'
+    // CHECK-NEXT:     IntLiteral '1'
 }

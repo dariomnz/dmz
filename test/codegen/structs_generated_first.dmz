@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '10\n120\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '10\n120\n')
 
 // CHECK: %struct.S2 = type { i32, i32 }
 // CHECK: %struct.S = type { i32, i32 }

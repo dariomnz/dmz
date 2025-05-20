@@ -16,7 +16,7 @@ fn error(x: int) -> void {
     2;
 }
 
-// CHECK: FunctionDecl: error -> void
-// CHECK-NEXT:   ParamDecl: x:int
+// CHECK: FunctionDecl error -> void
+// CHECK-NEXT:   ParamDecl:int x
 // CHECK-NEXT:   Block
-// CHECK-NEXT:     IntLiteral: '2'
+// CHECK-NEXT:     IntLiteral '2'

@@ -4,10 +4,10 @@ struct Color {
   g: int,
   b: int,
 }
-// CHECK: ResolvedStructDecl: Color:
-// CHECK-NEXT:   ResolvedFieldDecl: r
-// CHECK-NEXT:   ResolvedFieldDecl: g
-// CHECK-NEXT:   ResolvedFieldDecl: b
+// CHECK: ResolvedStructDecl:Color Color
+// CHECK-NEXT:   ResolvedFieldDecl:int r
+// CHECK-NEXT:   ResolvedFieldDecl:int g
+// CHECK-NEXT:   ResolvedFieldDecl:int b
 
 fn main() -> void {
   let x = Color { 
@@ -16,17 +16,17 @@ fn main() -> void {
     b: 2,
   };
 }
-// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: x:
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:
-// CHECK-NEXT:           ResolvedFieldInitStmt: r
-// CHECK-NEXT:             ResolvedIntLiteral: '0'
-// CHECK-NEXT:             | value: 0
-// CHECK-NEXT:           ResolvedFieldInitStmt: g
-// CHECK-NEXT:             ResolvedIntLiteral: '1'
-// CHECK-NEXT:             | value: 1
-// CHECK-NEXT:           ResolvedFieldInitStmt: b
-// CHECK-NEXT:             ResolvedIntLiteral: '2'
-// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:Color x
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
+// CHECK-NEXT:           ResolvedFieldInitStmt:int r
+// CHECK-NEXT:             ResolvedIntLiteral:int '0'
+// CHECK-NEXT:             | value:int 0
+// CHECK-NEXT:           ResolvedFieldInitStmt:int g
+// CHECK-NEXT:             ResolvedIntLiteral:int '1'
+// CHECK-NEXT:             | value:int 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:int b
+// CHECK-NEXT:             ResolvedIntLiteral:int '2'
+// CHECK-NEXT:             | value:int 2

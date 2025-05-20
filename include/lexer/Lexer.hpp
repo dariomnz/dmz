@@ -45,6 +45,9 @@ enum class TokenType {
     kw_fn,
     kw_int,
     kw_char,
+    kw_bool,
+    kw_true,
+    kw_false,
     kw_ptr,
     kw_if,
     kw_else,
@@ -64,11 +67,13 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t);
 
 const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"void", TokenType::kw_void},     {"fn", TokenType::kw_fn},         {"int", TokenType::kw_int},
-    {"char", TokenType::kw_char},     {"ptr", TokenType::kw_ptr},       {"if", TokenType::kw_if},
+    {"char", TokenType::kw_char},     {"bool", TokenType::kw_bool},     {"true", TokenType::kw_true},
+    {"false", TokenType::kw_false},   {"ptr", TokenType::kw_ptr},       {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},     {"let", TokenType::kw_let},       {"const", TokenType::kw_const},
     {"while", TokenType::kw_while},   {"return", TokenType::kw_return}, {"struct", TokenType::kw_struct},
     {"extern", TokenType::kw_extern}, {"defer", TokenType::kw_defer},   {"err", TokenType::kw_err},
-    {"catch", TokenType::kw_catch},};
+    {"catch", TokenType::kw_catch},
+};
 
 struct Token {
     TokenType type = TokenType::invalid;

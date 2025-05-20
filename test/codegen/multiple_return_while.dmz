@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '0\n5\n3\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '0\n5\n3\n')
 fn foo(x: int) -> int {
     let n: int = x;
     while (n > 10) {

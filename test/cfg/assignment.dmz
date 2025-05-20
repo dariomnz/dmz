@@ -16,15 +16,15 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedIntLiteral: '2'
-// CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:   ResolvedIntLiteral: '3'
-// CHECK-NEXT:   ResolvedAssignment:
-// CHECK-NEXT:   ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:   ResolvedIntLiteral: '1'
-// CHECK-NEXT:   ResolvedBinaryOperator: '+'
-// CHECK-NEXT:   ResolvedAssignment:
+// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedIntLiteral:int '2'
+// CHECK-NEXT:   ResolvedAssignment
+// CHECK-NEXT:   ResolvedIntLiteral:int '3'
+// CHECK-NEXT:   ResolvedAssignment
+// CHECK-NEXT:   ResolvedDeclRefExpr:int x
+// CHECK-NEXT:   ResolvedIntLiteral:int '1'
+// CHECK-NEXT:   ResolvedBinaryOperator:int '+'
+// CHECK-NEXT:   ResolvedAssignment
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 

@@ -5,10 +5,10 @@ err {
     ERROR_TWO,
     ERROR_THREE,
 }
-// CHECK: ErrGroupDecl: 
-// CHECK-NEXT:   ErrDecl: ERROR_ONE
-// CHECK-NEXT:   ErrDecl: ERROR_TWO
-// CHECK-NEXT:   ErrDecl: ERROR_THREE
+// CHECK: ErrGroupDecl 
+// CHECK-NEXT:   ErrDecl ERROR_ONE
+// CHECK-NEXT:   ErrDecl ERROR_TWO
+// CHECK-NEXT:   ErrDecl ERROR_THREE
 
 fn foo(x:int) -> int? {
     if (x == 1){
@@ -18,26 +18,26 @@ fn foo(x:int) -> int? {
     }
     return 10;
 }
-// CHECK: FunctionDecl: foo -> int?
-// CHECK-NEXT:   ParamDecl: x:int
+// CHECK: FunctionDecl foo -> int?
+// CHECK-NEXT:   ParamDecl:int x
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     IfStmt
-// CHECK-NEXT:       BinaryOperator: '=='
-// CHECK-NEXT:         DeclRefExpr: x
-// CHECK-NEXT:         IntLiteral: '1'
+// CHECK-NEXT:       BinaryOperator '=='
+// CHECK-NEXT:         DeclRefExpr x
+// CHECK-NEXT:         IntLiteral '1'
 // CHECK-NEXT:       Block
 // CHECK-NEXT:         ReturnStmt
-// CHECK-NEXT:           ErrDeclRefExpr: ERROR_ONE
+// CHECK-NEXT:           ErrDeclRefExpr ERROR_ONE
 // CHECK-NEXT:       Block
 // CHECK-NEXT:         IfStmt
-// CHECK-NEXT:           BinaryOperator: '=='
-// CHECK-NEXT:             DeclRefExpr: x
-// CHECK-NEXT:             IntLiteral: '2'
+// CHECK-NEXT:           BinaryOperator '=='
+// CHECK-NEXT:             DeclRefExpr x
+// CHECK-NEXT:             IntLiteral '2'
 // CHECK-NEXT:           Block
 // CHECK-NEXT:             ReturnStmt
-// CHECK-NEXT:               ErrDeclRefExpr: ERROR_TWO
+// CHECK-NEXT:               ErrDeclRefExpr ERROR_TWO
 // CHECK-NEXT:     ReturnStmt
-// CHECK-NEXT:       IntLiteral: '10'
+// CHECK-NEXT:       IntLiteral '10'
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 
@@ -51,38 +51,38 @@ fn main() -> void {
 
     dprintf(1, &"No safe error %d\n", foo(10)!);
 }
-// CHECK: FunctionDecl: main -> void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
-// CHECK-NEXT:     DeclStmt:
+// CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: result
-// CHECK-NEXT:         CallExpr:
-// CHECK-NEXT:           DeclRefExpr: foo
-// CHECK-NEXT:           IntLiteral: '1'
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr foo
+// CHECK-NEXT:           IntLiteral '1'
 // CHECK-NEXT:     IfStmt
-// CHECK-NEXT:       CatchErrExpr: 
-// CHECK-NEXT:         DeclStmt:
-// CHECK-NEXT:           VarDecl const: error:err
-// CHECK-NEXT:             DeclRefExpr: result
+// CHECK-NEXT:       CatchErrExpr
+// CHECK-NEXT:         DeclStmt
+// CHECK-NEXT:           VarDecl:const err error
+// CHECK-NEXT:             DeclRefExpr result
 // CHECK-NEXT:       Block
-// CHECK-NEXT:         CallExpr:
-// CHECK-NEXT:           DeclRefExpr: dprintf
-// CHECK-NEXT:           IntLiteral: '1'
-// CHECK-NEXT:           UnaryOperator: '&'
-// CHECK-NEXT:             StringLiteral: '"%s\n"'
-// CHECK-NEXT:           UnaryOperator: '&'
-// CHECK-NEXT:             DeclRefExpr: error
-// CHECK-NEXT:     CallExpr:
-// CHECK-NEXT:       DeclRefExpr: dprintf
-// CHECK-NEXT:       IntLiteral: '1'
-// CHECK-NEXT:       UnaryOperator: '&'
-// CHECK-NEXT:         StringLiteral: '"No error %d\n"'
-// CHECK-NEXT:       DeclRefExpr: result
-// CHECK-NEXT:     CallExpr:
-// CHECK-NEXT:       DeclRefExpr: dprintf
-// CHECK-NEXT:       IntLiteral: '1'
-// CHECK-NEXT:       UnaryOperator: '&'
-// CHECK-NEXT:         StringLiteral: '"No safe error %d\n"'
-// CHECK-NEXT:       ErrUnwrapExpr: 
-// CHECK-NEXT:         CallExpr:
-// CHECK-NEXT:           DeclRefExpr: foo
-// CHECK-NEXT:           IntLiteral: '10'
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr dprintf
+// CHECK-NEXT:           IntLiteral '1'
+// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:             StringLiteral '"%s\n"'
+// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:             DeclRefExpr error
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       DeclRefExpr dprintf
+// CHECK-NEXT:       IntLiteral '1'
+// CHECK-NEXT:       UnaryOperator '&'
+// CHECK-NEXT:         StringLiteral '"No error %d\n"'
+// CHECK-NEXT:       DeclRefExpr result
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       DeclRefExpr dprintf
+// CHECK-NEXT:       IntLiteral '1'
+// CHECK-NEXT:       UnaryOperator '&'
+// CHECK-NEXT:         StringLiteral '"No safe error %d\n"'
+// CHECK-NEXT:       ErrUnwrapExpr 
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr foo
+// CHECK-NEXT:           IntLiteral '10'

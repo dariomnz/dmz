@@ -5,10 +5,10 @@ err {
     ERROR_TWO,
     ERROR_THREE,
 }
-// CHECK: ResolvedErrGroupDecl: 
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_ONE
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_TWO
-// CHECK-NEXT:   ResolvedErrDecl: ERROR_THREE
+// CHECK: ResolvedErrGroupDecl 
+// CHECK-NEXT:   ResolvedErrDecl ERROR_ONE
+// CHECK-NEXT:   ResolvedErrDecl ERROR_TWO
+// CHECK-NEXT:   ResolvedErrDecl ERROR_THREE
 
 fn foo(x:int) -> int? {
     if (x == 1){
@@ -18,26 +18,26 @@ fn foo(x:int) -> int? {
     }
     return x;
 }
-// CHECK: ResolvedFunctionDecl: foo -> int?
-// CHECK-NEXT:   ResolvedParamDecl: x:int
+// CHECK: ResolvedFunctionDecl foo -> int?
+// CHECK-NEXT:   ResolvedParamDecl:int x
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedBinaryOperator: '=='
-// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:         ResolvedIntLiteral: '1'
+// CHECK-NEXT:       ResolvedBinaryOperator:int '=='
+// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+// CHECK-NEXT:         ResolvedIntLiteral:int '1'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedErrDeclRefExpr: ERROR_ONE
+// CHECK-NEXT:           ResolvedErrDeclRefExpr ERROR_ONE
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedIfStmt
-// CHECK-NEXT:           ResolvedBinaryOperator: '=='
-// CHECK-NEXT:             ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:             ResolvedIntLiteral: '2'
+// CHECK-NEXT:           ResolvedBinaryOperator:int '=='
+// CHECK-NEXT:             ResolvedDeclRefExpr:int x
+// CHECK-NEXT:             ResolvedIntLiteral:int '2'
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedReturnStmt
-// CHECK-NEXT:               ResolvedErrDeclRefExpr: ERROR_TWO
+// CHECK-NEXT:               ResolvedErrDeclRefExpr ERROR_TWO
 // CHECK-NEXT:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
+// CHECK-NEXT:       ResolvedDeclRefExpr:int x
 
 extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
 
@@ -60,67 +60,67 @@ fn main() -> void {
     dprintf(1, &"No error %d\n", result);
     dprintf(1, &"No safe error %d\n", foo(10)!);
 }
-// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: result:int?
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '2'
-// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int? result
+// CHECK-NEXT:         ResolvedCallExpr:int? foo
+// CHECK-NEXT:           ResolvedIntLiteral:int '2'
+// CHECK-NEXT:           | value:int 2
 // CHECK-NEXT:     ResolvedCatchErrExpr: 
-// CHECK-NEXT:       ResolvedDeclStmt:
-// CHECK-NEXT:         ResolvedVarDecl const: result_e:err
-// CHECK-NEXT:           ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: '%s\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr: result_e:err
+// CHECK-NEXT:       ResolvedDeclStmt
+// CHECK-NEXT:         ResolvedVarDecl:const err result_e
+// CHECK-NEXT:           ResolvedDeclRefExpr:int? result
+// CHECK-NEXT:     ResolvedCallExpr:int dprintf
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       | value:int 1
+// CHECK-NEXT:       ResolvedUnaryOperator:&char[4] '&'
+// CHECK-NEXT:         ResolvedStringLiteral:char[4] '%s\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:err result_e
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedDeclStmt:
-// CHECK-NEXT:           ResolvedVarDecl const: error:err
-// CHECK-NEXT:             ResolvedDeclRefExpr: result:int?
+// CHECK-NEXT:         ResolvedDeclStmt
+// CHECK-NEXT:           ResolvedVarDecl:const err error
+// CHECK-NEXT:             ResolvedDeclRefExpr:int? result
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: '%s\n'
-// CHECK-NEXT:           ResolvedDeclRefExpr: error:err
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[4] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[4] '%s\n'
+// CHECK-NEXT:           ResolvedDeclRefExpr:err error
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedDeclRefExpr: result:int?
+// CHECK-NEXT:         ResolvedDeclRefExpr:int? result
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'There are an error\n'
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[20] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[20] 'There are an error\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr: 
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '2'
-// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:         ResolvedCallExpr:int? foo
+// CHECK-NEXT:           ResolvedIntLiteral:int '2'
+// CHECK-NEXT:           | value:int 2
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:           ResolvedIntLiteral: '1'
-// CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator: '&'
-// CHECK-NEXT:             ResolvedStringLiteral: 'There are an error\n'
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: 'No error %d\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr: result:int?
-// CHECK-NEXT:     ResolvedCallExpr: dprintf:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
-// CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator: '&'
-// CHECK-NEXT:         ResolvedStringLiteral: 'No safe error %d\n'
-// CHECK-NEXT:       ResolvedErrUnwrapExpr: int
-// CHECK-NEXT:         ResolvedCallExpr: foo:int?
-// CHECK-NEXT:           ResolvedIntLiteral: '10'
-// CHECK-NEXT:           | value: 10
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[20] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[20] 'There are an error\n'
+// CHECK-NEXT:     ResolvedCallExpr:int dprintf
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       | value:int 1
+// CHECK-NEXT:       ResolvedUnaryOperator:&char[13] '&'
+// CHECK-NEXT:         ResolvedStringLiteral:char[13] 'No error %d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:int? result
+// CHECK-NEXT:     ResolvedCallExpr:int dprintf
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       | value:int 1
+// CHECK-NEXT:       ResolvedUnaryOperator:&char[18] '&'
+// CHECK-NEXT:         ResolvedStringLiteral:char[18] 'No safe error %d\n'
+// CHECK-NEXT:       ResolvedErrUnwrapExpr:int
+// CHECK-NEXT:         ResolvedCallExpr:int? foo
+// CHECK-NEXT:           ResolvedIntLiteral:int '10'
+// CHECK-NEXT:           | value:int 10

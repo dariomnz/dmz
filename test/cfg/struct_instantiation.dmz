@@ -21,18 +21,18 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral: '1'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedIntLiteral: '0'
-// CHECK-NEXT:   ResolvedIntLiteral: '2'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedIntLiteral: '3'
-// CHECK-NEXT:   ResolvedIntLiteral: '4'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedIntLiteral: '5'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedDeclStmt:
+// CHECK-NEXT:   ResolvedIntLiteral:int '1'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S2
+// CHECK-NEXT:   ResolvedIntLiteral:int '0'
+// CHECK-NEXT:   ResolvedIntLiteral:int '2'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S
+// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedIntLiteral:int '3'
+// CHECK-NEXT:   ResolvedIntLiteral:int '4'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S2
+// CHECK-NEXT:   ResolvedIntLiteral:int '5'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S
+// CHECK-NEXT:   ResolvedDeclStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 

@@ -21,15 +21,15 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral: '0'
-// CHECK-NEXT:   ResolvedIntLiteral: '1'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:
-// CHECK-NEXT:   ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedDeclRefExpr: s:S
-// CHECK-NEXT:   ResolvedMemberExpr: s2:S2
-// CHECK-NEXT:   ResolvedMemberExpr: y:int
-// CHECK-NEXT:   ResolvedDeclStmt:
+// CHECK-NEXT:   ResolvedIntLiteral:int '0'
+// CHECK-NEXT:   ResolvedIntLiteral:int '1'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S2
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:S
+// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedDeclRefExpr:S s
+// CHECK-NEXT:   ResolvedMemberExpr:S2 s2
+// CHECK-NEXT:   ResolvedMemberExpr:int y
+// CHECK-NEXT:   ResolvedDeclStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 

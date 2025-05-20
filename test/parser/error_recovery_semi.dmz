@@ -9,10 +9,10 @@ fn error() -> void {
     let z: void =;
 }
 
-// CHECK: FunctionDecl: error -> void
+// CHECK: FunctionDecl error -> void
 // CHECK-NEXT:   Block
-// CHECK-NEXT:    DeclStmt:
-// CHECK-NEXT:      VarDecl: y:int
-// CHECK-NEXT:        BinaryOperator: '+'
-// CHECK-NEXT:          IntLiteral: '1'
-// CHECK-NEXT:          IntLiteral: '2'
+// CHECK-NEXT:    DeclStmt
+// CHECK-NEXT:      VarDecl:int y
+// CHECK-NEXT:        BinaryOperator '+'
+// CHECK-NEXT:          IntLiteral '1'
+// CHECK-NEXT:          IntLiteral '2'

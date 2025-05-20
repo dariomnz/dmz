@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '0\n1\n2\n3\n10\n15\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '0\n1\n2\n3\n10\n15\n')
 struct S {
   x: int,
   s2: S2,

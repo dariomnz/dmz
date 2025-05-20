@@ -185,7 +185,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
             return report(character->location, "malformed char");
         }
     }
-
+    if (const auto *boolean = dynamic_cast<const BoolLiteral *>(&expr)) {
+        return std::make_unique<ResolvedBoolLiteral>(boolean->location, boolean->value == "true");
+    }
     if (const auto *str = dynamic_cast<const StringLiteral *>(&expr)) {
         if (auto c = str_from_source(str->value.substr(1, str->value.size() - 2))) {
             return std::make_unique<ResolvedStringLiteral>(str->location, *c);
@@ -193,47 +195,36 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
             return report(str->location, "malformed string");
         }
     }
-
     if (const auto *errRef = dynamic_cast<const ErrDeclRefExpr *>(&expr)) {
         return resolve_err_decl_ref_expr(*errRef);
     }
-
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
         return resolve_decl_ref_expr(*declRefExpr);
     }
-
     if (const auto *callExpr = dynamic_cast<const CallExpr *>(&expr)) {
         return resolve_call_expr(*callExpr);
     }
-
     if (const auto *groupingExpr = dynamic_cast<const GroupingExpr *>(&expr)) {
         return resolve_grouping_expr(*groupingExpr);
     }
-
     if (const auto *binaryOperator = dynamic_cast<const BinaryOperator *>(&expr)) {
         return resolve_binary_operator(*binaryOperator);
     }
-
     if (const auto *unaryOperator = dynamic_cast<const UnaryOperator *>(&expr)) {
         return resolve_unary_operator(*unaryOperator);
     }
-
     if (const auto *structInstantiation = dynamic_cast<const StructInstantiationExpr *>(&expr)) {
         return resolve_struct_instantiation(*structInstantiation);
     }
-
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
     }
-
     if (const auto *errUnwrapExpr = dynamic_cast<const ErrUnwrapExpr *>(&expr)) {
         return resolve_err_unwrap_expr(*errUnwrapExpr);
     }
-
     if (const auto *catchErrExpr = dynamic_cast<const CatchErrExpr *>(&expr)) {
         return resolve_catch_err_expr(*catchErrExpr);
     }
-
     dmz_unreachable("unexpected expression");
 }
 
@@ -931,10 +922,10 @@ std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchEr
     if (catchErrExpr.errTocatch) {
         auto resolvedErr = resolve_expr(*catchErrExpr.errTocatch);
         return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, std::move(resolvedErr), nullptr);
-    }else if (catchErrExpr.declaration){
+    } else if (catchErrExpr.declaration) {
         auto declaration = resolve_decl_stmt(*catchErrExpr.declaration);
         return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, nullptr, std::move(declaration));
-    }else {
+    } else {
         dmz_unreachable("malformed CatchErrExpr");
     }
 }

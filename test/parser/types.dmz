@@ -1,18 +1,26 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     let i: int = 10;
-    // CHECK: VarDecl: i:int
-    // CHECK-NEXT:   IntLiteral: '10'
+    // CHECK: VarDecl:int i
+    // CHECK-NEXT:   IntLiteral '10'
 
     let c1: char = 'c';
-    // CHECK: VarDecl: c1:char
-    // CHECK-NEXT:   CharLiteral: ''c''
+    // CHECK: VarDecl:char c1
+    // CHECK-NEXT:   CharLiteral ''c''
 
     let c2: char = '\n';
-    // CHECK: VarDecl: c2:char
-    // CHECK-NEXT:   CharLiteral: ''\n''
+    // CHECK: VarDecl:char c2
+    // CHECK-NEXT:   CharLiteral ''\n''
 
     let c3: char[] = "Hello, world\n";
-    // CHECK: VarDecl: c3:char[]
-    // CHECK-NEXT:   StringLiteral: '"Hello, world\n"'
+    // CHECK: VarDecl:char[] c3
+    // CHECK-NEXT:   StringLiteral '"Hello, world\n"'
+
+    let b1: bool = true;
+    // CHECK: VarDecl:bool b1
+    // CHECK-NEXT:   BoolLiteral 'true'
+
+    let b2: bool = false;
+    // CHECK: VarDecl:bool b2
+    // CHECK-NEXT:   BoolLiteral 'false'
 }

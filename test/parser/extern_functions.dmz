@@ -25,14 +25,14 @@ extern fn f() -> void
 extern fn f() -> void {}
 
 extern fn puts(str: char[]) -> int;
-// CHECK: ExternFunctionDecl: puts -> int
-// CHECK-NEXT:  ParamDecl: str:char[]
+// CHECK: ExternFunctionDecl puts -> int
+// CHECK-NEXT:  ParamDecl:char[] str
 
 extern fn dprintf(fd:int, format: char[], ...) -> int;
-// CHECK: ExternFunctionDecl: dprintf -> int
-// CHECK-NEXT:  ParamDecl: fd:int
-// CHECK-NEXT:  ParamDecl: format:char[]
-// CHECK-NEXT:  ParamDecl: ...:vararg
+// CHECK: ExternFunctionDecl dprintf -> int
+// CHECK-NEXT:  ParamDecl:int fd
+// CHECK-NEXT:  ParamDecl:char[] format
+// CHECK-NEXT:  ParamDecl:vararg ...
 
 fn main() -> void {
     puts("Hello, world");

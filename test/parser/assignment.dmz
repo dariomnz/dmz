@@ -9,7 +9,7 @@ fn main() -> void {
     a = b = 4;
 
     a = 4;
-    // CHECK: Assignment:
-    // CHECK-NEXT:   DeclRefExpr: a
-    // CHECK-NEXT:   IntLiteral: '4'
+    // CHECK: Assignment
+    // CHECK-NEXT:   DeclRefExpr a
+    // CHECK-NEXT:   IntLiteral '4'
 }

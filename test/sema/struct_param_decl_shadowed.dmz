@@ -5,10 +5,10 @@ struct S {
 
 fn foo(S: S) -> void {
   let x = S.x;
-  // CHECK: ResolvedDeclStmt:
-  // CHECK-NEXT:   ResolvedVarDecl: x:
-  // CHECK-NEXT:     ResolvedMemberExpr: x
-  // CHECK-NEXT:       ResolvedDeclRefExpr: S
+  // CHECK: ResolvedDeclStmt
+  // CHECK-NEXT:   ResolvedVarDecl:int x
+  // CHECK-NEXT:     ResolvedMemberExpr:int x
+  // CHECK-NEXT:       ResolvedDeclRefExpr:S S
 }
 
 fn main() -> void {

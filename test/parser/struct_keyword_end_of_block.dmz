@@ -15,8 +15,8 @@ struct S2 {
     x: int,
 }
 
-// CHECK: StructDecl: S
-// CHECK-NEXT:   FieldDecl: x:int
-// CHECK-NEXT: StructDecl: S2
-// CHECK-NEXT:   FieldDecl: x:int
+// CHECK: StructDecl S
+// CHECK-NEXT:   FieldDecl:int x
+// CHECK-NEXT: StructDecl S2
+// CHECK-NEXT:   FieldDecl:int x
 // CHECK-NOT: {{.*}}

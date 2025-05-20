@@ -7,14 +7,14 @@ fn main() -> void {
 
   println(S);
 }
-// CHECK: ResolvedFunctionDecl: main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl const: S:int
-// CHECK-NEXT:         ResolvedIntLiteral: '1'
-// CHECK-NEXT:         | value: 1
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: x:
-// CHECK-NEXT:     ResolvedCallExpr: println
-// CHECK-NEXT:       ResolvedDeclRefExpr: S
-// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:const int S
+// CHECK-NEXT:         ResolvedIntLiteral:int '1'
+// CHECK-NEXT:         | value:int 1
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:S x
+// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedDeclRefExpr:int S
+// CHECK-NEXT:       | value:int 1

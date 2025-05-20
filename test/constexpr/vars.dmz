@@ -4,18 +4,18 @@ fn pass() -> int {
     return x * 10;
 }
 // CHECK:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedBinaryOperator: '*'
-// CHECK-NEXT:       | value: 20
-// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:         ResolvedIntLiteral: '10'
+// CHECK-NEXT:       ResolvedBinaryOperator:int '*'
+// CHECK-NEXT:       | value:int 20
+// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+// CHECK-NEXT:         ResolvedIntLiteral:int '10'
 
 fn pass2() -> int {
     let const x: int = 2;
     return x;
 }
 // CHECK:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:       | value: 2
+// CHECK-NEXT:       ResolvedDeclRefExpr:int x
+// CHECK-NEXT:       | value:int 2
 
 fn error() -> int {
     let const x: int;
@@ -23,17 +23,17 @@ fn error() -> int {
     return x * 10;
 }
 // CHECK:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedBinaryOperator: '*'
-// CHECK-NEXT:         ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:         ResolvedIntLiteral: '10'
+// CHECK-NEXT:       ResolvedBinaryOperator:int '*'
+// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+// CHECK-NEXT:         ResolvedIntLiteral:int '10'
 
 fn err2() -> int {
     let x: int = 2;
     return x * 10;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator: '*'
-// CHECK-NEXT:        ResolvedDeclRefExpr: x:int
-// CHECK-NEXT:        ResolvedIntLiteral: '10'
+// CHECK-NEXT:      ResolvedBinaryOperator:int '*'
+// CHECK-NEXT:        ResolvedDeclRefExpr:int x
+// CHECK-NEXT:        ResolvedIntLiteral:int '10'
 
 fn main() -> void {}

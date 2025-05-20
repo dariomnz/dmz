@@ -1,26 +1,26 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '1\n2\n3\n4\n5\n7\n10\n13\n14\n15\n16\n'
-fn true(x: int) -> int {
+// RUN: diff <(compiler %s -run) <(echo -n -e '1\n2\n3\n4\n5\n7\n10\n13\n14\n15\n16\n')
+fn fnTrue(x: int) -> int {
     println(x);
     return 1;
 }
 
-fn false(x: int) -> int {
+fn fnFalse(x: int) -> int {
     println(x);
     return 0;
 }
 
 fn test1() -> void {
-    false(1) || true(2) && false(3);
+    fnFalse(1) || fnTrue(2) && fnFalse(3);
 }
 // CHECK: define void @test1() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 @false(i32 1)
+// CHECK-NEXT:   %0 = call i32 @fnFalse(i32 1)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %entry
-// CHECK-NEXT:   %1 = call i32 @true(i32 2)
+// CHECK-NEXT:   %1 = call i32 @fnTrue(i32 2)
 // CHECK-NEXT:   %int.to.bool1 = icmp ne i32 %1, 0
 // CHECK-NEXT:   br i1 %int.to.bool1, label %and.rhs, label %and.merge
 // CHECK-NEXT: 
@@ -30,7 +30,7 @@ fn test1() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %or.rhs
-// CHECK-NEXT:   %3 = call i32 @false(i32 3)
+// CHECK-NEXT:   %3 = call i32 @fnFalse(i32 3)
 // CHECK-NEXT:   %int.to.bool2 = icmp ne i32 %3, 0
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
@@ -42,16 +42,16 @@ fn test1() -> void {
 // CHECK-NEXT: }
 
 fn test2() -> void {
-    false(4) || true(5) || true(6);
+    fnFalse(4) || fnTrue(5) || fnTrue(6);
 }
 // CHECK: define void @test2() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 @false(i32 4)
+// CHECK-NEXT:   %0 = call i32 @fnFalse(i32 4)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %or.lhs.false
-// CHECK-NEXT:   %1 = call i32 @true(i32 6)
+// CHECK-NEXT:   %1 = call i32 @fnTrue(i32 6)
 // CHECK-NEXT:   %int.to.bool2 = icmp ne i32 %1, 0
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
@@ -61,22 +61,22 @@ fn test2() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 @true(i32 5)
+// CHECK-NEXT:   %3 = call i32 @fnTrue(i32 5)
 // CHECK-NEXT:   %int.to.bool1 = icmp ne i32 %3, 0
 // CHECK-NEXT:   br i1 %int.to.bool1, label %or.merge, label %or.rhs
 // CHECK-NEXT: }
 
 fn test3() -> void {
-    false(7) && false(8) && true(9);
+    fnFalse(7) && fnFalse(8) && fnTrue(9);
 }
 // CHECK: define void @test3() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 @false(i32 7)
+// CHECK-NEXT:   %0 = call i32 @fnFalse(i32 7)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %and.lhs.true, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %and.lhs.true
-// CHECK-NEXT:   %1 = call i32 @true(i32 9)
+// CHECK-NEXT:   %1 = call i32 @fnTrue(i32 9)
 // CHECK-NEXT:   %int.to.bool2 = icmp ne i32 %1, 0
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
@@ -86,22 +86,22 @@ fn test3() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: and.lhs.true:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 @false(i32 8)
+// CHECK-NEXT:   %3 = call i32 @fnFalse(i32 8)
 // CHECK-NEXT:   %int.to.bool1 = icmp ne i32 %3, 0
 // CHECK-NEXT:   br i1 %int.to.bool1, label %and.rhs, label %and.merge
 // CHECK-NEXT: }
 
 fn test4() -> void {
-    true(10) || true(11) || true(12);
+    fnTrue(10) || fnTrue(11) || fnTrue(12);
 }
 // CHECK: define void @test4() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 @true(i32 10)
+// CHECK-NEXT:   %0 = call i32 @fnTrue(i32 10)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %or.lhs.false
-// CHECK-NEXT:   %1 = call i32 @true(i32 12)
+// CHECK-NEXT:   %1 = call i32 @fnTrue(i32 12)
 // CHECK-NEXT:   %int.to.bool2 = icmp ne i32 %1, 0
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
@@ -111,22 +111,22 @@ fn test4() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 @true(i32 11)
+// CHECK-NEXT:   %3 = call i32 @fnTrue(i32 11)
 // CHECK-NEXT:   %int.to.bool1 = icmp ne i32 %3, 0
 // CHECK-NEXT:   br i1 %int.to.bool1, label %or.merge, label %or.rhs
 // CHECK-NEXT: }
 
 fn test5() -> void {
-    false(13) || true(14) && false(15) || true(16);
+    fnFalse(13) || fnTrue(14) && fnFalse(15) || fnTrue(16);
 }
 // CHECK: define void @test5() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 @false(i32 13)
+// CHECK-NEXT:   %0 = call i32 @fnFalse(i32 13)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %and.lhs.true, %or.lhs.false
-// CHECK-NEXT:   %1 = call i32 @true(i32 16)
+// CHECK-NEXT:   %1 = call i32 @fnTrue(i32 16)
 // CHECK-NEXT:   %int.to.bool3 = icmp ne i32 %1, 0
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
@@ -136,12 +136,12 @@ fn test5() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 @true(i32 14)
+// CHECK-NEXT:   %3 = call i32 @fnTrue(i32 14)
 // CHECK-NEXT:   %int.to.bool1 = icmp ne i32 %3, 0
 // CHECK-NEXT:   br i1 %int.to.bool1, label %and.lhs.true, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: and.lhs.true:                                     ; preds = %or.lhs.false
-// CHECK-NEXT:   %4 = call i32 @false(i32 15)
+// CHECK-NEXT:   %4 = call i32 @fnFalse(i32 15)
 // CHECK-NEXT:   %int.to.bool2 = icmp ne i32 %4, 0
 // CHECK-NEXT:   br i1 %int.to.bool2, label %or.merge, label %or.rhs
 // CHECK-NEXT: }

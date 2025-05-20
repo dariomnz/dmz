@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzx '2\n10\n52\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '2\n10\n52\n')
 fn foo(x: int) -> int {
     if (x == 1) {
         return 2;

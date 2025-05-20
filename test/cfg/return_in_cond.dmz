@@ -14,13 +14,13 @@ fn foo() -> int {
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 3 
 // CHECK-NEXT:   succs: 0(U) 1 
-// CHECK-NEXT:   IntLiteral: '0'
+// CHECK-NEXT:   ResolvedIntLiteral:int '0'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   IntLiteral: '2'
+// CHECK-NEXT:   ResolvedIntLiteral:int '2'
 // CHECK-NEXT:   ResolvedReturnStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

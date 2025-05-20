@@ -50,7 +50,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.types.dmz",
-					"match": "\\b(int|char|void)\\b"
+					"match": "\\b(int|char|void|bool|true|false)\\b"
 				}
 			]
 		},

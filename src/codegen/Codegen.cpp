@@ -61,6 +61,9 @@ llvm::Type *Codegen::generate_type(const Type &type) {
     if (type.kind == Type::Kind::Char) {
         ret = m_builder.getInt8Ty();
     }
+    if (type.kind == Type::Kind::Bool) {
+        ret = m_builder.getInt1Ty();
+    }
     if (type.kind == Type::Kind::Struct) {
         ret = llvm::StructType::getTypeByName(m_context, "struct." + std::string(type.name));
     }
@@ -273,16 +276,19 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
     if (auto val = expr.get_constant_value()) {
         if (std::holds_alternative<int>(*val)) {
-            return llvm::ConstantInt::get(m_builder.getInt32Ty(), std::get<int>(*val));
+            return m_builder.getInt32(std::get<int>(*val));
         } else if (std::holds_alternative<char>(*val)) {
-            return llvm::ConstantInt::get(m_builder.getInt8Ty(), std::get<char>(*val));
+            return m_builder.getInt8(std::get<char>(*val));
         }
     }
     if (auto *number = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
-        return llvm::ConstantInt::get(m_builder.getInt32Ty(), number->value);
+        return m_builder.getInt32(number->value);
     }
     if (auto *number = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
-        return llvm::ConstantInt::get(m_builder.getInt8Ty(), number->value);
+        return m_builder.getInt8(number->value);
+    }
+    if (auto *number = dynamic_cast<const ResolvedBoolLiteral *>(&expr)) {
+        return m_builder.getInt1(number->value);
     }
     if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
         return m_builder.CreateGlobalStringPtr(str->value, "global.str");
@@ -668,9 +674,7 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
     return ret;
 }
 
-void Codegen::generate_err_no_err() {
-    m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR");
-}
+void Codegen::generate_err_no_err() { m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR"); }
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
@@ -704,7 +708,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         m_builder.CreateStructGEP(generate_type(errUnwrapExpr.errToUnwrap->type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
 
-    m_builder.CreateCondBr( ptr_to_bool(err_value), trueBB, elseBB);
+    m_builder.CreateCondBr(ptr_to_bool(err_value), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -740,27 +744,27 @@ llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchE
     if (catchErrExpr.errToCatch) {
         err_struct = generate_expr(*catchErrExpr.errToCatch, true);
         err_type = catchErrExpr.errToCatch->type;
-    }else if (catchErrExpr.declaration) {
+    } else if (catchErrExpr.declaration) {
         err_struct = generate_expr(*catchErrExpr.declaration->varDecl->initializer, true);
 
-        decl_value = allocate_stack_variable(catchErrExpr.declaration->varDecl->identifier, catchErrExpr.declaration->varDecl->type);
+        decl_value = allocate_stack_variable(catchErrExpr.declaration->varDecl->identifier,
+                                             catchErrExpr.declaration->varDecl->type);
 
         m_declarations[catchErrExpr.declaration->varDecl.get()] = decl_value;
 
         err_type = catchErrExpr.declaration->varDecl->initializer->type;
-    }else {
+    } else {
         dmz_unreachable("malformed ResolvedCatchErrExpr");
     }
 
     llvm::Value *err_value_ptr = m_builder.CreateStructGEP(generate_type(err_type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
 
-    if (catchErrExpr.declaration){
+    if (catchErrExpr.declaration) {
         store_value(m_noError, decl_value, Type::builtinErr("err"));
     }
     llvm::Value *returnValue = allocate_stack_variable("catch.result", Type::builtinInt());
     store_value(m_builder.getInt32(0), returnValue, Type::builtinInt());
-
 
     m_builder.CreateCondBr(ptr_to_bool(err_value), trueBB, elseBB);
 
@@ -768,7 +772,7 @@ llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchE
     m_builder.SetInsertPoint(trueBB);
 
     store_value(m_builder.getInt32(1), returnValue, Type::builtinInt());
-    if (catchErrExpr.declaration){
+    if (catchErrExpr.declaration) {
         store_value(err_value, decl_value, Type::builtinErr("err"));
     }
 

@@ -164,6 +164,15 @@ struct ResolvedCharLiteral : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedBoolLiteral : public ResolvedExpr {
+    bool value;
+
+    ResolvedBoolLiteral(SourceLocation location, bool value)
+        : ResolvedExpr(location, Type::builtinBool()), value(value) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedStringLiteral : public ResolvedExpr {
     std::string value;
 

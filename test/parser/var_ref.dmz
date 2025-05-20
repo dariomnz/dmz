@@ -3,8 +3,8 @@
 fn foo(x: &int) -> void {
     x = 20;
 }
-// CHECK: FunctionDecl: foo -> void
-// CHECK-NEXT:   ParamDecl: x:&int
+// CHECK: FunctionDecl foo -> void
+// CHECK-NEXT:   ParamDecl:&int x
 // CHECK-NEXT:   Block
 
 fn main() -> void {
@@ -12,7 +12,7 @@ fn main() -> void {
     foo(&i);
 }
 
-// CHECK:      CallExpr:
-// CHECK-NEXT:   DeclRefExpr: foo
-// CHECK-NEXT:   UnaryOperator: '&'
-// CHECK-NEXT:     DeclRefExpr: i
+// CHECK:      CallExpr
+// CHECK-NEXT:   DeclRefExpr foo
+// CHECK-NEXT:   UnaryOperator '&'
+// CHECK-NEXT:     DeclRefExpr i

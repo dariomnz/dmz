@@ -14,20 +14,20 @@ fn error(x: int) -> void {
     2;
 }
 
-// CHECK: FunctionDecl: error -> void
-// CHECK-NEXT:   ParamDecl: x:int
+// CHECK: FunctionDecl error -> void
+// CHECK-NEXT:   ParamDecl:int x
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     IfStmt
-// CHECK-NEXT:       BinaryOperator: '=='
-// CHECK-NEXT:         DeclRefExpr: x
-// CHECK-NEXT:         IntLiteral: '0'
+// CHECK-NEXT:       BinaryOperator '=='
+// CHECK-NEXT:         DeclRefExpr x
+// CHECK-NEXT:         IntLiteral '0'
 // CHECK-NEXT:       Block
 // CHECK-NEXT:         IfStmt
-// CHECK-NEXT:           BinaryOperator: '=='
-// CHECK-NEXT:             DeclRefExpr: x
-// CHECK-NEXT:             IntLiteral: '2
+// CHECK-NEXT:           BinaryOperator '=='
+// CHECK-NEXT:             DeclRefExpr x
+// CHECK-NEXT:             IntLiteral '2
 // CHECK-NEXT:           Block
-// CHECK-NEXT:             IntLiteral: '0'
+// CHECK-NEXT:             IntLiteral '0'
 // CHECK-NEXT:           Block
-// CHECK-NEXT:             IntLiteral: '1'
-// CHECK-NEXT:     IntLiteral: '2'
+// CHECK-NEXT:             IntLiteral '1'
+// CHECK-NEXT:     IntLiteral '2'

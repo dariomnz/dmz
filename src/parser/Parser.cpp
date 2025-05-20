@@ -120,6 +120,7 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
 // <type>
 //  ::= 'int'
 //  |   'char'
+//  |   'bool'
 //  |   'void'
 //  |   <identifier>
 std::optional<Type> Parser::parse_type() {
@@ -134,10 +135,7 @@ std::optional<Type> Parser::parse_type() {
     std::string_view name = m_nextToken.str;
 
     std::unordered_set<TokenType> types = {
-        TokenType::kw_void,
-        TokenType::kw_int,
-        TokenType::kw_char,
-        TokenType::id,
+        TokenType::kw_void, TokenType::kw_int, TokenType::kw_char, TokenType::kw_bool, TokenType::id,
     };
 
     if (types.count(type) == 0) {
@@ -158,6 +156,9 @@ std::optional<Type> Parser::parse_type() {
     Type t;
     if (type == TokenType::kw_void) {
         t = Type::builtinVoid();
+    }
+    if (type == TokenType::kw_bool) {
+        t = Type::builtinBool();
     }
     if (type == TokenType::kw_char) {
         t = Type::builtinChar();
@@ -265,6 +266,12 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (m_nextToken.type == TokenType::lit_char) {
         auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat char
+        return literal;
+    }
+
+    if (m_nextToken.type == TokenType::kw_true || m_nextToken.type == TokenType::kw_false) {
+        auto literal = std::make_unique<BoolLiteral>(location, m_nextToken.str);
+        eat_next_token();  // eat bool
         return literal;
     }
 

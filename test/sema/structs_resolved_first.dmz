@@ -7,29 +7,29 @@ fn main() -> void {}
 
 struct S { x: int, y:int}
 struct S2 { x: int, y:int}
-// CHECK: ResolvedStructDecl: S:
-// CHECK-NEXT:   ResolvedFieldDecl: x
-// CHECK-NEXT:   ResolvedFieldDecl: y
+// CHECK: ResolvedStructDecl:S S
+// CHECK-NEXT:   ResolvedFieldDecl:int x
+// CHECK-NEXT:   ResolvedFieldDecl:int y
 
-// CHECK-NEXT: ResolvedStructDecl: S2:
-// CHECK-NEXT:   ResolvedFieldDecl: x
-// CHECK-NEXT:   ResolvedFieldDecl: y
+// CHECK-NEXT: ResolvedStructDecl:S2 S2
+// CHECK-NEXT:   ResolvedFieldDecl:int x
+// CHECK-NEXT:   ResolvedFieldDecl:int y
 
-// CHECK-NEXT: ResolvedFunctionDecl: println -> void
-// CHECK-NEXT:   ResolvedParamDecl: n:
+// CHECK-NEXT: ResolvedFunctionDecl println -> void
+// CHECK-NEXT:   ResolvedParamDecl:int n
 // CHECK-NEXT:   ResolvedBlock
 
-// CHECK-NEXT: ResolvedFunctionDecl: foo -> S2
-// CHECK-NEXT:   ResolvedParamDecl: s:
+// CHECK-NEXT: ResolvedFunctionDecl foo -> S2
+// CHECK-NEXT:   ResolvedParamDecl:S s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedStructInstantiationExpr:
-// CHECK-NEXT:         ResolvedFieldInitStmt: x
-// CHECK-NEXT:           ResolvedMemberExpr: x
-// CHECK-NEXT:             ResolvedDeclRefExpr: s
-// CHECK-NEXT:         ResolvedFieldInitStmt: y
-// CHECK-NEXT:           ResolvedMemberExpr: y
-// CHECK-NEXT:             ResolvedDeclRefExpr: s
+// CHECK-NEXT:       ResolvedStructInstantiationExpr:S2
+// CHECK-NEXT:         ResolvedFieldInitStmt:int x
+// CHECK-NEXT:           ResolvedMemberExpr:int x
+// CHECK-NEXT:             ResolvedDeclRefExpr:S s
+// CHECK-NEXT:         ResolvedFieldInitStmt:int y
+// CHECK-NEXT:           ResolvedMemberExpr:int y
+// CHECK-NEXT:             ResolvedDeclRefExpr:S s
 
-// CHECK-NEXT: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock

@@ -15,13 +15,13 @@ fn main() -> void {
 
     let x = 1;
 }
-// CHECK: StructDecl: Color
-// CHECK-NEXT:   FieldDecl: r:int
-// CHECK-NEXT:   FieldDecl: g:int
-// CHECK-NEXT:   FieldDecl: b:int
-// CHECK-NEXT: FunctionDecl: main -> void
+// CHECK: StructDecl Color
+// CHECK-NEXT:   FieldDecl:int r
+// CHECK-NEXT:   FieldDecl:int g
+// CHECK-NEXT:   FieldDecl:int b
+// CHECK-NEXT: FunctionDecl main -> void
 // CHECK-NEXT:   Block
-// CHECK-NEXT:     DeclStmt:
+// CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: x
-// CHECK-NEXT:         IntLiteral: '1'
+// CHECK-NEXT:         IntLiteral '1'
 // CHECK-NOT: {{.*}}

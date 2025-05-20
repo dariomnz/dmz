@@ -11,6 +11,10 @@ fn str() -> char[] {
     return "hello\n";
 }
 
+fn fnBool() -> bool {
+    return true;
+}
+
 fn main() -> void {
     let x = 1;
     let y = foo() + 1;
@@ -24,19 +28,32 @@ fn main() -> void {
 
     let str1 = "something\n";
     let str2 = str();
+
+    let bool1 = true;
+    let bool2 = false;
+    let bool3 = fnBool();
 }
 
-// CHECK:   ResolvedVarDecl: x:int
-// CHECK-NEXT:     ResolvedIntLiteral: '1'
-// CHECK-NEXT:     | value: 1
-// CHECK-NEXT: ResolvedDeclStmt:
-// CHECK-NEXT:   ResolvedVarDecl: y:int
-// CHECK-NEXT:     ResolvedBinaryOperator: '+'
-// CHECK-NEXT:       ResolvedCallExpr: foo:int
-// CHECK-NEXT:       ResolvedIntLiteral: '1'
+// CHECK:   ResolvedVarDecl:int x
+// CHECK-NEXT:     ResolvedIntLiteral:int '1'
+// CHECK-NEXT:     | value:int 1
+// CHECK-NEXT: ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedVarDecl:int y
+// CHECK-NEXT:     ResolvedBinaryOperator:int '+'
+// CHECK-NEXT:       ResolvedCallExpr:int foo
+// CHECK-NEXT:       ResolvedIntLiteral:int '1'
 
-// CHECK:      ResolvedVarDecl: str1:char[11]
-// CHECK-NEXT:        ResolvedStringLiteral: 'something\n'
-// CHECK-NEXT:    ResolvedDeclStmt:
-// CHECK-NEXT:      ResolvedVarDecl: str2:char[]
-// CHECK-NEXT:        ResolvedCallExpr: str:char[]
+// CHECK:      ResolvedVarDecl:char[11] str1
+// CHECK-NEXT:        ResolvedStringLiteral:char[11] 'something\n'
+// CHECK-NEXT:    ResolvedDeclStmt
+// CHECK-NEXT:      ResolvedVarDecl:char[] str2
+// CHECK-NEXT:        ResolvedCallExpr:char[] str
+
+// CHECK:   ResolvedVarDecl:bool bool1
+// CHECK-NEXT:     ResolvedBoolLiteral:bool 'true'
+// CHECK-NEXT: ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedVarDecl:bool bool2
+// CHECK-NEXT:     ResolvedBoolLiteral:bool 'false'
+// CHECK-NEXT: ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedVarDecl:bool bool3
+// CHECK-NEXT:     ResolvedCallExpr:bool fnBool

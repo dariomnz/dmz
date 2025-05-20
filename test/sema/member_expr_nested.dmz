@@ -13,29 +13,29 @@ fn main() -> void {
 
   let x = s.n.x;
 }
-// CHECK: ResolvedStructDecl: S:
-// CHECK-NEXT:   ResolvedFieldDecl: x
-// CHECK-NEXT:   ResolvedFieldDecl: n
-// CHECK-NEXT: ResolvedStructDecl: S2:
-// CHECK-NEXT:   ResolvedFieldDecl: x
-// CHECK-NEXT: ResolvedFunctionDecl: println -> void
-// CHECK-NEXT:   ResolvedParamDecl: n:
+// CHECK: ResolvedStructDecl:S S
+// CHECK-NEXT:   ResolvedFieldDecl:int x
+// CHECK-NEXT:   ResolvedFieldDecl:S2 n
+// CHECK-NEXT: ResolvedStructDecl:S2 S2
+// CHECK-NEXT:   ResolvedFieldDecl:int x
+// CHECK-NEXT: ResolvedFunctionDecl println -> void
+// CHECK-NEXT:   ResolvedParamDecl:int n
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT: ResolvedFunctionDecl: main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: s:
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:
-// CHECK-NEXT:           ResolvedFieldInitStmt: x
-// CHECK-NEXT:             ResolvedIntLiteral: '0'
-// CHECK-NEXT:             | value: 0
-// CHECK-NEXT:           ResolvedFieldInitStmt: n
-// CHECK-NEXT:             ResolvedStructInstantiationExpr:
-// CHECK-NEXT:               ResolvedFieldInitStmt: x
-// CHECK-NEXT:                 ResolvedIntLiteral: '1'
-// CHECK-NEXT:                 | value: 1
-// CHECK-NEXT:     ResolvedDeclStmt:
-// CHECK-NEXT:       ResolvedVarDecl: x:
-// CHECK-NEXT:         ResolvedMemberExpr: x
-// CHECK-NEXT:           ResolvedMemberExpr: n
-// CHECK-NEXT:             ResolvedDeclRefExpr: s
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:S s
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:S
+// CHECK-NEXT:           ResolvedFieldInitStmt:int x
+// CHECK-NEXT:             ResolvedIntLiteral:int '0'
+// CHECK-NEXT:             | value:int 0
+// CHECK-NEXT:           ResolvedFieldInitStmt:S2 n
+// CHECK-NEXT:             ResolvedStructInstantiationExpr:S2
+// CHECK-NEXT:               ResolvedFieldInitStmt:int x
+// CHECK-NEXT:                 ResolvedIntLiteral:int '1'
+// CHECK-NEXT:                 | value:int 1
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int x
+// CHECK-NEXT:         ResolvedMemberExpr:int x
+// CHECK-NEXT:           ResolvedMemberExpr:S2 n
+// CHECK-NEXT:             ResolvedDeclRefExpr:S s

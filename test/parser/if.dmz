@@ -22,13 +22,13 @@ fn main() -> void {
 
     if (0) {}
     // CHECK: IfStmt
-    // CHECK-NEXT:   IntLiteral: '0'
+    // CHECK-NEXT:   IntLiteral '0'
     // CHECK-NEXT:   Block
 
     if (0) {}
     else {}
     // CHECK: IfStmt
-    // CHECK-NEXT:   IntLiteral: '0'
+    // CHECK-NEXT:   IntLiteral '0'
     // CHECK-NEXT:   Block
     // CHECK-NEXT:   Block
 
@@ -37,15 +37,15 @@ fn main() -> void {
     else if (2) {}
     else {}
     // CHECK: IfStmt
-    // CHECK-NEXT:   IntLiteral: '0'
+    // CHECK-NEXT:   IntLiteral '0'
     // CHECK-NEXT:   Block
     // CHECK-NEXT:   Block
     // CHECK-NEXT:     IfStmt
-    // CHECK-NEXT:       IntLiteral: '1'
+    // CHECK-NEXT:       IntLiteral '1'
     // CHECK-NEXT:       Block
     // CHECK-NEXT:       Block
     // CHECK-NEXT:         IfStmt
-    // CHECK-NEXT:           IntLiteral: '2'
+    // CHECK-NEXT:           IntLiteral '2'
     // CHECK-NEXT:           Block
     // CHECK-NEXT:           Block
 }

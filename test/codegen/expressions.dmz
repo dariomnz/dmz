@@ -1,4 +1,4 @@
-// RUN: compiler %s -run | grep -Plzx '1\n-1\n-9\n'
+// RUN: diff <(compiler %s -run) <(echo -n -e '1\n-1\n-9\n')
 fn foo(x: int) -> int {
     if (x < (0 - 5)) {
         return (0 - 1);
