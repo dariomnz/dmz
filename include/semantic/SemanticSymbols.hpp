@@ -22,7 +22,7 @@ struct ResolvedStmt {
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
 };
 
-using ConstValue = std::variant<int, char>;
+using ConstValue = std::variant<int, char, bool>;
 
 struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public ResolvedStmt {
     Type type;

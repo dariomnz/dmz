@@ -51,9 +51,11 @@ fn main() -> void {
 
 // CHECK:   ResolvedVarDecl:bool bool1
 // CHECK-NEXT:     ResolvedBoolLiteral:bool 'true'
+// CHECK-NEXT:     | value:bool true
 // CHECK-NEXT: ResolvedDeclStmt
 // CHECK-NEXT:   ResolvedVarDecl:bool bool2
 // CHECK-NEXT:     ResolvedBoolLiteral:bool 'false'
+// CHECK-NEXT:     | value:bool false
 // CHECK-NEXT: ResolvedDeclStmt
 // CHECK-NEXT:   ResolvedVarDecl:bool bool3
 // CHECK-NEXT:     ResolvedCallExpr:bool fnBool

@@ -64,9 +64,9 @@ fn orCondition() -> void {
 // CHECK-NEXT:   succs: 1(U) 3
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:   ResolvedWhileStmt
 // CHECK-NEXT:
 // CHECK-NEXT: [3]
@@ -110,9 +110,9 @@ fn andCondition() -> void {
 // CHECK-NEXT:   succs: 1(U) 3
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:   ResolvedIntLiteral:int '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:   ResolvedWhileStmt
 // CHECK-NEXT:
 // CHECK-NEXT: [3]

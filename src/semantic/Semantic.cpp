@@ -2,8 +2,18 @@
 
 #include <map>
 #include <stack>
+#include <unordered_set>
 
 namespace DMZ {
+
+bool op_generate_bool(TokenType op) {
+    static const std::unordered_set<TokenType> op_bool = {
+        TokenType::op_excla_mark, TokenType::op_less,    TokenType::op_less_eq,
+        TokenType::op_more,       TokenType::op_more_eq, TokenType::op_equal,
+        TokenType::op_not_equal,  TokenType::op_or,      TokenType::op_and,
+    };
+    return op_bool.count(op) != 0;
+}
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     const auto &[foundDecl, scopeIdx] = lookup_decl<ResolvedDecl>(decl.identifier);
@@ -457,11 +467,16 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
 std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    if (unary.op != TokenType::amp && resolvedRHS->type.kind != Type::Kind::Int)
+    if (resolvedRHS->type.kind == Type::Kind::Void ||
+        (unary.op != TokenType::amp && resolvedRHS->type.kind != Type::Kind::Int &&
+         (unary.op == TokenType::op_excla_mark && !Type::compare(Type::builtinBool(), resolvedRHS->type))))
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
-                                                 "' cannot be used as an operand to unary operator " +
-                                                 std::string(get_op_str(unary.op)));
+                                                 "' cannot be used as an operand to unary operator '" +
+                                                 std::string(get_op_str(unary.op)) + "'");
     auto ret = std::make_unique<ResolvedUnaryOperator>(unary.location, unary.op, std::move(resolvedRHS));
+    if (op_generate_bool(unary.op)) {
+        ret->type = Type::builtinBool();
+    }
     if (unary.op == TokenType::amp) {
         ret->type.isRef = true;
     }
@@ -472,20 +487,35 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (resolvedLHS->type.kind != Type::Kind::Int) {
+    auto generateBool = op_generate_bool(binop.op);
+
+    if (resolvedLHS->type.kind != Type::Kind::Int && resolvedLHS->type.kind != Type::Kind::Bool) {
         return report(resolvedLHS->location, '\'' + std::string(resolvedLHS->type.name) +
                                                  "' cannot be used as LHS operand to binary operator");
     }
-    if (resolvedRHS->type.kind != Type::Kind::Int) {
+    if (resolvedRHS->type.kind != Type::Kind::Int && resolvedRHS->type.kind != Type::Kind::Bool) {
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
                                                  "' cannot be used as RHS operand to binary operator");
     }
-    if (resolvedLHS->type.kind != resolvedRHS->type.kind || resolvedLHS->type.kind != Type::Kind::Int) {
+    if (!Type::compare(resolvedLHS->type, resolvedRHS->type)) {
         return report(binop.location, "unexpected type " + resolvedLHS->type.to_str() + " in binop");
     }
 
-    return std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
-                                                    std::move(resolvedRHS));
+    auto ret = std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
+                                                        std::move(resolvedRHS));
+    if (generateBool) {
+        ret->type = Type::builtinBool();
+    } else {
+        if (resolvedLHS && resolvedLHS->type == Type::builtinBool() && resolvedRHS &&
+            resolvedRHS->type == Type::builtinBool()) {
+            ret->type = Type::builtinInt();
+        } else if (resolvedLHS && resolvedLHS->type == Type::builtinBool()) {
+            ret->type = resolvedRHS->type;
+        } else if (resolvedLHS && resolvedLHS->type == Type::builtinBool()) {
+            ret->type = resolvedLHS->type;
+        }
+    }
+    return ret;
 }
 
 std::unique_ptr<ResolvedGroupingExpr> Sema::resolve_grouping_expr(const GroupingExpr &grouping) {
@@ -496,7 +526,7 @@ std::unique_ptr<ResolvedGroupingExpr> Sema::resolve_grouping_expr(const Grouping
 std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int) {
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
         return report(condition->location, "expected int in condition");
     }
     varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
@@ -516,7 +546,7 @@ std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
 std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int) {
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
         return report(condition->location, "expected int in condition");
     }
 

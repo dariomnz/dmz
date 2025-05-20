@@ -17,7 +17,7 @@ fn foo(x: int) -> void {
 //CHECK-NEXT:  ResolvedParamDecl:int x
 //CHECK-NEXT:  ResolvedBlock
 //CHECK-NEXT:    ResolvedIfStmt
-//CHECK-NEXT:      ResolvedBinaryOperator:int '=='
+//CHECK-NEXT:      ResolvedBinaryOperator:bool '=='
 //CHECK-NEXT:        ResolvedDeclRefExpr:int x
 //CHECK-NEXT:        ResolvedIntLiteral:int '1'
 //CHECK-NEXT:      ResolvedBlock

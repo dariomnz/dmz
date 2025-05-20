@@ -4,10 +4,11 @@ namespace DMZ {
 
 void ResolvedExpr::dump_constant_value(size_t level) const {
     if (value) {
-        std::cerr << indent(level) << "| value:" << type << " ";
+        std::cerr << indent(level) << "| value:";
         std::visit(overload{
-                       [](char val) { std::cerr << str_to_source(std::string(1, val)); },
-                       [](auto val) { std::cerr << val; },
+                       [](int val) { std::cerr << "int " << val; },
+                       [](char val) { std::cerr << "char " << str_to_source(std::string(1, val)); },
+                       [](bool val) { std::cerr << "bool " << (val ? "true" : "false"); },
                    },
                    *value);
         std::cerr << '\n';

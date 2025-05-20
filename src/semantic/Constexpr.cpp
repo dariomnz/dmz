@@ -8,6 +8,7 @@ std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<ConstValu
     std::visit(overload{
                    [&retval](int val) { retval = val != 0; },
                    [&retval](char val) { retval = val != 0; },
+                   [&retval](bool val) { retval = val; },
                },
                *d);
     return retval;
@@ -22,6 +23,9 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate(const ResolvedEx
     }
     if (const auto *charLiteral = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
         return charLiteral->value;
+    }
+    if (const auto *boolLiteral = dynamic_cast<const ResolvedBoolLiteral *>(&expr)) {
+        return boolLiteral->value;
     }
     if (const auto *groupingExpr = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return evaluate(*groupingExpr->expr, allowSideEffects);
@@ -60,6 +64,8 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_unary_operator(c
         return do_unary_op<int>(unop.op, *operand);
     } else if (std::holds_alternative<char>(*operand)) {
         return do_unary_op<char>(unop.op, *operand);
+    } else if (std::holds_alternative<bool>(*operand)) {
+        return do_unary_op<bool>(unop.op, *operand);
     } else {
         dmz_unreachable("unexpected type in ConstValue");
     }
@@ -104,21 +110,21 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_binary_operator(
     if (!lhs && !allowSideEffects) return std::nullopt;
 
     if (binop.op == TokenType::op_or) {
-        if (to_bool(lhs) == true) return 1;
+        if (to_bool(lhs) == true) return true;
 
         std::optional<ConstValue> rhs = evaluate(*binop.rhs, allowSideEffects);
-        if (to_bool(rhs) == true) return 1;
-        if (lhs && rhs) return 0;
+        if (to_bool(rhs) == true) return true;
+        if (lhs && rhs) return false;
 
         return std::nullopt;
     }
     if (binop.op == TokenType::op_and) {
-        if (to_bool(lhs) == false) return 0;
+        if (to_bool(lhs) == false) return false;
 
         std::optional<ConstValue> rhs = evaluate(*binop.rhs, allowSideEffects);
-        if (to_bool(rhs) == false) return 0;
+        if (to_bool(rhs) == false) return false;
 
-        if (lhs && rhs) return 1;
+        if (lhs && rhs) return true;
 
         return std::nullopt;
     }
@@ -133,6 +139,8 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_binary_operator(
         return do_binary_op<int>(binop.op, *lhs, *rhs);
     } else if (std::holds_alternative<char>(*lhs)) {
         return do_binary_op<char>(binop.op, *lhs, *rhs);
+    } else if (std::holds_alternative<bool>(*lhs)) {
+        return do_binary_op<bool>(binop.op, *lhs, *rhs);
     } else {
         dmz_unreachable("unexpected type in ConstValue");
     }

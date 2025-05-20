@@ -1,9 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <iomanip>
 #include <mutex>
 #include <ostream>
-#include <iomanip>
 
 namespace DMZ {
 
@@ -35,8 +35,8 @@ struct time_stamp {
 };
 class debug_lock {
    public:
-    static std::mutex &get_lock() {
-        static std::mutex mutex;
+    static std::recursive_mutex &get_lock() {
+        static std::recursive_mutex mutex;
         return mutex;
     }
 };

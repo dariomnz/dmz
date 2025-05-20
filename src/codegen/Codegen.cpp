@@ -279,6 +279,8 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
             return m_builder.getInt32(std::get<int>(*val));
         } else if (std::holds_alternative<char>(*val)) {
             return m_builder.getInt8(std::get<char>(*val));
+        } else if (std::holds_alternative<bool>(*val)) {
+            return m_builder.getInt1(std::get<bool>(*val));
         }
     }
     if (auto *number = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {

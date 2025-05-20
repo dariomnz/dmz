@@ -54,10 +54,25 @@ struct Type {
     }
     static Type builtinErr(const std::string_view& name) { return {Kind::Err, name}; }
 
+    bool operator==(const Type& otro) const {
+        return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isRef == otro.isRef &&
+                isOptional == otro.isOptional);
+    }
+
+    static bool can_convert(const Type& to, const Type& from) {
+        bool canConvert = false;
+        canConvert |= from == Type::builtinInt() && to == Type::builtinBool();
+        canConvert |= from == Type::builtinBool() && to == Type::builtinInt();
+        return canConvert;
+    }
+
     static bool compare(const Type& lhs, const Type& rhs) {
-        // println("Types: '"<< lhs.to_str() << "' '" << rhs.to_str() << "'");
+        // println("Types: '" << lhs.to_str() << "' '" << rhs.to_str() << "'");
         bool equalArray = false;
         bool equalOptional = false;
+        if (can_convert(lhs, rhs) || lhs == rhs) {
+            return true;
+        }
 
         if (lhs.isOptional && rhs.kind == Kind::Err) return true;
         if (rhs.isOptional && lhs.kind == Kind::Err) return true;

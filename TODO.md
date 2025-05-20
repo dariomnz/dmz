@@ -4,12 +4,13 @@
 - [x] External functions
 - [x] References
 - [x] defer
-- [ ] Error handling
-- [ ] Bool type
+- [x] Error handling
+- [x] Bool type
+- [ ] Modules and import
+- [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits
 - [ ] Generics
-- [ ] Modules
 - [ ] std
 - [ ] @test
 - [ ] @benckmark

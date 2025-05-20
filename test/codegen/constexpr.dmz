@@ -11,7 +11,7 @@ fn constant() -> int {
 // CHECK: define i32 @constant() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   store i32 1, ptr %retval, align 4
+// CHECK-NEXT:   store i1 true, ptr %retval, align 1
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
@@ -25,7 +25,7 @@ fn constant2() -> int {
 // CHECK: define i32 @constant2() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   store i32 0, ptr %retval, align 4
+// CHECK-NEXT:   store i1 false, ptr %retval, align 1
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
