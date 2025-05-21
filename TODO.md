@@ -6,6 +6,7 @@
 - [x] defer
 - [x] Error handling
 - [x] Bool type
+- [ ] Conversion between types
 - [ ] Modules and import
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice

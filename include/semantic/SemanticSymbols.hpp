@@ -357,4 +357,17 @@ struct ResolvedCatchErrExpr : public ResolvedExpr {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
+
+struct ResolvedTryErrExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errToTry;
+    std::unique_ptr<ResolvedDeclStmt> declaration;
+
+    ResolvedTryErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToTry,
+                         std::unique_ptr<ResolvedDeclStmt> declaration)
+        : ResolvedExpr(location, Type::builtinInt()),
+          errToTry(std::move(errToTry)),
+          declaration(std::move(declaration)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
 }  // namespace DMZ

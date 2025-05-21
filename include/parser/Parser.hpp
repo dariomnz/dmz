@@ -79,5 +79,6 @@ class Parser {
     std::unique_ptr<ErrGroupDecl> parse_err_group_decl();
     std::unique_ptr<ErrDecl> parse_err_decl();
     std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
+    std::unique_ptr<TryErrExpr> parse_try_err_expr();
 };
 }  // namespace DMZ

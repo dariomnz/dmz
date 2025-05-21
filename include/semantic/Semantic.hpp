@@ -72,5 +72,6 @@ class Sema {
     std::unique_ptr<ResolvedErrDeclRefExpr> resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef);
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
     std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
+    std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
 };
 }  // namespace DMZ

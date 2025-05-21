@@ -49,6 +49,10 @@ fn main() -> void {
     if (catch error = result){
         dprintf(1, &"%s\n", error);
     }
+    let result2 = foo(10);
+    if (try value = result2){
+        dprintf(1, &"%d\n", value);
+    }
 
     if (catch result){
         dprintf(1, &"There are an error\n");
@@ -89,6 +93,23 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedUnaryOperator:&char[4] '&'
 // CHECK-NEXT:             ResolvedStringLiteral:char[4] '%s\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:err error
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int? result2
+// CHECK-NEXT:         ResolvedCallExpr:int? foo
+// CHECK-NEXT:           ResolvedIntLiteral:int '10'
+// CHECK-NEXT:           | value:int 10
+// CHECK-NEXT:     ResolvedIfStmt
+// CHECK-NEXT:       ResolvedTryErrExpr:int
+// CHECK-NEXT:         ResolvedDeclStmt
+// CHECK-NEXT:           ResolvedVarDecl:const int value
+// CHECK-NEXT:             ResolvedDeclRefExpr:int? result2
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedCallExpr:int dprintf
+// CHECK-NEXT:           ResolvedIntLiteral:int '1'
+// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:           ResolvedUnaryOperator:&char[4] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:char[4] '%d\n'
+// CHECK-NEXT:           ResolvedDeclRefExpr:int value
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr: 
 // CHECK-NEXT:         ResolvedDeclRefExpr:int? result

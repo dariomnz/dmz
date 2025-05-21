@@ -82,29 +82,23 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         }
         return block;
     }
-
     if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
         return insert_expr(*memberExpr->base, block);
     }
-
     if (const auto *grouping = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return insert_expr(*grouping->expr, block);
     }
-
     if (const auto *binop = dynamic_cast<const ResolvedBinaryOperator *>(&expr)) {
         return insert_expr(*binop->rhs, block), insert_expr(*binop->lhs, block);
     }
-
     if (const auto *unop = dynamic_cast<const ResolvedUnaryOperator *>(&expr)) {
         return insert_expr(*unop->operand, block);
     }
-
     if (const auto *structInst = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         for (auto it = structInst->fieldInitializers.rbegin(); it != structInst->fieldInitializers.rend(); ++it)
             insert_stmt(**it, block);
         return block;
     }
-
     if (const auto *catchErrExpr = dynamic_cast<const ResolvedCatchErrExpr *>(&expr)) {
         if (catchErrExpr->errToCatch) {
             return insert_expr(*catchErrExpr->errToCatch, block);
@@ -112,6 +106,15 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
             return insert_stmt(*catchErrExpr->declaration, block);
         } else {
             dmz_unreachable("malformed CatchErrExpr");
+        }
+    }
+    if (const auto *tryErrExpr = dynamic_cast<const ResolvedTryErrExpr *>(&expr)) {
+        if (tryErrExpr->errToTry) {
+            return insert_expr(*tryErrExpr->errToTry, block);
+        } else if (tryErrExpr->declaration) {
+            return insert_stmt(*tryErrExpr->declaration, block);
+        } else {
+            dmz_unreachable("malformed TryErrExpr");
         }
     }
 

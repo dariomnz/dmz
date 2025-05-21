@@ -229,4 +229,12 @@ void ResolvedCatchErrExpr::dump(size_t level, bool onlySelf) const {
     if (declaration) declaration->dump(level + 1);
     if (errToCatch) errToCatch->dump(level + 1);
 }
+
+void ResolvedTryErrExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTryErrExpr:" << type << '\n';
+
+    if (onlySelf) return;
+    if (declaration) declaration->dump(level + 1);
+    if (errToTry) errToTry->dump(level + 1);
+}
 }  // namespace DMZ

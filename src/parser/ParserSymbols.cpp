@@ -191,4 +191,11 @@ void CatchErrExpr::dump(size_t level) const {
     if (declaration) declaration->dump(level + 1);
     if (errTocatch) errTocatch->dump(level + 1);
 }
+
+void TryErrExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "TryErrExpr " << '\n';
+
+    if (declaration) declaration->dump(level + 1);
+    if (errTotry) errTotry->dump(level + 1);
+}
 }  // namespace DMZ

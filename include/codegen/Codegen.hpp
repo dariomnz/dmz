@@ -20,6 +20,7 @@ class Codegen {
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
+    llvm::Instruction *m_memsetInsertPoint;
     const ResolvedFunctionDecl *m_currentFunction;
     llvm::Value *m_noError;
 
@@ -67,5 +68,6 @@ class Codegen {
     llvm::Value *generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &errDeclRefExpr);
     llvm::Value *generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr);
     llvm::Value *generate_catch_err_expr(const ResolvedCatchErrExpr &catchErrExpr);
+    llvm::Value *generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr);
 };
 }  // namespace DMZ

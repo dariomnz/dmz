@@ -428,4 +428,14 @@ struct CatchErrExpr : public Expr {
 
     void dump(size_t level = 0) const override;
 };
+
+struct TryErrExpr : public Expr {
+    std::unique_ptr<Expr> errTotry;
+    std::unique_ptr<DeclStmt> declaration;
+
+    TryErrExpr(SourceLocation location, std::unique_ptr<Expr> errTotry, std::unique_ptr<DeclStmt> declaration)
+        : Expr(location), errTotry(std::move(errTotry)), declaration(std::move(declaration)) {}
+
+    void dump(size_t level = 0) const override;
+};
 }  // namespace DMZ

@@ -256,31 +256,26 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
         return std::make_unique<GroupingExpr>(location, std::move(expr));
     }
-
     if (m_nextToken.type == TokenType::lit_int) {
         auto literal = std::make_unique<IntLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat int
         return literal;
     }
-
     if (m_nextToken.type == TokenType::lit_char) {
         auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat char
         return literal;
     }
-
     if (m_nextToken.type == TokenType::kw_true || m_nextToken.type == TokenType::kw_false) {
         auto literal = std::make_unique<BoolLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat bool
         return literal;
     }
-
     if (m_nextToken.type == TokenType::lit_string) {
         auto literal = std::make_unique<StringLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat string
         return literal;
     }
-
     if (m_nextToken.type == TokenType::id) {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
@@ -303,9 +298,11 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
         return declRefExpr;
     }
-
     if (m_nextToken.type == TokenType::kw_catch) {
         return parse_catch_err_expr();
+    }
+    if (m_nextToken.type == TokenType::kw_try) {
+        return parse_try_err_expr();
     }
 
     return report(location, "expected expression");
@@ -733,5 +730,30 @@ std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
     auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, type, false, std::move(errToCatch));
     auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
     return std::make_unique<CatchErrExpr>(location, nullptr, std::move(declaration));
+}
+
+std::unique_ptr<TryErrExpr> Parser::parse_try_err_expr() {
+    matchOrReturn(TokenType::kw_try, "expected 'try'");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat try
+
+    std::string_view identifier = m_nextToken.str;
+    auto idLocation = m_nextToken.loc;
+    varOrReturn(first_expr, parse_expr());
+
+    std::unique_ptr<Expr> initializer;
+    
+    if (m_nextToken.type != TokenType::op_assign) {
+        return std::make_unique<TryErrExpr>(location, std::move(first_expr), nullptr);
+    }
+    
+    matchOrReturn(TokenType::op_assign, "expected '='");
+    eat_next_token();  // eat '='
+    
+    varOrReturn(errToCatch, parse_expr());
+    
+    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::nullopt, false, std::move(errToCatch));
+    auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
+    return std::make_unique<TryErrExpr>(location, nullptr, std::move(declaration));
 }
 }  // namespace DMZ

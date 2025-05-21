@@ -235,6 +235,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *catchErrExpr = dynamic_cast<const CatchErrExpr *>(&expr)) {
         return resolve_catch_err_expr(*catchErrExpr);
     }
+    if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
+        return resolve_try_err_expr(*tryErrExpr);
+    }
     dmz_unreachable("unexpected expression");
 }
 
@@ -957,6 +960,19 @@ std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchEr
         return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, nullptr, std::move(declaration));
     } else {
         dmz_unreachable("malformed CatchErrExpr");
+    }
+}
+
+std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr &tryErrExpr) {
+    if (tryErrExpr.errTotry) {
+        auto resolvedErr = resolve_expr(*tryErrExpr.errTotry);
+        return std::make_unique<ResolvedTryErrExpr>(tryErrExpr.location, std::move(resolvedErr), nullptr);
+    } else if (tryErrExpr.declaration) {
+        auto declaration = resolve_decl_stmt(*tryErrExpr.declaration);
+        declaration->varDecl->type.isOptional = false;
+        return std::make_unique<ResolvedTryErrExpr>(tryErrExpr.location, nullptr, std::move(declaration));
+    } else {
+        dmz_unreachable("malformed TryErrExpr");
     }
 }
 }  // namespace DMZ
