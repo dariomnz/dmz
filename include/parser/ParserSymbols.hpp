@@ -438,4 +438,32 @@ struct TryErrExpr : public Expr {
 
     void dump(size_t level = 0) const override;
 };
+
+struct ModuleDecl : public Decl {
+    std::unique_ptr<ModuleDecl> nestedModule;
+
+    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule = nullptr)
+        : Decl(location, identifier), nestedModule(std::move(nestedModule)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ModuleDeclRefExpr : public Expr {
+    std::string_view identifier;
+    std::unique_ptr<Expr> expr;
+
+    ModuleDeclRefExpr(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> expr = nullptr)
+        : Expr(location), identifier(identifier), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ImportDecl : public Decl {
+    std::unique_ptr<ImportDecl> nestedImport;
+
+    ImportDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ImportDecl> nestedImport = nullptr)
+        : Decl(location, identifier), nestedImport(std::move(nestedImport)) {}
+
+    void dump(size_t level = 0) const override;
+};
 }  // namespace DMZ

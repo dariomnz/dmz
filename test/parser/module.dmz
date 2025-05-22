@@ -1,0 +1,22 @@
+// RUN: compiler %s 2>&1 -ast-dump | filecheck %s
+
+module mod1;
+// CHECK: ModuleDecl mod1
+module modnest1::modnest2;
+// CHECK: ModuleDecl modnest1
+// CHECK-NEXT: ModuleDecl modnest2
+import mod1;
+// CHECK: ImportDecl mod1
+import modnest1::modnest2::modnest3::modnest4;
+// CHECK: ImportDecl modnest1
+// CHECK-NEXT:   ImportDecl modnest2
+// CHECK-NEXT:     ImportDecl modnest3
+// CHECK-NEXT:       ImportDecl modnest4
+
+fn main() -> void {
+    std::printf("asdf");
+// CHECK: ModuleDeclRefExpr std
+// CHECK-NEXT:   CallExpr
+// CHECK-NEXT:     DeclRefExpr printf
+// CHECK-NEXT:     StringLiteral '"asdf"'
+}

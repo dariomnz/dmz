@@ -27,8 +27,9 @@ namespace DMZ {
     }
 }
 
-static const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof, TokenType::kw_fn, TokenType::kw_struct,
-                                                               TokenType::kw_extern};
+static const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof,       TokenType::kw_fn,
+                                                               TokenType::kw_struct, TokenType::kw_extern,
+                                                               TokenType::kw_module, TokenType::kw_import};
 [[maybe_unused]] static inline bool is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
@@ -44,7 +45,17 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
     std::vector<std::unique_ptr<Decl>> declarations;
 
     while (m_nextToken.type != TokenType::eof) {
-        if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
+        if (m_nextToken.type == TokenType::kw_module) {
+            if (auto mod = parse_module_decl()) {
+                declarations.emplace_back(std::move(mod));
+                continue;
+            }
+        } else if (m_nextToken.type == TokenType::kw_import) {
+            if (auto mod = parse_import_decl()) {
+                declarations.emplace_back(std::move(mod));
+                continue;
+            }
+        } else if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
             if (auto fn = parse_function_decl()) {
                 declarations.emplace_back(std::move(fn));
                 continue;
@@ -60,7 +71,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
                 continue;
             }
         } else {
-            report(m_nextToken.loc, "expected function or struct declaration on the top level");
+            report(m_nextToken.loc, "expected function, struct, err, module or import declaration on the top level");
         }
 
         synchronize_on(top_level_tokens);
@@ -318,6 +329,15 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 //  ::= '.' <identifier>
 std::unique_ptr<Expr> Parser::parse_postfix_expr() {
     varOrReturn(expr, parse_primary());
+
+    if (auto declRef = dynamic_cast<DeclRefExpr *>(expr.get())) {
+        if (m_nextToken.type == TokenType::coloncolon) {
+            eat_next_token();  // eat '::'
+
+            varOrReturn(modExpr, parse_expr());
+            return std::make_unique<ModuleDeclRefExpr>(declRef->location, declRef->identifier, std::move(modExpr));
+        }
+    }
 
     if (m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
@@ -755,5 +775,51 @@ std::unique_ptr<TryErrExpr> Parser::parse_try_err_expr() {
     auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::nullopt, false, std::move(errToCatch));
     auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
     return std::make_unique<TryErrExpr>(location, nullptr, std::move(declaration));
+}
+
+std::unique_ptr<ModuleDecl> Parser::parse_module_decl(bool haveEatModule) {
+    auto location = m_nextToken.loc;
+    if (!haveEatModule) {
+        matchOrReturn(TokenType::kw_module, "expected 'module'");
+        eat_next_token();  // eat module
+    }
+
+    matchOrReturn(TokenType::id, "expected identifier");
+    auto identifier = m_nextToken.str;
+    eat_next_token();      // eat identifier
+
+    if (m_nextToken.type == TokenType::coloncolon) {
+        eat_next_token();  // eat ::
+        varOrReturn(nestedModule, parse_module_decl(true));
+        return std::make_unique<ModuleDecl>(location, identifier, std::move(nestedModule));
+    }
+
+    matchOrReturn(TokenType::semicolon, "expected ';'");
+    eat_next_token();  // eat ;
+
+    return std::make_unique<ModuleDecl>(location, identifier);
+}
+
+std::unique_ptr<ImportDecl> Parser::parse_import_decl(bool haveEatImport) {
+    auto location = m_nextToken.loc;
+    if (!haveEatImport) {
+        matchOrReturn(TokenType::kw_import, "expected 'import'");
+        eat_next_token();  // eat import
+    }
+
+    matchOrReturn(TokenType::id, "expected identifier");
+    auto identifier = m_nextToken.str;
+    eat_next_token();      // eat identifier
+
+    if (m_nextToken.type == TokenType::coloncolon) {
+        eat_next_token();  // eat ::
+        varOrReturn(nestedImport, parse_import_decl(true));
+        return std::make_unique<ImportDecl>(location, identifier, std::move(nestedImport));
+    }
+
+    matchOrReturn(TokenType::semicolon, "expected ';'");
+    eat_next_token();  // eat ;
+
+    return std::make_unique<ImportDecl>(location, identifier);
 }
 }  // namespace DMZ

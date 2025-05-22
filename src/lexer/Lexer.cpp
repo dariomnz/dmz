@@ -44,6 +44,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(bracket_l);
         CASE_TYPE(bracket_r);
         CASE_TYPE(colon);
+        CASE_TYPE(coloncolon);
         CASE_TYPE(semicolon);
         CASE_TYPE(comma);
         CASE_TYPE(dot);
@@ -68,6 +69,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_err);
         CASE_TYPE(kw_catch);
         CASE_TYPE(kw_try);
+        CASE_TYPE(kw_module);
+        CASE_TYPE(kw_import);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -213,6 +216,11 @@ Token Lexer::next_token() {
         t.type = TokenType::bracket_r;
         t.str = file_content.substr(0, 1);
         advance();
+    } else if (file_content.substr(0, 2) == "::") {
+        debug_msg(TokenType::coloncolon);
+        t.type = TokenType::coloncolon;
+        t.str = file_content.substr(0, 2);
+        advance(2);
     } else if (file_content[0] == ':') {
         debug_msg(TokenType::colon);
         t.type = TokenType::colon;

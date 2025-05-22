@@ -80,5 +80,7 @@ class Parser {
     std::unique_ptr<ErrDecl> parse_err_decl();
     std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
     std::unique_ptr<TryErrExpr> parse_try_err_expr();
+    std::unique_ptr<ModuleDecl> parse_module_decl(bool haveEatModule = false);
+    std::unique_ptr<ImportDecl> parse_import_decl(bool haveEatImport = false);
 };
 }  // namespace DMZ

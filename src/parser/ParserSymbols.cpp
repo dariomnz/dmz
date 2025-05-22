@@ -169,9 +169,7 @@ void DeferStmt::dump(size_t level) const {
 
 void ErrDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrDecl " << identifier << '\n'; }
 
-void ErrDeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ErrDeclRefExpr " << identifier << '\n';
-}
+void ErrDeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "ErrDeclRefExpr " << identifier << '\n'; }
 
 void ErrGroupDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ErrGroupDecl " << '\n';
@@ -197,5 +195,23 @@ void TryErrExpr::dump(size_t level) const {
 
     if (declaration) declaration->dump(level + 1);
     if (errTotry) errTotry->dump(level + 1);
+}
+
+void ModuleDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ModuleDecl " << identifier << '\n';
+
+    if (nestedModule) nestedModule->dump(level + 1);
+}
+
+void ModuleDeclRefExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ModuleDeclRefExpr " << identifier << '\n';
+
+    if (expr) expr->dump(level + 1);
+}
+
+void ImportDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ImportDecl " << identifier << '\n';
+
+    if (nestedImport) nestedImport->dump(level + 1);
 }
 }  // namespace DMZ

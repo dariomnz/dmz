@@ -37,6 +37,7 @@ enum class TokenType {
     bracket_l,
     bracket_r,
     colon,
+    coloncolon,
     semicolon,
     comma,
     dot,
@@ -61,6 +62,8 @@ enum class TokenType {
     kw_err,
     kw_catch,
     kw_try,
+    kw_module,
+    kw_import,
     unknown,
     eof,
 };
@@ -73,7 +76,8 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"else", TokenType::kw_else},     {"let", TokenType::kw_let},       {"const", TokenType::kw_const},
     {"while", TokenType::kw_while},   {"return", TokenType::kw_return}, {"struct", TokenType::kw_struct},
     {"extern", TokenType::kw_extern}, {"defer", TokenType::kw_defer},   {"err", TokenType::kw_err},
-    {"catch", TokenType::kw_catch},   {"try", TokenType::kw_try},
+    {"catch", TokenType::kw_catch},   {"try", TokenType::kw_try},       {"module", TokenType::kw_module},
+    {"import", TokenType::kw_import},
 };
 
 struct Token {

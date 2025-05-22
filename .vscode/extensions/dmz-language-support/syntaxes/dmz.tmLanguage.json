@@ -38,11 +38,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.dmz",
-					"match": "\\b(if|else|while|for|return|fn|extern|defer|catch|try|err)\\b"
+					"match": "\\b(if|else|while|for|return|fn|extern|defer|catch|try|err|module)\\b"
 				},
 				{
 					"name": "keyword.other.dmz",
-					"match": "\\b(const|let|struct)\\b"
+					"match": "\\b(const|let|struct|import)\\b"
 				}
 			]
 		},
