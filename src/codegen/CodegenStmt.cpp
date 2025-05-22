@@ -1,0 +1,145 @@
+#include "codegen/Codegen.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/TargetParser/Host.h>
+#pragma GCC diagnostic pop
+
+namespace DMZ {
+
+void Codegen::generate_block(const ResolvedBlock &block) {
+    for (auto &stmt : block.statements) {
+        generate_stmt(*stmt);
+
+        // We exited the current basic block for some reason, so there is
+        // no need for generating the remaining instructions.
+        if (!m_builder.GetInsertBlock()) break;
+    }
+}
+
+llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
+    if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
+        return generate_expr(*expr);
+    }
+    if (auto *returnStmt = dynamic_cast<const ResolvedReturnStmt *>(&stmt)) {
+        return generate_return_stmt(*returnStmt);
+    }
+    if (auto *ifStmt = dynamic_cast<const ResolvedIfStmt *>(&stmt)) {
+        return generate_if_stmt(*ifStmt);
+    }
+    if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
+        return generate_while_stmt(*whileStmt);
+    }
+    if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
+        return generate_decl_stmt(*declStmt);
+    }
+    if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(&stmt)) {
+        return generate_assignment(*assignment);
+    }
+    if (auto *block = dynamic_cast<const ResolvedBlock *>(&stmt)) {
+        generate_block(*block);
+        return nullptr;
+    }
+    if (auto *defer = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
+        generate_block(*defer->block);
+        return nullptr;
+    }
+    dmz_unreachable("unknown statement");
+}
+
+llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
+    if (stmt.expr) {
+        if (stmt.expr->type.kind == Type::Kind::Err) {
+            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
+            store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"));
+        } else {
+            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional());
+        }
+    }
+
+    assert(retBB && "function with return stmt doesn't have a return block");
+    break_into_bb(retBB);
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
+    llvm::Function *function = get_current_function();
+
+    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true");
+    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit");
+
+    llvm::BasicBlock *elseBB = exitBB;
+    if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(m_context, "if.false");
+
+    llvm::Value *cond = generate_expr(*stmt.condition);
+    m_builder.CreateCondBr(int_to_bool(cond), trueBB, elseBB);
+
+    trueBB->insertInto(function);
+    m_builder.SetInsertPoint(trueBB);
+    generate_block(*stmt.trueBlock);
+    break_into_bb(exitBB);
+
+    if (stmt.falseBlock) {
+        elseBB->insertInto(function);
+        m_builder.SetInsertPoint(elseBB);
+        generate_block(*stmt.falseBlock);
+        break_into_bb(exitBB);
+    }
+
+    exitBB->insertInto(function);
+    m_builder.SetInsertPoint(exitBB);
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
+    llvm::Function *function = get_current_function();
+
+    auto *header = llvm::BasicBlock::Create(m_context, "while.cond", function);
+    auto *body = llvm::BasicBlock::Create(m_context, "while.body", function);
+    auto *exit = llvm::BasicBlock::Create(m_context, "while.exit", function);
+
+    m_builder.CreateBr(header);
+
+    m_builder.SetInsertPoint(header);
+    llvm::Value *cond = generate_expr(*stmt.condition);
+    m_builder.CreateCondBr(int_to_bool(cond), body, exit);
+
+    m_builder.SetInsertPoint(body);
+    generate_block(*stmt.body);
+    break_into_bb(header);
+
+    m_builder.SetInsertPoint(exit);
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
+    const auto *decl = stmt.varDecl.get();
+    if (!decl->type.isRef) {
+        llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
+
+        if (const auto &init = decl->initializer) {
+            store_value(generate_expr(*init), var, init->type);
+        }
+        m_declarations[decl] = var;
+        return var;
+    } else {
+        // Only permit ref with a unary operator
+        if (const auto init = dynamic_cast<ResolvedUnaryOperator *>(decl->initializer.get())) {
+            if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->operand.get())) {
+                m_declarations[decl] = m_declarations[&operand->decl];
+                return m_declarations[&operand->decl];
+            }
+        }
+        dmz_unreachable("Only permit ref with a unary operator");
+    }
+
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
+    llvm::Value *val = generate_expr(*stmt.expr);
+    return store_value(val, generate_expr(*stmt.assignee, true), stmt.assignee->type);
+}
+}  // namespace DMZ

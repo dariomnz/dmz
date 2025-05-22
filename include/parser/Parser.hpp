@@ -43,6 +43,7 @@ class Parser {
     }
     void synchronize_on(std::unordered_set<TokenType> types);
     void synchronize();
+    bool is_top_level_token(TokenType tok);
 
    public:
     std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file();
