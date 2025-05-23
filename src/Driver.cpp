@@ -2,10 +2,13 @@
 
 #include <wait.h>
 
+#include <barrier>
 #include <filesystem>
 
+#include "ThreadPool.hpp"
 #include "codegen/Codegen.hpp"
 #include "lexer/Lexer.hpp"
+#include "linker/Linker.hpp"
 #include "parser/Parser.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Semantic.hpp"
@@ -13,7 +16,7 @@
 namespace DMZ {
 static void displayHelp() {
     println("Usage:");
-    println("  compiler [options] <source_file>\n");
+    println("  compiler [options] <source_files...>\n");
     println("Options:");
     println("  -h, -help        display this message");
     println("  -o <file>        write executable to <file>");
@@ -22,7 +25,7 @@ static void displayHelp() {
     println("  -res-dump        print the resolved syntax tree");
     println("  -cfg-dump        print the control flow graph");
     println("  -llvm-dump       print the llvm module");
-    println("  -print-stats     print the llvm module");
+    println("  -print-stats     print the time stats");
     println("  -run             runs the program with lli (Just In Time)");
 }
 
@@ -33,10 +36,7 @@ static CompilerOptions parseArguments(int argc, char **argv) {
     while (idx < argc) {
         std::string_view arg = argv[idx];
         if (arg[0] != '-') {
-            if (!options.source.empty()) {
-                error("unexpected argument '" + std::string(arg) + '\'');
-            }
-            options.source = arg;
+            options.sources.emplace_back(arg);
         } else {
             if (arg == "-h" || arg == "--help")
                 options.displayHelp = true;
@@ -56,8 +56,6 @@ static CompilerOptions parseArguments(int argc, char **argv) {
                 options.run = true;
             else if (arg == "-print-stats")
                 options.printStats = true;
-            else if (arg == "-o")
-                options.output = ++idx >= argc ? "" : argv[idx];
             else
                 error("unexpected option '" + std::string(arg) + '\'');
         }
@@ -82,65 +80,143 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    if (options.source.empty()) {
-        error("no source file specified");
+    if (options.sources.empty()) {
+        error("no source files specified");
     }
 
-    if (options.source.extension() != ".dmz") {
-        error("unexpected source file extension '" + options.source.extension().string() + "'");
-    }
+    ThreadPool workers;
+    std::mutex modulesMutex;
+    std::barrier barrier(options.sources.size());
+    std::atomic_bool haveError(false);
+    std::atomic_bool normalExit(false);
+    std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules;
+    std::condition_variable inOrderCV;
+    std::filesystem::path inOrderCurrent = options.sources[0];
 
-    if (!std::filesystem::exists(options.source)) {
-        error("failed to open '" + options.source.string() + '\'');
-    }
-
-    Lexer lexer(options.source.c_str());
-
-    if (options.lexerDump) {
-        Token tok;
-        do {
-            tok = lexer.next_token();
-            println(tok);
-        } while (tok.type != TokenType::eof);
-        return 0;
-    }
-
-    Parser parser(lexer);
-    auto [ast, success] = parser.parse_source_file();
-
-    if (options.astDump) {
-        for (auto &&fn : ast) fn->dump();
-        return 0;
-    }
-
-    if (!success) return 1;
-
-    Sema sema(ast);
-    auto resolvedTree = sema.resolve_ast();
-
-    if (options.resDump) {
-        for (auto &&fn : resolvedTree) fn->dump();
-        return 0;
-    }
-
-    if (options.cfgDump) {
-        for (auto &&decl : resolvedTree) {
-            const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
-            if (!fn) continue;
-
-            std::cerr << fn->identifier << ':' << '\n';
-            CFGBuilder().build(*fn).dump();
+    for (auto &&source : options.sources) {
+        if (source.extension() != ".dmz") {
+            error("unexpected source file extension '" + source.extension().string() + "'");
         }
-        return 0;
+
+        if (!std::filesystem::exists(source)) {
+            error("failed to open '" + source.string() + '\'');
+        }
+    }
+    size_t index = -1;
+    for (auto &&s : options.sources) {
+        index++;
+        workers.submit([&, source = s, i = index]() {
+            size_t index = i;
+            Lexer lexer(source.c_str());
+
+            if (options.lexerDump) {
+                std::unique_lock lock(modulesMutex);
+                if (inOrderCurrent != source) {
+                    inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+                }
+
+                Token tok;
+                do {
+                    tok = lexer.next_token();
+                    println(tok);
+                } while (tok.type != TokenType::eof);
+                normalExit = true;
+                if (index != options.sources.size() - 1) {
+                    inOrderCurrent = options.sources[++index];
+                    inOrderCV.notify_all();
+                }
+                return;
+            }
+
+            Parser parser(lexer);
+            auto [ast, success] = parser.parse_source_file();
+
+            if (options.astDump) {
+                std::unique_lock lock(modulesMutex);
+                if (inOrderCurrent != source) {
+                    inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+                }
+
+                for (auto &&fn : ast) fn->dump();
+                normalExit = true;
+                if (index != options.sources.size() - 1) {
+                    inOrderCurrent = options.sources[++index];
+                    inOrderCV.notify_all();
+                }
+                return;
+            }
+
+            if (!success) haveError = true;
+            barrier.arrive_and_wait();
+            if (haveError) return;
+
+            Sema sema(ast);
+            auto resolvedTree = sema.resolve_ast();
+
+            if (options.resDump) {
+                std::unique_lock lock(modulesMutex);
+                if (inOrderCurrent != source) {
+                    inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+                }
+
+                for (auto &&fn : resolvedTree) fn->dump();
+                normalExit = true;
+                if (index != options.sources.size() - 1) {
+                    inOrderCurrent = options.sources[++index];
+                    inOrderCV.notify_all();
+                }
+                return;
+            }
+
+            if (options.cfgDump) {
+                std::unique_lock lock(modulesMutex);
+                if (inOrderCurrent != source) {
+                    inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+                }
+
+                for (auto &&decl : resolvedTree) {
+                    const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
+                    if (!fn) continue;
+
+                    std::cerr << fn->identifier << ':' << '\n';
+                    CFGBuilder().build(*fn).dump();
+                }
+                normalExit = true;
+                if (index != options.sources.size() - 1) {
+                    inOrderCurrent = options.sources[++index];
+                    inOrderCV.notify_all();
+                }
+                return;
+            }
+
+            if (resolvedTree.empty()) haveError = true;
+            barrier.arrive_and_wait();
+            if (haveError) return;
+
+            Codegen codegen(std::move(resolvedTree), source.c_str());
+            std::unique_lock lock(modulesMutex);
+            if (inOrderCurrent != source) {
+                inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+            }
+
+            modules.emplace_back(codegen.generate_ir());
+            if (index != options.sources.size() - 1) {
+                inOrderCurrent = options.sources[++index];
+                inOrderCV.notify_all();
+            }
+        });
     }
 
-    if (resolvedTree.empty()) return 1;
+    workers.wait();
+    if (normalExit) return 0;
+    if (haveError) return 1;
 
-    Codegen codegen(std::move(resolvedTree), options.source.c_str());
-    llvm::Module *llvmIR = codegen.generate_ir();
+    Linker linker(std::move(modules));
+
+    auto llvmModule = linker.link_modules();
 
     if (options.llvmDump) {
-        llvmIR->dump();
+        llvmModule->withModuleDo([](auto &m) { m.dump(); });
         return 0;
     }
 
@@ -200,7 +276,7 @@ int main(int argc, char *argv[]) {
 
         llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
 
-        llvmIR->print(pipe_stream, nullptr);
+        llvmModule->withModuleDo([&pipe_stream](auto &m) { m.print(pipe_stream, nullptr); });
 
         close(pipefd[1]);
 

@@ -1,2 +1,2 @@
-// RUN: (compiler src1 src2 || true) 2>&1 | filecheck %s
-// CHECK: error: unexpected argument 'src2'
+// RUN: diff <(compiler ../examples/prime_numbers.dmz ../examples/structs.dmz -run) <(echo -n -e "2\n3\n5\n7\n11\n13\n17\n19\n23\n29\n")
+// RUN: diff <(compiler ../examples/structs.dmz ../examples/prime_numbers.dmz -run) <(echo -n -e "1\n2\n3\n41\n42\n43\n")

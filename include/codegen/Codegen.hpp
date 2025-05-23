@@ -3,6 +3,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <llvm/IR/IRBuilder.h>
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #pragma GCC diagnostic pop
 
 #include <map>
@@ -12,11 +13,17 @@
 namespace DMZ {
 
 class Codegen {
+    static llvm::orc::ThreadSafeContext get_shared_context() {
+        static std::unique_ptr<llvm::LLVMContext> sc = std::make_unique<llvm::LLVMContext>();
+        static llvm::orc::ThreadSafeContext tsc(std::move(sc));
+        return tsc;
+    }
     std::vector<std::unique_ptr<ResolvedDecl>> m_resolvedTree;
 
-    llvm::LLVMContext m_context;
+    llvm::LLVMContext& m_context;
     llvm::IRBuilder<> m_builder;
-    llvm::Module m_module;
+    std::unique_ptr<llvm::Module> ptr_module;
+    llvm::Module& m_module;
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
@@ -30,7 +37,7 @@ class Codegen {
    public:
     Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath);
 
-    llvm::Module *generate_ir();
+    std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir();
     llvm::Type *generate_type(const Type &type);
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);

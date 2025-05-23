@@ -1,10 +1,11 @@
 #pragma once
 
 #include <filesystem>
+#include <vector>
 
 namespace DMZ {
 struct CompilerOptions {
-    std::filesystem::path source;
+    std::vector<std::filesystem::path> sources;
     std::filesystem::path output;
     bool displayHelp = false;
     bool lexerDump = false;

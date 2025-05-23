@@ -9,12 +9,16 @@
 
 namespace DMZ {
 Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath)
-    : m_resolvedTree(std::move(resolvedTree)), m_builder(m_context), m_module("<translation_unit>", m_context) {
+    : m_resolvedTree(std::move(resolvedTree)),
+      m_context(*get_shared_context().getContext()),
+      m_builder(m_context),
+      ptr_module(std::make_unique<llvm::Module>("<translation_unit>", m_context)),
+      m_module(*ptr_module) {
     m_module.setSourceFileName(sourcePath);
     m_module.setTargetTriple(llvm::sys::getDefaultTargetTriple());
 }
 
-llvm::Module *Codegen::generate_ir() {
+std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
     ScopedTimer st(Stats::type::codegenTime);
 
     for (auto &&decl : m_resolvedTree) {
@@ -48,7 +52,7 @@ llvm::Module *Codegen::generate_ir() {
             dmz_unreachable("unexpected top level declaration");
     }
 
-    return &m_module;
+    return std::make_unique<llvm::orc::ThreadSafeModule>(std::move(ptr_module), get_shared_context());
 }
 
 llvm::Type *Codegen::generate_type(const Type &type) {
