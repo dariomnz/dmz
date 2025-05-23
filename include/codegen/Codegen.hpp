@@ -20,10 +20,10 @@ class Codegen {
     }
     std::vector<std::unique_ptr<ResolvedDecl>> m_resolvedTree;
 
-    llvm::LLVMContext& m_context;
+    llvm::LLVMContext &m_context;
     llvm::IRBuilder<> m_builder;
     std::unique_ptr<llvm::Module> ptr_module;
-    llvm::Module& m_module;
+    llvm::Module &m_module;
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
@@ -33,6 +33,8 @@ class Codegen {
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
+
+    std::string m_currentModulePrefix = "";
 
    public:
     Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath);
@@ -76,5 +78,7 @@ class Codegen {
     llvm::Value *generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr);
     llvm::Value *generate_catch_err_expr(const ResolvedCatchErrExpr &catchErrExpr);
     llvm::Value *generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr);
+    void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
+    void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal = false);
 };
 }  // namespace DMZ

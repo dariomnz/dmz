@@ -1,0 +1,42 @@
+// RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
+
+module ops;
+
+fn print(x:int) -> void {
+    println(x);
+}
+
+// CHECK: ResolvedModuleDecl ops
+// CHECK-NEXT:   ResolvedFunctionDecl print -> void
+// CHECK-NEXT:     ResolvedParamDecl:int x
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:void println
+// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+
+module ops::integer;
+
+fn add(x:int, y:int) -> int {
+    return x + y;
+}
+
+fn sub(x:int, y:int) -> int {
+    return x - y;
+}
+// CHECK: ResolvedModuleDecl ops
+// CHECK-NEXT:   ResolvedModuleDecl integer
+// CHECK-NEXT:     ResolvedFunctionDecl add -> int
+// CHECK-NEXT:       ResolvedParamDecl:int x
+// CHECK-NEXT:       ResolvedParamDecl:int y
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:int '+'
+// CHECK-NEXT:             ResolvedDeclRefExpr:int x
+// CHECK-NEXT:             ResolvedDeclRefExpr:int y
+// CHECK-NEXT:     ResolvedFunctionDecl sub -> int
+// CHECK-NEXT:       ResolvedParamDecl:int x
+// CHECK-NEXT:       ResolvedParamDecl:int y
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:int '-'
+// CHECK-NEXT:             ResolvedDeclRefExpr:int x
+// CHECK-NEXT:             ResolvedDeclRefExpr:int y

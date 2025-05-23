@@ -237,4 +237,13 @@ void ResolvedTryErrExpr::dump(size_t level, bool onlySelf) const {
     if (declaration) declaration->dump(level + 1);
     if (errToTry) errToTry->dump(level + 1);
 }
+
+void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedModuleDecl " << identifier << '\n';
+
+    if (onlySelf) return;
+    for (auto &&decl : declarations) decl->dump(level + 1);
+
+    if (nestedModule) nestedModule->dump(level + 1);
+}
 }  // namespace DMZ

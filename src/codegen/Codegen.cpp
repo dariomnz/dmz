@@ -21,36 +21,7 @@ Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::s
 std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
     ScopedTimer st(Stats::type::codegenTime);
 
-    for (auto &&decl : m_resolvedTree) {
-        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get()))
-            generate_function_decl(*fn);
-        else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
-            generate_struct_decl(*sd);
-        else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
-            continue;
-        else
-            dmz_unreachable("unexpected top level declaration");
-    }
-
-    generate_main_wrapper();
-
-    generate_err_no_err();
-    for (auto &&decl : m_resolvedTree) {
-        if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
-            generate_err_group_decl(*errGroup);
-    }
-
-    for (auto &&decl : m_resolvedTree) {
-        if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
-            continue;
-        else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
-            generate_function_body(*fn);
-        else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
-            generate_struct_definition(*sd);
-        else
-            dmz_unreachable("unexpected top level declaration");
-    }
+    generate_in_module_decl(m_resolvedTree, true);
 
     return std::make_unique<llvm::orc::ThreadSafeModule>(std::move(ptr_module), get_shared_context());
 }
@@ -113,7 +84,8 @@ void Codegen::generate_main_wrapper() {
     auto *entry = llvm::BasicBlock::Create(m_context, "entry", main);
     m_builder.SetInsertPoint(entry);
 
-    m_builder.CreateCall(builtinMain);
+    if (builtinMain) m_builder.CreateCall(builtinMain);
+
     m_builder.CreateRet(llvm::ConstantInt::getSigned(m_builder.getInt32Ty(), 0));
 }
 

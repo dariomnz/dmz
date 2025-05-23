@@ -181,4 +181,136 @@ std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGrou
     return std::make_unique<ResolvedErrGroupDecl>(errGroupDecl.location, errGroupDecl.identifier,
                                                   std::move(resolvedErrors));
 }
+
+std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module_decl(const ModuleDecl &moduleDecl) {
+    ScopeRAII moduleScope(*this);
+    if (moduleDecl.nestedModule) {
+        varOrReturn(nestedModule, resolve_module_decl(*moduleDecl.nestedModule));
+
+        return std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier,
+                                                    std::move(nestedModule));
+    }
+
+    auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations);
+    if (resolvedDecls.size() == 0) return nullptr;
+
+    return std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, nullptr,
+                                                std::move(resolvedDecls));
+}
+
+bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
+    ScopeRAII moduleScope(*this);
+    if (moduleDecl.nestedModule) {
+        return resolve_module_body(*moduleDecl.nestedModule);
+    }
+
+    return resolve_in_module_body(moduleDecl.declarations);
+}
+
+std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
+    const std::vector<std::unique_ptr<Decl>> &decls) {
+    bool error = false;
+    std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
+
+    // Resolve every struct first so that functions have access to them in their
+    // signature.
+    {
+        ScopedTimer st(Stats::type::semanticResolveStructsTime);
+        for (auto &&decl : decls) {
+            if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
+                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
+
+                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                    error = true;
+                    continue;
+                }
+
+                resolvedTree.emplace_back(std::move(resolvedDecl));
+                continue;
+            }
+
+            if (dynamic_cast<const FuncDecl *>(decl.get())) {
+                continue;
+            }
+            if (const auto *err = dynamic_cast<const ErrGroupDecl *>(decl.get())) {
+                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_err_group_decl(*err);
+                if (!resolvedDecl) {
+                    error = true;
+                    continue;
+                }
+                resolvedTree.emplace_back(std::move(resolvedDecl));
+                continue;
+            }
+            dmz_unreachable("unexpected declaration");
+        }
+    }
+
+    if (error) return {};
+
+    if (m_scopes.size() == 1) {
+        // Insert println first to be able to detect a possible redeclaration.
+        auto *printlnDecl = resolvedTree.emplace_back(create_builtin_println()).get();
+        insert_decl_to_current_scope(*printlnDecl);
+    }
+    {
+        ScopedTimer st(Stats::type::semanticResolveFunctionsTime);
+        for (auto &&decl : decls) {
+            if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
+                if (auto resolvedDecl = resolve_function_decl(*fn);
+                    resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
+                    auto &resolvedDeclEmpaced = resolvedTree.emplace_back(std::move(resolvedDecl));
+                    if (auto resolvedfndecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDeclEmpaced.get())) {
+                        if (auto fndecl = dynamic_cast<const FunctionDecl *>(fn)) {
+                            m_functionsToResolveMap[resolvedfndecl] = fndecl->body.get();
+                        }
+                    }
+                    continue;
+                }
+
+                error = true;
+            }
+        }
+    }
+
+    if (error) return {};
+    return resolvedTree;
+}
+
+bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
+    bool error = false;
+    {
+        ScopedTimer st(Stats::type::semanticResolveBodysTime);
+        for (auto &&currentDecl : decls) {
+            if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
+                if (!resolve_struct_fields(*st)) error = true;
+
+                continue;
+            }
+
+            if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl.get())) {
+                if (fn->identifier == "println") continue;
+
+                ScopeRAII paramScope(*this);
+                for (auto &&param : fn->params) insert_decl_to_current_scope(*param);
+
+                m_currentFunction = fn;
+                if (auto body = m_functionsToResolveMap[fn]) {
+                    m_functionsToResolveMap.erase(fn);
+                    if (auto resolvedBody = resolve_block(*body)) {
+                        fn->body = std::move(resolvedBody);
+                        error |= run_flow_sensitive_checks(*fn);
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+
+                error = true;
+            }
+        }
+    }
+    if (error) return false;
+
+    return true;
+}
 }  // namespace DMZ

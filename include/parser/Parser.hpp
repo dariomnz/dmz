@@ -43,10 +43,14 @@ class Parser {
     }
     void synchronize_on(std::unordered_set<TokenType> types);
     void synchronize();
+
+    const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof,       TokenType::kw_fn,
+                                                                   TokenType::kw_struct, TokenType::kw_extern,
+                                                                   TokenType::kw_module, TokenType::kw_import};
     bool is_top_level_token(TokenType tok);
 
    public:
-    std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file();
+    std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file(bool expectMain = false);
 
    public:
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
@@ -82,6 +86,7 @@ class Parser {
     std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
     std::unique_ptr<TryErrExpr> parse_try_err_expr();
     std::unique_ptr<ModuleDecl> parse_module_decl(bool haveEatModule = false);
+    std::vector<std::unique_ptr<Decl>> parse_in_module_decl();
     std::unique_ptr<ImportDecl> parse_import_decl(bool haveEatImport = false);
 };
 }  // namespace DMZ

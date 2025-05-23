@@ -12,4 +12,5 @@
 // CHECK-NEXT:   -cfg-dump        print the control flow graph
 // CHECK-NEXT:   -llvm-dump       print the llvm module
 // CHECK-NEXT:   -print-stats     print the time stats
+// CHECK-NEXT:   -module          compile a module to .o file
 // CHECK-NEXT:   -run             runs the program with lli (Just In Time)

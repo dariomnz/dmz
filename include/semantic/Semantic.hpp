@@ -15,8 +15,15 @@ class Sema {
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
     std::vector<std::vector<ResolvedDecl *>> m_scopes;
+
+    // key: std::, std::example::
+    std::unordered_multimap<std::string_view, ResolvedModuleDecl *> m_moduleScopes;
+
     std::vector<std::vector<std::unique_ptr<ResolvedStmt>>> m_defers;
-    ResolvedFunctionDecl *currentFunction;
+    ResolvedFunctionDecl *m_currentFunction;
+
+    std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
+    std::string m_currentModulePrefix = "";
     class ScopeRAII {
         Sema &m_sema;
 
@@ -34,13 +41,14 @@ class Sema {
    public:
     explicit Sema(std::vector<std::unique_ptr<Decl>> &ast) : m_ast(std::move(ast)) {}
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
+    std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast_decl();
+    bool resolve_ast_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
 
    private:
     template <typename T>
-    std::pair<T *, int> lookup_decl(const std::string_view id);
+    std::pair<T *, int> lookup_decl(const std::string_view id, const std::string_view module = "");
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
-    std::vector<std::unique_ptr<ResolvedFuncDecl>> resolve_source_file();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
@@ -73,5 +81,9 @@ class Sema {
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
     std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
     std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
+    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
+    bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
+    std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
+    bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
 };
 }  // namespace DMZ

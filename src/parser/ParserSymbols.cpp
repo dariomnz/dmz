@@ -200,6 +200,8 @@ void TryErrExpr::dump(size_t level) const {
 void ModuleDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ModuleDecl " << identifier << '\n';
 
+    for (auto &&decl : declarations) decl->dump(level + 1);
+
     if (nestedModule) nestedModule->dump(level + 1);
 }
 

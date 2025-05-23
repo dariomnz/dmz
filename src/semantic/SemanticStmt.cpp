@@ -36,14 +36,14 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
 }
 
 std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {
-    if (!currentFunction) {
+    if (!m_currentFunction) {
         return report(returnStmt.location, "unexpected return stmt outside a function");
     }
 
-    if (currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
+    if (m_currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
         return report(returnStmt.location, "unexpected return value in void function");
 
-    if (currentFunction->type.kind != Type::Kind::Void && !returnStmt.expr)
+    if (m_currentFunction->type.kind != Type::Kind::Void && !returnStmt.expr)
         return report(returnStmt.location, "expected a return value");
 
     std::unique_ptr<ResolvedExpr> resolvedExpr;
@@ -51,7 +51,7 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
         resolvedExpr = resolve_expr(*returnStmt.expr);
         if (!resolvedExpr) return nullptr;
 
-        if (!Type::compare(currentFunction->type, resolvedExpr->type))
+        if (!Type::compare(m_currentFunction->type, resolvedExpr->type))
             return report(resolvedExpr->location, "unexpected return type");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));

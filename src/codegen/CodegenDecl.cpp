@@ -32,7 +32,9 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     }
 
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
-    std::string_view funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.identifier;
+    std::string funcName = functionDecl.identifier == "main"
+                               ? "__builtin_main"
+                               : m_currentModulePrefix + std::string(functionDecl.identifier);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }
@@ -72,7 +74,9 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
 
 void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     m_currentFunction = &functionDecl;
-    std::string_view funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.identifier;
+    std::string funcName = functionDecl.identifier == "main"
+                               ? "__builtin_main"
+                               : m_currentModulePrefix + std::string(functionDecl.identifier);
     auto *function = m_module.getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(m_context, "entry", function);
@@ -146,7 +150,7 @@ void Codegen::generate_builtin_println_body(const ResolvedFunctionDecl &println)
 }
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    std::string structName("struct.");
+    std::string structName(m_currentModulePrefix + "struct.");
     structName += structDecl.identifier;
     llvm::StructType::create(m_context, structName);
 }
@@ -163,12 +167,66 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
     type->setBody(fieldTypes);
 }
 
-void Codegen::generate_err_no_err() { m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR"); }
+void Codegen::generate_err_no_err() {
+    if (!m_noError) m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR");
+}
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
-        std::string str(err->identifier);
+        std::string str(m_currentModulePrefix);
+        str += err->identifier;
         m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(str, "err.str." + str);
+    }
+}
+
+void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
+    std::string prevModulePrefix(m_currentModulePrefix);
+    m_currentModulePrefix += moduleDecl.identifier;
+    m_currentModulePrefix += "::";
+
+    if (moduleDecl.nestedModule) {
+        generate_module_decl(*moduleDecl.nestedModule);
+    } else {
+        generate_in_module_decl(moduleDecl.declarations);
+    }
+    m_currentModulePrefix = prevModulePrefix;
+}
+
+void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal) {
+    for (auto &&decl : declarations) {
+        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get()))
+            generate_function_decl(*fn);
+        else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
+            generate_struct_decl(*sd);
+        else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
+                 dynamic_cast<const ResolvedModuleDecl *>(decl.get()))
+            continue;
+        else
+            dmz_unreachable("unexpected top level in module declaration");
+    }
+
+    if (isGlobal) {
+        generate_main_wrapper();
+    }
+
+    generate_err_no_err();
+    for (auto &&decl : declarations) {
+        if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
+            generate_err_group_decl(*errGroup);
+    }
+
+    for (auto &&decl : declarations) {
+        if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
+            continue;
+        else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
+            generate_function_body(*fn);
+        else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
+            generate_struct_definition(*sd);
+        else if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get()))
+            generate_module_decl(*modDecl);
+        else
+            dmz_unreachable("unexpected top level in module declaration");
     }
 }
 }  // namespace DMZ

@@ -26,6 +26,7 @@ static void displayHelp() {
     println("  -cfg-dump        print the control flow graph");
     println("  -llvm-dump       print the llvm module");
     println("  -print-stats     print the time stats");
+    println("  -module          compile a module to .o file");
     println("  -run             runs the program with lli (Just In Time)");
 }
 
@@ -54,6 +55,8 @@ static CompilerOptions parseArguments(int argc, char **argv) {
                 options.cfgDump = true;
             else if (arg == "-run")
                 options.run = true;
+            else if (arg == "-module")
+                options.isModule = true;
             else if (arg == "-print-stats")
                 options.printStats = true;
             else
@@ -129,7 +132,8 @@ int main(int argc, char *argv[]) {
             }
 
             Parser parser(lexer);
-            auto [ast, success] = parser.parse_source_file();
+            bool needMain = !options.isModule && index == 0;
+            auto [ast, success] = parser.parse_source_file(needMain);
 
             if (options.astDump) {
                 std::unique_lock lock(modulesMutex);

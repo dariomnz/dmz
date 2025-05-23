@@ -14,6 +14,7 @@ struct CompilerOptions {
     bool llvmDump = false;
     bool cfgDump = false;
     bool run = false;
+    bool isModule = false;
     bool printStats = false;
 };
 }  // namespace DMZ

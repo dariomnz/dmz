@@ -178,7 +178,39 @@ std::unique_ptr<ModuleDecl> Parser::parse_module_decl(bool haveEatModule) {
     matchOrReturn(TokenType::semicolon, "expected ';'");
     eat_next_token();  // eat ;
 
-    return std::make_unique<ModuleDecl>(location, identifier);
+    auto declarations = parse_in_module_decl();
+
+    return std::make_unique<ModuleDecl>(location, identifier, nullptr, std::move(declarations));
+}
+
+std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
+    std::vector<std::unique_ptr<Decl>> declarations;
+
+    while (m_nextToken.type != TokenType::eof && m_nextToken.type != TokenType::kw_module) {
+        if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
+            if (auto fn = parse_function_decl()) {
+                declarations.emplace_back(std::move(fn));
+                continue;
+            }
+        } else if (m_nextToken.type == TokenType::kw_struct) {
+            if (auto st = parse_struct_decl()) {
+                declarations.emplace_back(std::move(st));
+                continue;
+            }
+        } else if (m_nextToken.type == TokenType::kw_err) {
+            if (auto st = parse_err_group_decl()) {
+                declarations.emplace_back(std::move(st));
+                continue;
+            }
+        } else {
+            report(m_nextToken.loc, "expected function, struct, err declaration inside a module");
+        }
+
+        synchronize_on({TokenType::kw_extern, TokenType::kw_fn, TokenType::kw_struct, TokenType::kw_err});
+        continue;
+    }
+
+    return declarations;
 }
 
 std::unique_ptr<ImportDecl> Parser::parse_import_decl(bool haveEatImport) {

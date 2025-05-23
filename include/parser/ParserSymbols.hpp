@@ -441,9 +441,10 @@ struct TryErrExpr : public Expr {
 
 struct ModuleDecl : public Decl {
     std::unique_ptr<ModuleDecl> nestedModule;
+    std::vector<std::unique_ptr<Decl>> declarations;
 
-    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule = nullptr)
-        : Decl(location, identifier), nestedModule(std::move(nestedModule)) {}
+    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule, std::vector<std::unique_ptr<Decl>> declarations = {})
+        : Decl(location, identifier), nestedModule(std::move(nestedModule)), declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;
 };

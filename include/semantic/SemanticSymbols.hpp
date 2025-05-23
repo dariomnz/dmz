@@ -370,4 +370,14 @@ struct ResolvedTryErrExpr : public ResolvedExpr {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
+
+struct ResolvedModuleDecl : public ResolvedDecl {
+    std::unique_ptr<ResolvedModuleDecl> nestedModule;
+    std::vector<std::unique_ptr<ResolvedDecl>> declarations;
+
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ResolvedModuleDecl> nestedModule, std::vector<std::unique_ptr<ResolvedDecl>> declarations = {})
+        : ResolvedDecl(location, identifier, Type::builtinVoid(), false), nestedModule(std::move(nestedModule)), declarations(std::move(declarations)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
 }  // namespace DMZ

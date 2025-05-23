@@ -2,14 +2,11 @@
 
 namespace DMZ {
 
-static const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof,       TokenType::kw_fn,
-                                                               TokenType::kw_struct, TokenType::kw_extern,
-                                                               TokenType::kw_module, TokenType::kw_import};
 bool Parser::is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
-std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() {
+std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bool expectMain) {
     ScopedTimer st(Stats::type::parseTime);
     std::vector<std::unique_ptr<Decl>> declarations;
 
@@ -24,33 +21,27 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file() 
                 declarations.emplace_back(std::move(mod));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
-            if (auto fn = parse_function_decl()) {
-                declarations.emplace_back(std::move(fn));
-                continue;
-            }
-        } else if (m_nextToken.type == TokenType::kw_struct) {
-            if (auto st = parse_struct_decl()) {
-                declarations.emplace_back(std::move(st));
-                continue;
-            }
-        } else if (m_nextToken.type == TokenType::kw_err) {
-            if (auto st = parse_err_group_decl()) {
-                declarations.emplace_back(std::move(st));
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_extern ||
+                   m_nextToken.type == TokenType::kw_err || m_nextToken.type == TokenType::kw_struct) {
+            auto decls = parse_in_module_decl();
+            if (decls.size() > 0) {
+                for (auto &&decl : decls) {
+                    declarations.emplace_back(std::move(decl));
+                }
                 continue;
             }
         } else {
-            report(m_nextToken.loc, "expected function, struct, err, module or import declaration on the top level");
+            report(m_nextToken.loc, "expected module, import, function, struct or err declaration on the top level");
         }
 
         synchronize_on(top_level_tokens);
         continue;
     }
 
-    bool hasMainFunction = false;
+    bool hasMainFunction = !expectMain;
     for (auto &&fn : declarations) hasMainFunction |= fn->identifier == "main";
 
-    if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found");
+    if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found in global module");
 
     return {std::move(declarations), !m_incompleteAST && hasMainFunction};
 }
