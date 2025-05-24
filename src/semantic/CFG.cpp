@@ -61,6 +61,7 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *deferStmt = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
         return insert_block(*deferStmt->block, block);
     }
+    stmt.dump();
     dmz_unreachable("unexpected expression");
 }
 

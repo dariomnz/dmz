@@ -1,5 +1,5 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 fn main() -> void {
     let x = 1;
     println(x);
@@ -10,10 +10,7 @@ fn main() -> void {
     println(x);
 }
 
-// CHECK: ResolvedFunctionDecl println -> void
-// CHECK-NEXT:   ResolvedParamDecl:int n
-// CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:int x

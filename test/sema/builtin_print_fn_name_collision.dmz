@@ -1,8 +1,0 @@
-// RUN: compiler %s -run 2>&1 -res-dump | filecheck %s
-fn main() -> void {}
-
-// CHECK: [[# @LINE + 1 ]]:1: error: redeclaration of 'println'
-fn println(x: int) -> int {
-    return 0;
-}
-// CHECK-NOT: {{.*}}

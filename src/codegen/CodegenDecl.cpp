@@ -32,9 +32,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     }
 
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
-    std::string funcName = functionDecl.identifier == "main"
-                               ? "__builtin_main"
-                               : m_currentModulePrefix + std::string(functionDecl.identifier);
+    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.withinModule;
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }
@@ -74,9 +72,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
 
 void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     m_currentFunction = &functionDecl;
-    std::string funcName = functionDecl.identifier == "main"
-                               ? "__builtin_main"
-                               : m_currentModulePrefix + std::string(functionDecl.identifier);
+    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.withinModule;
     auto *function = m_module.getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(m_context, "entry", function);
@@ -115,10 +111,10 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
         ++idx;
     }
 
-    if (functionDecl.identifier == "println")
-        generate_builtin_println_body(functionDecl);
-    else
-        generate_block(*functionDecl.body);
+    // if (functionDecl.identifier == "println")
+    // generate_builtin_println_body(functionDecl);
+    // else
+    generate_block(*functionDecl.body);
 
     if (retBB->hasNPredecessorsOrMore(1)) {
         break_into_bb(retBB);
@@ -139,19 +135,18 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     m_builder.CreateRet(load_value(retVal, functionDecl.type));
 }
 
-void Codegen::generate_builtin_println_body(const ResolvedFunctionDecl &println) {
-    auto *type = llvm::FunctionType::get(m_builder.getInt32Ty(), {m_builder.getInt8Ty()->getPointerTo()}, true);
-    auto *printf = llvm::Function::Create(type, llvm::Function::ExternalLinkage, "printf", m_module);
-    auto *format = m_builder.CreateGlobalStringPtr("%d\n");
+// void Codegen::generate_builtin_println_body(const ResolvedFunctionDecl &println) {
+//     auto *type = llvm::FunctionType::get(m_builder.getInt32Ty(), {m_builder.getInt8Ty()->getPointerTo()}, true);
+//     auto *printf = llvm::Function::Create(type, llvm::Function::ExternalLinkage, "printf", m_module);
+//     auto *format = m_builder.CreateGlobalStringPtr("%d\n");
 
-    llvm::Value *param = m_declarations[println.params[0].get()];
+//     llvm::Value *param = m_declarations[println.params[0].get()];
 
-    m_builder.CreateCall(printf, {format, param});
-}
+//     m_builder.CreateCall(printf, {format, param});
+// }
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    std::string structName(m_currentModulePrefix + "struct.");
-    structName += structDecl.identifier;
+    std::string structName("struct." + structDecl.withinModule);
     llvm::StructType::create(m_context, structName);
 }
 
@@ -168,28 +163,21 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
 }
 
 void Codegen::generate_err_no_err() {
-    if (!m_noError) m_noError = m_builder.CreateGlobalStringPtr("NO_ERROR", "err.str.NO_ERROR");
+    if (!m_success) m_success = m_builder.CreateGlobalStringPtr("SUCCESS", "err.str.SUCCESS");
 }
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
-        std::string str(m_currentModulePrefix);
-        str += err->identifier;
-        m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(str, "err.str." + str);
+        m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(err->withinModule, "err.str." + err->withinModule);
     }
 }
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
-    std::string prevModulePrefix(m_currentModulePrefix);
-    m_currentModulePrefix += moduleDecl.identifier;
-    m_currentModulePrefix += "::";
-
     if (moduleDecl.nestedModule) {
         generate_module_decl(*moduleDecl.nestedModule);
     } else {
         generate_in_module_decl(moduleDecl.declarations);
     }
-    m_currentModulePrefix = prevModulePrefix;
 }
 
 void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal) {
@@ -201,8 +189,10 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
         else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
                  dynamic_cast<const ResolvedModuleDecl *>(decl.get()))
             continue;
-        else
+        else {
+            decl->dump();
             dmz_unreachable("unexpected top level in module declaration");
+        }
     }
 
     if (isGlobal) {
@@ -225,8 +215,10 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             generate_struct_definition(*sd);
         else if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get()))
             generate_module_decl(*modDecl);
-        else
+        else {
+            decl->dump();
             dmz_unreachable("unexpected top level in module declaration");
+        }
     }
 }
 }  // namespace DMZ

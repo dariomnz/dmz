@@ -64,12 +64,28 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *tryErr = dynamic_cast<const ResolvedTryErrExpr *>(&expr)) {
         return generate_try_err_expr(*tryErr);
     }
+    expr.dump();
     dmz_unreachable("unexpected expression");
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     const ResolvedFuncDecl &calleeDecl = call.callee;
-    llvm::Function *callee = m_module.getFunction(calleeDecl.identifier);
+    llvm::Function *callee = m_module.getFunction(calleeDecl.withinModule);
+    if (!callee) {
+        // println("calleeDecl.withinModule " << calleeDecl.withinModule);
+        // call.dump();
+        // println(&calleeDecl << " " << calleeDecl.identifier);
+        // println(&calleeDecl << " " << calleeDecl.params.size());
+        // println(&calleeDecl << " " << (void *)calleeDecl.params[0].get());
+
+        // println(&calleeDecl << " " << calleeDecl.params[0]->identifier);
+
+        // (&calleeDecl)->dump();
+        generate_function_decl(calleeDecl);
+        callee = m_module.getFunction(calleeDecl.withinModule);
+        // println("Cannot find " << calleeDecl.withinModule);
+        assert(callee && "Cannot generate declaration of extern function");
+    }
 
     bool isReturningStruct = calleeDecl.type.kind == Type::Kind::Struct || calleeDecl.type.isOptional;
     llvm::Value *retVal = nullptr;
@@ -111,6 +127,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
         return rhs;
     }
 
+    unop.dump();
     dmz_unreachable("unknown unary op");
     return nullptr;
 }
@@ -172,6 +189,7 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
     if (op == TokenType::op_equal) return bool_to_int(m_builder.CreateICmpEQ(lhs, rhs));
     if (op == TokenType::op_not_equal) return bool_to_int(m_builder.CreateICmpNE(lhs, rhs));
 
+    binop.dump();
     dmz_unreachable("unexpected binary operator");
     return nullptr;
 }
@@ -301,13 +319,13 @@ llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchE
     }
     llvm::Value *err_value_ptr = m_builder.CreateStructGEP(generate_type(err_type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
-
+    llvm::Value *err_value_bool = ptr_to_bool(err_value);
     if (catchErrExpr.declaration) {
-        llvm::Value *selectedError = m_builder.CreateSelect(ptr_to_bool(err_value), err_value, m_noError, "select.err");
+        llvm::Value *selectedError = m_builder.CreateSelect(err_value_bool, err_value, m_success, "select.err");
         store_value(selectedError, decl_value, Type::builtinErr("err"));
     }
 
-    return m_builder.CreateSelect(ptr_to_bool(err_value), m_builder.getInt32(1), m_builder.getInt32(0), "catch.result");
+    return m_builder.CreateSelect(err_value_bool, m_builder.getInt32(1), m_builder.getInt32(0), "catch.result");
 }
 
 llvm::Value *Codegen::generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr) {

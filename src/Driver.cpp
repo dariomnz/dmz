@@ -141,7 +141,8 @@ int main(int argc, char *argv[]) {
                     inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
                 }
 
-                for (auto &&fn : ast) fn->dump();
+                if (!haveError)
+                    for (auto &&fn : ast) fn->dump();
                 normalExit = true;
                 if (index != options.sources.size() - 1) {
                     inOrderCurrent = options.sources[++index];
@@ -154,8 +155,11 @@ int main(int argc, char *argv[]) {
             barrier.arrive_and_wait();
             if (haveError) return;
 
-            Sema sema(ast);
-            auto resolvedTree = sema.resolve_ast();
+            Sema sema(std::move(ast));
+            auto resolvedTree = sema.resolve_ast_decl();
+            barrier.arrive_and_wait();
+            if (!sema.resolve_ast_body(resolvedTree)) haveError = true;
+            barrier.arrive_and_wait();
 
             if (options.resDump) {
                 std::unique_lock lock(modulesMutex);
@@ -163,7 +167,8 @@ int main(int argc, char *argv[]) {
                     inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
                 }
 
-                for (auto &&fn : resolvedTree) fn->dump();
+                if (!haveError)
+                    for (auto &&fn : resolvedTree) fn->dump();
                 normalExit = true;
                 if (index != options.sources.size() - 1) {
                     inOrderCurrent = options.sources[++index];
@@ -178,13 +183,14 @@ int main(int argc, char *argv[]) {
                     inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
                 }
 
-                for (auto &&decl : resolvedTree) {
-                    const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
-                    if (!fn) continue;
+                if (!haveError)
+                    for (auto &&decl : resolvedTree) {
+                        const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
+                        if (!fn) continue;
 
-                    std::cerr << fn->identifier << ':' << '\n';
-                    CFGBuilder().build(*fn).dump();
-                }
+                        std::cerr << fn->identifier << ':' << '\n';
+                        CFGBuilder().build(*fn).dump();
+                    }
                 normalExit = true;
                 if (index != options.sources.size() - 1) {
                     inOrderCurrent = options.sources[++index];
@@ -197,17 +203,20 @@ int main(int argc, char *argv[]) {
             barrier.arrive_and_wait();
             if (haveError) return;
 
-            Codegen codegen(std::move(resolvedTree), source.c_str());
-            std::unique_lock lock(modulesMutex);
-            if (inOrderCurrent != source) {
-                inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
-            }
+            Codegen codegen(resolvedTree, source.c_str());
+            {
+                std::unique_lock lock(modulesMutex);
+                if (inOrderCurrent != source) {
+                    inOrderCV.wait(lock, [source, &inOrderCurrent]() { return inOrderCurrent == source; });
+                }
 
-            modules.emplace_back(codegen.generate_ir());
-            if (index != options.sources.size() - 1) {
-                inOrderCurrent = options.sources[++index];
-                inOrderCV.notify_all();
+                modules.emplace_back(codegen.generate_ir());
+                if (index != options.sources.size() - 1) {
+                    inOrderCurrent = options.sources[++index];
+                    inOrderCV.notify_all();
+                }
             }
+            barrier.arrive_and_wait();
         });
     }
 

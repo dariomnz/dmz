@@ -32,6 +32,7 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
         return resolve_block(*block);
     }
 
+    stmt.dump();
     dmz_unreachable("unexpected statement");
 }
 

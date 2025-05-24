@@ -1,5 +1,6 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run) <(echo -n -e '0\n10\n12345\n10002345\n123456789\n')
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 fn main() -> void {
     println(0);
     println(10);
@@ -7,11 +8,11 @@ fn main() -> void {
     println(10002345);
     println(123456789);
 }
+// CHECK: declare i32 @printf(ptr byref(ptr) %0, ...)
 
 // CHECK: define void @println(i32 %n) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @0, i32 %n)
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str, i32 %n)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK: declare i32 @printf(ptr %0, ...)

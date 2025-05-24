@@ -18,7 +18,7 @@ fn foo(x: &int) -> void {
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:&int x
 
-extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
     let i = 10;

@@ -15,10 +15,6 @@ struct S2 { x: int, y:int}
 // CHECK-NEXT:   ResolvedFieldDecl:int x
 // CHECK-NEXT:   ResolvedFieldDecl:int y
 
-// CHECK-NEXT: ResolvedFunctionDecl println -> void
-// CHECK-NEXT:   ResolvedParamDecl:int n
-// CHECK-NEXT:   ResolvedBlock
-
 // CHECK-NEXT: ResolvedFunctionDecl foo -> S2
 // CHECK-NEXT:   ResolvedParamDecl:S s
 // CHECK-NEXT:   ResolvedBlock

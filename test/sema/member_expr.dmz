@@ -10,9 +10,6 @@ fn main() -> void {
 }
 // CHECK: ResolvedStructDecl:S S
 // CHECK-NEXT:   ResolvedFieldDecl:int x
-// CHECK-NEXT: ResolvedFunctionDecl println -> void
-// CHECK-NEXT:   ResolvedParamDecl:int n
-// CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt

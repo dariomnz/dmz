@@ -13,6 +13,7 @@ fn bar(s: S) -> S {
   s.y = 8;
   return s;
 }
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
   let s = S { x: 1, y: 2 };

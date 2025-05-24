@@ -46,6 +46,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
         generate_block(*defer->block);
         return nullptr;
     }
+    stmt.dump();
     dmz_unreachable("unknown statement");
 }
 

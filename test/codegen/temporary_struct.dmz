@@ -10,6 +10,7 @@ struct S2 {
   y: int,
   z: int,
 }
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn foo() -> void {
   println(S2 { x: 1, y: 2, z: 3 }.z);

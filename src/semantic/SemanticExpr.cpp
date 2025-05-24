@@ -25,6 +25,8 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     if (dynamic_cast<ResolvedStructDecl *>(decl))
         return report(declRefExpr.location, "expected an instance of '" + std::string(decl->type.name) + '\'');
 
+    // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
+
     return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl);
 }
 
@@ -33,7 +35,6 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     if (!dre) return report(call.location, "expression cannot be called as a function");
 
     varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
-
     const auto *resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
@@ -68,7 +69,8 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         ++idx;
         resolvedArguments.emplace_back(std::move(resolvedArg));
     }
-
+    // resolvedFuncDecl->dump();
+    // println("param ptr " << resolvedFuncDecl->params[0].get());
     return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
 }
 
@@ -126,6 +128,7 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
         return resolve_try_err_expr(*tryErrExpr);
     }
+    expr.dump();
     dmz_unreachable("unexpected expression");
 }
 
@@ -195,6 +198,7 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
         return resolve_member_expr(*memberExpr);
 
+    assignableExpr.dump();
     dmz_unreachable("unexpected assignable expression");
 }
 

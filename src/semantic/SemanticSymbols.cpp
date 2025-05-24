@@ -75,14 +75,14 @@ void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << identifier << " -> " << type << '\n';
+    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << withinModule << " -> " << type << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);
 }
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedFunctionDecl " << identifier << " -> " << type << '\n';
+    std::cerr << indent(level) << "ResolvedFunctionDecl " << withinModule << " -> " << type << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);
@@ -165,7 +165,7 @@ void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedStructDecl:" << type << " " << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedStructDecl:" << type << " " << withinModule << '\n';
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1);
@@ -199,12 +199,12 @@ void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedErrDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDecl " << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedErrDecl " << withinModule << '\n';
     if (onlySelf) return;
 }
 
 void ResolvedErrDeclRefExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDeclRefExpr " << decl.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedErrDeclRefExpr " << decl.withinModule << '\n';
     if (onlySelf) return;
 }
 

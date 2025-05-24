@@ -1,4 +1,5 @@
 // RUN: diff <(compiler %s -run) <(echo -n -e '1\n-1\n-9\n')
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 fn foo(x: int) -> int {
     if (x < (0 - 5)) {
         return (0 - 1);

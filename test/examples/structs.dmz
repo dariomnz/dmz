@@ -8,6 +8,7 @@
 // CHECK-NEXT: 43
 
 // CHECK-NOT: {{.*}}
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 struct Color {
     r: int,

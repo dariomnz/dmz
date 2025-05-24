@@ -8,14 +8,19 @@
 #pragma GCC diagnostic pop
 
 namespace DMZ {
-Codegen::Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath)
-    : m_resolvedTree(std::move(resolvedTree)),
+Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath)
+    : m_resolvedTree(resolvedTree),
       m_context(*get_shared_context().getContext()),
       m_builder(m_context),
       ptr_module(std::make_unique<llvm::Module>("<translation_unit>", m_context)),
       m_module(*ptr_module) {
     m_module.setSourceFileName(sourcePath);
     m_module.setTargetTriple(llvm::sys::getDefaultTargetTriple());
+
+    // for (auto &&resolved : m_resolvedTree) {
+    //     println(resolved->identifier << " " << resolved.get());
+    //     resolved->dump();
+    // }
 }
 
 std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {

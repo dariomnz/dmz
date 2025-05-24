@@ -26,6 +26,7 @@ fn foo(const s: S) -> S2 {
 // CHECK-NEXT: return:                                           ; preds = %entry
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
   let x = S { x: 10, y: 120 };

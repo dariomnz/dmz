@@ -12,6 +12,7 @@
 // CHECK-NEXT: 29
 
 // CHECK-NOT: {{.*}}
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 fn divides(n: int, divisor: int) -> int {
     let i = 1;
     while (i <= n) {

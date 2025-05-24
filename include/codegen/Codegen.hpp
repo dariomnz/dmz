@@ -3,6 +3,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <llvm/IR/IRBuilder.h>
+
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #pragma GCC diagnostic pop
 
@@ -18,7 +19,7 @@ class Codegen {
         static llvm::orc::ThreadSafeContext tsc(std::move(sc));
         return tsc;
     }
-    std::vector<std::unique_ptr<ResolvedDecl>> m_resolvedTree;
+    const std::vector<std::unique_ptr<ResolvedDecl>> &m_resolvedTree;
 
     llvm::LLVMContext &m_context;
     llvm::IRBuilder<> m_builder;
@@ -29,15 +30,13 @@ class Codegen {
     llvm::Instruction *m_allocaInsertPoint;
     llvm::Instruction *m_memsetInsertPoint;
     const ResolvedFunctionDecl *m_currentFunction;
-    llvm::Value *m_noError;
+    llvm::Value *m_success = nullptr;
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
 
-    std::string m_currentModulePrefix = "";
-
    public:
-    Codegen(std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree, std::string_view sourcePath);
+    Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
 
     std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir();
     llvm::Type *generate_type(const Type &type);
@@ -50,7 +49,7 @@ class Codegen {
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
-    void generate_builtin_println_body(const ResolvedFunctionDecl &println);
+    // void generate_builtin_println_body(const ResolvedFunctionDecl &println);
     void generate_main_wrapper();
     llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);

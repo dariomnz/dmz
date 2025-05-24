@@ -1,6 +1,7 @@
 // RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
-
 module ops;
+extern fn printf(fmt:&char[], ...) -> int; 
+fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn print(x:int) -> void {
     println(x);

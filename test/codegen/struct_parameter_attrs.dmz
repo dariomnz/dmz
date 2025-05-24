@@ -3,6 +3,7 @@
 struct S {
   x: int,
 }
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn foo(const a: int, const b: S, c: int, d: S) -> void {
   println(a);

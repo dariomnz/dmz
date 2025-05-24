@@ -37,11 +37,17 @@ struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public Resolved
 struct ResolvedDecl {
     SourceLocation location;
     std::string_view identifier;
+    std::string withinModule;
     Type type;
     bool isMutable;
 
-    ResolvedDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
-        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable) {}
+    ResolvedDecl(SourceLocation location, std::string_view identifier, std::string withinModule, Type type,
+                 bool isMutable)
+        : location(location),
+          identifier(std::move(identifier)),
+          withinModule(std::move(withinModule)),
+          type(type),
+          isMutable(isMutable) {}
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
@@ -87,7 +93,7 @@ struct ResolvedParamDecl : public ResolvedDecl {
 
     ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
                       bool isVararg = false)
-        : ResolvedDecl(location, std::move(identifier), type, isMutable), isVararg(isVararg) {}
+        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, isMutable), isVararg(isVararg) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -96,7 +102,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     unsigned index;
 
     ResolvedFieldDecl(SourceLocation location, std::string_view identifier, Type type, unsigned index)
-        : ResolvedDecl(location, std::move(identifier), type, false), index(index) {}
+        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, false), index(index) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -106,7 +112,8 @@ struct ResolvedVarDecl : public ResolvedDecl {
 
     ResolvedVarDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
                     std::unique_ptr<ResolvedExpr> initializer = nullptr)
-        : ResolvedDecl(location, std::move(identifier), type, isMutable), initializer(std::move(initializer)) {}
+        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, isMutable),
+          initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -114,15 +121,16 @@ struct ResolvedVarDecl : public ResolvedDecl {
 struct ResolvedFuncDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
 
-    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, Type type,
+    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, std::string withinModule, Type type,
                      std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedDecl(location, std::move(identifier), type, false), params(std::move(params)) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(withinModule), type, false),
+          params(std::move(params)) {}
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
-    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                               std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedFuncDecl(location, std::move(identifier), type, std::move(params)) {}
+    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, std::string withinModule,
+                               Type type, std::vector<std::unique_ptr<ResolvedParamDecl>> params)
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(withinModule), type, std::move(params)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -130,9 +138,10 @@ struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
 struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     std::unique_ptr<ResolvedBlock> body;
 
-    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, std::string withinModule, Type type,
                          std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
-        : ResolvedFuncDecl(location, std::move(identifier), type, std::move(params)), body(std::move(body)) {}
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(withinModule), type, std::move(params)),
+          body(std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -140,9 +149,10 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 struct ResolvedStructDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, Type type,
+    ResolvedStructDecl(SourceLocation location, std::string_view identifier, std::string withinModule, Type type,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields)
-        : ResolvedDecl(location, std::move(identifier), type, false), fields(std::move(fields)) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(withinModule), type, false),
+          fields(std::move(fields)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -312,8 +322,8 @@ struct ResolvedDeferStmt : public ResolvedStmt {
 };
 
 struct ResolvedErrDecl : public ResolvedDecl {
-    ResolvedErrDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, std::move(identifier), Type::builtinErr(identifier), false) {}
+    ResolvedErrDecl(SourceLocation location, std::string_view identifier, std::string withinModule)
+        : ResolvedDecl(location, std::move(identifier), std::move(withinModule), Type::builtinErr(identifier), false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -331,7 +341,8 @@ struct ResolvedErrGroupDecl : public ResolvedDecl {
 
     ResolvedErrGroupDecl(SourceLocation location, std::string_view identifier,
                          std::vector<std::unique_ptr<ResolvedErrDecl>> errs)
-        : ResolvedDecl(location, std::move(identifier), Type::builtinErr("errGroup"), false), errs(std::move(errs)) {}
+        : ResolvedDecl(location, std::move(identifier), std::string(identifier), Type::builtinErr("errGroup"), false),
+          errs(std::move(errs)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -363,7 +374,7 @@ struct ResolvedTryErrExpr : public ResolvedExpr {
     std::unique_ptr<ResolvedDeclStmt> declaration;
 
     ResolvedTryErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToTry,
-                         std::unique_ptr<ResolvedDeclStmt> declaration)
+                       std::unique_ptr<ResolvedDeclStmt> declaration)
         : ResolvedExpr(location, Type::builtinInt()),
           errToTry(std::move(errToTry)),
           declaration(std::move(declaration)) {}
@@ -375,8 +386,12 @@ struct ResolvedModuleDecl : public ResolvedDecl {
     std::unique_ptr<ResolvedModuleDecl> nestedModule;
     std::vector<std::unique_ptr<ResolvedDecl>> declarations;
 
-    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ResolvedModuleDecl> nestedModule, std::vector<std::unique_ptr<ResolvedDecl>> declarations = {})
-        : ResolvedDecl(location, identifier, Type::builtinVoid(), false), nestedModule(std::move(nestedModule)), declarations(std::move(declarations)) {}
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier,
+                       std::unique_ptr<ResolvedModuleDecl> nestedModule,
+                       std::vector<std::unique_ptr<ResolvedDecl>> declarations = {})
+        : ResolvedDecl(location, identifier, std::string(identifier), Type::builtinVoid(), false),
+          nestedModule(std::move(nestedModule)),
+          declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

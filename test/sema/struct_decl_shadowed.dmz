@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 struct S {}
-
+extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 fn main() -> void {
   let const S = 1;
   let x: S;

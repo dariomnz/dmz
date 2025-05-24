@@ -6,9 +6,22 @@
 
 namespace DMZ {
 
-bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
-    const auto &[foundDecl, scopeIdx] = lookup_decl<ResolvedDecl>(decl.identifier);
+std::mutex Sema::m_moduleScopesMutex = {};
+std::unordered_multimap<std::string, ResolvedDecl *> Sema::m_moduleScopes = {};
 
+void Sema::dump_module_scopes() {
+    std::unique_lock lock(m_moduleScopesMutex);
+    for (auto &&[key, value] : m_moduleScopes) {
+        std::cerr << "Key: " << key << std::endl;
+        std::cerr << "Value: ";
+        value->dump();
+    }
+}
+
+bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
+    const auto &[foundDecl, scopeIdx] = lookup_decl<ResolvedDecl>(decl.identifier, m_currentModulePrefix);
+
+    // println("identifier " << std::quoted(decl.identifier) << " foundDecl " << foundDecl << " scopeIdx " << scopeIdx);
     if (foundDecl && scopeIdx == 0) {
         report(decl.location, "redeclaration of '" + std::string(decl.identifier) + '\'');
         return false;
@@ -16,19 +29,22 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 
     m_scopes.back().emplace_back(&decl);
 
-    // if (auto moduleDecl = dynamic_cast<ResolvedModuleDecl *>(&decl)) {
-    //     std::string modID(m_currentModulePrefix);
-    //     modID += moduleDecl->identifier;
-
-    //     m_moduleScopes.emplace(std::piecewise_construct, std::forward_as_tuple(modID),
-    //                            std::forward_as_tuple(moduleDecl));
-    // }
+    if (dynamic_cast<ResolvedFuncDecl *>(&decl) || dynamic_cast<ResolvedStructDecl *>(&decl) ||
+        dynamic_cast<ResolvedModuleDecl *>(&decl)) {
+        std::unique_lock lock(m_moduleScopesMutex);
+        std::string identifier(m_currentModulePrefix);
+        if (!dynamic_cast<ResolvedModuleDecl *>(&decl)) identifier += decl.identifier;
+        // println("identifier " << std::quoted(identifier));
+        m_moduleScopes.emplace(std::piecewise_construct, std::forward_as_tuple(identifier),
+                               std::forward_as_tuple(&decl));
+    }
 
     return true;
 }
 
 template <typename T>
 std::pair<T *, int> Sema::lookup_decl(const std::string_view id, const std::string_view module) {
+    // println("lookup_decl " << std::quoted(std::string(module) + std::string(id)));
     int scopeIdx = 0;
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         for (auto &&decl : *it) {
@@ -38,27 +54,34 @@ std::pair<T *, int> Sema::lookup_decl(const std::string_view id, const std::stri
 
             if (decl->identifier != id) continue;
 
-            return {correctDecl, scopeIdx};
+            // Permit various module decl
+            if (dynamic_cast<ResolvedModuleDecl *>(decl)) {
+                return {correctDecl, -1};
+            } else {
+                return {correctDecl, scopeIdx};
+            }
         }
 
         ++scopeIdx;
     }
-    // auto it_start = m_moduleScopes.find(module);
-    // size_t num_matches = m_moduleScopes.count(module);
-    // for (size_t i = 0; i < num_matches; i++) {
-    //     auto [key, value] = *it_start++;
-    //     if (value) {
-    //         for (auto &&decl : value->declarations) {
-    //             auto *correctDecl = dynamic_cast<T *>(decl.get());
+    {
+        std::unique_lock lock(m_moduleScopesMutex);
+        std::string identifier(module);
+        identifier += id;
+        auto it = m_moduleScopes.find(identifier);
+        if (it != m_moduleScopes.end()) {
+            auto *correctDecl = dynamic_cast<T *>((*it).second);
 
-    //             if (!correctDecl) continue;
-
-    //             if (decl->identifier != id) continue;
-
-    //             return {correctDecl, -1};
-    //         }
-    //     }
-    // }
+            if (correctDecl && correctDecl->identifier == id) {
+                // Permit various module decl
+                if (dynamic_cast<ResolvedModuleDecl *>((*it).second)) {
+                    return {correctDecl, -1};
+                } else {
+                    return {correctDecl, 0};
+                }
+            }
+        }
+    }
 
     return {nullptr, -1};
 }
@@ -81,20 +104,17 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     ScopedTimer st(Stats::type::semanticTime);
 
-    ScopeRAII globalScope(*this);
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
-
-    std::vector<std::unique_ptr<Decl>> withoutModules;
 
     for (auto &&decl : m_ast) {
         if (!dynamic_cast<const ModuleDecl *>(decl.get())) {
-            withoutModules.emplace_back(std::move(decl));
+            m_ast_withoutModules.emplace_back(std::move(decl));
         }
     }
     // Clear the withoutModules from m_ast
     std::erase_if(m_ast, [](const std::unique_ptr<Decl> &decl) { return decl.get() == nullptr; });
 
-    auto resolvedDecls = resolve_in_module_decl(withoutModules);
+    auto resolvedDecls = resolve_in_module_decl(m_ast_withoutModules);
 
     for (auto &&decl : resolvedDecls) {
         resolvedTree.emplace_back(std::move(decl));
@@ -112,12 +132,11 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
 
     if (error) return {};
 
+    // dump_module_scopes();
     return resolvedTree;
 }
 
-bool Sema::resolve_ast_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
-    ScopedTimer st(Stats::type::semanticTime);
-
+bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
     if (!resolve_in_module_body(decls)) {
         return false;
     }
@@ -134,61 +153,24 @@ bool Sema::resolve_ast_body(const std::vector<std::unique_ptr<ResolvedDecl>> &de
         }
     }
 
-    if (error) return false;
+    if (error) {
+        decls.clear();
+        return false;
+    }
 
+    // dump_module_scopes();
     return true;
 }
 
-std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
-    // auto decls = resolve_ast_decl();
-    // if (!resolve_ast_body(decls)) {
-    //     return {};
-    // }
-    // return decls;
+// std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
+//     ScopeRAII globalScope(*this);
+//     auto decls = resolve_ast_decl();
 
-    ScopedTimer st(Stats::type::semanticTime);
-
-    ScopeRAII globalScope(*this);
-    std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
-
-    std::vector<std::unique_ptr<Decl>> withoutModules;
-
-    for (auto &&decl : m_ast) {
-        if (!dynamic_cast<const ModuleDecl *>(decl.get())) {
-            withoutModules.emplace_back(std::move(decl));
-        }
-    }
-    // Clear the withoutModules from m_ast
-    std::erase_if(m_ast, [](const std::unique_ptr<Decl> &decl) { return decl.get() == nullptr; });
-
-    auto resolvedDecls = resolve_in_module_decl(withoutModules);
-
-    if (!resolve_in_module_body(resolvedDecls)) {
-        return {};
-    }
-
-    for (auto &&decl : resolvedDecls) {
-        resolvedTree.emplace_back(std::move(decl));
-    }
-
-    // Now resolve the modules
-    bool error = false;
-    for (auto &&decl : m_ast) {
-        if (const auto *mod = dynamic_cast<const ModuleDecl *>(decl.get())) {
-            auto resolvedModDecl = resolve_module_decl(*mod);
-            if (!resolve_module_body(*resolvedModDecl)) {
-                error = true;
-                continue;
-            }
-            resolvedTree.emplace_back(std::move(resolvedModDecl));
-            continue;
-        }
-    }
-
-    if (error) return {};
-
-    return resolvedTree;
-}
+//     if (!resolve_ast_body(decls)) {
+//         return {};
+//     }
+//     return decls;
+// }
 
 bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
     CFG cfg = CFGBuilder().build(fn);

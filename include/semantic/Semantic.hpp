@@ -14,10 +14,14 @@ class Sema {
    private:
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
+    std::vector<std::unique_ptr<Decl>> m_ast_withoutModules;
     std::vector<std::vector<ResolvedDecl *>> m_scopes;
 
+    static std::mutex m_moduleScopesMutex;
     // key: std::, std::example::
-    std::unordered_multimap<std::string_view, ResolvedModuleDecl *> m_moduleScopes;
+    static std::unordered_multimap<std::string, ResolvedDecl *> m_moduleScopes;
+
+    void dump_module_scopes();
 
     std::vector<std::vector<std::unique_ptr<ResolvedStmt>>> m_defers;
     ResolvedFunctionDecl *m_currentFunction;
@@ -37,18 +41,20 @@ class Sema {
             m_sema.m_defers.pop_back();
         }
     };
+    std::unique_ptr<ScopeRAII> m_globalScope;
 
    public:
-    explicit Sema(std::vector<std::unique_ptr<Decl>> &ast) : m_ast(std::move(ast)) {}
-    std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
+    explicit Sema(std::vector<std::unique_ptr<Decl>> ast)
+        : m_ast(std::move(ast)), m_globalScope(std::make_unique<ScopeRAII>(*this)) {}
+    // std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast_decl();
-    bool resolve_ast_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
+    bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
 
    private:
     template <typename T>
     std::pair<T *, int> lookup_decl(const std::string_view id, const std::string_view module = "");
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
-    std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
+    // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
