@@ -28,6 +28,7 @@ class Sema {
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
     std::string m_currentModulePrefix = "";
+    std::string m_currentImportPrefix = "";
     class ScopeRAII {
         Sema &m_sema;
 
@@ -52,7 +53,7 @@ class Sema {
 
    private:
     template <typename T>
-    std::pair<T *, int> lookup_decl(const std::string_view id, const std::string_view module = "");
+    std::pair<T *, int> lookup_decl(const std::string_view id);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
@@ -91,5 +92,8 @@ class Sema {
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
+    std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl);
+    bool resolve_import_check(ResolvedImportDecl &importDecl);
+    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef);
 };
 }  // namespace DMZ

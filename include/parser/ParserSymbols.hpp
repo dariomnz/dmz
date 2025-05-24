@@ -453,7 +453,7 @@ struct ModuleDeclRefExpr : public Expr {
     std::string_view identifier;
     std::unique_ptr<Expr> expr;
 
-    ModuleDeclRefExpr(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> expr = nullptr)
+    ModuleDeclRefExpr(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> expr)
         : Expr(location), identifier(identifier), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;

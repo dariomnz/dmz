@@ -1,0 +1,36 @@
+// RUN: compiler %s %S/module_ops.dmz -llvm-dump
+// RUN: diff <(compiler %s %S/module_ops.dmz -run) <(echo -n -e '1\n2\n3\n')
+
+import ops;
+import ops::integer;
+
+fn main() -> void {
+    let x = 1;
+    let y = 2;
+
+    ops::print(x);
+    ops::print(y);
+
+    let result = ops::integer::add(x, y);
+    
+    ops::print(result);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %y = alloca i32, align 4
+// CHECK-NEXT:   %result = alloca i32, align 4
+// CHECK-NEXT:   store i32 1, ptr %x, align 4
+// CHECK-NEXT:   store i32 2, ptr %y, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
+// CHECK-NEXT:   call void @ops__print(i32 %0)
+// CHECK-NEXT:   %1 = load i32, ptr %y, align 4
+// CHECK-NEXT:   call void @ops__print(i32 %1)
+// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %3 = load i32, ptr %y, align 4
+// CHECK-NEXT:   %4 = call i32 @ops__integer__add(i32 %2, i32 %3)
+// CHECK-NEXT:   store i32 %4, ptr %result, align 4
+// CHECK-NEXT:   %5 = load i32, ptr %result, align 4
+// CHECK-NEXT:   call void @ops__print(i32 %5)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

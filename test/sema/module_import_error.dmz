@@ -1,0 +1,18 @@
+// RUN: compiler %s %S/module_ops.dmz -res-dump
+
+import ops;
+import ops::integer;
+// CHECK: [[# @LINE + 1 ]]:13: error: module 'ops::float::' not found
+import ops::float;
+
+
+fn main() -> void {
+    let x = 1;
+    let y = 2;
+
+    ops::print(x);
+
+    let result = ops::integer::add(x, y);
+    
+    ops::print(result);
+}

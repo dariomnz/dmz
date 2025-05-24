@@ -1,0 +1,19 @@
+// RUN: compiler %s %S/module_ops.dmz -res-dump
+
+import ops;
+import ops::integer;
+
+
+fn main() -> void {
+    let x = 1;
+    let y = 2;
+
+    // CHECK: [[# @LINE + 1 ]]:10: error: symbol 'prints' not found
+    ops::prints(x);
+
+    let result = ops::integer::add(x, y);
+    // CHECK: [[# @LINE + 1 ]]:10: error: module 'ops::float::' not imported
+    ops::float::add(x, y);
+    
+    ops::print(result);
+}

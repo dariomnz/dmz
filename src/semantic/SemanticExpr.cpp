@@ -16,7 +16,16 @@ bool op_generate_bool(TokenType op) {
 }
 
 std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee) {
-    ResolvedDecl *decl = lookup_decl<ResolvedDecl>(declRefExpr.identifier).first;
+    // Search in the module scope
+    std::string modIdentifier(m_currentModulePrefix);
+    modIdentifier += declRefExpr.identifier;
+    ResolvedDecl *decl = lookup_decl<ResolvedDecl>(modIdentifier).first;
+    if (!decl) {
+        // Search in the imports
+        std::string modIdentifier(m_currentImportPrefix);
+        modIdentifier += declRefExpr.identifier;
+        decl = lookup_decl<ResolvedDecl>(modIdentifier).first;
+    }
     if (!decl) return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
 
     if (!isCallee && dynamic_cast<ResolvedFuncDecl *>(decl))
@@ -127,6 +136,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
         return resolve_try_err_expr(*tryErrExpr);
+    }
+    if (const auto *modDeclRefExpr = dynamic_cast<const ModuleDeclRefExpr *>(&expr)) {
+        return resolve_module_decl_ref_expr(*modDeclRefExpr);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -340,5 +352,29 @@ std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr 
     } else {
         dmz_unreachable("malformed TryErrExpr");
     }
+}
+
+std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef) {
+    std::string prevImportPrefix(m_currentImportPrefix);
+    m_currentImportPrefix += moduleDeclRef.identifier;
+    m_currentImportPrefix += "::";
+    defer([&]() { m_currentImportPrefix = prevImportPrefix; });
+
+    const ResolvedModuleDecl *moduleDecl = nullptr;
+    // Only check imported of the last module
+    if (!dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
+        const auto &[importDecl, idx] = lookup_decl<ResolvedImportDecl>(m_currentImportPrefix);
+        if (!importDecl) {
+            return report(moduleDeclRef.location, "module '" + m_currentImportPrefix + "' not imported");
+        }
+        if (!importDecl->moduleDecl) {
+            return nullptr;
+        }
+        moduleDecl = importDecl->moduleDecl;
+    }
+
+    varOrReturn(resolvedExpr, resolve_expr(*moduleDeclRef.expr));
+
+    return std::make_unique<ResolvedModuleDeclRefExpr>(moduleDeclRef.location, moduleDecl, std::move(resolvedExpr));
 }
 }  // namespace DMZ

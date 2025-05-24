@@ -32,7 +32,10 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     }
 
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
-    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.withinModule;
+    std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)
+                                    ? std::string(functionDecl.identifier)
+                                    : functionDecl.modIdentifier;
+    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(modIdentifier);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }
@@ -72,7 +75,8 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
 
 void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     m_currentFunction = &functionDecl;
-    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : functionDecl.withinModule;
+    std::string funcName =
+        functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(functionDecl.modIdentifier);
     auto *function = m_module.getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(m_context, "entry", function);
@@ -146,7 +150,7 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
 // }
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    std::string structName("struct." + structDecl.withinModule);
+    std::string structName("struct." + generate_symbol_name(structDecl.modIdentifier));
     llvm::StructType::create(m_context, structName);
 }
 
@@ -168,7 +172,8 @@ void Codegen::generate_err_no_err() {
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
-        m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(err->withinModule, "err.str." + err->withinModule);
+        auto symbol_name = generate_symbol_name(err->modIdentifier);
+        m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(symbol_name, "err.str." + symbol_name);
     }
 }
 
@@ -187,7 +192,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
         else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_decl(*sd);
         else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
-                 dynamic_cast<const ResolvedModuleDecl *>(decl.get()))
+                 dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
+                 dynamic_cast<const ResolvedImportDecl *>(decl.get()))
             continue;
         else {
             decl->dump();
@@ -207,7 +213,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
 
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
+        dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
+        dynamic_cast<const ResolvedImportDecl *>(decl.get()))
             continue;
         else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_body(*fn);

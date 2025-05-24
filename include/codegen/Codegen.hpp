@@ -79,5 +79,6 @@ class Codegen {
     llvm::Value *generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal = false);
+    std::string generate_symbol_name(std::string modIdentifier);
 };
 }  // namespace DMZ

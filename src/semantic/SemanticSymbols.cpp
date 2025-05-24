@@ -75,14 +75,14 @@ void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << withinModule << " -> " << type << '\n';
+    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << modIdentifier << " -> " << type << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);
 }
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedFunctionDecl " << withinModule << " -> " << type << '\n';
+    std::cerr << indent(level) << "ResolvedFunctionDecl " << modIdentifier << " -> " << type << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);
@@ -165,7 +165,7 @@ void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedStructDecl:" << type << " " << withinModule << '\n';
+    std::cerr << indent(level) << "ResolvedStructDecl:" << type << " " << modIdentifier << '\n';
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1);
@@ -199,12 +199,12 @@ void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedErrDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDecl " << withinModule << '\n';
+    std::cerr << indent(level) << "ResolvedErrDecl " << modIdentifier << '\n';
     if (onlySelf) return;
 }
 
 void ResolvedErrDeclRefExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDeclRefExpr " << decl.withinModule << '\n';
+    std::cerr << indent(level) << "ResolvedErrDeclRefExpr " << decl.modIdentifier << '\n';
     if (onlySelf) return;
 }
 
@@ -239,11 +239,30 @@ void ResolvedTryErrExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedModuleDecl " << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedModuleDecl " << modIdentifier << '\n';
 
     if (onlySelf) return;
     for (auto &&decl : declarations) decl->dump(level + 1);
 
     if (nestedModule) nestedModule->dump(level + 1);
+}
+
+void ResolvedImportDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedImportDecl " << modIdentifier << '\n';
+
+    if (onlySelf) return;
+
+    if (nestedImport) nestedImport->dump(level + 1);
+}
+
+void ResolvedModuleDeclRefExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedModuleDeclRefExpr ";
+    if (decl) {
+        std::cerr << decl->modIdentifier;
+    }
+    std::cerr << '\n';
+
+    if (onlySelf) return;
+    if (expr) expr->dump(level + 1);
 }
 }  // namespace DMZ

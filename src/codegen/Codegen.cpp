@@ -16,11 +16,6 @@ Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree,
       m_module(*ptr_module) {
     m_module.setSourceFileName(sourcePath);
     m_module.setTargetTriple(llvm::sys::getDefaultTargetTriple());
-
-    // for (auto &&resolved : m_resolvedTree) {
-    //     println(resolved->identifier << " " << resolved.get());
-    //     resolved->dump();
-    // }
 }
 
 std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
@@ -148,5 +143,17 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
         ret->setBody(fieldTypes);
     }
     return ret;
+}
+
+std::string Codegen::generate_symbol_name(std::string modIdentifier) {
+    std::string_view to_find = "::";
+    std::string_view to_replace = "__";
+
+    size_t pos = modIdentifier.find(to_find);
+    while (pos != std::string::npos) {
+        modIdentifier.replace(pos, to_find.length(), to_replace);
+        pos = modIdentifier.find(to_find, pos + to_replace.length());
+    }
+    return modIdentifier;
 }
 }  // namespace DMZ

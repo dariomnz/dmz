@@ -1,14 +1,15 @@
 // RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
 module ops;
-extern fn printf(fmt:&char[], ...) -> int; 
-fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 fn print(x:int) -> void {
     println(x);
 }
 
-// CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedFunctionDecl print -> void
+extern fn printf(fmt:&char[], ...) -> int;
+
+fn println(const n:int) -> void {printf(&"%d\n", n);}
+// CHECK: ResolvedModuleDecl ops::
+// CHECK-NEXT:   ResolvedFunctionDecl ops::print -> void
 // CHECK-NEXT:     ResolvedParamDecl:int x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void println
@@ -23,9 +24,9 @@ fn add(x:int, y:int) -> int {
 fn sub(x:int, y:int) -> int {
     return x - y;
 }
-// CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedModuleDecl integer
-// CHECK-NEXT:     ResolvedFunctionDecl add -> int
+// CHECK: ResolvedModuleDecl ops::
+// CHECK-NEXT:   ResolvedModuleDecl ops::integer
+// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::add -> int
 // CHECK-NEXT:       ResolvedParamDecl:int x
 // CHECK-NEXT:       ResolvedParamDecl:int y
 // CHECK-NEXT:       ResolvedBlock
@@ -33,7 +34,7 @@ fn sub(x:int, y:int) -> int {
 // CHECK-NEXT:           ResolvedBinaryOperator:int '+'
 // CHECK-NEXT:             ResolvedDeclRefExpr:int x
 // CHECK-NEXT:             ResolvedDeclRefExpr:int y
-// CHECK-NEXT:     ResolvedFunctionDecl sub -> int
+// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::sub -> int
 // CHECK-NEXT:       ResolvedParamDecl:int x
 // CHECK-NEXT:       ResolvedParamDecl:int y
 // CHECK-NEXT:       ResolvedBlock

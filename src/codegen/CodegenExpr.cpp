@@ -64,15 +64,22 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *tryErr = dynamic_cast<const ResolvedTryErrExpr *>(&expr)) {
         return generate_try_err_expr(*tryErr);
     }
+    if (auto *modDeclRef = dynamic_cast<const ResolvedModuleDeclRefExpr *>(&expr)) {
+        return generate_expr(*modDeclRef->expr);
+    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     const ResolvedFuncDecl &calleeDecl = call.callee;
-    llvm::Function *callee = m_module.getFunction(calleeDecl.withinModule);
+    std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&calleeDecl)
+                                    ? std::string(calleeDecl.identifier)
+                                    : calleeDecl.modIdentifier;
+    auto symbolName = generate_symbol_name(modIdentifier);
+    llvm::Function *callee = m_module.getFunction(generate_symbol_name(symbolName));
     if (!callee) {
-        // println("calleeDecl.withinModule " << calleeDecl.withinModule);
+        // println("symbolName " << symbolName);
         // call.dump();
         // println(&calleeDecl << " " << calleeDecl.identifier);
         // println(&calleeDecl << " " << calleeDecl.params.size());
@@ -82,8 +89,8 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 
         // (&calleeDecl)->dump();
         generate_function_decl(calleeDecl);
-        callee = m_module.getFunction(calleeDecl.withinModule);
-        // println("Cannot find " << calleeDecl.withinModule);
+        callee = m_module.getFunction(symbolName);
+        // println("Cannot find " << symbolName);
         assert(callee && "Cannot generate declaration of extern function");
     }
 

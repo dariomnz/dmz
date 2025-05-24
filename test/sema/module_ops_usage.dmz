@@ -1,6 +1,10 @@
-// RUN: compiler %s module_ops.dmz -res-dump
+// RUN: compiler %s %S/module_ops.dmz -res-dump
 
 import ops;
+// CHECK: ResolvedImportDecl ops::
+import ops::integer;
+// CHECK: ResolvedImportDecl ops::
+// CHECK-NEXT: ResolvedImportDecl ops::integer::
 
 fn main() -> void {
     let x = 1;
@@ -12,3 +16,26 @@ fn main() -> void {
     
     ops::print(result);
 }
+// CHECK: ResolvedFunctionDecl main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int x
+// CHECK-NEXT:         ResolvedIntLiteral:int '1'
+// CHECK-NEXT:         | value:int 1
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int y
+// CHECK-NEXT:         ResolvedIntLiteral:int '2'
+// CHECK-NEXT:         | value:int 2
+// CHECK-NEXT:     ResolvedModuleDeclRefExpr ops::
+// CHECK-NEXT:       ResolvedCallExpr:void print
+// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:int result
+// CHECK-NEXT:         ResolvedModuleDeclRefExpr 
+// CHECK-NEXT:           ResolvedModuleDeclRefExpr ops::integer::
+// CHECK-NEXT:             ResolvedCallExpr:int add
+// CHECK-NEXT:               ResolvedDeclRefExpr:int x
+// CHECK-NEXT:               ResolvedDeclRefExpr:int y
+// CHECK-NEXT:     ResolvedModuleDeclRefExpr ops::
+// CHECK-NEXT:       ResolvedCallExpr:void print
+// CHECK-NEXT:         ResolvedDeclRefExpr:int result
