@@ -23,7 +23,7 @@ class Sema {
 
     void dump_module_scopes();
 
-    std::vector<std::vector<std::unique_ptr<ResolvedStmt>>> m_defers;
+    std::vector<std::vector<ResolvedDeferStmt*>> m_defers;
     ResolvedFunctionDecl *m_currentFunction;
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
@@ -83,6 +83,7 @@ class Sema {
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
+    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope);
     std::unique_ptr<ResolvedErrGroupDecl> resolve_err_group_decl(const ErrGroupDecl &errGroupDecl);
     std::unique_ptr<ResolvedErrDeclRefExpr> resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef);
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);

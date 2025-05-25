@@ -326,7 +326,10 @@ std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUn
 
     Type unwrapType = resolvedToUnwrap->type;
     unwrapType.isOptional = false;
-    return std::make_unique<ResolvedErrUnwrapExpr>(errUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap));
+
+    auto defers = resolve_defer_ref_stmt(false);
+    return std::make_unique<ResolvedErrUnwrapExpr>(errUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap),
+                                                   std::move(defers));
 }
 
 std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchErrExpr &catchErrExpr) {

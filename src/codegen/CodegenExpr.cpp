@@ -286,6 +286,11 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
+    for (auto &&d : errUnwrapExpr.defers)
+    {
+        generate_block(*d->resolvedDefer.block);
+    }
+    
     if (m_currentFunction->type.isOptional) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
         store_value(err_value, dst, Type::builtinErr("err"));

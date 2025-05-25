@@ -17,6 +17,9 @@ void Codegen::generate_block(const ResolvedBlock &block) {
         // no need for generating the remaining instructions.
         if (!m_builder.GetInsertBlock()) break;
     }
+    for (auto &&d : block.defers) {
+        generate_block(*d->resolvedDefer.block);
+    }
 }
 
 llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
@@ -43,7 +46,6 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
         return nullptr;
     }
     if (auto *defer = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
-        generate_block(*defer->block);
         return nullptr;
     }
     stmt.dump();
@@ -58,6 +60,10 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
         } else {
             store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional());
         }
+    }
+
+    for (auto &&d : stmt.defers) {
+        generate_block(*d->resolvedDefer.block);
     }
 
     assert(retBB && "function with return stmt doesn't have a return block");

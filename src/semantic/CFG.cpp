@@ -19,6 +19,10 @@ static inline bool is_terminator(const ResolvedStmt &stmt) {
 
 int CFGBuilder::insert_block(const ResolvedBlock &block, int succ) {
     const auto &stmts = block.statements;
+    for (auto &&d : block.defers)
+    {
+        succ = insert_block(*d->resolvedDefer.block, succ);
+    }
 
     bool insertNewBlock = true;
     for (auto it = stmts.rbegin(); it != stmts.rend(); ++it) {
@@ -59,13 +63,18 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
         return insert_block(*blockStmt, block);
     }
     if (auto *deferStmt = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
-        return insert_block(*deferStmt->block, block);
+        return block;
     }
     stmt.dump();
     dmz_unreachable("unexpected expression");
 }
 
 int CFGBuilder::insert_return_stmt(const ResolvedReturnStmt &stmt, int block) {
+    for (auto &&d : stmt.defers)
+    {
+        block = insert_block(*d->resolvedDefer.block, block);
+    }
+
     block = cfg.insert_new_block_before(cfg.exit, true);
 
     cfg.insert_stmt(&stmt, block);
@@ -117,6 +126,13 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         } else {
             dmz_unreachable("malformed TryErrExpr");
         }
+    }
+    if (const auto *unwrapExpr = dynamic_cast<const ResolvedErrUnwrapExpr *>(&expr)) {
+        for (auto &&d : unwrapExpr->defers)
+        {
+            block = insert_block(*d->resolvedDefer.block, block);
+        }
+        return insert_expr(*unwrapExpr->errToUnwrap, block);
     }
 
     return block;

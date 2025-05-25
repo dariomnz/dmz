@@ -53,11 +53,16 @@ struct ResolvedDecl {
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
 };
 
+// Forward declaration 
+struct ResolvedDeferRefStmt;
+
 struct ResolvedBlock : public ResolvedStmt {
     std::vector<std::unique_ptr<ResolvedStmt>> statements;
+    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
 
-    ResolvedBlock(SourceLocation location, std::vector<std::unique_ptr<ResolvedStmt>> statements)
-        : ResolvedStmt(location), statements(std::move(statements)) {}
+    ResolvedBlock(SourceLocation location, std::vector<std::unique_ptr<ResolvedStmt>> statements,
+                  std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedStmt(location), statements(std::move(statements)), defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const;
 };
@@ -279,9 +284,11 @@ struct ResolvedAssignment : public ResolvedStmt {
 
 struct ResolvedReturnStmt : public ResolvedStmt {
     std::unique_ptr<ResolvedExpr> expr;
+    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
 
-    ResolvedReturnStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> expr = nullptr)
-        : ResolvedStmt(location), expr(std::move(expr)) {}
+    ResolvedReturnStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> expr,
+                       std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedStmt(location), expr(std::move(expr)), defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -311,12 +318,19 @@ struct ResolvedStructInstantiationExpr : public ResolvedExpr {
 };
 
 struct ResolvedDeferStmt : public ResolvedStmt {
-    std::shared_ptr<ResolvedBlock> block;
+    std::unique_ptr<ResolvedBlock> block;
 
-    ResolvedDeferStmt(SourceLocation location, std::shared_ptr<ResolvedBlock> block)
-        : ResolvedStmt(location), block(block) {}
+    ResolvedDeferStmt(SourceLocation location, std::unique_ptr<ResolvedBlock> block)
+        : ResolvedStmt(location), block(std::move(block)) {}
 
-    ResolvedDeferStmt(const ResolvedDeferStmt &deferStmt) : ResolvedStmt(deferStmt.location), block(deferStmt.block) {}
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedDeferRefStmt : public ResolvedStmt {
+    ResolvedDeferStmt &resolvedDefer;
+
+    ResolvedDeferRefStmt(ResolvedDeferStmt &resolvedDefer)
+        : ResolvedStmt(resolvedDefer.location), resolvedDefer(resolvedDefer) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -350,9 +364,11 @@ struct ResolvedErrGroupDecl : public ResolvedDecl {
 
 struct ResolvedErrUnwrapExpr : public ResolvedExpr {
     std::unique_ptr<ResolvedExpr> errToUnwrap;
+    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
 
-    ResolvedErrUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errToUnwrap)
-        : ResolvedExpr(location, unwrapType), errToUnwrap(std::move(errToUnwrap)) {}
+    ResolvedErrUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errToUnwrap,
+                          std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedExpr(location, unwrapType), errToUnwrap(std::move(errToUnwrap)), defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

@@ -60,6 +60,7 @@ void ResolvedBlock::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     for (auto &&stmt : statements) stmt->dump(level + 1);
+    for (auto &&d : defers) d->dump(level + 1);
 }
 
 void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
@@ -95,6 +96,7 @@ void ResolvedReturnStmt::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     if (expr) expr->dump(level + 1);
+    for (auto &&d : defers) d->dump(level + 1);
 }
 
 void ResolvedBinaryOperator::dump(size_t level, bool onlySelf) const {
@@ -198,6 +200,12 @@ void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {
     block->dump(level + 1);
 }
 
+void ResolvedDeferRefStmt::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedDeferRefStmt\n";
+    if (onlySelf) return;
+    resolvedDefer.block->dump(level + 1);
+}
+
 void ResolvedErrDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedErrDecl " << modIdentifier << '\n';
     if (onlySelf) return;
@@ -220,6 +228,7 @@ void ResolvedErrUnwrapExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     errToUnwrap->dump(level + 1);
+    for (auto &&d : defers) d->dump(level + 1);
 }
 
 void ResolvedCatchErrExpr::dump(size_t level, bool onlySelf) const {
