@@ -97,7 +97,7 @@ std::string Lexer::read_file() {
     debug_msg("Begin");
     auto size = std::filesystem::file_size(m_file_name);
     std::string content(size, '\0');
-    std::ifstream in(m_file_name);
+    std::ifstream in{std::string(m_file_name)};
     in.read(&content[0], size);
     debug_msg("End");
     return content;

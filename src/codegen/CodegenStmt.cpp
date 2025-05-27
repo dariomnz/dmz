@@ -45,7 +45,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
         generate_block(*block);
         return nullptr;
     }
-    if (auto *defer = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
+    if (dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
         return nullptr;
     }
     stmt.dump();

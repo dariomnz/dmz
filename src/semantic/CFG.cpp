@@ -19,8 +19,7 @@ static inline bool is_terminator(const ResolvedStmt &stmt) {
 
 int CFGBuilder::insert_block(const ResolvedBlock &block, int succ) {
     const auto &stmts = block.statements;
-    for (auto &&d : block.defers)
-    {
+    for (auto &&d : block.defers) {
         succ = insert_block(*d->resolvedDefer.block, succ);
     }
 
@@ -62,7 +61,7 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *blockStmt = dynamic_cast<const ResolvedBlock *>(&stmt)) {
         return insert_block(*blockStmt, block);
     }
-    if (auto *deferStmt = dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
+    if (dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
         return block;
     }
     stmt.dump();
@@ -70,8 +69,7 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
 }
 
 int CFGBuilder::insert_return_stmt(const ResolvedReturnStmt &stmt, int block) {
-    for (auto &&d : stmt.defers)
-    {
+    for (auto &&d : stmt.defers) {
         block = insert_block(*d->resolvedDefer.block, block);
     }
 
@@ -128,8 +126,7 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         }
     }
     if (const auto *unwrapExpr = dynamic_cast<const ResolvedErrUnwrapExpr *>(&expr)) {
-        for (auto &&d : unwrapExpr->defers)
-        {
+        for (auto &&d : unwrapExpr->defers) {
             block = insert_block(*d->resolvedDefer.block, block);
         }
         return insert_expr(*unwrapExpr->errToUnwrap, block);

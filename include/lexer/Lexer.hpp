@@ -99,12 +99,8 @@ class Lexer {
     std::string read_file();
     void advance(int num = 1);
 
-   public:
-    const std::string& get_file_name() { return m_file_name; }
-    const std::string& get_file_content() { return m_file_content; }
-
    private:
-    std::string m_file_name;
+    std::string_view m_file_name;
     std::string m_file_content;
     size_t m_position = 0;
     size_t m_line = 0;
