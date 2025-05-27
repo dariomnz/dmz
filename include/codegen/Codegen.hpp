@@ -15,16 +15,14 @@ namespace DMZ {
 
 class Codegen {
     static llvm::orc::ThreadSafeContext get_shared_context() {
-        static std::unique_ptr<llvm::LLVMContext> sc = std::make_unique<llvm::LLVMContext>();
-        static llvm::orc::ThreadSafeContext tsc(std::move(sc));
+        static llvm::orc::ThreadSafeContext tsc(std::make_unique<llvm::LLVMContext>());
         return tsc;
     }
     const std::vector<std::unique_ptr<ResolvedDecl>> &m_resolvedTree;
 
-    llvm::LLVMContext &m_context;
+    llvm::LLVMContext* m_context;
     llvm::IRBuilder<> m_builder;
-    std::unique_ptr<llvm::Module> ptr_module;
-    llvm::Module &m_module;
+    std::unique_ptr<llvm::Module> m_module;
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;

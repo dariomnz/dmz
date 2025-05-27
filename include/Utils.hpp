@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <optional>
+#include <mutex>
 
 namespace DMZ {
 
@@ -31,6 +32,8 @@ struct SourceLocation {
 
 [[maybe_unused]] static inline std::nullptr_t report(SourceLocation loc, std::string_view message,
                                                      bool isWarning = false) {
+    static std::mutex reportMutex;
+    std::unique_lock lock(reportMutex);
     std::cerr << loc << ':' << (isWarning ? " warning: " : " error: ") << message << '\n';
 
     return nullptr;

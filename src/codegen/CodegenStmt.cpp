@@ -74,11 +74,11 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
 llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
     llvm::Function *function = get_current_function();
 
-    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true");
-    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit");
+    auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true");
+    auto *exitBB = llvm::BasicBlock::Create(*m_context, "if.exit");
 
     llvm::BasicBlock *elseBB = exitBB;
-    if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(m_context, "if.false");
+    if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(*m_context, "if.false");
 
     llvm::Value *cond = generate_expr(*stmt.condition);
     m_builder.CreateCondBr(int_to_bool(cond), trueBB, elseBB);
@@ -103,9 +103,9 @@ llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
 llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
     llvm::Function *function = get_current_function();
 
-    auto *header = llvm::BasicBlock::Create(m_context, "while.cond", function);
-    auto *body = llvm::BasicBlock::Create(m_context, "while.body", function);
-    auto *exit = llvm::BasicBlock::Create(m_context, "while.exit", function);
+    auto *header = llvm::BasicBlock::Create(*m_context, "while.cond", function);
+    auto *body = llvm::BasicBlock::Create(*m_context, "while.body", function);
+    auto *exit = llvm::BasicBlock::Create(*m_context, "while.exit", function);
 
     m_builder.CreateBr(header);
 

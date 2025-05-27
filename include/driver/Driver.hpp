@@ -50,13 +50,13 @@ class Driver {
     using Type_Modules = std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>>;
     using Type_Module = std::unique_ptr<llvm::orc::ThreadSafeModule>;
 
-    void check_sources_pass(const Type_Sources& sources);
-    Type_Lexers lexer_pass(const Type_Sources& sources);
-    Type_Asts parser_pass(const Type_Lexers& lexers);
-    Type_ResolvedTrees semantic_pass(Type_Asts asts);
-    Type_Modules codegen_pass(Type_ResolvedTrees resolvedTrees);
-    Type_Module linker_pass(Type_Modules modules);
-    int jit_pass(Type_Module module);
-    int generate_exec_pass(Type_Module module);
+    void check_sources_pass(Type_Sources& sources);
+    Type_Lexers lexer_pass(Type_Sources& sources);
+    Type_Asts parser_pass(Type_Lexers& lexers);
+    Type_ResolvedTrees semantic_pass(Type_Asts& asts);
+    Type_Modules codegen_pass(Type_ResolvedTrees& resolvedTrees);
+    Type_Module linker_pass(Type_Modules& modules);
+    int jit_pass(Type_Module& module);
+    int generate_exec_pass(Type_Module& module);
 };
 }  // namespace DMZ

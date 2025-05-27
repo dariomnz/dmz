@@ -65,7 +65,7 @@ void Driver::check_exit() {
     if (m_haveError || m_haveNormalExit) exit(EXIT_SUCCESS);
 }
 
-void Driver::check_sources_pass(const Type_Sources &sources) {
+void Driver::check_sources_pass(Type_Sources &sources) {
     if (sources.empty()) {
         error("no source files specified");
         m_haveError = true;
@@ -85,7 +85,7 @@ void Driver::check_sources_pass(const Type_Sources &sources) {
     }
 }
 
-Driver::Type_Lexers Driver::lexer_pass(const Type_Sources &sources) {
+Driver::Type_Lexers Driver::lexer_pass(Type_Sources &sources) {
     std::vector<std::unique_ptr<Lexer>> lexers;
     lexers.resize(sources.size());
     for (size_t index = 0; index < sources.size(); index++) {
@@ -109,7 +109,7 @@ Driver::Type_Lexers Driver::lexer_pass(const Type_Sources &sources) {
     return lexers;
 }
 
-Driver::Type_Asts Driver::parser_pass(const Type_Lexers &lexers) {
+Driver::Type_Asts Driver::parser_pass(Type_Lexers &lexers) {
     std::vector<std::vector<std::unique_ptr<Decl>>> asts;
     asts.resize(lexers.size());
     for (size_t index = 0; index < lexers.size(); index++) {
@@ -136,14 +136,14 @@ Driver::Type_Asts Driver::parser_pass(const Type_Lexers &lexers) {
     return asts;
 }
 
-Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts asts) {
+Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts &asts) {
     std::vector<std::unique_ptr<Sema>> semas;
     std::vector<std::vector<std::unique_ptr<ResolvedDecl>>> resolvedTrees;
     semas.resize(asts.size());
     resolvedTrees.resize(asts.size());
     std::barrier barrier(asts.size());
     for (size_t index = 0; index < asts.size(); index++) {
-        debug_msg("Ast[" << index << "] size " << ast.size());
+        debug_msg("Ast[" << index << "] size " << asts[index].size());
         m_workers.submit([&, index]() {
             semas[index] = std::make_unique<Sema>(std::move(asts[index]));
             resolvedTrees[index] = semas[index]->resolve_ast_decl();
@@ -190,15 +190,13 @@ Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts asts) {
     return resolvedTrees;
 }
 
-Driver::Type_Modules Driver::codegen_pass(Type_ResolvedTrees resolvedTrees) {
+Driver::Type_Modules Driver::codegen_pass(Type_ResolvedTrees &resolvedTrees) {
     std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules;
     modules.resize(resolvedTrees.size());
-    size_t i = 0;
-    for (auto &&resolvedTree : resolvedTrees) {
-        size_t index = i++;
-        debug_msg("resolvedTree[" << index << "] size " << resolvedTree.size());
+    for (size_t index = 0; index < resolvedTrees.size(); index++) {
+        debug_msg("resolvedTree[" << index << "] size " << resolvedTrees[index].size());
         m_workers.submit([&, index]() {
-            Codegen codegen(resolvedTree, m_options.sources[index].c_str());
+            Codegen codegen(resolvedTrees[index], m_options.sources[index].c_str());
             modules[index] = codegen.generate_ir();
         });
     }
@@ -207,7 +205,7 @@ Driver::Type_Modules Driver::codegen_pass(Type_ResolvedTrees resolvedTrees) {
     return modules;
 }
 
-Driver::Type_Module Driver::linker_pass(Type_Modules modules) {
+Driver::Type_Module Driver::linker_pass(Type_Modules &modules) {
     debug_msg("modules size " << modules.size());
     Linker linker(std::move(modules));
     auto module = linker.link_modules();
@@ -220,7 +218,7 @@ Driver::Type_Module Driver::linker_pass(Type_Modules modules) {
     return module;
 }
 
-int Driver::jit_pass(Type_Module module) {
+int Driver::jit_pass(Type_Module &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -267,7 +265,7 @@ int Driver::jit_pass(Type_Module module) {
         return WEXITSTATUS(status);
     }
 }
-int Driver::generate_exec_pass(Type_Module module) {
+int Driver::generate_exec_pass(Type_Module &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -341,19 +339,19 @@ int Driver::main() {
     auto asts = parser_pass(lexers);
     check_exit();
 
-    auto resolvedTrees = semantic_pass(std::move(asts));
+    auto resolvedTrees = semantic_pass(asts);
     check_exit();
 
-    auto modules = codegen_pass(std::move(resolvedTrees));
+    auto modules = codegen_pass(resolvedTrees);
     check_exit();
 
-    auto module = linker_pass(std::move(modules));
+    auto module = linker_pass(modules);
     check_exit();
 
     if (m_options.run) {
-        return jit_pass(std::move(module));
+        return jit_pass(module);
     } else {
-        return generate_exec_pass(std::move(module));
+        return generate_exec_pass(module);
     }
 }
 }  // namespace DMZ

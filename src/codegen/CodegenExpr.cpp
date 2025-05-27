@@ -77,7 +77,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
                                     ? std::string(calleeDecl.identifier)
                                     : calleeDecl.modIdentifier;
     auto symbolName = generate_symbol_name(modIdentifier);
-    llvm::Function *callee = m_module.getFunction(generate_symbol_name(symbolName));
+    llvm::Function *callee = m_module->getFunction(generate_symbol_name(symbolName));
     if (!callee) {
         // println("symbolName " << symbolName);
         // call.dump();
@@ -89,7 +89,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 
         // (&calleeDecl)->dump();
         generate_function_decl(calleeDecl);
-        callee = m_module.getFunction(symbolName);
+        callee = m_module->getFunction(symbolName);
         // println("Cannot find " << symbolName);
         assert(callee && "Cannot generate declaration of extern function");
     }
@@ -149,8 +149,8 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
         auto *rhsTag = isOr ? "or.rhs" : "and.rhs";
         auto *mergeTag = isOr ? "or.merge" : "and.merge";
 
-        auto *rhsBB = llvm::BasicBlock::Create(m_context, rhsTag, function);
-        auto *mergeBB = llvm::BasicBlock::Create(m_context, mergeTag, function);
+        auto *rhsBB = llvm::BasicBlock::Create(*m_context, rhsTag, function);
+        auto *mergeBB = llvm::BasicBlock::Create(*m_context, mergeTag, function);
 
         llvm::BasicBlock *trueBB = isOr ? mergeBB : rhsBB;
         llvm::BasicBlock *falseBB = isOr ? rhsBB : mergeBB;
@@ -207,7 +207,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
     const auto *binop = dynamic_cast<const ResolvedBinaryOperator *>(&op);
 
     if (binop && binop->op == TokenType::op_or) {
-        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(m_context, "or.lhs.false", function);
+        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(*m_context, "or.lhs.false", function);
         generate_conditional_operator(*binop->lhs, trueBB, nextBB);
 
         m_builder.SetInsertPoint(nextBB);
@@ -216,7 +216,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
     }
 
     if (binop && binop->op == TokenType::op_and) {
-        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(m_context, "and.lhs.true", function);
+        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(*m_context, "and.lhs.true", function);
         generate_conditional_operator(*binop->lhs, nextBB, falseBB);
 
         m_builder.SetInsertPoint(nextBB);
@@ -271,8 +271,8 @@ llvm::Value *Codegen::generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &e
 llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr) {
     llvm::Function *function = get_current_function();
 
-    auto *trueBB = llvm::BasicBlock::Create(m_context, "if.true.unwrap");
-    auto *exitBB = llvm::BasicBlock::Create(m_context, "if.exit.unwrap");
+    auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.unwrap");
+    auto *exitBB = llvm::BasicBlock::Create(*m_context, "if.exit.unwrap");
 
     llvm::BasicBlock *elseBB = exitBB;
 
@@ -298,7 +298,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
-        llvm::Function *trapIntrinsic = llvm::Intrinsic::getDeclaration(&m_module, llvm::Intrinsic::trap);
+        llvm::Function *trapIntrinsic = llvm::Intrinsic::getDeclaration(m_module.get(), llvm::Intrinsic::trap);
         m_builder.CreateCall(trapIntrinsic, {});
     }
     break_into_bb(exitBB);
