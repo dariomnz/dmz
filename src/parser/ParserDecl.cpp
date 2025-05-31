@@ -26,7 +26,7 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
                 parse_list_with_trailing_comma<ParamDecl>({TokenType::par_l, "expected '('"}, &Parser::parse_param_decl,
                                                           {TokenType::par_r, "expected ')'"}));
 
-    matchOrReturn(TokenType::return_type, "expected '->'");
+    matchOrReturn(TokenType::return_arrow, "expected '->'");
     eat_next_token();  // eat '->'
 
     varOrReturn(type, parse_type());

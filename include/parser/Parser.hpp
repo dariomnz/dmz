@@ -44,10 +44,17 @@ class Parser {
     void synchronize_on(std::unordered_set<TokenType> types);
     void synchronize();
 
-    const std::unordered_set<TokenType> top_level_tokens = {TokenType::eof,       TokenType::kw_fn,
-                                                                   TokenType::kw_struct, TokenType::kw_extern,
-                                                                   TokenType::kw_module, TokenType::kw_import};
+    const std::unordered_set<TokenType> top_level_tokens = {
+        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct,
+        TokenType::kw_extern, TokenType::kw_module, TokenType::kw_import,
+    };
+    const std::unordered_set<TokenType> top_stmt_level_tokens = {
+        TokenType::kw_if,  TokenType::kw_while, TokenType::kw_return,
+        TokenType::kw_let, TokenType::kw_defer, TokenType::kw_switch,
+    };
+
     bool is_top_level_token(TokenType tok);
+    bool is_top_stmt_level_token(TokenType tok);
 
    public:
     std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file(bool expectMain = false);
@@ -88,5 +95,7 @@ class Parser {
     std::unique_ptr<ModuleDecl> parse_module_decl(bool haveEatModule = false);
     std::vector<std::unique_ptr<Decl>> parse_in_module_decl();
     std::unique_ptr<ImportDecl> parse_import_decl(bool haveEatImport = false);
+    std::unique_ptr<SwitchStmt> parse_switch_stmt();
+    std::unique_ptr<CaseStmt> parse_case_stmt();
 };
 }  // namespace DMZ

@@ -6,10 +6,10 @@ namespace DMZ {
 //   ::= 'return' <expr>? ';'
 std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
     SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'return'
     if (restrictions & ReturnNotAllowed) {
         return report(location, "unexpected return statement");
     }
-    eat_next_token();  // eat 'return'
 
     std::unique_ptr<Expr> expr;
     if (m_nextToken.type != TokenType::semicolon) {
@@ -30,6 +30,7 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
     if (m_nextToken.type == TokenType::kw_let) return parse_decl_stmt();
     if (m_nextToken.type == TokenType::kw_defer) return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
+    if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
     return parse_assignment_or_expr();
 }
 
@@ -204,5 +205,74 @@ std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
                            ReturnNotAllowed, [&]() { return parse_block(m_nextToken.type != TokenType::block_l); }));
 
     return std::make_unique<DeferStmt>(location, std::move(block));
+}
+
+std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
+    matchOrReturn(TokenType::kw_switch, "expected switch");
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat switch
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat '('
+
+    varOrReturn(condition, with_restrictions<std::unique_ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat ')'
+
+    matchOrReturn(TokenType::block_l, "expected '{'");
+    eat_next_token();  // eat '{'
+
+    std::vector<std::unique_ptr<CaseStmt>> cases;
+    std::unique_ptr<Block> elseBlock;
+    while (m_nextToken.type == TokenType::kw_case || m_nextToken.type == TokenType::kw_else) {
+        bool isElse = m_nextToken.type == TokenType::kw_else;
+        varOrReturn(cas, parse_case_stmt());
+
+        if (!isElse) {
+            cases.emplace_back(std::move(cas));
+        } else {
+            if (elseBlock) {
+                synchronize_on({TokenType::block_r});
+                eat_next_token();  // eat '}'
+                return report(cas->location, "only one else is permited");
+            }
+            elseBlock = std::move(cas->block);
+        }
+    }
+
+    if (!elseBlock) {
+        synchronize_on({TokenType::block_r});
+        eat_next_token();  // eat '}'
+        return report(location, "expected a else case");
+    }
+
+    matchOrReturn(TokenType::block_r, "expected '}'");
+    eat_next_token();  // eat '}'
+
+    return std::make_unique<SwitchStmt>(location, std::move(condition), std::move(cases), std::move(elseBlock));
+}
+
+std::unique_ptr<CaseStmt> Parser::parse_case_stmt() {
+    auto location = m_nextToken.loc;
+    if (m_nextToken.type != TokenType::kw_case && m_nextToken.type != TokenType::kw_else) {
+        return report(location, "expected case or else");
+    }
+    bool isElse = m_nextToken.type == TokenType::kw_else;
+    eat_next_token();  // eat case or else
+
+    std::unique_ptr<Expr> condition;
+    if (!isElse) {
+        auto conditionLocation = m_nextToken.loc;
+        condition = parse_expr();
+        if (!condition) return report(conditionLocation, "expected expresion");
+    }
+
+    matchOrReturn(TokenType::switch_arrow, "expected '=>'");
+    eat_next_token();  // eat =>
+
+    varOrReturn(block, parse_block(m_nextToken.type != TokenType::block_l));
+
+    return std::make_unique<CaseStmt>(location, std::move(condition), std::move(block));
 }
 }  // namespace DMZ

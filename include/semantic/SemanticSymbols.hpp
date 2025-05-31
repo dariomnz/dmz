@@ -53,7 +53,7 @@ struct ResolvedDecl {
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
 };
 
-// Forward declaration 
+// Forward declaration
 struct ResolvedDeferRefStmt;
 
 struct ResolvedBlock : public ResolvedStmt {
@@ -89,6 +89,32 @@ struct ResolvedWhileStmt : public ResolvedStmt {
     ResolvedWhileStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
                       std::unique_ptr<ResolvedBlock> body)
         : ResolvedStmt(location), condition(std::move(condition)), body(std::move(body)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedCaseStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedExpr> condition;
+    std::unique_ptr<ResolvedBlock> block;
+
+    ResolvedCaseStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                     std::unique_ptr<ResolvedBlock> block)
+        : ResolvedStmt(location), condition(std::move(condition)), block(std::move(block)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedSwitchStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedExpr> condition;
+    std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
+    std::unique_ptr<ResolvedBlock> elseBlock;
+
+    ResolvedSwitchStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                       std::vector<std::unique_ptr<ResolvedCaseStmt>> cases, std::unique_ptr<ResolvedBlock> elseBlock)
+        : ResolvedStmt(location),
+          condition(std::move(condition)),
+          cases(std::move(cases)),
+          elseBlock(std::move(elseBlock)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

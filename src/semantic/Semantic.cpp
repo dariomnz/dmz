@@ -32,7 +32,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     m_scopes.back().emplace_back(&decl);
 
     if (dynamic_cast<ResolvedFuncDecl *>(&decl) || dynamic_cast<ResolvedStructDecl *>(&decl) ||
-        dynamic_cast<ResolvedModuleDecl *>(&decl)) {
+        dynamic_cast<ResolvedErrDecl *>(&decl) || dynamic_cast<ResolvedModuleDecl *>(&decl)) {
         std::unique_lock lock(m_moduleScopesMutex);
         // println("identifier " << std::quoted(identifier));
         m_moduleScopes.emplace(std::piecewise_construct, std::forward_as_tuple(decl.modIdentifier),

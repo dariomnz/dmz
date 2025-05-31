@@ -78,6 +78,7 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
 
 void Codegen::generate_main_wrapper() {
     auto *builtinMain = m_module->getFunction("__builtin_main");
+    if (!builtinMain) return;
 
     auto *main = llvm::Function::Create(llvm::FunctionType::get(m_builder.getInt32Ty(), {}, false),
                                         llvm::Function::ExternalLinkage, "main", *m_module);
@@ -156,5 +157,26 @@ std::string Codegen::generate_symbol_name(std::string modIdentifier) {
         pos = modIdentifier.find(to_find, pos + to_replace.length());
     }
     return modIdentifier;
+}
+
+void Codegen::generate_builtin_get_errno() {
+    llvm::Type *i32PtrTy = llvm::PointerType::get(m_builder.getInt32Ty(), 0);
+
+    llvm::FunctionType *errnoLocationFTy = llvm::FunctionType::get(i32PtrTy, false);
+    llvm::Function *errnoLocationFunc =
+        llvm::Function::Create(errnoLocationFTy, llvm::Function::ExternalLinkage, "__errno_location", *m_module);
+
+    llvm::FunctionType *getErrnoValueFTy = llvm::FunctionType::get(m_builder.getInt32Ty(), false);
+    llvm::Function *getErrnoFunc =
+        llvm::Function::Create(getErrnoValueFTy, llvm::Function::ExternalLinkage, "get_errno", *m_module);
+
+    llvm::BasicBlock *entryBB = llvm::BasicBlock::Create(*m_context, "entry", getErrnoFunc);
+    m_builder.SetInsertPoint(entryBB);
+
+    llvm::Value *errnoPtr = m_builder.CreateCall(errnoLocationFunc);
+
+    llvm::Value *errnoVal = m_builder.CreateLoad(m_builder.getInt32Ty(), errnoPtr, "errno_val");
+
+    m_builder.CreateRet(errnoVal);
 }
 }  // namespace DMZ

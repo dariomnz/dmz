@@ -23,7 +23,7 @@ class Sema {
 
     void dump_module_scopes();
 
-    std::vector<std::vector<ResolvedDeferStmt*>> m_defers;
+    std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFunctionDecl *m_currentFunction;
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
@@ -96,5 +96,7 @@ class Sema {
     std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl);
     bool resolve_import_check(ResolvedImportDecl &importDecl);
     std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef);
+    std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
+    std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
 };
 }  // namespace DMZ

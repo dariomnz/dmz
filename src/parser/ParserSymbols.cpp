@@ -114,6 +114,25 @@ void WhileStmt::dump(size_t level) const {
     body->dump(level + 1);
 }
 
+void CaseStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "CaseStmt\n";
+
+    condition->dump(level + 1);
+    block->dump(level + 1);
+}
+
+void SwitchStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "SwitchStmt\n";
+
+    condition->dump(level + 1);
+
+    for (auto &&c : cases) {
+        c->dump(level + 1);
+    }
+    std::cerr << indent(level + 1) << "ElseBlock\n";
+    elseBlock->dump(level + 1);
+}
+
 void VarDecl::dump(size_t level) const {
     std::cerr << indent(level) << "VarDecl:" << (isMutable ? "" : "const ");
     if (type) {

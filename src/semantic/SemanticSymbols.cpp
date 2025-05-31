@@ -141,6 +141,27 @@ void ResolvedWhileStmt::dump(size_t level, bool onlySelf) const {
     body->dump(level + 1);
 }
 
+void ResolvedCaseStmt::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedCaseStmt\n";
+
+    if (onlySelf) return;
+    condition->dump(level + 1);
+    block->dump(level + 1);
+}
+
+void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSwitchStmt\n";
+
+    if (onlySelf) return;
+    condition->dump(level + 1);
+
+    for (auto &&c : cases) {
+        c->dump(level + 1);
+    }
+    std::cerr << indent(level + 1) << "ElseBlock\n";
+    elseBlock->dump(level + 1);
+}
+
 void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ") << type << " " << identifier
               << '\n';

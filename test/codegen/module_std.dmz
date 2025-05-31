@@ -1,0 +1,7 @@
+// RUN: diff <(compiler %s %S/../../std/io/print.dmz -run) <(echo -n -e 'Hello\n')
+
+import std::io;
+
+fn main() -> void {
+    std::io::printf(&"Hello\n");
+}

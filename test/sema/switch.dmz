@@ -1,0 +1,43 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:&char[], ...) -> int;
+
+fn main() -> void {
+    let x = 10;
+
+    switch(x) {
+        case 1 => printf(&"1\n");
+        case 2 => printf(&"2\n");
+        case 3 => printf(&"3\n");
+        else   => printf(&"else %d\n", x);
+    }
+}
+// CHECK: ResolvedSwitchStmt
+// CHECK-NEXT:      ResolvedDeclRefExpr:int x
+// CHECK-NEXT:      ResolvedCaseStmt
+// CHECK-NEXT:        ResolvedIntLiteral:int '1'
+// CHECK-NEXT:        | value:int 1
+// CHECK-NEXT:        ResolvedBlock
+// CHECK-NEXT:          ResolvedCallExpr:int printf
+// CHECK-NEXT:            ResolvedUnaryOperator:&char[3] '&'
+// CHECK-NEXT:              ResolvedStringLiteral:char[3] '1\n'
+// CHECK-NEXT:      ResolvedCaseStmt
+// CHECK-NEXT:        ResolvedIntLiteral:int '2'
+// CHECK-NEXT:        | value:int 2
+// CHECK-NEXT:        ResolvedBlock
+// CHECK-NEXT:          ResolvedCallExpr:int printf
+// CHECK-NEXT:            ResolvedUnaryOperator:&char[3] '&'
+// CHECK-NEXT:              ResolvedStringLiteral:char[3] '2\n'
+// CHECK-NEXT:      ResolvedCaseStmt
+// CHECK-NEXT:        ResolvedIntLiteral:int '3'
+// CHECK-NEXT:        | value:int 3
+// CHECK-NEXT:        ResolvedBlock
+// CHECK-NEXT:          ResolvedCallExpr:int printf
+// CHECK-NEXT:            ResolvedUnaryOperator:&char[3] '&'
+// CHECK-NEXT:              ResolvedStringLiteral:char[3] '3\n'
+// CHECK-NEXT:      ElseBlock
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedCallExpr:int printf
+// CHECK-NEXT:          ResolvedUnaryOperator:&char[9] '&'
+// CHECK-NEXT:            ResolvedStringLiteral:char[9] 'else %d\n'
+// CHECK-NEXT:          ResolvedDeclRefExpr:int x

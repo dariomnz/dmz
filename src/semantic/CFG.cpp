@@ -64,6 +64,9 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
         return block;
     }
+    if (auto *switchStmt = dynamic_cast<const ResolvedSwitchStmt *>(&stmt)) {
+        return insert_switch_stmt(*switchStmt, block);
+    }
     stmt.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -147,6 +150,36 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
     std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
     cfg.insert_edge(entry, trueBlock, ConstantExpressionEvaluator::to_bool(val) != false);
     cfg.insert_edge(entry, falseBlock, ConstantExpressionEvaluator::to_bool(val).value_or(false) == false);
+
+    cfg.insert_stmt(&stmt, entry);
+    return insert_expr(*stmt.condition, entry);
+}
+
+int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
+    // TODO: revise
+    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    std::vector<int> casesBlocks(stmt.cases.size() + 1);
+    for (size_t i = 0; i < stmt.cases.size(); i++) {
+        casesBlocks[i] = insert_block(*stmt.cases[i]->block, exit);
+    }
+    casesBlocks[stmt.cases.size()] = insert_block(*stmt.elseBlock, exit);
+
+    int entry = cfg.insert_new_block();
+
+    size_t rechableIndex = -1;
+    for (size_t i = 0; i < stmt.cases.size(); i++) {
+        std::optional<ConstValue> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
+        if (val && case_val && val == case_val) {
+            rechableIndex = i;
+        }
+    }
+
+    for (size_t i = 0; i < stmt.cases.size(); i++) {
+        std::optional<ConstValue> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
+        cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == i);
+    }
+
+    cfg.insert_edge(entry, casesBlocks[stmt.cases.size()], !val || rechableIndex == -1u);
 
     cfg.insert_stmt(&stmt, entry);
     return insert_expr(*stmt.condition, entry);

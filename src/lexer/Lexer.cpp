@@ -15,7 +15,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(invalid);
         CASE_TYPE(comment);
         CASE_TYPE(id);
-        CASE_TYPE(return_type);
+        CASE_TYPE(return_arrow);
+        CASE_TYPE(switch_arrow);
         CASE_TYPE(lit_int);
         CASE_TYPE(lit_float);
         CASE_TYPE(lit_char);
@@ -71,6 +72,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_try);
         CASE_TYPE(kw_module);
         CASE_TYPE(kw_import);
+        CASE_TYPE(kw_switch);
+        CASE_TYPE(kw_case);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -162,7 +165,7 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, digit_count);
         advance(digit_count);
 
-    } else if (std::isalpha(file_content[0])) {
+    } else if (std::isalpha(file_content[0]) || file_content[0] == '_') {
         debug_msg(TokenType::id);
         size_t alpha_count = 1;
         while (std::isalnum(file_content[alpha_count]) || file_content[alpha_count] == '_') {
@@ -267,8 +270,13 @@ Token Lexer::next_token() {
         t.type = TokenType::lit_char;
         t.str = file_content.substr(0, char_size);
     } else if (file_content.substr(0, 2) == "->") {
-        debug_msg(TokenType::return_type);
-        t.type = TokenType::return_type;
+        debug_msg(TokenType::return_arrow);
+        t.type = TokenType::return_arrow;
+        t.str = file_content.substr(0, 2);
+        advance(2);
+    } else if (file_content.substr(0, 2) == "=>") {
+        debug_msg(TokenType::switch_arrow);
+        t.type = TokenType::switch_arrow;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content[0] == '+') {

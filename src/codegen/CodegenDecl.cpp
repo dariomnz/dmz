@@ -167,13 +167,21 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
 }
 
 void Codegen::generate_err_no_err() {
-    if (!m_success) m_success = m_builder.CreateGlobalStringPtr("SUCCESS", "err.str.SUCCESS");
+    if (m_success) return;
+    std::string str("SUCCESS");
+    llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, str, true);
+    m_success =
+        new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                 llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, "err.str." + str);
 }
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
         auto symbol_name = generate_symbol_name(err->modIdentifier);
-        m_declarations[err.get()] = m_builder.CreateGlobalStringPtr(symbol_name, "err.str." + symbol_name);
+        llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, symbol_name, true);
+        m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                                             llvm::GlobalVariable::LinkageTypes::PrivateLinkage,
+                                                             stringConst, "err.str." + symbol_name);
     }
 }
 
@@ -187,9 +195,13 @@ void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
 
 void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal) {
     for (auto &&decl : declarations) {
-        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get()))
-            generate_function_decl(*fn);
-        else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
+        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
+            if (fn->identifier == "get_errno") {
+                generate_builtin_get_errno();
+            } else {
+                generate_function_decl(*fn);
+            }
+        } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get()))
             generate_struct_decl(*sd);
         else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
                  dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
@@ -213,8 +225,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
 
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-        dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
-        dynamic_cast<const ResolvedImportDecl *>(decl.get()))
+            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedImportDecl *>(decl.get()))
             continue;
         else if (const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get()))
             generate_function_body(*fn);

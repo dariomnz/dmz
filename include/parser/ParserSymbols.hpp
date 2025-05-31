@@ -167,6 +167,28 @@ struct WhileStmt : public Stmt {
     void dump(size_t level = 0) const override;
 };
 
+struct CaseStmt : public Stmt {
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Block> block;
+
+    CaseStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> block)
+        : Stmt(location), condition(std::move(condition)), block(std::move(block)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct SwitchStmt : public Stmt {
+    std::unique_ptr<Expr> condition;
+    std::vector<std::unique_ptr<CaseStmt>> cases;
+    std::unique_ptr<Block> elseBlock;
+
+    SwitchStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::vector<std::unique_ptr<CaseStmt>> cases,
+               std::unique_ptr<Block> elseBlock)
+        : Stmt(location), condition(std::move(condition)), cases(std::move(cases)), elseBlock(std::move(elseBlock)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
 struct ReturnStmt : public Stmt {
     std::unique_ptr<Expr> expr;
 
@@ -443,7 +465,8 @@ struct ModuleDecl : public Decl {
     std::unique_ptr<ModuleDecl> nestedModule;
     std::vector<std::unique_ptr<Decl>> declarations;
 
-    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule, std::vector<std::unique_ptr<Decl>> declarations = {})
+    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule,
+               std::vector<std::unique_ptr<Decl>> declarations = {})
         : Decl(location, identifier), nestedModule(std::move(nestedModule)), declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;

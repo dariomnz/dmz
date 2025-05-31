@@ -3,6 +3,7 @@
 namespace DMZ {
 
 bool Parser::is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
+bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_tokens.count(tok) != 0; }
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
@@ -113,7 +114,9 @@ std::optional<Type> Parser::parse_type() {
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
     m_incompleteAST = true;
 
-    while (types.count(m_nextToken.type) == 0 && m_nextToken.type != TokenType::eof) eat_next_token();
+    while (types.count(m_nextToken.type) == 0 && m_nextToken.type != TokenType::eof) {
+        eat_next_token();
+    }
 }
 
 void Parser::synchronize() {
@@ -134,6 +137,8 @@ void Parser::synchronize() {
             --blocks;
         } else if (type == TokenType::semicolon && blocks == 0) {
             eat_next_token();  // eat ';'
+            break;
+        } else if (is_top_stmt_level_token(type) && blocks == 0) {
             break;
         } else if (is_top_level_token(type)) {
             break;

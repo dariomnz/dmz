@@ -48,6 +48,9 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     if (dynamic_cast<const ResolvedDeferStmt *>(&stmt)) {
         return nullptr;
     }
+    if (auto *switchStmt = dynamic_cast<const ResolvedSwitchStmt *>(&stmt)) {
+        return generate_switch_stmt(*switchStmt);
+    }
     stmt.dump();
     dmz_unreachable("unknown statement");
 }
@@ -139,6 +142,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
                 return m_declarations[&operand->decl];
             }
         }
+        stmt.dump();
         dmz_unreachable("Only permit ref with a unary operator");
     }
 
@@ -148,5 +152,34 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     llvm::Value *val = generate_expr(*stmt.expr);
     return store_value(val, generate_expr(*stmt.assignee, true), stmt.assignee->type);
+}
+
+llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
+    llvm::Function *function = get_current_function();
+    auto *elseBB = llvm::BasicBlock::Create(*m_context, "switch.else");
+    auto *exitBB = llvm::BasicBlock::Create(*m_context, "switch.exit");
+
+    auto condition = generate_expr(*stmt.condition);
+
+    auto generatedSwitch = m_builder.CreateSwitch(condition, elseBB, stmt.cases.size());
+    for (auto &&cas : stmt.cases) {
+        auto *caseBB = llvm::BasicBlock::Create(*m_context, "switch.case");
+        caseBB->insertInto(function);
+        m_builder.SetInsertPoint(caseBB);
+        generate_block(*cas->block);
+        break_into_bb(exitBB);
+
+        llvm::ConstantInt *cond = static_cast<llvm::ConstantInt *>(generate_expr(*cas->condition));
+        generatedSwitch->addCase(cond, caseBB);
+    }
+
+    elseBB->insertInto(function);
+    m_builder.SetInsertPoint(elseBB);
+    generate_block(*stmt.elseBlock);
+    break_into_bb(exitBB);
+
+    exitBB->insertInto(function);
+    m_builder.SetInsertPoint(exitBB);
+    return nullptr;
 }
 }  // namespace DMZ

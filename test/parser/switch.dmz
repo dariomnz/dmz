@@ -1,0 +1,42 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn main() -> void {
+    let x = 10;
+
+    switch(x) {
+        case 1 => printf(&"1\n");
+        case 2 => printf(&"2\n");
+        case 3 => printf(&"3\n");
+        else   => printf(&"else %d\n", x);
+    }
+}
+
+// CHECK: SwitchStmt
+// CHECK-NEXT:       DeclRefExpr x
+// CHECK-NEXT:       CaseStmt
+// CHECK-NEXT:         IntLiteral '1'
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:               StringLiteral '"1\n"'
+// CHECK-NEXT:       CaseStmt
+// CHECK-NEXT:         IntLiteral '2'
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:               StringLiteral '"2\n"'
+// CHECK-NEXT:       CaseStmt
+// CHECK-NEXT:         IntLiteral '3'
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:               StringLiteral '"3\n"'
+// CHECK-NEXT:       ElseBlock
+// CHECK-NEXT:       Block
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr printf
+// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:             StringLiteral '"else %d\n"'
+// CHECK-NEXT:           DeclRefExpr x

@@ -20,7 +20,7 @@ class Codegen {
     }
     const std::vector<std::unique_ptr<ResolvedDecl>> &m_resolvedTree;
 
-    llvm::LLVMContext* m_context;
+    llvm::LLVMContext *m_context;
     llvm::IRBuilder<> m_builder;
     std::unique_ptr<llvm::Module> m_module;
 
@@ -47,6 +47,7 @@ class Codegen {
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
+    void generate_builtin_get_errno();
     // void generate_builtin_println_body(const ResolvedFunctionDecl &println);
     void generate_main_wrapper();
     llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
@@ -78,5 +79,6 @@ class Codegen {
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal = false);
     std::string generate_symbol_name(std::string modIdentifier);
+    llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
 };
 }  // namespace DMZ

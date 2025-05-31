@@ -31,6 +31,9 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     if (auto *block = dynamic_cast<const Block *>(&stmt)) {
         return resolve_block(*block);
     }
+    if (auto *switchStmt = dynamic_cast<const SwitchStmt *>(&stmt)) {
+        return resolve_switch_stmt(*switchStmt);
+    }
 
     stmt.dump();
     dmz_unreachable("unexpected statement");
@@ -173,5 +176,40 @@ std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(
         if (isScope) break;
     }
     return defers;
+}
+
+std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) {
+    varOrReturn(condition, resolve_expr(*switchStmt.condition));
+
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
+        return report(condition->location, "expected int in condition");
+    }
+
+    std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
+
+    for (auto &&cas : switchStmt.cases) {
+        varOrReturn(c, resolve_case_stmt(*cas));
+        cases.emplace_back(std::move(c));
+    }
+
+    varOrReturn(resolvedElseBlock, resolve_block(*switchStmt.elseBlock));
+
+    condition->set_constant_value(cee.evaluate(*condition, false));
+
+    return std::make_unique<ResolvedSwitchStmt>(switchStmt.location, std::move(condition), std::move(cases),
+                                                std::move(resolvedElseBlock));
+}
+
+std::unique_ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt) {
+    varOrReturn(condition, resolve_expr(*caseStmt.condition));
+
+    varOrReturn(block, resolve_block(*caseStmt.block));
+
+    condition->set_constant_value(cee.evaluate(*condition, false));
+    if (!condition->get_constant_value()) {
+        return report(condition->location, "condition in case must be a constant value");
+    }
+
+    return std::make_unique<ResolvedCaseStmt>(caseStmt.location, std::move(condition), std::move(block));
 }
 }  // namespace DMZ

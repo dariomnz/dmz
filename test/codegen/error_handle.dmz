@@ -6,10 +6,10 @@ err {
     ERROR_TWO,
     ERROR_THREE,
 }
-// CHECK: @err.str.SUCCESS = private unnamed_addr constant [8 x i8] c"SUCCESS\00", align 1
-// CHECK-NEXT: @err.str.ERROR_ONE = private unnamed_addr constant [10 x i8] c"ERROR_ONE\00", align 1
-// CHECK-NEXT: @err.str.ERROR_TWO = private unnamed_addr constant [10 x i8] c"ERROR_TWO\00", align 1
-// CHECK-NEXT: @err.str.ERROR_THREE = private unnamed_addr constant [12 x i8] c"ERROR_THREE\00", align 1
+// CHECK: @err.str.SUCCESS = private constant [8 x i8] c"SUCCESS\00"
+// CHECK-NEXT: @err.str.ERROR_ONE = private constant [10 x i8] c"ERROR_ONE\00"
+// CHECK-NEXT: @err.str.ERROR_TWO = private constant [10 x i8] c"ERROR_TWO\00"
+// CHECK-NEXT: @err.str.ERROR_THREE = private constant [12 x i8] c"ERROR_THREE\00"
 
 fn foo(x:int) -> int? {
     if (x == 1){

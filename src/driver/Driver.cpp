@@ -296,11 +296,17 @@ int Driver::generate_exec_pass(Type_Module &module) {
         args.emplace_back("-x");
         args.emplace_back("ir");
         args.emplace_back("-");
+        if (m_options.isModule) {
+            args.emplace_back("-c");
+        }
         if (!m_options.output.empty()) {
             args.emplace_back("-o");
             args.emplace_back(m_options.output.c_str());
         }
         args.emplace_back(nullptr);
+        for (auto &&arg : args) {
+            println(arg);
+        }
 
         execvp(cmd, const_cast<char *const *>(args.data()));
         perror("execvp");

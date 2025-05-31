@@ -1,0 +1,20 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn main() -> void {
+    let x = 10;
+    // CHECK: [[# @LINE + 1 ]]:5: error: expected a else case
+    switch(x) {
+        case 1 => printf(&"1\n");
+    }
+    switch(x) {
+        case 1 => printf(&"1\n");
+        else   => printf(&"else\n");
+        // CHECK: [[# @LINE + 1 ]]:9: error: only one else is permited
+        else   => printf(&"else\n");
+    }
+    // CHECK: [[# @LINE + 1 ]]:12: error: expected expression
+    switch() {
+    }
+    // CHECK: [[# @LINE + 1 ]]:12: error: expected '('
+    switch {
+    }
+}

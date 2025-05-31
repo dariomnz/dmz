@@ -5,3 +5,4 @@ config.name = "DMZ"
 config.test_format = lit.formats.ShTest(False if os.name == 'nt' else True)
 
 config.suffixes = ['.dmz']
+config.individual_test_timeout = 10

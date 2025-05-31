@@ -2,8 +2,8 @@
 
 #include <functional>
 #include <iostream>
-#include <optional>
 #include <mutex>
+#include <optional>
 
 namespace DMZ {
 
