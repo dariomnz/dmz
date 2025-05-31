@@ -11,6 +11,19 @@
 namespace DMZ {
 
 class Sema {
+   public:
+    class ModuleScope {
+        std::unordered_map<std::string, ModuleScope> m_modules;
+        std::unordered_map<std::string, ResolvedDecl *> m_decls;
+
+       public:
+        ResolvedDecl *lookup_decl(const std::string_view id);
+        ModuleScope *lookup_module(const std::string_view id);
+        bool insert(ResolvedDecl &decl);
+        bool insert(const std::string_view id);
+        void dump(size_t level = 0) const;
+    };
+
    private:
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
@@ -18,17 +31,18 @@ class Sema {
     std::vector<std::vector<ResolvedDecl *>> m_scopes;
 
     static std::mutex m_moduleScopesMutex;
-    // key: std::, std::example::
-    static std::unordered_multimap<std::string, ResolvedDecl *> m_moduleScopes;
+    static ModuleScope m_globalmodule;
 
-    void dump_module_scopes();
+    void dump_module_scopes() const;
+    void dump_scopes() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFunctionDecl *m_currentFunction;
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
-    std::string m_currentModulePrefix = "";
-    std::string m_currentImportPrefix = "";
+    ModuleID m_currentModuleID;
+    ModuleID m_currentModuleIDRef;
+
     class ScopeRAII {
         Sema &m_sema;
 
@@ -54,7 +68,11 @@ class Sema {
    private:
     template <typename T>
     std::pair<T *, int> lookup_decl(const std::string_view id);
+    template <typename T>
+    T *lookup_decl_in_modules(const ModuleID &moduleID, const std::string_view id);
+    bool lookup_in_modules(const ModuleID &moduleID, const std::string_view id);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
+    bool insert_decl_to_modules(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
@@ -89,13 +107,13 @@ class Sema {
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
     std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
     std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
-    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
+    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl, const ModuleID &prevModuleID);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
-    std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl);
+    std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl, const ModuleID &prevModuleID);
     bool resolve_import_check(ResolvedImportDecl &importDecl);
-    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef);
+    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef, const ModuleID &prevModuleID);
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
 };

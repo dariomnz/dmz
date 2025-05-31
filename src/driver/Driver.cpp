@@ -178,7 +178,7 @@ Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts &asts) {
                     const auto *fn = dynamic_cast<const ResolvedFunctionDecl *>(decl.get());
                     if (!fn) continue;
 
-                    std::cerr << fn->modIdentifier << ':' << '\n';
+                    std::cerr << fn->identifier << ':' << '\n';
                     CFGBuilder().build(*fn).dump();
                 }
             }

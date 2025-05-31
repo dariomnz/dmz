@@ -75,7 +75,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     const ResolvedFuncDecl &calleeDecl = call.callee;
     std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&calleeDecl)
                                     ? std::string(calleeDecl.identifier)
-                                    : calleeDecl.modIdentifier;
+                                    : call.callee.moduleID.to_string() + std::string(calleeDecl.identifier);
     auto symbolName = generate_symbol_name(modIdentifier);
     llvm::Function *callee = m_module->getFunction(generate_symbol_name(symbolName));
     if (!callee) {
@@ -286,11 +286,10 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
-    for (auto &&d : errUnwrapExpr.defers)
-    {
+    for (auto &&d : errUnwrapExpr.defers) {
         generate_block(*d->resolvedDefer.block);
     }
-    
+
     if (m_currentFunction->type.isOptional) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
         store_value(err_value, dst, Type::builtinErr("err"));

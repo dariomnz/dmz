@@ -12,6 +12,17 @@
 
 namespace DMZ {
 
+struct ModuleID {
+    std::vector<std::string_view> modules;
+
+    ModuleID(std::vector<std::string_view> modules) : modules(std::move(modules)) {}
+    ModuleID() : modules({}) {}
+    void dump() const;
+    std::string to_string() const;
+    bool empty() const { return modules.empty(); };
+    friend std::ostream &operator<<(std::ostream &os, const ModuleID &t);
+};
+
 struct ResolvedStmt {
     SourceLocation location;
 
@@ -37,15 +48,14 @@ struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public Resolved
 struct ResolvedDecl {
     SourceLocation location;
     std::string_view identifier;
-    std::string modIdentifier;
+    ModuleID moduleID;
     Type type;
     bool isMutable;
 
-    ResolvedDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier, Type type,
-                 bool isMutable)
+    ResolvedDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type, bool isMutable)
         : location(location),
           identifier(std::move(identifier)),
-          modIdentifier(std::move(modIdentifier)),
+          moduleID(std::move(moduleID)),
           type(type),
           isMutable(isMutable) {}
     virtual ~ResolvedDecl() = default;
@@ -124,7 +134,7 @@ struct ResolvedParamDecl : public ResolvedDecl {
 
     ResolvedParamDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
                       bool isVararg = false)
-        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, isMutable), isVararg(isVararg) {}
+        : ResolvedDecl(location, std::move(identifier), ModuleID{}, type, isMutable), isVararg(isVararg) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -133,7 +143,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     unsigned index;
 
     ResolvedFieldDecl(SourceLocation location, std::string_view identifier, Type type, unsigned index)
-        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, false), index(index) {}
+        : ResolvedDecl(location, std::move(identifier), ModuleID{}, type, false), index(index) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -143,7 +153,7 @@ struct ResolvedVarDecl : public ResolvedDecl {
 
     ResolvedVarDecl(SourceLocation location, std::string_view identifier, Type type, bool isMutable,
                     std::unique_ptr<ResolvedExpr> initializer = nullptr)
-        : ResolvedDecl(location, std::move(identifier), std::string(identifier), type, isMutable),
+        : ResolvedDecl(location, std::move(identifier), ModuleID{}, type, isMutable),
           initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -152,16 +162,15 @@ struct ResolvedVarDecl : public ResolvedDecl {
 struct ResolvedFuncDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
 
-    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier, Type type,
+    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
                      std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedDecl(location, std::move(identifier), std::move(modIdentifier), type, false),
-          params(std::move(params)) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false), params(std::move(params)) {}
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
-    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier,
-                               Type type, std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(modIdentifier), type, std::move(params)) {}
+    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+                               std::vector<std::unique_ptr<ResolvedParamDecl>> params)
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -169,9 +178,9 @@ struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
 struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     std::unique_ptr<ResolvedBlock> body;
 
-    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier, Type type,
+    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
                          std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(modIdentifier), type, std::move(params)),
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)),
           body(std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -180,10 +189,9 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 struct ResolvedStructDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier, Type type,
+    ResolvedStructDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields)
-        : ResolvedDecl(location, std::move(identifier), std::move(modIdentifier), type, false),
-          fields(std::move(fields)) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false), fields(std::move(fields)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -362,9 +370,8 @@ struct ResolvedDeferRefStmt : public ResolvedStmt {
 };
 
 struct ResolvedErrDecl : public ResolvedDecl {
-    ResolvedErrDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier)
-        : ResolvedDecl(location, std::move(identifier), std::move(modIdentifier), Type::builtinErr(identifier), false) {
-    }
+    ResolvedErrDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID)
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), Type::builtinErr(identifier), false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -380,9 +387,9 @@ struct ResolvedErrDeclRefExpr : public ResolvedExpr {
 struct ResolvedErrGroupDecl : public ResolvedDecl {
     std::vector<std::unique_ptr<ResolvedErrDecl>> errs;
 
-    ResolvedErrGroupDecl(SourceLocation location, std::string_view identifier,
+    ResolvedErrGroupDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
                          std::vector<std::unique_ptr<ResolvedErrDecl>> errs)
-        : ResolvedDecl(location, std::move(identifier), std::string(identifier), Type::builtinErr("errGroup"), false),
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), Type::builtinErr("errGroup"), false),
           errs(std::move(errs)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -429,10 +436,10 @@ struct ResolvedModuleDecl : public ResolvedDecl {
     std::unique_ptr<ResolvedModuleDecl> nestedModule;
     std::vector<std::unique_ptr<ResolvedDecl>> declarations;
 
-    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier,
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
                        std::unique_ptr<ResolvedModuleDecl> nestedModule,
                        std::vector<std::unique_ptr<ResolvedDecl>> declarations = {})
-        : ResolvedDecl(location, identifier, std::move(modIdentifier), Type::builtinVoid(), false),
+        : ResolvedDecl(location, identifier, std::move(moduleID), Type::builtinVoid(), false),
           nestedModule(std::move(nestedModule)),
           declarations(std::move(declarations)) {}
 
@@ -441,23 +448,20 @@ struct ResolvedModuleDecl : public ResolvedDecl {
 
 struct ResolvedImportDecl : public ResolvedDecl {
     std::unique_ptr<ResolvedImportDecl> nestedImport;
-    const ResolvedModuleDecl *moduleDecl;
 
-    ResolvedImportDecl(SourceLocation location, std::string_view identifier, std::string modIdentifier,
-                       std::unique_ptr<ResolvedImportDecl> nestedImport, const ResolvedModuleDecl *moduleDecl)
-        : ResolvedDecl(location, identifier, std::move(modIdentifier), Type::builtinVoid(), false),
-          nestedImport(std::move(nestedImport)),
-          moduleDecl(moduleDecl) {}
+    ResolvedImportDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
+                       std::unique_ptr<ResolvedImportDecl> nestedImport)
+        : ResolvedDecl(location, identifier, std::move(moduleID), Type::builtinVoid(), false),
+          nestedImport(std::move(nestedImport)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
 struct ResolvedModuleDeclRefExpr : public ResolvedExpr {
-    const ResolvedModuleDecl *decl;
+    ModuleID moduleID;
     std::unique_ptr<ResolvedExpr> expr;
-    ResolvedModuleDeclRefExpr(SourceLocation location, const ResolvedModuleDecl *decl,
-                              std::unique_ptr<ResolvedExpr> expr)
-        : ResolvedExpr(location, expr->type), decl(decl), expr(std::move(expr)) {}
+    ResolvedModuleDeclRefExpr(SourceLocation location, ModuleID moduleID, std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedExpr(location, expr->type), moduleID(std::move(moduleID)), expr(std::move(expr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

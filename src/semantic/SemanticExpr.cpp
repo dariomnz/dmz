@@ -17,16 +17,19 @@ bool op_generate_bool(TokenType op) {
 
 std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee) {
     // Search in the module scope
-    std::string modIdentifier(m_currentModulePrefix);
-    modIdentifier += declRefExpr.identifier;
-    ResolvedDecl *decl = lookup_decl<ResolvedDecl>(modIdentifier).first;
+    ResolvedDecl *decl = lookup_decl<ResolvedDecl>(declRefExpr.identifier).first;
+    if (!decl) {
+        // Search in the current module
+        decl = lookup_decl_in_modules<ResolvedDecl>(m_currentModuleID, declRefExpr.identifier);
+    }
     if (!decl) {
         // Search in the imports
-        std::string modIdentifier(m_currentImportPrefix);
-        modIdentifier += declRefExpr.identifier;
-        decl = lookup_decl<ResolvedDecl>(modIdentifier).first;
+        decl = lookup_decl_in_modules<ResolvedDecl>(m_currentModuleIDRef, declRefExpr.identifier);
     }
-    if (!decl) return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
+    if (!decl) {
+        dump_scopes();
+        return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
+    }
 
     if (!isCallee && dynamic_cast<ResolvedFuncDecl *>(decl))
         return report(declRefExpr.location, "expected to call function '" + std::string(declRefExpr.identifier) + "'");
@@ -138,7 +141,7 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         return resolve_try_err_expr(*tryErrExpr);
     }
     if (const auto *modDeclRefExpr = dynamic_cast<const ModuleDeclRefExpr *>(&expr)) {
-        return resolve_module_decl_ref_expr(*modDeclRefExpr);
+        return resolve_module_decl_ref_expr(*modDeclRefExpr, ModuleID{});
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -357,27 +360,33 @@ std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr 
     }
 }
 
-std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef) {
-    std::string prevImportPrefix(m_currentImportPrefix);
-    m_currentImportPrefix += moduleDeclRef.identifier;
-    m_currentImportPrefix += "::";
-    defer([&]() { m_currentImportPrefix = prevImportPrefix; });
-
-    const ResolvedModuleDecl *moduleDecl = nullptr;
+std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
+                                                                              const ModuleID &prevModuleID) {
+    ModuleID currentModuleID = prevModuleID;
+    currentModuleID.modules.emplace_back(moduleDeclRef.identifier);
+    m_currentModuleIDRef = currentModuleID;
     // Only check imported of the last module
     if (!dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
-        const auto &[importDecl, idx] = lookup_decl<ResolvedImportDecl>(m_currentImportPrefix);
+        std::string strToLookUp = currentModuleID.to_string();
+        std::string prevStr = prevModuleID.to_string();
+        auto newSize = currentModuleID.modules.size() > 0 ? strToLookUp.size() - 2 : strToLookUp.size();
+        strToLookUp = strToLookUp.substr(0, newSize);
+        const auto &[importDecl, _] = lookup_decl<ResolvedImportDecl>(strToLookUp);
         if (!importDecl) {
-            return report(moduleDeclRef.location, "module '" + m_currentImportPrefix + "' not imported");
+            moduleDeclRef.dump();
+            return report(moduleDeclRef.location, "module '" + strToLookUp + "' not imported");
         }
-        if (!importDecl->moduleDecl) {
-            return nullptr;
-        }
-        moduleDecl = importDecl->moduleDecl;
     }
 
-    varOrReturn(resolvedExpr, resolve_expr(*moduleDeclRef.expr));
+    std::unique_ptr<ResolvedExpr> resolvedExpr;
+    if (auto nextmoduleDeclRef = dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
+        resolvedExpr = resolve_module_decl_ref_expr(*nextmoduleDeclRef, currentModuleID);
+    } else {
+        resolvedExpr = resolve_expr(*moduleDeclRef.expr);
+    }
+    if (!resolvedExpr) return nullptr;
 
-    return std::make_unique<ResolvedModuleDeclRefExpr>(moduleDeclRef.location, moduleDecl, std::move(resolvedExpr));
+    return std::make_unique<ResolvedModuleDeclRefExpr>(moduleDeclRef.location, currentModuleID,
+                                                       std::move(resolvedExpr));
 }
 }  // namespace DMZ

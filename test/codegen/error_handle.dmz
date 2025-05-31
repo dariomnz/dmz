@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e "10\nERROR_TWO\nThere was no error\n10\nThere are an error\nNo error 10\nNo safe error 10\n")
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e "10\nERROR_TWO\nThere was no error\n10\nThere are an error\nNo error 10\nNo safe error 10\n")
 
 err {
     ERROR_ONE,

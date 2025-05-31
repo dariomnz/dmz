@@ -1,5 +1,5 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e '10\n10\n20\n20\n')
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\n')
 
 fn foo(x: &int) -> void {
     println(x);

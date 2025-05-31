@@ -34,7 +34,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
     std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)
                                     ? std::string(functionDecl.identifier)
-                                    : functionDecl.modIdentifier;
+                                    : functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
     std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(modIdentifier);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
@@ -76,7 +76,9 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
 void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     m_currentFunction = &functionDecl;
     std::string funcName =
-        functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(functionDecl.modIdentifier);
+        functionDecl.identifier == "main"
+            ? "__builtin_main"
+            : generate_symbol_name(functionDecl.moduleID.to_string() + std::string(functionDecl.identifier));
     auto *function = m_module->getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);
@@ -150,7 +152,8 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
 // }
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    std::string structName("struct." + generate_symbol_name(structDecl.modIdentifier));
+    std::string structName("struct." +
+                           generate_symbol_name(structDecl.moduleID.to_string() + std::string(structDecl.identifier)));
     llvm::StructType::create(*m_context, structName);
 }
 
@@ -177,7 +180,7 @@ void Codegen::generate_err_no_err() {
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
-        auto symbol_name = generate_symbol_name(err->modIdentifier);
+        auto symbol_name = generate_symbol_name(err->moduleID.to_string() + std::string(err->identifier));
         llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, symbol_name, true);
         m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
                                                              llvm::GlobalVariable::LinkageTypes::PrivateLinkage,

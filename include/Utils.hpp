@@ -114,4 +114,41 @@ overload(Ts...) -> overload<Ts...>;
     return res;
 }
 
+[[maybe_unused]] static size_t split_count(std::string_view s, std::string_view delimiter) {
+    if (s.empty() || delimiter.empty()) {
+        return 1;
+    }
+
+    size_t count = 1;
+    size_t pos = s.find(delimiter);
+
+    while (pos != std::string_view::npos) {
+        count++;
+        pos = s.find(delimiter, pos + 1);
+    }
+
+    return count;
+}
+
+[[maybe_unused]] static std::string_view split(std::string_view s, std::string_view delimiter, size_t index) {
+    size_t currentSplitIndex = 0;
+    size_t start = 0;
+    size_t end = s.find(delimiter);
+
+    while (end != std::string_view::npos) {
+        if (currentSplitIndex == index) {
+            return s.substr(start, end - start);
+        }
+        start = end + delimiter.size();
+        end = s.find(delimiter, start);
+        currentSplitIndex++;
+    }
+
+    if (currentSplitIndex == index) {
+        return s.substr(start);
+    }
+
+    return {};
+}
+
 }  // namespace DMZ

@@ -1,0 +1,3 @@
+module std::io;
+
+extern fn printf(fmt: &char[], ...) -> int;

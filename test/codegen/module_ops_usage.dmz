@@ -1,5 +1,5 @@
 // RUN: compiler %s %S/module_ops.dmz -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s %S/module_ops.dmz -run) <(echo -n -e '1\n2\n3\n')
+// RUN: diff <(compiler %s %S/module_ops.dmz -run 2>&1) <(echo -n -e '1\n2\n3\n')
 
 import ops;
 import ops::integer;

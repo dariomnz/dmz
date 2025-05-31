@@ -1,6 +1,12 @@
 // RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
 module ops;
 
+struct str_ops {
+    x:int,
+    y:int,
+    z:int,
+}
+
 fn print(x:int) -> void {
     println(x);
 }
@@ -8,11 +14,11 @@ fn print(x:int) -> void {
 extern fn printf(fmt:&char[], ...) -> int;
 
 fn println(const n:int) -> void {printf(&"%d\n", n);}
-// CHECK: ResolvedModuleDecl ops::
+// CHECK: ResolvedModuleDecl ops
 // CHECK-NEXT:   ResolvedFunctionDecl ops::print -> void
 // CHECK-NEXT:     ResolvedParamDecl:int x
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:void println
+// CHECK-NEXT:       ResolvedCallExpr:void ops::println
 // CHECK-NEXT:         ResolvedDeclRefExpr:int x
 
 module ops::integer;
@@ -24,7 +30,7 @@ fn add(x:int, y:int) -> int {
 fn sub(x:int, y:int) -> int {
     return x - y;
 }
-// CHECK: ResolvedModuleDecl ops::
+// CHECK: ResolvedModuleDecl ops
 // CHECK-NEXT:   ResolvedModuleDecl ops::integer
 // CHECK-NEXT:     ResolvedFunctionDecl ops::integer::add -> int
 // CHECK-NEXT:       ResolvedParamDecl:int x

@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e '1\n2\n3\n2\n1\n3\n3\n2\n1\n')
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n2\n3\n2\n1\n3\n3\n2\n1\n')
 extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
 struct Color {
   r: int,

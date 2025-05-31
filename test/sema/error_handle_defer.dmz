@@ -1,5 +1,5 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e "Defered foo\nDefered foo\nDefered foo\nDefered bar\nDefered foo\nDefered foo\nDefered bar\n")
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e "Defered foo\nDefered foo\nDefered foo\nDefered bar\nDefered foo\nDefered foo\nDefered bar\n")
 
 err {
     ERROR_ONE,
