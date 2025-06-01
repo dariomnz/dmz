@@ -231,7 +231,9 @@ void ModuleDeclRefExpr::dump(size_t level) const {
 }
 
 void ImportDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ImportDecl " << identifier << '\n';
+    std::cerr << indent(level) << "ImportDecl " << identifier;
+    if (!alias.empty()) std::cerr << " as " << alias;
+    std::cerr << '\n';
 
     if (nestedImport) nestedImport->dump(level + 1);
 }

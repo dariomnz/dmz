@@ -376,6 +376,10 @@ std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(co
             moduleDeclRef.dump();
             return report(moduleDeclRef.location, "module '" + strToLookUp + "' not imported");
         }
+        if (!importDecl->alias.empty()) {
+            m_currentModuleIDRef = importDecl->moduleID;
+            m_currentModuleIDRef.modules.emplace_back(importDecl->identifier);
+        }
     }
 
     std::unique_ptr<ResolvedExpr> resolvedExpr;

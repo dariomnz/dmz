@@ -290,7 +290,9 @@ void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedImportDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedImportDecl " << moduleID << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedImportDecl " << moduleID << identifier;
+    if (!alias.empty()) std::cerr << " as " << alias;
+    std::cerr << '\n';
 
     if (onlySelf) return;
 

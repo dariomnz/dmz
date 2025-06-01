@@ -14,8 +14,7 @@ fn print(x:int) -> void {
 extern fn printf(fmt:&char[], ...) -> int;
 
 fn println(const n:int) -> void {printf(&"%d\n", n);}
-// CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedFunctionDecl ops::print -> void
+// CHECK:   ResolvedFunctionDecl ops::print -> void
 // CHECK-NEXT:     ResolvedParamDecl:int x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void ops::println
@@ -30,8 +29,7 @@ fn add(x:int, y:int) -> int {
 fn sub(x:int, y:int) -> int {
     return x - y;
 }
-// CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedModuleDecl ops::integer
+// CHECK:   ResolvedModuleDecl ops::integer
 // CHECK-NEXT:     ResolvedFunctionDecl ops::integer::add -> int
 // CHECK-NEXT:       ResolvedParamDecl:int x
 // CHECK-NEXT:       ResolvedParamDecl:int y

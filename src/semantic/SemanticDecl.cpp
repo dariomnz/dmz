@@ -350,11 +350,11 @@ std::unique_ptr<ResolvedImportDecl> Sema::resolve_import_decl(const ImportDecl &
     std::unique_ptr<ResolvedImportDecl> resolvedImportDecl;
     if (importDecl.nestedImport) {
         varOrReturn(nestedImport, resolve_import_decl(*importDecl.nestedImport, currentModuleID));
-        resolvedImportDecl = std::make_unique<ResolvedImportDecl>(importDecl.location, importDecl.identifier,
-                                                                  prevModuleID, std::move(nestedImport));
+        resolvedImportDecl = std::make_unique<ResolvedImportDecl>(
+            importDecl.location, importDecl.identifier, prevModuleID, std::move(nestedImport), importDecl.alias);
     } else {
-        resolvedImportDecl =
-            std::make_unique<ResolvedImportDecl>(importDecl.location, importDecl.identifier, prevModuleID, nullptr);
+        resolvedImportDecl = std::make_unique<ResolvedImportDecl>(importDecl.location, importDecl.identifier,
+                                                                  prevModuleID, nullptr, importDecl.alias);
     }
     return resolvedImportDecl;
 }

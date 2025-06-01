@@ -484,9 +484,11 @@ struct ModuleDeclRefExpr : public Expr {
 
 struct ImportDecl : public Decl {
     std::unique_ptr<ImportDecl> nestedImport;
+    std::string_view alias;
 
-    ImportDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ImportDecl> nestedImport = nullptr)
-        : Decl(location, identifier), nestedImport(std::move(nestedImport)) {}
+    ImportDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ImportDecl> nestedImport = nullptr,
+               std::string_view alias = "")
+        : Decl(location, identifier), nestedImport(std::move(nestedImport)), alias(std::move(alias)) {}
 
     void dump(size_t level = 0) const override;
 };

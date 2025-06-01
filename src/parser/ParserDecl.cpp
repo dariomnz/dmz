@@ -230,9 +230,17 @@ std::unique_ptr<ImportDecl> Parser::parse_import_decl(bool haveEatImport) {
         return std::make_unique<ImportDecl>(location, identifier, std::move(nestedImport));
     }
 
+    std::string_view alias = "";
+    if (m_nextToken.type == TokenType::kw_as) {
+        eat_next_token();  // eat as
+        matchOrReturn(TokenType::id, "expected identifier");
+        alias = m_nextToken.str;
+        eat_next_token();  // eat id
+    }
+
     matchOrReturn(TokenType::semicolon, "expected ';'");
     eat_next_token();  // eat ;
 
-    return std::make_unique<ImportDecl>(location, identifier);
+    return std::make_unique<ImportDecl>(location, identifier, nullptr, alias);
 }
 }  // namespace DMZ

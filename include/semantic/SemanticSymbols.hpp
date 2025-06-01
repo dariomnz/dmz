@@ -448,11 +448,13 @@ struct ResolvedModuleDecl : public ResolvedDecl {
 
 struct ResolvedImportDecl : public ResolvedDecl {
     std::unique_ptr<ResolvedImportDecl> nestedImport;
+    std::string_view alias;
 
     ResolvedImportDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
-                       std::unique_ptr<ResolvedImportDecl> nestedImport)
+                       std::unique_ptr<ResolvedImportDecl> nestedImport, std::string_view alias)
         : ResolvedDecl(location, identifier, std::move(moduleID), Type::builtinVoid(), false),
-          nestedImport(std::move(nestedImport)) {}
+          nestedImport(std::move(nestedImport)),
+          alias(std::move(alias)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
