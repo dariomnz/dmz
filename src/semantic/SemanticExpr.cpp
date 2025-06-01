@@ -312,7 +312,16 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
 }
 
 std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {
-    auto lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
+    // Search in the module scope
+    ResolvedErrDecl *lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
+    if (!lookupErr) {
+        // Search in the current module
+        lookupErr = lookup_decl_in_modules<ResolvedErrDecl>(m_currentModuleID, errDeclRef.identifier);
+    }
+    if (!lookupErr) {
+        // Search in the imports
+        lookupErr = lookup_decl_in_modules<ResolvedErrDecl>(m_currentModuleIDRef, errDeclRef.identifier);
+    }
 
     if (!lookupErr) {
         return report(errDeclRef.location, "err '" + std::string(errDeclRef.identifier) + "' not found");
@@ -373,7 +382,7 @@ std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(co
         strToLookUp = strToLookUp.substr(0, newSize);
         const auto &[importDecl, _] = lookup_decl<ResolvedImportDecl>(strToLookUp);
         if (!importDecl) {
-            moduleDeclRef.dump();
+            // moduleDeclRef.dump();
             return report(moduleDeclRef.location, "module '" + strToLookUp + "' not imported");
         }
         if (!importDecl->alias.empty()) {

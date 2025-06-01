@@ -179,6 +179,7 @@ std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGrou
         auto &errDecl = resolvedErrors.emplace_back(
             std::make_unique<ResolvedErrDecl>(err->location, err->identifier, m_currentModuleID));
         if (!insert_decl_to_current_scope(*errDecl)) return nullptr;
+        if (!insert_decl_to_modules(*errDecl)) return nullptr;
     }
 
     return std::make_unique<ResolvedErrGroupDecl>(errGroupDecl.location, errGroupDecl.identifier, m_currentModuleID,

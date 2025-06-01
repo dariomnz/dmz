@@ -491,5 +491,6 @@ struct ImportDecl : public Decl {
         : Decl(location, identifier), nestedImport(std::move(nestedImport)), alias(std::move(alias)) {}
 
     void dump(size_t level = 0) const override;
+    std::string get_moduleID() const;
 };
 }  // namespace DMZ

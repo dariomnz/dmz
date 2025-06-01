@@ -105,7 +105,7 @@ class Lexer {
     void advance(int num = 1);
 
    private:
-    std::string_view m_file_name;
+    std::string m_file_name;
     std::string m_file_content;
     size_t m_position = 0;
     size_t m_line = 0;

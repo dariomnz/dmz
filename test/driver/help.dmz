@@ -5,6 +5,7 @@
 // CHECK-NEXT: 
 // CHECK-NEXT: Options:
 // CHECK-NEXT:   -h, -help        display this message
+// CHECK-NEXT:   -I <dir path>    include <dir path> to search for modules
 // CHECK-NEXT:   -o <file>        write executable to <file>
 // CHECK-NEXT:   -lexer-dump      print the lexer dump
 // CHECK-NEXT:   -ast-dump        print the abstract syntax tree

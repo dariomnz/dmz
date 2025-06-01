@@ -237,4 +237,15 @@ void ImportDecl::dump(size_t level) const {
 
     if (nestedImport) nestedImport->dump(level + 1);
 }
+
+std::string ImportDecl::get_moduleID() const {
+    std::string moduleID(identifier);
+    const ImportDecl *currentImportDecl = this;
+    while (currentImportDecl->nestedImport) {
+        currentImportDecl = currentImportDecl->nestedImport.get();
+        moduleID += "::";
+        moduleID += currentImportDecl->identifier;
+    }
+    return moduleID;
+}
 }  // namespace DMZ

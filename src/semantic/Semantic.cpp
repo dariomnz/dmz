@@ -162,6 +162,7 @@ T *Sema::lookup_decl_in_modules(const ModuleID &moduleID, const std::string_view
 template ResolvedDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::string_view);
 template ResolvedImportDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::string_view);
 template ResolvedModuleDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::string_view);
+template ResolvedErrDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::string_view);
 
 bool Sema::lookup_in_modules(const ModuleID &moduleID, const std::string_view id) {
 #ifdef DEBUG

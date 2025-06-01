@@ -1,0 +1,9 @@
+// RUN: compiler %s -I %S/../../std -run | filecheck %s
+
+// CHECK: Hello world!
+// CHECK-NOT: {{.*}}
+import std::io as io;
+
+fn main() -> void {
+    io::printf(&"Hello world!\n");
+}

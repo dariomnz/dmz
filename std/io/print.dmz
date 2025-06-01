@@ -1,3 +1,7 @@
 module std::io;
 
 extern fn printf(fmt: &char[], ...) -> int;
+
+fn println(n:int) -> int {
+    return printf(&"%d\n", n);
+}

@@ -11,6 +11,7 @@ void Driver::display_help() {
     println("  compiler [options] <source_files...>\n");
     println("Options:");
     println("  -h, -help        display this message");
+    println("  -I <dir path>    include <dir path> to search for modules");
     println("  -o <file>        write executable to <file>");
     println("  -lexer-dump      print the lexer dump");
     println("  -ast-dump        print the abstract syntax tree");
@@ -31,28 +32,31 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
         if (arg[0] != '-') {
             options.sources.emplace_back(arg);
         } else {
-            if (arg == "-h" || arg == "--help")
+            if (arg == "-h" || arg == "--help") {
                 options.displayHelp = true;
-            else if (arg == "-o")
+            } else if (arg == "-o") {
                 options.output = ++idx >= argc ? "" : argv[idx];
-            else if (arg == "-lexer-dump")
+            } else if (arg == "-I") {
+                if (++idx < argc) options.includes.emplace_back(argv[idx]);
+            } else if (arg == "-lexer-dump") {
                 options.lexerDump = true;
-            else if (arg == "-ast-dump")
+            } else if (arg == "-ast-dump") {
                 options.astDump = true;
-            else if (arg == "-res-dump")
+            } else if (arg == "-res-dump") {
                 options.resDump = true;
-            else if (arg == "-llvm-dump")
+            } else if (arg == "-llvm-dump") {
                 options.llvmDump = true;
-            else if (arg == "-cfg-dump")
+            } else if (arg == "-cfg-dump") {
                 options.cfgDump = true;
-            else if (arg == "-run")
+            } else if (arg == "-run") {
                 options.run = true;
-            else if (arg == "-module")
+            } else if (arg == "-module") {
                 options.isModule = true;
-            else if (arg == "-print-stats")
+            } else if (arg == "-print-stats") {
                 options.printStats = true;
-            else
+            } else {
                 error("unexpected option '" + std::string(arg) + '\'');
+            }
         }
 
         ++idx;
@@ -104,18 +108,17 @@ Driver::Type_Lexers Driver::lexer_pass(Type_Sources &sources) {
             } while (tok.type != TokenType::eof);
         }
         m_haveNormalExit = true;
-        return {};
     }
     return lexers;
 }
 
-Driver::Type_Asts Driver::parser_pass(Type_Lexers &lexers) {
+Driver::Type_Asts Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
     std::vector<std::vector<std::unique_ptr<Decl>>> asts;
     asts.resize(lexers.size());
     for (size_t index = 0; index < lexers.size(); index++) {
         m_workers.submit([&, index]() {
             Parser parser(*lexers[index]);
-            bool needMain = !m_options.isModule && index == 0;
+            bool needMain = expectMain && !m_options.isModule && index == 0;
             auto [ast, success] = parser.parse_source_file(needMain);
             asts[index] = std::move(ast);
             if (!success) m_haveError = true;
@@ -131,9 +134,56 @@ Driver::Type_Asts Driver::parser_pass(Type_Lexers &lexers) {
             }
         }
         m_haveNormalExit = true;
-        return {};
     }
     return asts;
+}
+
+void Driver::include_pass(Type_Lexers &lexers, Type_Asts &asts) {
+    std::unordered_set<std::filesystem::path> newSources;
+    // Insert already sources to not repeat
+    for (auto &&source : m_options.sources) {
+        newSources.emplace(source);
+    }
+
+    std::unordered_set<std::string> importedModules;
+    std::unordered_set<std::string_view> moduleIDs;
+
+    size_t prev_size = 0;
+    do {
+        prev_size = newSources.size();
+        moduleIDs.clear();
+
+        for (auto &&ast : asts) {
+            for (auto &&decl : ast) {
+                if (auto importDecl = dynamic_cast<ImportDecl *>(decl.get())) {
+                    std::string moduleID = importDecl->get_moduleID();
+                    if (importedModules.find(moduleID) != importedModules.end()) continue;
+                    auto moduleIDEmplaced = importedModules.emplace(moduleID);
+                    if (moduleIDEmplaced.second) moduleIDs.emplace(*moduleIDEmplaced.first);
+                }
+            }
+        }
+
+        auto sources = find_modules(m_options.includes, moduleIDs);
+        for (auto &&path : sources) {
+            newSources.emplace(path);
+        }
+
+        if (prev_size == newSources.size()) break;
+
+        for (auto &&path : sources) {
+            m_options.sources.emplace_back(path);
+        }
+        auto newLexers = lexer_pass(sources);
+        auto newAsts = parser_pass(newLexers, false);
+
+        for (auto &&lexer : newLexers) {
+            lexers.emplace_back(std::move(lexer));
+        }
+        for (auto &&ast : newAsts) {
+            asts.emplace_back(std::move(ast));
+        }
+    } while (prev_size != newSources.size());
 }
 
 Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts &asts) {
@@ -340,9 +390,8 @@ int Driver::main() {
     check_exit();
 
     auto lexers = lexer_pass(m_options.sources);
-    check_exit();
-
     auto asts = parser_pass(lexers);
+    include_pass(lexers, asts);
     check_exit();
 
     auto resolvedTrees = semantic_pass(asts);

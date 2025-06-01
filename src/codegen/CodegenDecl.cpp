@@ -180,8 +180,9 @@ void Codegen::generate_err_no_err() {
 
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     for (auto &err : errGroupDecl.errs) {
-        auto symbol_name = generate_symbol_name(err->moduleID.to_string() + std::string(err->identifier));
-        llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, symbol_name, true);
+        auto name = err->moduleID.to_string() + std::string(err->identifier);
+        auto symbol_name = generate_symbol_name(name);
+        llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, name, true);
         m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
                                                              llvm::GlobalVariable::LinkageTypes::PrivateLinkage,
                                                              stringConst, "err.str." + symbol_name);
