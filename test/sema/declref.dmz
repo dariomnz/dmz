@@ -2,7 +2,7 @@
 fn foo() -> void {}
 
 fn main() -> void {
-    let x: int = 1;
+    let x: i32 = 1;
 
     // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
     foo;
@@ -12,13 +12,13 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
     y;
 
-    let foo: int = 2;
+    let foo: i32 = 2;
 
     // CHECK: [[# @LINE + 1 ]]:8: error: calling non-function symbol
     foo();
 }
 
-fn bar(x: int) -> void {
+fn bar(x: i32) -> void {
     x;
 
     // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol

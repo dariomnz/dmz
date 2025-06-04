@@ -11,13 +11,13 @@ namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
     if (auto val = expr.get_constant_value()) {
-        if (std::holds_alternative<int>(*val)) {
-            return m_builder.getInt32(std::get<int>(*val));
-        } else if (std::holds_alternative<char>(*val)) {
-            return m_builder.getInt8(std::get<char>(*val));
-        } else if (std::holds_alternative<bool>(*val)) {
-            return m_builder.getInt1(std::get<bool>(*val));
+        if (expr.type == Type::builtinBool()) {
+            return m_builder.getInt1(*val != 0);
         }
+        return m_builder.getInt32(*val);
+    }
+    if (auto *number = dynamic_cast<const ResolvedFloatLiteral *>(&expr)) {
+        return llvm::ConstantFP::get(m_builder.getDoubleTy(), number->value);
     }
     if (auto *number = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
         return m_builder.getInt32(number->value);
@@ -79,18 +79,8 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     auto symbolName = generate_symbol_name(modIdentifier);
     llvm::Function *callee = m_module->getFunction(generate_symbol_name(symbolName));
     if (!callee) {
-        // println("symbolName " << symbolName);
-        // call.dump();
-        // println(&calleeDecl << " " << calleeDecl.identifier);
-        // println(&calleeDecl << " " << calleeDecl.params.size());
-        // println(&calleeDecl << " " << (void *)calleeDecl.params[0].get());
-
-        // println(&calleeDecl << " " << calleeDecl.params[0]->identifier);
-
-        // (&calleeDecl)->dump();
         generate_function_decl(calleeDecl);
         callee = m_module->getFunction(symbolName);
-        // println("Cannot find " << symbolName);
         assert(callee && "Cannot generate declaration of extern function");
     }
 
@@ -108,7 +98,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 
         if (arg->type.kind == Type::Kind::Struct && calleeDecl.params[argIdx]->isMutable && !arg->type.isRef) {
             llvm::Value *tmpVar = allocate_stack_variable("struct.arg.tmp", arg->type);
-            store_value(val, tmpVar, arg->type);
+            store_value(val, tmpVar, arg->type, arg->type);
             val = tmpVar;
         }
 
@@ -126,9 +116,16 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
     bool keepPointer = unop.op == TokenType::amp;
     llvm::Value *rhs = generate_expr(*unop.operand, keepPointer);
 
-    if (unop.op == TokenType::op_minus) return m_builder.CreateNeg(rhs);
+    if (unop.op == TokenType::op_minus) {
+        if (unop.operand->type.kind == Type::Kind::Int || unop.operand->type.kind == Type::Kind::UInt)
+            return m_builder.CreateNeg(rhs);
+        else if (unop.operand->type.kind == Type::Kind::Float)
+            return m_builder.CreateFNeg(rhs);
+        else
+            dmz_unreachable("not expected type in op_minus");
+    }
 
-    if (unop.op == TokenType::op_excla_mark) return bool_to_int(m_builder.CreateNot(int_to_bool(rhs)));
+    if (unop.op == TokenType::op_excla_mark) return m_builder.CreateNot(to_bool(rhs, unop.operand->type));
 
     if (unop.op == TokenType::amp) {
         return rhs;
@@ -157,7 +154,7 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
         generate_conditional_operator(*binop.lhs, trueBB, falseBB);
 
         m_builder.SetInsertPoint(rhsBB);
-        llvm::Value *rhs = int_to_bool(generate_expr(*binop.rhs));
+        llvm::Value *rhs = to_bool(generate_expr(*binop.rhs), binop.rhs->type);
 
         assert(!m_builder.GetInsertBlock()->getTerminator() && "a binop terminated the current block");
         m_builder.CreateBr(mergeBB);
@@ -173,28 +170,108 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
                 phi->addIncoming(m_builder.getInt1(isOr), *it);
         }
 
-        return bool_to_int(phi);
+        return phi;
     }
 
     llvm::Value *lhs = generate_expr(*binop.lhs);
     llvm::Value *rhs = generate_expr(*binop.rhs);
 
-    if (op == TokenType::op_plus) return m_builder.CreateAdd(lhs, rhs);
+    return cast_binary_operator(binop, lhs, rhs);
+}
 
-    if (op == TokenType::op_minus) return m_builder.CreateSub(lhs, rhs);
+llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs) {
+    rhs = cast_to(rhs, binop.rhs->type, binop.lhs->type);
 
-    if (op == TokenType::op_mult) return m_builder.CreateMul(lhs, rhs);
-
-    if (op == TokenType::op_div) return m_builder.CreateUDiv(lhs, rhs);
-
-    if (op == TokenType::op_less) return bool_to_int(m_builder.CreateICmpSLT(lhs, rhs));
-    if (op == TokenType::op_less_eq) return bool_to_int(m_builder.CreateICmpSLE(lhs, rhs));
-
-    if (op == TokenType::op_more) return bool_to_int(m_builder.CreateICmpSGT(lhs, rhs));
-    if (op == TokenType::op_more_eq) return bool_to_int(m_builder.CreateICmpSGE(lhs, rhs));
-
-    if (op == TokenType::op_equal) return bool_to_int(m_builder.CreateICmpEQ(lhs, rhs));
-    if (op == TokenType::op_not_equal) return bool_to_int(m_builder.CreateICmpNE(lhs, rhs));
+    if (binop.op == TokenType::op_plus) {
+        if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateAdd(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFAdd(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_plus");
+    }
+    if (binop.op == TokenType::op_minus) {
+        if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateSub(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFSub(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_minus");
+    }
+    if (binop.op == TokenType::op_mult) {
+        if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateMul(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFMul(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_mult");
+    }
+    if (binop.op == TokenType::op_div) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateSDiv(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateUDiv(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFDiv(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_div");
+    }
+    if (binop.op == TokenType::op_less) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateICmpSLT(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpULT(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpULT(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_less");
+    }
+    if (binop.op == TokenType::op_less_eq) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateICmpSLE(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpULE(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpULE(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_less");
+    }
+    if (binop.op == TokenType::op_more) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateICmpSGT(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpUGT(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpUGT(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_more");
+    }
+    if (binop.op == TokenType::op_more_eq) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateICmpSGE(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpUGE(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpUGE(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_more_eq");
+    }
+    if (binop.op == TokenType::op_equal) {
+        if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpEQ(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpUEQ(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_equal");
+    }
+    if (binop.op == TokenType::op_not_equal) {
+        if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateICmpNE(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFCmpUNE(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_not_equal");
+    }
 
     binop.dump();
     dmz_unreachable("unexpected binary operator");
@@ -224,7 +301,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
         return;
     }
 
-    llvm::Value *val = int_to_bool(generate_expr(op));
+    llvm::Value *val = to_bool(generate_expr(op), op.type);
     m_builder.CreateCondBr(val, trueBB, falseBB);
 }
 
@@ -258,7 +335,7 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     size_t idx = 0;
     for (auto &&field : sie.structDecl.fields) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(structType), tmp, idx++);
-        store_value(initializerVals[field.get()], dst, field->type);
+        store_value(initializerVals[field.get()], dst, field->type, field->type);
     }
 
     return tmp;
@@ -282,7 +359,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         m_builder.CreateStructGEP(generate_type(errUnwrapExpr.errToUnwrap->type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
 
-    m_builder.CreateCondBr(ptr_to_bool(err_value), trueBB, elseBB);
+    m_builder.CreateCondBr(to_bool(err_value, Type::builtinErr("err")), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -292,7 +369,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
 
     if (m_currentFunction->type.isOptional) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-        store_value(err_value, dst, Type::builtinErr("err"));
+        store_value(err_value, dst, Type::builtinErr("err"), Type::builtinErr("err"));
 
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
@@ -330,13 +407,13 @@ llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchE
     }
     llvm::Value *err_value_ptr = m_builder.CreateStructGEP(generate_type(err_type), err_struct, 1);
     llvm::Value *err_value = load_value(err_value_ptr, Type::builtinErr("err"));
-    llvm::Value *err_value_bool = ptr_to_bool(err_value);
+    llvm::Value *err_value_bool = to_bool(err_value, Type::builtinErr("err"));
     if (catchErrExpr.declaration) {
         llvm::Value *selectedError = m_builder.CreateSelect(err_value_bool, err_value, m_success, "select.err");
-        store_value(selectedError, decl_value, Type::builtinErr("err"));
+        store_value(selectedError, decl_value, Type::builtinErr("err"), Type::builtinErr("err"));
     }
 
-    return m_builder.CreateSelect(err_value_bool, m_builder.getInt32(1), m_builder.getInt32(0), "catch.result");
+    return m_builder.CreateSelect(err_value_bool, m_builder.getInt1(true), m_builder.getInt1(false), "catch.result");
 }
 
 llvm::Value *Codegen::generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr) {
@@ -364,9 +441,10 @@ llvm::Value *Codegen::generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr
     if (tryErrExpr.declaration) {
         llvm::Value *value_ptr = m_builder.CreateStructGEP(generate_type(err_type), err_struct, 0);
         llvm::Value *value = load_value(value_ptr, tryErrExpr.declaration->varDecl->type);
-        store_value(value, decl_value, tryErrExpr.declaration->varDecl->type);
+        store_value(value, decl_value, tryErrExpr.declaration->varDecl->type, tryErrExpr.declaration->varDecl->type);
     }
 
-    return m_builder.CreateSelect(ptr_to_bool(err_value), m_builder.getInt32(0), m_builder.getInt32(1), "try.result");
+    return m_builder.CreateSelect(to_bool(err_value, Type::builtinErr("err")), m_builder.getInt1(false),
+                                  m_builder.getInt1(true), "try.result");
 }
 }  // namespace DMZ

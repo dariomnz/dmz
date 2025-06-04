@@ -17,19 +17,18 @@ std::string ModuleID::to_string() const {
 
 void ResolvedExpr::dump_constant_value(size_t level) const {
     if (value) {
-        std::cerr << indent(level) << "| value:";
-        std::visit(overload{
-                       [](int val) { std::cerr << "int " << val; },
-                       [](char val) { std::cerr << "char " << str_to_source(std::string(1, val)); },
-                       [](bool val) { std::cerr << "bool " << (val ? "true" : "false"); },
-                   },
-                   *value);
-        std::cerr << '\n';
+        std::cerr << indent(level) << "| value: " << *value << '\n';
     }
 }
 
 void ResolvedIntLiteral::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedIntLiteral:" << type << " '" << value << "'\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+}
+
+void ResolvedFloatLiteral::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedFloatLiteral:" << type << " '" << std::fixed << value << "'\n";
     if (onlySelf) return;
     dump_constant_value(level);
 }

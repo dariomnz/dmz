@@ -65,7 +65,8 @@ std::optional<Type> Parser::parse_type() {
     std::string_view name = m_nextToken.str;
 
     std::unordered_set<TokenType> types = {
-        TokenType::kw_void, TokenType::kw_int, TokenType::kw_char, TokenType::kw_bool, TokenType::id,
+        TokenType::ty_void, TokenType::ty_f16, TokenType::ty_f32, TokenType::ty_f64,
+        TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
     };
 
     if (types.count(type) == 0) {
@@ -84,19 +85,24 @@ std::optional<Type> Parser::parse_type() {
         isArray = true;
     }
     Type t;
-    if (type == TokenType::kw_void) {
+    if (type == TokenType::ty_void) {
         t = Type::builtinVoid();
     }
-    if (type == TokenType::kw_bool) {
-        t = Type::builtinBool();
+    if (type == TokenType::ty_f16) {
+        t = Type::builtinF16();
     }
-    if (type == TokenType::kw_char) {
-        t = Type::builtinChar();
+    if (type == TokenType::ty_f32) {
+        t = Type::builtinF32();
     }
-    if (type == TokenType::kw_int) {
-        t = Type::builtinInt();
+    if (type == TokenType::ty_f64) {
+        t = Type::builtinF64();
     }
-
+    if (type == TokenType::ty_iN) {
+        t = Type::builtinIN(name);
+    }
+    if (type == TokenType::ty_uN) {
+        t = Type::builtinUN(name);
+    }
     if (type == TokenType::id) {
         t = Type::custom(name);
     }

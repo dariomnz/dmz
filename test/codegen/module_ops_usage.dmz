@@ -20,6 +20,9 @@ fn main() -> void {
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   %y = alloca i32, align 4
 // CHECK-NEXT:   %result = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 1, ptr %x, align 4
 // CHECK-NEXT:   store i32 2, ptr %y, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x, align 4

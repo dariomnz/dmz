@@ -1,22 +1,22 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-fn foo() -> int {
-    let const x: int = 2;
-    let const y: int = 5;
+fn foo() -> i32 {
+    let const x: i32 = 2;
+    let const y: i32 = 5;
 
     return (10 * (x + 4)) && (!(y == x) || x < y);
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:bool '&&'
-// CHECK-NEXT:      | value:bool true
+// CHECK-NEXT:      ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:      | value: 1
 
-fn bar() -> int {
-    let const x: int = 2;
+fn bar() -> i32 {
+    let const x: i32 = 2;
 
     return (x);
 }
 // CHECK: ResolvedReturnStmt
 // CHECK-NEXT:   ResolvedGroupingExpr:
-// CHECK-NEXT:   | value:int 2
-// CHECK-NEXT:     ResolvedDeclRefExpr:int x
+// CHECK-NEXT:   | value: 2
+// CHECK-NEXT:     ResolvedDeclRefExpr:i32 x
 
 fn main() -> void {}

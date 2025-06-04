@@ -1,17 +1,17 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s --implicit-check-not error --match-full-lines
-fn foo() -> int {
+fn foo() -> i32 {
     return 1;
 }
 
-fn bar() -> char {
+fn bar() -> u8 {
     return '\n';
 }
 
-fn str() -> char[] {
+fn str() -> u8[] {
     return "hello\n";
 }
 
-fn fnBool() -> bool {
+fn fnBool() -> i1 {
     return true;
 }
 
@@ -19,12 +19,12 @@ fn main() -> void {
     let x = 1;
     let y = foo() + 1;
 
-    let x2: int;
-    let y2: int;
+    let x2: i32;
+    let y2: i32;
 
     let c1 = 'a';
     let c2 = bar();
-    let c3: char;
+    let c3: u8;
 
     let str1 = "something\n";
     let str2 = str();
@@ -34,28 +34,28 @@ fn main() -> void {
     let bool3 = fnBool();
 }
 
-// CHECK:   ResolvedVarDecl:int x
-// CHECK-NEXT:     ResolvedIntLiteral:int '1'
-// CHECK-NEXT:     | value:int 1
+// CHECK:   ResolvedVarDecl:i32 x
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:int y
-// CHECK-NEXT:     ResolvedBinaryOperator:int '+'
-// CHECK-NEXT:       ResolvedCallExpr:int foo
-// CHECK-NEXT:       ResolvedIntLiteral:int '1'
+// CHECK-NEXT:   ResolvedVarDecl:i32 y
+// CHECK-NEXT:     ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:       ResolvedCallExpr:i32 foo
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 
-// CHECK:      ResolvedVarDecl:char[11] str1
-// CHECK-NEXT:        ResolvedStringLiteral:char[11] 'something\n'
+// CHECK:      ResolvedVarDecl:u8[11] str1
+// CHECK-NEXT:        ResolvedStringLiteral:u8[11] 'something\n'
 // CHECK-NEXT:    ResolvedDeclStmt
-// CHECK-NEXT:      ResolvedVarDecl:char[] str2
-// CHECK-NEXT:        ResolvedCallExpr:char[] str
+// CHECK-NEXT:      ResolvedVarDecl:u8[] str2
+// CHECK-NEXT:        ResolvedCallExpr:u8[] str
 
-// CHECK:   ResolvedVarDecl:bool bool1
-// CHECK-NEXT:     ResolvedBoolLiteral:bool 'true'
-// CHECK-NEXT:     | value:bool true
+// CHECK:   ResolvedVarDecl:i1 bool1
+// CHECK-NEXT:     ResolvedBoolLiteral:i1 'true'
+// CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:bool bool2
-// CHECK-NEXT:     ResolvedBoolLiteral:bool 'false'
-// CHECK-NEXT:     | value:bool false
+// CHECK-NEXT:   ResolvedVarDecl:i1 bool2
+// CHECK-NEXT:     ResolvedBoolLiteral:i1 'false'
+// CHECK-NEXT:     | value: 0
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:bool bool3
-// CHECK-NEXT:     ResolvedCallExpr:bool fnBool
+// CHECK-NEXT:   ResolvedVarDecl:i1 bool3
+// CHECK-NEXT:     ResolvedCallExpr:i1 fnBool

@@ -1,5 +1,5 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
-fn error(x: int) -> void {
+fn error(x: i32) -> void {
     
     if (x == 0) {
         if (x == 2) {
@@ -15,7 +15,7 @@ fn error(x: int) -> void {
 }
 
 // CHECK: FunctionDecl error -> void
-// CHECK-NEXT:   ParamDecl:int x
+// CHECK-NEXT:   ParamDecl:i32 x
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     IfStmt
 // CHECK-NEXT:       BinaryOperator '=='

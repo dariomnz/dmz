@@ -1,13 +1,13 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 struct Color {
-  r: int,
-  g: int,
-  b: int,
+  r: i32,
+  g: i32,
+  b: i32,
 }
 // CHECK: ResolvedStructDecl:Color Color
-// CHECK-NEXT:   ResolvedFieldDecl:int r
-// CHECK-NEXT:   ResolvedFieldDecl:int g
-// CHECK-NEXT:   ResolvedFieldDecl:int b
+// CHECK-NEXT:   ResolvedFieldDecl:i32 r
+// CHECK-NEXT:   ResolvedFieldDecl:i32 g
+// CHECK-NEXT:   ResolvedFieldDecl:i32 b
 
 fn main() -> void {
   let x = Color { 
@@ -21,12 +21,12 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:Color x
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
-// CHECK-NEXT:           ResolvedFieldInitStmt:int r
-// CHECK-NEXT:             ResolvedIntLiteral:int '0'
-// CHECK-NEXT:             | value:int 0
-// CHECK-NEXT:           ResolvedFieldInitStmt:int g
-// CHECK-NEXT:             ResolvedIntLiteral:int '1'
-// CHECK-NEXT:             | value:int 1
-// CHECK-NEXT:           ResolvedFieldInitStmt:int b
-// CHECK-NEXT:             ResolvedIntLiteral:int '2'
-// CHECK-NEXT:             | value:int 2
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:             | value: 0
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 g
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 b
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2

@@ -4,7 +4,7 @@ fn S() -> void {
 }
 
 struct S {
-  x: int,
+  x: i32,
 }
 
 fn main() -> void {

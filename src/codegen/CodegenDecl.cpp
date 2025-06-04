@@ -110,7 +110,7 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
         llvm::Value *declVal = &arg;
         if (paramDecl->type.kind != Type::Kind::Struct && !paramDecl->type.isRef && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, paramDecl->type);
-            store_value(&arg, declVal, paramDecl->type);
+            store_value(&arg, declVal, paramDecl->type, paramDecl->type);
         }
 
         m_declarations[paramDecl] = declVal;

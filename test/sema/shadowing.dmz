@@ -1,29 +1,29 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s --implicit-check-not error
 // CHECK: {{.*}}
-fn foo(x: int) -> void {
-    let x: int = 1;
+fn foo(x: i32) -> void {
+    let x: i32 = 1;
 
     if (0) {
-        let x: int = 2;
+        let x: i32 = 2;
 
         if (0) {
-            let x: int = 3;
+            let x: i32 = 3;
         }
     } else {
-        let x: int = 4;
+        let x: i32 = 4;
     }
 
     while (0) {
-        let x: int = 5;
+        let x: i32 = 5;
 
         if (0) {
-            let x: int = 6;
+            let x: i32 = 6;
 
             if (0) {
-                let x: int = 7;
+                let x: i32 = 7;
             }
         } else {
-            let x: int = 8;
+            let x: i32 = 8;
         }
     }
 }

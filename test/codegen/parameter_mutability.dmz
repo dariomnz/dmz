@@ -1,14 +1,15 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '3\n2\n1\n1\n')
 
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn mutableParam(n: int) -> void {
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn mutableParam(n: i32) -> void {
   n = 3;
   println(n);
 }
 // CHECK: define void @mutableParam(i32 %n) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %n1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %n, ptr %n1, align 4
 // CHECK-NEXT:   store i32 3, ptr %n1, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %n1, align 4
@@ -16,7 +17,7 @@ fn mutableParam(n: int) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn immutableParam(const n: int) -> void {
+fn immutableParam(const n: i32) -> void {
   println(n);
 }
 // CHECK: define void @immutableParam(i32 %n) {
@@ -39,6 +40,7 @@ fn main() -> void {
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %n = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 2, ptr %n, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %n, align 4
 // CHECK-NEXT:   call void @mutableParam(i32 %0)

@@ -59,9 +59,9 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
     if (stmt.expr) {
         if (stmt.expr->type.kind == Type::Kind::Err) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-            store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"));
+            store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"), Type::builtinErr("err"));
         } else {
-            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional());
+            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional(), m_currentFunction->type.withoutOptional());
         }
     }
 
@@ -84,7 +84,7 @@ llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
     if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(*m_context, "if.false");
 
     llvm::Value *cond = generate_expr(*stmt.condition);
-    m_builder.CreateCondBr(int_to_bool(cond), trueBB, elseBB);
+    m_builder.CreateCondBr(to_bool(cond, stmt.condition->type), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -114,7 +114,7 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
     m_builder.SetInsertPoint(header);
     llvm::Value *cond = generate_expr(*stmt.condition);
-    m_builder.CreateCondBr(int_to_bool(cond), body, exit);
+    m_builder.CreateCondBr(to_bool(cond, stmt.condition->type), body, exit);
 
     m_builder.SetInsertPoint(body);
     generate_block(*stmt.body);
@@ -130,7 +130,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
         llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
 
         if (const auto &init = decl->initializer) {
-            store_value(generate_expr(*init), var, init->type);
+            store_value(generate_expr(*init), var, init->type, decl->type);
         }
         m_declarations[decl] = var;
         return var;
@@ -151,7 +151,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     llvm::Value *val = generate_expr(*stmt.expr);
-    return store_value(val, generate_expr(*stmt.assignee, true), stmt.assignee->type);
+    return store_value(val, generate_expr(*stmt.assignee, true), stmt.expr->type, stmt.assignee->type);
 }
 
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {

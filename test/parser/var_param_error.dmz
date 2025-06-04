@@ -1,7 +1,7 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:14: error: expected parameter declaration
-fn foo(const let: int) -> void {
+fn foo(const let: i32) -> void {
 }
 
 fn main() -> void {

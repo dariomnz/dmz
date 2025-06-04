@@ -2,20 +2,13 @@
 
 namespace DMZ {
 
-std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<ConstValue> &d) {
+std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<int> &d) {
     if (!d) return std::nullopt;
-    bool retval;
-    std::visit(overload{
-                   [&retval](int val) { retval = val != 0; },
-                   [&retval](char val) { retval = val != 0; },
-                   [&retval](bool val) { retval = val; },
-               },
-               *d);
-    return retval;
+    return *d != 0;
 }
 
-std::optional<ConstValue> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &expr, bool allowSideEffects) {
-    if (std::optional<ConstValue> val = expr.get_constant_value()) {
+std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &expr, bool allowSideEffects) {
+    if (std::optional<int> val = expr.get_constant_value()) {
         return val;
     }
     if (const auto *intLiteral = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
@@ -42,10 +35,13 @@ std::optional<ConstValue> ConstantExpressionEvaluator::evaluate(const ResolvedEx
     return std::nullopt;
 }
 
-template <typename T>
-T do_unary_op(TokenType type, ConstValue &cval) {
-    T val = std::get<T>(cval);
-    switch (type) {
+std::optional<int> ConstantExpressionEvaluator::evaluate_unary_operator(const ResolvedUnaryOperator &unop,
+                                                                        bool allowSideEffects) {
+    std::optional<int> operand = evaluate(*unop.operand, allowSideEffects);
+    if (!operand) return std::nullopt;
+
+    int val = *operand;
+    switch (unop.op) {
         case TokenType::op_minus:
             return -val;
         case TokenType::op_excla_mark:
@@ -53,31 +49,43 @@ T do_unary_op(TokenType type, ConstValue &cval) {
         default:
             dmz_unreachable("unexpected binary operator");
     }
-}
-
-std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_unary_operator(const ResolvedUnaryOperator &unop,
-                                                                               bool allowSideEffects) {
-    std::optional<ConstValue> operand = evaluate(*unop.operand, allowSideEffects);
-    if (!operand) return std::nullopt;
-
-    if (std::holds_alternative<int>(*operand)) {
-        return do_unary_op<int>(unop.op, *operand);
-    } else if (std::holds_alternative<char>(*operand)) {
-        return do_unary_op<char>(unop.op, *operand);
-    } else if (std::holds_alternative<bool>(*operand)) {
-        return do_unary_op<bool>(unop.op, *operand);
-    } else {
-        dmz_unreachable("unexpected type in ConstValue");
-    }
 
     dmz_unreachable("unexpected unary operator");
 }
 
-template <typename T>
-T do_binary_op(TokenType type, ConstValue &cval1, ConstValue &cval2) {
-    T val1 = std::get<T>(cval1);
-    T val2 = std::get<T>(cval2);
-    switch (type) {
+std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const ResolvedBinaryOperator &binop,
+                                                                         bool allowSideEffects) {
+    std::optional<int> lhs = evaluate(*binop.lhs);
+
+    if (!lhs && !allowSideEffects) return std::nullopt;
+
+    if (binop.op == TokenType::op_or) {
+        if (to_bool(lhs) == true) return true;
+
+        std::optional<int> rhs = evaluate(*binop.rhs, allowSideEffects);
+        if (to_bool(rhs) == true) return true;
+        if (lhs && rhs) return false;
+
+        return std::nullopt;
+    }
+    if (binop.op == TokenType::op_and) {
+        if (to_bool(lhs) == false) return false;
+
+        std::optional<int> rhs = evaluate(*binop.rhs, allowSideEffects);
+        if (to_bool(rhs) == false) return false;
+
+        if (lhs && rhs) return true;
+
+        return std::nullopt;
+    }
+    if (!lhs) return std::nullopt;
+
+    std::optional<int> rhs = evaluate(*binop.rhs);
+    if (!rhs) return std::nullopt;
+
+    int val1 = *lhs;
+    int val2 = *rhs;
+    switch (binop.op) {
         case TokenType::op_mult:
             return val1 * val2;
         case TokenType::op_div:
@@ -103,51 +111,8 @@ T do_binary_op(TokenType type, ConstValue &cval1, ConstValue &cval2) {
     }
 }
 
-std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_binary_operator(const ResolvedBinaryOperator &binop,
-                                                                                bool allowSideEffects) {
-    std::optional<ConstValue> lhs = evaluate(*binop.lhs);
-
-    if (!lhs && !allowSideEffects) return std::nullopt;
-
-    if (binop.op == TokenType::op_or) {
-        if (to_bool(lhs) == true) return true;
-
-        std::optional<ConstValue> rhs = evaluate(*binop.rhs, allowSideEffects);
-        if (to_bool(rhs) == true) return true;
-        if (lhs && rhs) return false;
-
-        return std::nullopt;
-    }
-    if (binop.op == TokenType::op_and) {
-        if (to_bool(lhs) == false) return false;
-
-        std::optional<ConstValue> rhs = evaluate(*binop.rhs, allowSideEffects);
-        if (to_bool(rhs) == false) return false;
-
-        if (lhs && rhs) return true;
-
-        return std::nullopt;
-    }
-    if (!lhs) return std::nullopt;
-
-    std::optional<ConstValue> rhs = evaluate(*binop.rhs);
-    if (!rhs) return std::nullopt;
-
-    if ((*lhs).index() != (*rhs).index()) return std::nullopt;
-
-    if (std::holds_alternative<int>(*lhs)) {
-        return do_binary_op<int>(binop.op, *lhs, *rhs);
-    } else if (std::holds_alternative<char>(*lhs)) {
-        return do_binary_op<char>(binop.op, *lhs, *rhs);
-    } else if (std::holds_alternative<bool>(*lhs)) {
-        return do_binary_op<bool>(binop.op, *lhs, *rhs);
-    } else {
-        dmz_unreachable("unexpected type in ConstValue");
-    }
-}
-
-std::optional<ConstValue> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
-                                                                              bool allowSideEffects) {
+std::optional<int> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
+                                                                       bool allowSideEffects) {
     const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl);
     if (!rvd || rvd->isMutable || !rvd->initializer) return std::nullopt;
 

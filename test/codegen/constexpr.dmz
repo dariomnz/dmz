@@ -1,18 +1,19 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '3\n4\n')
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn sideEffect(x: int) -> int {
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn sideEffect(x: i32) -> i32 {
     println(x);
     return x;
 }
 
-fn constant() -> int {
+fn constant() -> i32 {
     return 1 || sideEffect(2);
 }
 // CHECK: define i32 @constant() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   store i1 true, ptr %retval, align 1
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 1, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
@@ -20,13 +21,14 @@ fn constant() -> int {
 // CHECK-NEXT:   ret i32 %0
 // CHECK-NEXT: }
 
-fn constant2() -> int {
+fn constant2() -> i32 {
     return 0 && sideEffect(2);
 }
 // CHECK: define i32 @constant2() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   store i1 false, ptr %retval, align 1
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 0, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
@@ -34,22 +36,24 @@ fn constant2() -> int {
 // CHECK-NEXT:   ret i32 %0
 // CHECK-NEXT: }
 
-fn nonConstant() -> int {
+fn nonConstant() -> i32 {
     return sideEffect(3) || 1;
 }
 // CHECK: define i32 @nonConstant() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @sideEffect(i32 3)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.rhs
 
-fn nonConstant2() -> int {
+fn nonConstant2() -> i32 {
     return sideEffect(4) && 0;
 }
 // CHECK: define i32 @nonConstant2() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @sideEffect(i32 4)
 // CHECK-NEXT:   %int.to.bool = icmp ne i32 %0, 0
 // CHECK-NEXT:   br i1 %int.to.bool, label %and.rhs, label %and.merge

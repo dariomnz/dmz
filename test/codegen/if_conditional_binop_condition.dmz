@@ -1,5 +1,5 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-fn foo(x: int) -> void {
+fn foo(x: i32) -> void {
     if (x == 1 || x == 2 && x > 3) {
 
     }
@@ -7,37 +7,28 @@ fn foo(x: int) -> void {
 // CHECK: define void @foo(i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
 // CHECK-NEXT:   %1 = icmp eq i32 %0, 1
-// CHECK-NEXT:   %bool.to.int = zext i1 %1 to i32
-// CHECK-NEXT:   %int.to.bool = icmp ne i32 %bool.to.int, 0
-// CHECK-NEXT:   br i1 %int.to.bool, label %or.merge, label %or.rhs
+// CHECK-NEXT:   br i1 %1, label %or.merge, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %entry
 // CHECK-NEXT:   %2 = load i32, ptr %x1, align 4
 // CHECK-NEXT:   %3 = icmp eq i32 %2, 2
-// CHECK-NEXT:   %bool.to.int2 = zext i1 %3 to i32
-// CHECK-NEXT:   %int.to.bool3 = icmp ne i32 %bool.to.int2, 0
-// CHECK-NEXT:   br i1 %int.to.bool3, label %and.rhs, label %and.merge
+// CHECK-NEXT:   br i1 %3, label %and.rhs, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %and.merge, %entry
-// CHECK-NEXT:   %4 = phi i1 [ %int.to.bool7, %and.merge ], [ true, %entry ]
-// CHECK-NEXT:   %bool.to.int8 = zext i1 %4 to i32
-// CHECK-NEXT:   %int.to.bool9 = icmp ne i32 %bool.to.int8, 0
-// CHECK-NEXT:   br i1 %int.to.bool9, label %if.true, label %if.exit
+// CHECK-NEXT:   %4 = phi i1 [ %7, %and.merge ], [ true, %entry ]
+// CHECK-NEXT:   br i1 %4, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %or.rhs
 // CHECK-NEXT:   %5 = load i32, ptr %x1, align 4
 // CHECK-NEXT:   %6 = icmp sgt i32 %5, 3
-// CHECK-NEXT:   %bool.to.int4 = zext i1 %6 to i32
-// CHECK-NEXT:   %int.to.bool5 = icmp ne i32 %bool.to.int4, 0
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.merge:                                        ; preds = %and.rhs, %or.rhs
-// CHECK-NEXT:   %7 = phi i1 [ %int.to.bool5, %and.rhs ], [ false, %or.rhs ]
-// CHECK-NEXT:   %bool.to.int6 = zext i1 %7 to i32
-// CHECK-NEXT:   %int.to.bool7 = icmp ne i32 %bool.to.int6, 0
+// CHECK-NEXT:   %7 = phi i1 [ %6, %and.rhs ], [ false, %or.rhs ]
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %or.merge

@@ -1,10 +1,10 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn foo() -> void {}
 
-fn bar(x: int, y: int) -> void {}
+fn bar(x: i32, y: i32) -> void {}
 
 fn main() -> void {
-    let x: int = 1;
+    let x: i32 = 1;
 
     // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol
     x();

@@ -7,80 +7,80 @@ err {
     ERROR_THREE,
 }
 
-fn bar(x:int) -> int? {
+fn bar(x:i32) -> i32? {
     defer printf(&"Defered bar\n");
     let result = foo(x)!;
     return foo(x)!;
 }
-// CHECK: ResolvedFunctionDecl bar -> int?
-// CHECK-NEXT:  ResolvedParamDecl:int x
+// CHECK: ResolvedFunctionDecl bar -> i32?
+// CHECK-NEXT:  ResolvedParamDecl:i32 x
 // CHECK-NEXT:  ResolvedBlock
 // CHECK-NEXT:    ResolvedDeferStmt
 // CHECK-NEXT:      ResolvedBlock
-// CHECK-NEXT:        ResolvedCallExpr:int printf
-// CHECK-NEXT:          ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:            ResolvedStringLiteral:char[13] 'Defered bar\n'
+// CHECK-NEXT:        ResolvedCallExpr:i32 printf
+// CHECK-NEXT:          ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:            ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:    ResolvedDeclStmt
-// CHECK-NEXT:      ResolvedVarDecl:int result
-// CHECK-NEXT:        ResolvedErrUnwrapExpr:int
-// CHECK-NEXT:          ResolvedCallExpr:int? foo
-// CHECK-NEXT:            ResolvedDeclRefExpr:int x
+// CHECK-NEXT:      ResolvedVarDecl:i32 result
+// CHECK-NEXT:        ResolvedErrUnwrapExpr:i32
+// CHECK-NEXT:          ResolvedCallExpr:i32? foo
+// CHECK-NEXT:            ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:          ResolvedDeferRefStmt
 // CHECK-NEXT:            ResolvedBlock
-// CHECK-NEXT:              ResolvedCallExpr:int printf
-// CHECK-NEXT:                ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:                  ResolvedStringLiteral:char[13] 'Defered bar\n'
+// CHECK-NEXT:              ResolvedCallExpr:i32 printf
+// CHECK-NEXT:                ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:                  ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedErrUnwrapExpr:int
-// CHECK-NEXT:        ResolvedCallExpr:int? foo
-// CHECK-NEXT:          ResolvedDeclRefExpr:int x
+// CHECK-NEXT:      ResolvedErrUnwrapExpr:i32
+// CHECK-NEXT:        ResolvedCallExpr:i32? foo
+// CHECK-NEXT:          ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:        ResolvedDeferRefStmt
 // CHECK-NEXT:          ResolvedBlock
-// CHECK-NEXT:            ResolvedCallExpr:int printf
-// CHECK-NEXT:              ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:                ResolvedStringLiteral:char[13] 'Defered bar\n'
+// CHECK-NEXT:            ResolvedCallExpr:i32 printf
+// CHECK-NEXT:              ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:                ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:      ResolvedDeferRefStmt
 // CHECK-NEXT:        ResolvedBlock
-// CHECK-NEXT:          ResolvedCallExpr:int printf
-// CHECK-NEXT:            ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:              ResolvedStringLiteral:char[13] 'Defered bar\n'
+// CHECK-NEXT:          ResolvedCallExpr:i32 printf
+// CHECK-NEXT:            ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:              ResolvedStringLiteral:u8[13] 'Defered bar\n'
 
-fn foo(x:int) -> int? {
+fn foo(x:i32) -> i32? {
     defer printf(&"Defered foo\n");
     if (x == 1){
         return ERROR_ONE?;
     }
     return x;
 }
-// CHECK: ResolvedFunctionDecl foo -> int?
-// CHECK-NEXT:   ResolvedParamDecl:int x
+// CHECK: ResolvedFunctionDecl foo -> i32?
+// CHECK-NEXT:   ResolvedParamDecl:i32 x
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr:int printf
-// CHECK-NEXT:           ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:             ResolvedStringLiteral:char[13] 'Defered foo\n'
+// CHECK-NEXT:         ResolvedCallExpr:i32 printf
+// CHECK-NEXT:           ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:             ResolvedStringLiteral:u8[13] 'Defered foo\n'
 // CHECK-NEXT:     ResolvedIfStmt
-// CHECK-NEXT:       ResolvedBinaryOperator:bool '=='
-// CHECK-NEXT:         ResolvedDeclRefExpr:int x
-// CHECK-NEXT:         ResolvedIntLiteral:int '1'
+// CHECK-NEXT:       ResolvedBinaryOperator:i1 '=='
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
 // CHECK-NEXT:           ResolvedErrDeclRefExpr ERROR_ONE
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
-// CHECK-NEXT:               ResolvedCallExpr:int printf
-// CHECK-NEXT:                 ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:                   ResolvedStringLiteral:char[13] 'Defered foo\n'
+// CHECK-NEXT:               ResolvedCallExpr:i32 printf
+// CHECK-NEXT:                 ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:                   ResolvedStringLiteral:u8[13] 'Defered foo\n'
 // CHECK-NEXT:     ResolvedReturnStmt
-// CHECK-NEXT:       ResolvedDeclRefExpr:int x
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:       ResolvedDeferRefStmt
 // CHECK-NEXT:         ResolvedBlock
-// CHECK-NEXT:           ResolvedCallExpr:int printf
-// CHECK-NEXT:             ResolvedUnaryOperator:&char[13] '&'
-// CHECK-NEXT:               ResolvedStringLiteral:char[13] 'Defered foo\n'
+// CHECK-NEXT:           ResolvedCallExpr:i32 printf
+// CHECK-NEXT:             ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:               ResolvedStringLiteral:u8[13] 'Defered foo\n'
 
-extern fn printf(fmt:&char[], ...) -> int;
+extern fn printf(fmt:&u8[], ...) -> i32;
 
 fn main() -> void {
     let result = foo(1);
@@ -91,22 +91,22 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:int? result
-// CHECK-NEXT:         ResolvedCallExpr:int? foo
-// CHECK-NEXT:           ResolvedIntLiteral:int '1'
-// CHECK-NEXT:           | value:int 1
+// CHECK-NEXT:       ResolvedVarDecl:i32? result
+// CHECK-NEXT:         ResolvedCallExpr:i32? foo
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:           | value: 1
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:int? result
-// CHECK-NEXT:       ResolvedCallExpr:int? foo
-// CHECK-NEXT:         ResolvedIntLiteral:int '10'
-// CHECK-NEXT:         | value:int 10
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32? result
+// CHECK-NEXT:       ResolvedCallExpr:i32? foo
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:         | value: 10
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:int? result
-// CHECK-NEXT:       ResolvedCallExpr:int? bar
-// CHECK-NEXT:         ResolvedIntLiteral:int '1'
-// CHECK-NEXT:         | value:int 1
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32? result
+// CHECK-NEXT:       ResolvedCallExpr:i32? bar
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:int? result
-// CHECK-NEXT:       ResolvedCallExpr:int? bar
-// CHECK-NEXT:         ResolvedIntLiteral:int '10'
-// CHECK-NEXT:         | value:int 10
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32? result
+// CHECK-NEXT:       ResolvedCallExpr:i32? bar
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:         | value: 10

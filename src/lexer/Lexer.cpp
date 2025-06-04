@@ -50,11 +50,13 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(comma);
         CASE_TYPE(dot);
         CASE_TYPE(dotdotdot);
-        CASE_TYPE(kw_void);
+        CASE_TYPE(ty_void);
+        CASE_TYPE(ty_f16);
+        CASE_TYPE(ty_f32);
+        CASE_TYPE(ty_f64);
+        CASE_TYPE(ty_iN);
+        CASE_TYPE(ty_uN);
         CASE_TYPE(kw_fn);
-        CASE_TYPE(kw_int);
-        CASE_TYPE(kw_char);
-        CASE_TYPE(kw_bool);
         CASE_TYPE(kw_true);
         CASE_TYPE(kw_false);
         CASE_TYPE(kw_ptr);
@@ -179,6 +181,17 @@ Token Lexer::next_token() {
         if (it != keywords.end()) {
             t.type = it->second;
         }
+        if (t.str.size() > 1 && (t.str[0] == 'i' || t.str[0] == 'u')) {
+            bool isInteger = true;
+            for (size_t i = 1; i < t.str.size(); i++) {
+                if (!std::isdigit(t.str[i])) {
+                    isInteger = false;
+                }
+            }
+            if (isInteger && t.str[0] == 'i') t.type = TokenType::ty_iN;
+            if (isInteger && t.str[0] == 'u') t.type = TokenType::ty_uN;
+        }
+
     } else if (file_content.substr(0, 2) == "//") {
         debug_msg(TokenType::comment);
         size_t comment_count = 2;

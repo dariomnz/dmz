@@ -3,14 +3,14 @@
 extern fn foo() -> void;
 // CHECK: ResolvedExternFunctionDecl foo -> void
 
-extern fn bar(a:int) -> void;
+extern fn bar(a:i32) -> void;
 // CHECK: ResolvedExternFunctionDecl bar -> void
-// CHECK-NEXT:  ResolvedParamDecl:int a
+// CHECK-NEXT:  ResolvedParamDecl:i32 a
 
-extern fn dprintf(fd:int, format: &char[], ...) -> int;
-// CHECK: ResolvedExternFunctionDecl dprintf -> int
-// CHECK-NEXT:  ResolvedParamDecl:int fd
-// CHECK-NEXT:  ResolvedParamDecl:&char[] format
+extern fn dprintf(fd:i32, format: &u8[], ...) -> i32;
+// CHECK: ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:  ResolvedParamDecl:i32 fd
+// CHECK-NEXT:  ResolvedParamDecl:&u8[] format
 // CHECK-NEXT:  ResolvedParamDecl:vararg ...
 
 fn main() -> void {

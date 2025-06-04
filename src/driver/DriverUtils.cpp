@@ -18,7 +18,6 @@ Driver::Type_Sources Driver::find_modules(const Type_Sources& includeDirs, const
 
     const std::string_view module_keyword = "module";
     const char semicolon_char = ';';
-    std::string line_buffer;
 
     for (const auto& includeDir : includeDirs) {
         if (!std::filesystem::exists(includeDir) || !std::filesystem::is_directory(includeDir)) {
@@ -30,6 +29,7 @@ Driver::Type_Sources Driver::find_modules(const Type_Sources& includeDirs, const
             if (std::filesystem::is_regular_file(entry.status())) {
                 if (entry.path().extension() == ".dmz") {
                     m_workers.submit([&, path = entry.path()]() {
+                        std::string line_buffer;
                         std::ifstream file(path);
                         if (file.is_open()) {
                             while (std::getline(file, line_buffer)) {

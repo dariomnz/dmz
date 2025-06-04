@@ -1,11 +1,11 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n2\n')
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 struct S {
-  x: int
+  x: i32
 }
 
-fn rhs() -> int {
+fn rhs() -> i32 {
   println(1);
   return 1;
 }
@@ -21,6 +21,7 @@ fn main() -> void {
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %struct.ret.tmp = alloca %struct.S, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @rhs()
 // CHECK-NEXT:   call void @lhs(ptr sret(%struct.S) %struct.ret.tmp)
 // CHECK-NEXT:   %1 = getelementptr inbounds %struct.S, ptr %struct.ret.tmp, i32 0, i32 0

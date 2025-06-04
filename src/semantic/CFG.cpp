@@ -147,7 +147,7 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
     int trueBlock = insert_block(*stmt.trueBlock, exit);
     int entry = cfg.insert_new_block();
 
-    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<int> val = cee.evaluate(*stmt.condition, true);
     cfg.insert_edge(entry, trueBlock, ConstantExpressionEvaluator::to_bool(val) != false);
     cfg.insert_edge(entry, falseBlock, ConstantExpressionEvaluator::to_bool(val).value_or(false) == false);
 
@@ -157,7 +157,7 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
 
 int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
     // TODO: revise
-    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<int> val = cee.evaluate(*stmt.condition, true);
     std::vector<int> casesBlocks(stmt.cases.size() + 1);
     for (size_t i = 0; i < stmt.cases.size(); i++) {
         casesBlocks[i] = insert_block(*stmt.cases[i]->block, exit);
@@ -168,14 +168,14 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
 
     size_t rechableIndex = -1;
     for (size_t i = 0; i < stmt.cases.size(); i++) {
-        std::optional<ConstValue> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
+        std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
         if (val && case_val && val == case_val) {
             rechableIndex = i;
         }
     }
 
     for (size_t i = 0; i < stmt.cases.size(); i++) {
-        std::optional<ConstValue> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
+        std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
         cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == i);
     }
 
@@ -192,7 +192,7 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
     int header = cfg.insert_new_block();
     cfg.insert_edge(latch, header, true);
 
-    std::optional<ConstValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<int> val = cee.evaluate(*stmt.condition, true);
     cfg.insert_edge(header, body, ConstantExpressionEvaluator::to_bool(val) != false);
     cfg.insert_edge(header, exit, ConstantExpressionEvaluator::to_bool(val).value_or(false) == false);
 

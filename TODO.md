@@ -6,8 +6,9 @@
 - [x] defer
 - [x] Error handling
 - [x] Bool type
-- [ ] Conversion between types
-- [ ] Modules and import
+- [x] Types i32 u32 f32
+- [x] Conversion between types cast
+- [x] Modules and import
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits

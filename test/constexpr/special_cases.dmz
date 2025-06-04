@@ -1,30 +1,30 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
-fn binaryLhsKnown(y: int) -> int {
-    let x: int = 2;
+fn binaryLhsKnown(y: i32) -> i32 {
+    let x: i32 = 2;
 
     return (0 && y) + (1 || x);
 }
-// CHECK:       ResolvedBinaryOperator:bool '+'
-// CHECK-NEXT:       | value:bool true
-// CHECK-NEXT:         ResolvedGroupingExpr:bool
-// CHECK-NEXT:           ResolvedBinaryOperator:bool '&&'
-// CHECK-NEXT:             ResolvedIntLiteral:int '0'
-// CHECK-NEXT:             ResolvedDeclRefExpr:int y
-// CHECK-NEXT:         ResolvedGroupingExpr:bool
-// CHECK-NEXT:           ResolvedBinaryOperator:bool '||'
-// CHECK-NEXT:             ResolvedIntLiteral:int '1'
-// CHECK-NEXT:             ResolvedDeclRefExpr:int x
+// CHECK:       ResolvedBinaryOperator:i1 '+'
+// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:         ResolvedGroupingExpr:i1
+// CHECK-NEXT:           ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:         ResolvedGroupingExpr:i1
+// CHECK-NEXT:           ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
 
-fn unaryNonConst() -> int {
-    let x: int = 2;
+fn unaryNonConst() -> i32 {
+    let x: i32 = 2;
 
     return !x;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedUnaryOperator:bool '!'
-// CHECK-NEXT:        ResolvedDeclRefExpr:int x
+// CHECK-NEXT:      ResolvedUnaryOperator:i1 '!'
+// CHECK-NEXT:        ResolvedDeclRefExpr:i32 x
 
-fn ret() -> int {
+fn ret() -> i32 {
     return 1;
 }
 
@@ -34,41 +34,41 @@ fn call() -> void {
     }
 }
 // CHECK:    ResolvedIfStmt
-// CHECK-NEXT:      ResolvedUnaryOperator:bool '!'
-// CHECK-NEXT:        ResolvedCallExpr:int ret
+// CHECK-NEXT:      ResolvedUnaryOperator:i1 '!'
+// CHECK-NEXT:        ResolvedCallExpr:i32 ret
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
 
-fn lhsKnownRhsNot(y: int) -> int {
+fn lhsKnownRhsNot(y: i32) -> i32 {
     return 1 && y;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:bool '&&'
-// CHECK-NEXT:        ResolvedIntLiteral:int '1'
-// CHECK-NEXT:        ResolvedDeclRefExpr:int y
+// CHECK-NEXT:      ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:        ResolvedDeclRefExpr:i32 y
 
-fn lhsUnknownRhsFalse(x: int) -> int {
+fn lhsUnknownRhsFalse(x: i32) -> i32 {
     return x && 0;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:bool '&&'
-// CHECK-NEXT:        ResolvedDeclRefExpr:int x
-// CHECK-NEXT:        ResolvedIntLiteral:int '0'
+// CHECK-NEXT:      ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:        ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '0'
 
-fn lhsUnknownRhsTrue(x: int) -> int {
+fn lhsUnknownRhsTrue(x: i32) -> i32 {
     return x || 1;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:bool '||'
-// CHECK-NEXT:        ResolvedDeclRefExpr:int x
-// CHECK-NEXT:        ResolvedIntLiteral:int '1'
+// CHECK-NEXT:      ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:        ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '1'
 
-fn lhsUnknownRhsFalseOr(x: int) -> int {
+fn lhsUnknownRhsFalseOr(x: i32) -> i32 {
     return x || 0;
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:bool '||'
-// CHECK-NEXT:        ResolvedDeclRefExpr:int x
-// CHECK-NEXT:        ResolvedIntLiteral:int '0'
+// CHECK-NEXT:      ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:        ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '0'
 
 fn main() -> void {}

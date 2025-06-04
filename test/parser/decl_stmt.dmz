@@ -1,7 +1,7 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:20: error: expected ';' after declaration
-    let x: int = 0 |;
+    let x: i32 = 0 |;
 
     // CHECK: [[# @LINE + 1 ]]:9: error: expected identifier
     let ;
@@ -10,18 +10,18 @@ fn main() -> void {
     let x:;
 
     // CHECK: [[# @LINE + 1 ]]:17: error: expected expression
-    let x: int =;
+    let x: i32 =;
 
     let x;
     // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: x
 
-    let x: int;
+    let x: i32;
     // CHECK: DeclStmt
-    // CHECK-NEXT:   VarDecl:int x
+    // CHECK-NEXT:   VarDecl:i32 x
     
-    let x: int = 1;
+    let x: i32 = 1;
     // CHECK: DeclStmt
-    // CHECK-NEXT:   VarDecl:int x
+    // CHECK-NEXT:   VarDecl:i32 x
     // CHECK-NEXT:     IntLiteral '1'
 }

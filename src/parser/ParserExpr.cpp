@@ -20,6 +20,11 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         eat_next_token();  // eat int
         return literal;
     }
+    if (m_nextToken.type == TokenType::lit_float) {
+        auto literal = std::make_unique<FloatLiteral>(location, m_nextToken.str);
+        eat_next_token();  // eat float
+        return literal;
+    }
     if (m_nextToken.type == TokenType::lit_char) {
         auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat char

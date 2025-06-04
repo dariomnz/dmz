@@ -102,7 +102,7 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
         return report(condition->location, "expected int in condition");
     }
     varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
@@ -122,7 +122,7 @@ std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
 std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
         return report(condition->location, "expected int in condition");
     }
 
@@ -181,7 +181,7 @@ std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(
 std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) {
     varOrReturn(condition, resolve_expr(*switchStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::Bool) {
+    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
         return report(condition->location, "expected int in condition");
     }
 

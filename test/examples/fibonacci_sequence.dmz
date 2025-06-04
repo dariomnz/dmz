@@ -22,8 +22,8 @@
 // CHECK-NEXT: 4181
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn fib(n: int) -> int {
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn fib(n: i32) -> i32 {
     if (n == 0 || n == 1) {
         return n;
     }

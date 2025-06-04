@@ -7,10 +7,10 @@ extern fn foo() -> customType;
 extern fn bar(a:customType) -> void;
 
 // CHECK: [[# @LINE + 1 ]]:32: error: vararg '...' can only be in the last argument
-extern fn argvar1(a:int, ... , ...) -> void;
+extern fn argvar1(a:i32, ... , ...) -> void;
 
 // CHECK: [[# @LINE + 1 ]]:31: error: vararg '...' can only be in the last argument
-extern fn argvar2(a:int, ..., b:int) -> void;
+extern fn argvar2(a:i32, ..., b:i32) -> void;
 
 fn main() -> void {}
 // CHECK-NOT: {{.*}}

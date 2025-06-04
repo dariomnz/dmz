@@ -1,5 +1,5 @@
 // RUN: compiler %s -cfg-dump 2>&1 | filecheck %s --match-full-lines
-fn foo(x: int, y: int) -> void{}
+fn foo(x: i32, y: i32) -> void{}
 
 fn main() -> void {
     foo(1 + 2, 3 + 4);
@@ -12,12 +12,12 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:int '1'
-// CHECK-NEXT:   ResolvedIntLiteral:int '2'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '+'
-// CHECK-NEXT:   ResolvedIntLiteral:int '3'
-// CHECK-NEXT:   ResolvedIntLiteral:int '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:int '+'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:   ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:   ResolvedBinaryOperator:i32 '+'
 // CHECK-NEXT:   ResolvedCallExpr:void foo
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

@@ -90,6 +90,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
         return std::make_unique<ResolvedIntLiteral>(number->location, std::stod(std::string(number->value)));
     }
+    if (const auto *number = dynamic_cast<const FloatLiteral *>(&expr)) {
+        return std::make_unique<ResolvedFloatLiteral>(number->location, std::stod(std::string(number->value)));
+    }
     if (const auto *character = dynamic_cast<const CharLiteral *>(&expr)) {
         if (auto c = str_from_source(character->value.substr(1, character->value.size() - 1))) {
             return std::make_unique<ResolvedCharLiteral>(character->location, (*c)[0]);
@@ -170,13 +173,13 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    auto generateBool = op_generate_bool(binop.op);
-
-    if (resolvedLHS->type.kind != Type::Kind::Int && resolvedLHS->type.kind != Type::Kind::Bool) {
+    if (resolvedLHS->type.kind != Type::Kind::Int && resolvedLHS->type.kind != Type::Kind::UInt &&
+        resolvedLHS->type.kind != Type::Kind::Float) {
         return report(resolvedLHS->location, '\'' + std::string(resolvedLHS->type.name) +
                                                  "' cannot be used as LHS operand to binary operator");
     }
-    if (resolvedRHS->type.kind != Type::Kind::Int && resolvedRHS->type.kind != Type::Kind::Bool) {
+    if (resolvedRHS->type.kind != Type::Kind::Int && resolvedRHS->type.kind != Type::Kind::UInt &&
+        resolvedRHS->type.kind != Type::Kind::Float) {
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
                                                  "' cannot be used as RHS operand to binary operator");
     }
@@ -186,17 +189,8 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
 
     auto ret = std::make_unique<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS),
                                                         std::move(resolvedRHS));
-    if (generateBool) {
+    if (op_generate_bool(binop.op)) {
         ret->type = Type::builtinBool();
-    } else {
-        if (resolvedLHS && resolvedLHS->type == Type::builtinBool() && resolvedRHS &&
-            resolvedRHS->type == Type::builtinBool()) {
-            ret->type = Type::builtinInt();
-        } else if (resolvedLHS && resolvedLHS->type == Type::builtinBool()) {
-            ret->type = resolvedRHS->type;
-        } else if (resolvedLHS && resolvedLHS->type == Type::builtinBool()) {
-            ret->type = resolvedLHS->type;
-        }
     }
     return ret;
 }

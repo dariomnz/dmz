@@ -1,7 +1,7 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn main() -> void {
-    let x: int = 1;
+    let x: i32 = 1;
     // CHECK: [[# @LINE + 1 ]]:9: error: redeclaration of 'x'
-    let x: int = 2;
+    let x: i32 = 2;
 }
 // CHECK-NOT: {{.*}}

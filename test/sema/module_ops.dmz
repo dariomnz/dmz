@@ -2,47 +2,47 @@
 module ops;
 
 struct str_ops {
-    x:int,
-    y:int,
-    z:int,
+    x:i32,
+    y:i32,
+    z:i32,
 }
 
-fn print(x:int) -> void {
+fn print(x:i32) -> void {
     println(x);
 }
 
-extern fn printf(fmt:&char[], ...) -> int;
+extern fn printf(fmt:&u8[], ...) -> i32;
 
-fn println(const n:int) -> void {printf(&"%d\n", n);}
+fn println(const n:i32) -> void {printf(&"%d\n", n);}
 // CHECK:   ResolvedFunctionDecl ops::print -> void
-// CHECK-NEXT:     ResolvedParamDecl:int x
+// CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void ops::println
-// CHECK-NEXT:         ResolvedDeclRefExpr:int x
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 
 module ops::integer;
 
-fn add(x:int, y:int) -> int {
+fn add(x:i32, y:i32) -> i32 {
     return x + y;
 }
 
-fn sub(x:int, y:int) -> int {
+fn sub(x:i32, y:i32) -> i32 {
     return x - y;
 }
 // CHECK:   ResolvedModuleDecl ops::integer
-// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::add -> int
-// CHECK-NEXT:       ResolvedParamDecl:int x
-// CHECK-NEXT:       ResolvedParamDecl:int y
+// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::add -> i32
+// CHECK-NEXT:       ResolvedParamDecl:i32 x
+// CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:int '+'
-// CHECK-NEXT:             ResolvedDeclRefExpr:int x
-// CHECK-NEXT:             ResolvedDeclRefExpr:int y
-// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::sub -> int
-// CHECK-NEXT:       ResolvedParamDecl:int x
-// CHECK-NEXT:       ResolvedParamDecl:int y
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:     ResolvedFunctionDecl ops::integer::sub -> i32
+// CHECK-NEXT:       ResolvedParamDecl:i32 x
+// CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:int '-'
-// CHECK-NEXT:             ResolvedDeclRefExpr:int x
-// CHECK-NEXT:             ResolvedDeclRefExpr:int y
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y

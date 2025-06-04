@@ -1,8 +1,8 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '2\n')
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn foo(x: int) -> void {
-    let i: int = x;
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn foo(x: i32) -> void {
+    let i: i32 = x;
 
     while (i > 1) {
         println(i);
@@ -17,6 +17,8 @@ fn main() -> void {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   %i = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
 // CHECK-NEXT:   store i32 %0, ptr %i, align 4
@@ -25,9 +27,7 @@ fn main() -> void {
 // CHECK-NEXT: while.cond:                                       ; preds = %while.body, %entry
 // CHECK-NEXT:   %1 = load i32, ptr %i, align 4
 // CHECK-NEXT:   %2 = icmp sgt i32 %1, 1
-// CHECK-NEXT:   %bool.to.int = zext i1 %2 to i32
-// CHECK-NEXT:   %int.to.bool = icmp ne i32 %bool.to.int, 0
-// CHECK-NEXT:   br i1 %int.to.bool, label %while.body, label %while.exit
+// CHECK-NEXT:   br i1 %2, label %while.body, label %while.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: while.body:                                       ; preds = %while.cond
 // CHECK-NEXT:   %3 = load i32, ptr %i, align 4

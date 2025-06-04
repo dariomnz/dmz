@@ -34,14 +34,24 @@ llvm::Type *Codegen::generate_type(const Type &type) {
         // ret = m_builder.getIntPtrTy(m_module->getDataLayout());
         return ret;
     }
-    if (type.kind == Type::Kind::Int) {
-        ret = m_builder.getInt32Ty();
+    if (type.kind == Type::Kind::Int || type.kind == Type::Kind::UInt) {
+        ret = m_builder.getIntNTy(type.size);
     }
-    if (type.kind == Type::Kind::Char) {
-        ret = m_builder.getInt8Ty();
-    }
-    if (type.kind == Type::Kind::Bool) {
-        ret = m_builder.getInt1Ty();
+    if (type.kind == Type::Kind::Float) {
+        switch (type.size) {
+            case 16:
+                ret = m_builder.getHalfTy();
+                break;
+            case 32:
+                ret = m_builder.getFloatTy();
+                break;
+            case 64:
+                ret = m_builder.getDoubleTy();
+                break;
+            default:
+                dmz_unreachable("float type have an incorrect size");
+                break;
+        }
     }
     if (type.kind == Type::Kind::Struct) {
         ret = llvm::StructType::getTypeByName(*m_context, "struct." + std::string(type.name));
@@ -66,13 +76,13 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
     llvm::IRBuilder<> tmpBuilder(*m_context);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
     auto value = tmpBuilder.CreateAlloca(generate_type(type), nullptr, identifier);
-    if (type.isOptional) {
-        llvm::IRBuilder<> tmpBuilderMemset(*m_context);
-        tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
-        const llvm::DataLayout &dl = m_module->getDataLayout();
-        tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
-                                            tmpBuilderMemset.getInt64(*value->getAllocationSize(dl)));
-    }
+    // if (type.isOptional) {
+    llvm::IRBuilder<> tmpBuilderMemset(*m_context);
+    tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
+    const llvm::DataLayout &dl = m_module->getDataLayout();
+    tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
+                                        tmpBuilderMemset.getInt64(*value->getAllocationSize(dl)));
+    // }
     return value;
 }
 
@@ -91,17 +101,78 @@ void Codegen::generate_main_wrapper() {
     m_builder.CreateRet(llvm::ConstantInt::getSigned(m_builder.getInt32Ty(), 0));
 }
 
-llvm::Value *Codegen::int_to_bool(llvm::Value *v) {
-    return m_builder.CreateICmpNE(v, m_builder.getInt32(0), "int.to.bool");
+llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
+    // println("type: " << type.to_str());
+    // v->dump();
+    if (type.kind == Type::Kind::Int) {
+        if (type.size == 1) return v;
+        return m_builder.CreateICmpNE(v, llvm::ConstantInt::get(generate_type(type), 0, type.kind == Type::Kind::Int),
+                                      "int.to.bool");
+    } else if (type.kind == Type::Kind::UInt) {
+        if (type.size == 1) return v;
+        return m_builder.CreateICmpNE(v, llvm::ConstantInt::get(generate_type(type), 0, type.kind == Type::Kind::Int),
+                                      "uint.to.bool");
+    } else if (type.kind == Type::Kind::Float) {
+        return m_builder.CreateFCmpONE(v, llvm::ConstantFP::get(generate_type(type), 0.0), "float.to.bool");
+    } else if (type.kind == Type::Kind::Err) {
+        v = m_builder.CreatePtrToInt(v, m_builder.getInt64Ty());
+        return m_builder.CreateICmpNE(v, m_builder.getInt64(0), "ptr.to.bool");
+    } else {
+        type.dump();
+        dmz_unreachable("unsuported type in to_bool");
+    }
 }
 
-llvm::Value *Codegen::ptr_to_bool(llvm::Value *v) {
-    v = m_builder.CreatePtrToInt(v, m_builder.getInt32Ty());
-    return m_builder.CreateICmpNE(v, m_builder.getInt32(0), "ptr.to.bool");
-}
-
-llvm::Value *Codegen::bool_to_int(llvm::Value *v) {
-    return m_builder.CreateIntCast(v, m_builder.getInt32Ty(), false, "bool.to.int");
+llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) {
+    // println("From: " << from.to_str() << " to: " << to.to_str());
+    // v->dump();
+    if (from.kind == Type::Kind::Int) {
+        if (to.kind == Type::Kind::Int) {
+            if (from.size == 1) return m_builder.CreateZExtOrTrunc(v, generate_type(to), "bool.to.int");
+            return m_builder.CreateSExtOrTrunc(v, generate_type(to), "int.to.int");
+        } else if (to.kind == Type::Kind::UInt) {
+            return m_builder.CreateSExtOrTrunc(v, generate_type(to), "int.to.uint");
+        } else if (to.kind == Type::Kind::Float) {
+            return m_builder.CreateSIToFP(v, generate_type(to), "int.to.float");
+        } else {
+            dmz_unreachable("unsuported type from Int");
+        }
+    } else if (from.kind == Type::Kind::UInt) {
+        if (to.kind == Type::Kind::Int) {
+            return m_builder.CreateZExtOrTrunc(v, generate_type(to), "uint.to.int");
+        } else if (to.kind == Type::Kind::UInt) {
+            return m_builder.CreateZExtOrTrunc(v, generate_type(to), "uint.to.uint");
+        } else if (to.kind == Type::Kind::Float) {
+            return m_builder.CreateUIToFP(v, generate_type(to));
+        } else {
+            dmz_unreachable("unsuported type from UInt");
+        }
+    } else if (from.kind == Type::Kind::Float) {
+        if (to.kind == Type::Kind::Int) {
+            return m_builder.CreateFPToSI(v, generate_type(to), "uint.to.int");
+        } else if (to.kind == Type::Kind::UInt) {
+            return m_builder.CreateFPToUI(v, generate_type(to), "uint.to.uint");
+        } else if (to.kind == Type::Kind::Float) {
+            if (from.size > to.size) {
+                return m_builder.CreateFPTrunc(v, generate_type(to));
+            } else if (from.size < to.size) {
+                return m_builder.CreateFPExt(v, generate_type(to));
+            } else {
+                return v;
+            }
+        } else {
+            dmz_unreachable("unsuported type from UInt");
+        }
+    } else if (from.kind == Type::Kind::Err) {
+        if (to.kind == Type::Kind::Err) {
+            return v;
+        } else {
+            dmz_unreachable("unsuported type from Err");
+        }
+    } else {
+        println("From: " << from.to_str() << " to: " << to.to_str());
+        dmz_unreachable("unsuported type in cast_to");
+    }
 }
 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };
@@ -114,21 +185,21 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
     m_builder.ClearInsertionPoint();
 }
 
-llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &type) {
-    if (type.kind == Type::Kind::Struct || type.isOptional) {
+llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &from, const Type &to) {
+    if (from.kind == Type::Kind::Struct || from.isOptional) {
         const llvm::DataLayout &dl = m_module->getDataLayout();
-        const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(type)));
+        const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
 
         return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
     }
-    if (type.isArray) {
+    if (from.isArray) {
         const llvm::DataLayout &dl = m_module->getDataLayout();
-        auto t = generate_type(type);
+        auto t = generate_type(from);
 
         return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t), dl.getTypeAllocSize(t));
     }
 
-    return m_builder.CreateStore(val, ptr);
+    return m_builder.CreateStore(cast_to(val, from, to), ptr);
 }
 
 llvm::Value *Codegen::load_value(llvm::Value *v, Type type) { return m_builder.CreateLoad(generate_type(type), v); }

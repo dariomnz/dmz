@@ -1,7 +1,7 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn foo() -> void {}
 
-fn bar() -> int { return 1; }
+fn bar() -> i32 { return 1; }
 
 fn main() -> void {
     while (bar()) {}

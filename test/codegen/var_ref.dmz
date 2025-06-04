@@ -2,9 +2,9 @@
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n')
 
 struct Color {
-    r: int,
-    g: int,
-    b: int,
+    r: i32,
+    g: i32,
+    b: i32,
 }
 
 fn bar(c: &Color) -> void {
@@ -38,7 +38,7 @@ fn printColor(const c: &Color) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn foo(x: &int) -> void {
+fn foo(x: &i32) -> void {
     dprintf(1, &"%d\n", x);
     x = 20;
     dprintf(1, &"%d\n", x);
@@ -53,7 +53,7 @@ fn foo(x: &int) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;
 
 fn main() -> void {
     let i = 10;
@@ -73,6 +73,9 @@ fn main() -> void {
 // CHECK-NEXT:   %i = alloca i32, align 4
 // CHECK-NEXT:   %col = alloca %struct.Color, align 8
 // CHECK-NEXT:   %Color.tmp = alloca %struct.Color, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %col, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Color.tmp, i8 0, i64 12, i1 false)
 // CHECK-NEXT:   store i32 10, ptr %i, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %i, align 4
 // CHECK-NEXT:   %1 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(ptr) @global.str.3, i32 %0)

@@ -1,23 +1,24 @@
 // RUN: compiler %s -module -llvm-dump 2>&1 | filecheck %s
 module ops;
 
-fn print(x:int) -> void {
+fn print(x:i32) -> void {
     println(x);
 }
 
 // CHECK: define void @ops__print(i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
 // CHECK-NEXT:   call void @ops__println(i32 %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-extern fn printf(fmt:&char[], ...) -> int;
+extern fn printf(fmt:&u8[], ...) -> i32;
 // CHECK: declare i32 @printf(ptr byref(ptr) %0, ...)
 
-fn println(const n:int) -> void {printf(&"%d\n", n);}
+fn println(const n:i32) -> void {printf(&"%d\n", n);}
 // CHECK: define void @ops__println(i32 %n) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str, i32 %n)
@@ -26,7 +27,7 @@ fn println(const n:int) -> void {printf(&"%d\n", n);}
 
 module ops::integer;
 
-fn add(x:int, y:int) -> int {
+fn add(x:i32, y:i32) -> i32 {
     return x + y;
 }
 // CHECK: define i32 @ops__integer__add(i32 %x, i32 %y) {
@@ -34,6 +35,9 @@ fn add(x:int, y:int) -> int {
 // CHECK-NEXT:   %retval = alloca i32, align 4
 // CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   %y2 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y2, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   store i32 %y, ptr %y2, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
@@ -47,7 +51,7 @@ fn add(x:int, y:int) -> int {
 // CHECK-NEXT:   ret i32 %3
 // CHECK-NEXT: }
 
-fn sub(x:int, y:int) -> int {
+fn sub(x:i32, y:i32) -> i32 {
     return x - y;
 }
 // CHECK:  define i32 @ops__integer__sub(i32 %x, i32 %y) {
@@ -55,6 +59,9 @@ fn sub(x:int, y:int) -> int {
 // CHECK-NEXT:    %retval = alloca i32, align 4
 // CHECK-NEXT:    %x1 = alloca i32, align 4
 // CHECK-NEXT:    %y2 = alloca i32, align 4
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %y2, i8 0, i64 4, i1 false)
 // CHECK-NEXT:    store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:    store i32 %y, ptr %y2, align 4
 // CHECK-NEXT:    %0 = load i32, ptr %x1, align 4

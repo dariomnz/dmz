@@ -1,10 +1,10 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 struct S {
-  x: int
+  x: i32
 }
 
 struct S2 {
-  x: int
+  x: i32
 }
 
 fn foo(s: S) -> void {}

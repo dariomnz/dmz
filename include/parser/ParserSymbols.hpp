@@ -1,5 +1,6 @@
 #pragma once
 
+#include <charconv>
 #include <memory>
 #include <optional>
 #include <variant>
@@ -33,22 +34,43 @@ namespace DMZ {
 }
 
 struct Type {
-    enum class Kind { Void, Int, Char, Bool, Struct, Custom, Err };
+    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Err };
 
     Kind kind;
     std::string_view name;
+    int size = 0;
     std::optional<int> isArray = std::nullopt;
     bool isRef = false;
     bool isOptional = false;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
-    static Type builtinInt() { return {Kind::Int, "int"}; }
-    static Type builtinChar() { return {Kind::Char, "char"}; }
-    static Type builtinBool() { return {Kind::Bool, "bool"}; }
-    static Type builtinString(int size) { return Type{.kind = Kind::Char, .name = "char", .isArray = size}; }
+    static Type builtinBool() { return {Kind::Int, "i1", 1}; }
+    static Type builtinIN(const std::string_view& name) {
+        auto num = name.substr(1);
+        int result = 0;
+        auto res = std::from_chars(num.data(), num.data() + num.size(), result);
+        if (result == 0 || res.ec != std::errc()) {
+            dmz_unreachable("unexpected size of 0 in i type");
+        }
+        return {Kind::Int, name, result};
+    }
+    static Type builtinUN(const std::string_view& name) {
+        auto num = name.substr(1);
+        int result = 0;
+        auto res = std::from_chars(num.data(), num.data() + num.size(), result);
+        if (result == 0 || res.ec != std::errc()) {
+            dmz_unreachable("unexpected size of 0 in u type");
+        }
+        return {Kind::UInt, name, result};
+    }
+    static Type builtinF16() { return {Kind::Float, "f16", 16}; }
+    static Type builtinF32() { return {Kind::Float, "f32", 32}; }
+    static Type builtinF64() { return {Kind::Float, "f64", 64}; }
+    static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
     static Type custom(const std::string_view& name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
     static Type structType(Type t) {
+        if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
         t.kind = Kind::Struct;
         return t;
     }
@@ -61,8 +83,12 @@ struct Type {
 
     static bool can_convert(const Type& to, const Type& from) {
         bool canConvert = false;
-        canConvert |= from == Type::builtinInt() && to == Type::builtinBool();
-        canConvert |= from == Type::builtinBool() && to == Type::builtinInt();
+        canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Int;
+        canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Float;
+        canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::UInt;
+        canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::Float;
+        canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::Int;
+        canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::UInt;
         return canConvert;
     }
 
@@ -85,7 +111,14 @@ struct Type {
         equalOptional |= lhs.isOptional == rhs.isOptional;
         equalOptional |= lhs.isOptional == true && rhs.isOptional == false;
 
-        return lhs.kind == rhs.kind && lhs.name == rhs.name && equalArray && equalOptional;
+        bool equal = equalArray && equalOptional;
+        equal &= lhs.kind == rhs.kind;
+        if ((lhs.kind == Type::Kind::Struct || lhs.kind == Type::Kind::Custom) &&
+            (rhs.kind == Type::Kind::Struct || rhs.kind == Type::Kind::Custom)) {
+            equal &= lhs.name == rhs.name;
+        }
+
+        return equal;
     }
 
     void dump() const;
@@ -222,6 +255,14 @@ struct IntLiteral : public Expr {
     std::string_view value;
 
     IntLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FloatLiteral : public Expr {
+    std::string_view value;
+
+    FloatLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
     void dump(size_t level = 0) const override;
 };

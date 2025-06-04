@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 struct S {}
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 fn main() -> void {
   let const S = 1;
   let x: S;
@@ -10,11 +10,11 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:const int S
-// CHECK-NEXT:         ResolvedIntLiteral:int '1'
-// CHECK-NEXT:         | value:int 1
+// CHECK-NEXT:       ResolvedVarDecl:const i32 S
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:S x
 // CHECK-NEXT:     ResolvedCallExpr:void println
-// CHECK-NEXT:       ResolvedDeclRefExpr:int S
-// CHECK-NEXT:       | value:int 1
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 S
+// CHECK-NEXT:       | value: 1

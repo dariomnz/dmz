@@ -1,0 +1,26 @@
+// RUN: compiler %s -I %S/../../std -run | filecheck %s
+
+// CHECK: 3.1415858269
+
+// CHECK-NOT: {{.*}}
+import std::io as io;
+
+fn calculate_pi_leibniz(iterations:i32) -> f32 {
+    let pi_estimate:f32 = 0.0;
+    let sign:f32 = 1.0;
+
+    let i:f32 = 0.0; 
+    while (i < iterations) {
+        let term:f32 = sign / (2.0 * i + 1.0);
+        pi_estimate = pi_estimate + term;
+        sign = -sign;
+        i = i + 1; 
+    }
+    return 4.0 * pi_estimate;
+}
+
+fn main() -> void {
+    let num_iterations = 100000;
+    let pi_calculated = calculate_pi_leibniz(num_iterations);
+    io::printf32(pi_calculated, 10);
+}

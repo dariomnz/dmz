@@ -12,8 +12,8 @@
 // CHECK-NEXT: 29
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn divides(n: int, divisor: int) -> int {
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn divides(n: i32, divisor: i32) -> i32 {
     let i = 1;
     while (i <= n) {
         let d = divisor * i;
@@ -28,7 +28,7 @@ fn divides(n: int, divisor: int) -> int {
     return 0;
 }
 
-fn isPrime(x: int) -> int {
+fn isPrime(x: i32) -> i32 {
     if (x == 0 || x == 1) {
         return 0;
     }

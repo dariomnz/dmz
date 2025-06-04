@@ -1,9 +1,9 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn error() -> void {
     // CHECK: [[# @LINE + 1 ]]:17: error: expected expression
-    let x: int =;
+    let x: i32 =;
 
-    let y: int = 1 + 2;
+    let y: i32 = 1 + 2;
     
     // CHECK: [[# @LINE + 1 ]]:18: error: expected expression
     let z: void =;
@@ -12,7 +12,7 @@ fn error() -> void {
 // CHECK: FunctionDecl error -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:    DeclStmt
-// CHECK-NEXT:      VarDecl:int y
+// CHECK-NEXT:      VarDecl:i32 y
 // CHECK-NEXT:        BinaryOperator '+'
 // CHECK-NEXT:          IntLiteral '1'
 // CHECK-NEXT:          IntLiteral '2'

@@ -5,26 +5,26 @@ fn foo(s: S) -> S2 {
 
 fn main() -> void {}
 
-struct S { x: int, y:int}
-struct S2 { x: int, y:int}
+struct S { x: i32, y:i32}
+struct S2 { x: i32, y:i32}
 // CHECK: ResolvedStructDecl:S S
-// CHECK-NEXT:   ResolvedFieldDecl:int x
-// CHECK-NEXT:   ResolvedFieldDecl:int y
+// CHECK-NEXT:   ResolvedFieldDecl:i32 x
+// CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
 // CHECK-NEXT: ResolvedStructDecl:S2 S2
-// CHECK-NEXT:   ResolvedFieldDecl:int x
-// CHECK-NEXT:   ResolvedFieldDecl:int y
+// CHECK-NEXT:   ResolvedFieldDecl:i32 x
+// CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
 // CHECK-NEXT: ResolvedFunctionDecl foo -> S2
 // CHECK-NEXT:   ResolvedParamDecl:S s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:S2
-// CHECK-NEXT:         ResolvedFieldInitStmt:int x
-// CHECK-NEXT:           ResolvedMemberExpr:int x
+// CHECK-NEXT:         ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:           ResolvedMemberExpr:i32 x
 // CHECK-NEXT:             ResolvedDeclRefExpr:S s
-// CHECK-NEXT:         ResolvedFieldInitStmt:int y
-// CHECK-NEXT:           ResolvedMemberExpr:int y
+// CHECK-NEXT:         ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:           ResolvedMemberExpr:i32 y
 // CHECK-NEXT:             ResolvedDeclRefExpr:S s
 
 // CHECK-NEXT: ResolvedFunctionDecl main -> void

@@ -1,9 +1,9 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 
-fn foo(const x: int) -> void {
+fn foo(const x: i32) -> void {
 }
 // CHECK: FunctionDecl foo -> void
-// CHECK-NEXT:   ParamDecl:int x
+// CHECK-NEXT:   ParamDecl:i32 x
 // CHECK-NEXT:   Block
 
 fn main() -> void {

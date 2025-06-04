@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 struct S {
-  x: int,
+  x: i32,
 }
 
 fn main() -> void {

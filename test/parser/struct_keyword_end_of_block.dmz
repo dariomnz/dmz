@@ -3,20 +3,20 @@ fn error() -> void {
 
 struct S {
 // CHECK: [[# @LINE -1 ]]:1: error: expected '}' at the end of a block
-    x: int,
+    x: i32,
 }
 
 fn error2() -> void {
-    let y: int = 
+    let y: i32 = 
 
 struct S2 {
 // CHECK: [[# @LINE -1 ]]:1: error: expected expression
 // CHECK: [[# @LINE -2 ]]:1: error: expected '}' at the end of a block
-    x: int,
+    x: i32,
 }
 
 // CHECK: StructDecl S
-// CHECK-NEXT:   FieldDecl:int x
+// CHECK-NEXT:   FieldDecl:i32 x
 // CHECK-NEXT: StructDecl S2
-// CHECK-NEXT:   FieldDecl:int x
+// CHECK-NEXT:   FieldDecl:i32 x
 // CHECK-NOT: {{.*}}

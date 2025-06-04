@@ -1,15 +1,15 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn foo() -> void {}
 
-fn bar() -> int { return 1; }
+fn bar() -> i32 { return 1; }
 
 fn main() -> void {
-    let x: int = 1;
+    let x: i32 = 1;
 
-    // CHECK: [[# @LINE + 1 ]]:12: error: assigned value type 'void' doesn't match variable type 'int'
+    // CHECK: [[# @LINE + 1 ]]:12: error: assigned value type 'void' doesn't match variable type 'i32'
     x = foo();
 
-    let y: int = 3;
+    let y: i32 = 3;
     
     y = 3;
 
@@ -19,11 +19,11 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
     foo = 3;
 
-    let z: int;
+    let z: i32;
     z = 3;
 }
 
-fn assignParam(const x: int) -> void {
+fn assignParam(const x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
     x = 1;
 }

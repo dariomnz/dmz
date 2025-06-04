@@ -3,21 +3,21 @@ struct Empty {}
 // CHECK: StructDecl Empty
 
 struct WithTrailingComma {
-    r: int,
-    g: int,
-    b: int,
+    r: i32,
+    g: i32,
+    b: i32,
 }
 // CHECK: StructDecl WithTrailingComma
-// CHECK-NEXT:   FieldDecl:int r
-// CHECK-NEXT:   FieldDecl:int g
-// CHECK-NEXT:   FieldDecl:int b
+// CHECK-NEXT:   FieldDecl:i32 r
+// CHECK-NEXT:   FieldDecl:i32 g
+// CHECK-NEXT:   FieldDecl:i32 b
 
 struct WithoutTrailingComma {
-    a: int,
-    b: int,
-    c: int
+    a: i32,
+    b: i32,
+    c: i32
 }
 // CHECK: StructDecl WithoutTrailingComma
-// CHECK-NEXT:   FieldDecl:int a
-// CHECK-NEXT:   FieldDecl:int b
-// CHECK-NEXT:   FieldDecl:int c
+// CHECK-NEXT:   FieldDecl:i32 a
+// CHECK-NEXT:   FieldDecl:i32 b
+// CHECK-NEXT:   FieldDecl:i32 c

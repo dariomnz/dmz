@@ -1,5 +1,5 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
-fn foo() -> int {
+fn foo() -> i32 {
     if (0) {
         return 1;
     }
@@ -11,7 +11,7 @@ fn foo() -> int {
     return main();
 }
 
-fn bar() -> int {
+fn bar() -> i32 {
     // CHECK: [[# @LINE + 1 ]]:5: error: expected a return value
     return;
 

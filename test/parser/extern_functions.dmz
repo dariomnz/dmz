@@ -24,14 +24,14 @@ extern fn f() -> void
 // CHECK: [[# @LINE + 1 ]]:23: error: extern fn cannot have a body
 extern fn f() -> void {}
 
-extern fn puts(str: char[]) -> int;
-// CHECK: ExternFunctionDecl puts -> int
-// CHECK-NEXT:  ParamDecl:char[] str
+extern fn puts(str: u8[]) -> i32;
+// CHECK: ExternFunctionDecl puts -> i32
+// CHECK-NEXT:  ParamDecl:u8[] str
 
-extern fn dprintf(fd:int, format: char[], ...) -> int;
-// CHECK: ExternFunctionDecl dprintf -> int
-// CHECK-NEXT:  ParamDecl:int fd
-// CHECK-NEXT:  ParamDecl:char[] format
+extern fn dprintf(fd:i32, format: u8[], ...) -> i32;
+// CHECK: ExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:  ParamDecl:i32 fd
+// CHECK-NEXT:  ParamDecl:u8[] format
 // CHECK-NEXT:  ParamDecl:vararg ...
 
 fn main() -> void {

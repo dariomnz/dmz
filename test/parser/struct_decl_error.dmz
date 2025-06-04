@@ -1,8 +1,8 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 struct Error {
-    r: int,
+    r: i32,
     let g = 0,
     // CHECK: [[# @LINE -1 ]]:5: error: expected field declaration
-    b: int,
+    b: i32,
 }
 // CHECK-NOT: {{.*}}

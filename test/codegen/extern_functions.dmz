@@ -12,6 +12,8 @@ fn main() -> void {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %fmt = alloca [9 x i8], align 1
 // CHECK-NEXT:   %fd = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fmt, i8 0, i64 9, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fd, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
 // CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %fmt, ptr align 1 @global.str, i64 9, i1 false)
@@ -25,7 +27,7 @@ fn main() -> void {
 
 
 // CHECK: declare i32 @putchar(i32 %0)
-extern fn putchar(c:int) -> int;
+extern fn putchar(c:i32) -> i32;
 
 // CHECK: declare i32 @dprintf(i32 %0, ptr byref(ptr) %1, ...)
-extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;

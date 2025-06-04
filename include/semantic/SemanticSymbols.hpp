@@ -33,9 +33,7 @@ struct ResolvedStmt {
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
 };
 
-using ConstValue = std::variant<int, char, bool>;
-
-struct ResolvedExpr : public ConstantValueContainer<ConstValue>, public ResolvedStmt {
+struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
     Type type;
 
     ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type) {}
@@ -199,7 +197,17 @@ struct ResolvedStructDecl : public ResolvedDecl {
 struct ResolvedIntLiteral : public ResolvedExpr {
     int value;
 
-    ResolvedIntLiteral(SourceLocation location, int value) : ResolvedExpr(location, Type::builtinInt()), value(value) {}
+    ResolvedIntLiteral(SourceLocation location, int value)
+        : ResolvedExpr(location, Type::builtinIN("i32")), value(value) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedFloatLiteral : public ResolvedExpr {
+    double value;
+
+    ResolvedFloatLiteral(SourceLocation location, double value)
+        : ResolvedExpr(location, Type::builtinF64()), value(value) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -208,7 +216,7 @@ struct ResolvedCharLiteral : public ResolvedExpr {
     char value;
 
     ResolvedCharLiteral(SourceLocation location, char value)
-        : ResolvedExpr(location, Type::builtinChar()), value(value) {}
+        : ResolvedExpr(location, Type::builtinUN("u8")), value(value) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -412,7 +420,7 @@ struct ResolvedCatchErrExpr : public ResolvedExpr {
 
     ResolvedCatchErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToCatch,
                          std::unique_ptr<ResolvedDeclStmt> declaration)
-        : ResolvedExpr(location, Type::builtinInt()),
+        : ResolvedExpr(location, Type::builtinBool()),
           errToCatch(std::move(errToCatch)),
           declaration(std::move(declaration)) {}
 
@@ -425,7 +433,7 @@ struct ResolvedTryErrExpr : public ResolvedExpr {
 
     ResolvedTryErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToTry,
                        std::unique_ptr<ResolvedDeclStmt> declaration)
-        : ResolvedExpr(location, Type::builtinInt()),
+        : ResolvedExpr(location, Type::builtinBool()),
           errToTry(std::move(errToTry)),
           declaration(std::move(declaration)) {}
 

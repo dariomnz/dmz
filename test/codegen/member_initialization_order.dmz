@@ -1,13 +1,13 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n2\n3\n2\n1\n3\n3\n2\n1\n')
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 struct Color {
-  r: int,
-  g: int,
-  b: int,
+  r: i32,
+  g: i32,
+  b: i32,
 }
 
-fn printAndReturn(n: int) -> int {
+fn printAndReturn(n: i32) -> i32 {
   println(n);
   return n;
 }
@@ -36,6 +36,9 @@ fn main() -> void {
 // CHECK-NEXT:   %Color.tmp = alloca %struct.Color, align 8
 // CHECK-NEXT:   %Color.tmp1 = alloca %struct.Color, align 8
 // CHECK-NEXT:   %Color.tmp2 = alloca %struct.Color, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Color.tmp, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Color.tmp1, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Color.tmp2, i8 0, i64 12, i1 false)
 
 // CHECK-NEXT:   %0 = call i32 @printAndReturn(i32 1)
 // CHECK-NEXT:   %1 = call i32 @printAndReturn(i32 2)

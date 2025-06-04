@@ -16,6 +16,9 @@ else()
     add_compile_options("-O3")
 endif()
 
+# add_compile_options(-fsanitize=thread)
+# add_link_options(-fsanitize=thread)
+
 find_package(LLVM REQUIRED CONFIG)
 include_directories(include "${LLVM_INCLUDE_DIR}")
 

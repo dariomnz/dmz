@@ -10,7 +10,7 @@ err {
 // CHECK-NEXT:   ErrDecl ERROR_TWO
 // CHECK-NEXT:   ErrDecl ERROR_THREE
 
-fn foo(x:int) -> int? {
+fn foo(x:i32) -> i32? {
     if (x == 1){
         return ERROR_ONE?;
     }else if (x == 2){
@@ -18,8 +18,8 @@ fn foo(x:int) -> int? {
     }
     return 10;
 }
-// CHECK: FunctionDecl foo -> int?
-// CHECK-NEXT:   ParamDecl:int x
+// CHECK: FunctionDecl foo -> i32?
+// CHECK-NEXT:   ParamDecl:i32 x
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     IfStmt
 // CHECK-NEXT:       BinaryOperator '=='
@@ -39,7 +39,7 @@ fn foo(x:int) -> int? {
 // CHECK-NEXT:     ReturnStmt
 // CHECK-NEXT:       IntLiteral '10'
 
-extern fn dprintf(fd:int, fmt:&char[], ...) -> int;
+extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;
 
 fn main() -> void {
     let result = foo(1);

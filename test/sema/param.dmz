@@ -4,10 +4,10 @@
 fn foo(x: void, y: customType) -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:16: error: parameter 'y' has invalid 'customType' type
-fn bar(x: int, y: customType) -> void {}
+fn bar(x: i32, y: customType) -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:28: error: redeclaration of 'x'
-fn redeclaredParam(x: int, x: int) -> void {}
+fn redeclaredParam(x: i32, x: i32) -> void {}
 
 fn main() -> void {}
 // CHECK-NOT: {{.*}}

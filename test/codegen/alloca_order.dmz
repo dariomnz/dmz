@@ -1,10 +1,10 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n2\n3\n')
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
-fn foo(x: int, y: int, z: int) -> void {
-    let x: int = x;
-    let y: int = y;
-    let z: int = z;
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+fn foo(x: i32, y: i32, z: i32) -> void {
+    let x: i32 = x;
+    let y: i32 = y;
+    let z: i32 = z;
 
     println(x);
     println(y);
@@ -18,6 +18,12 @@ fn foo(x: int, y: int, z: int) -> void {
 // CHECK-NEXT:   %x4 = alloca i32, align 4
 // CHECK-NEXT:   %y5 = alloca i32, align 4
 // CHECK-NEXT:   %z6 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y2, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z3, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x4, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y5, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z6, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   store i32 %y, ptr %y2, align 4
 // CHECK-NEXT:   store i32 %z, ptr %z3, align 4

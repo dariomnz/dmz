@@ -1,11 +1,11 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n2\n3\n2\n')
 struct S {
-  x: int,
+  x: i32,
 }
-extern fn printf(fmt:&char[], ...) -> int; fn println(const n:int) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 
-fn foo(const a: int, const b: S, c: int, d: S) -> void {
+fn foo(const a: i32, const b: S, c: i32, d: S) -> void {
   println(a);
   println(b.x);
   println(c);
@@ -14,6 +14,7 @@ fn foo(const a: int, const b: S, c: int, d: S) -> void {
 // CHECK:      define void @foo(i32 %a, ptr readonly %b, i32 %c, ptr byval(%struct.S) %d) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %c1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %c, ptr %c1, align 4
 // CHECK-NEXT:   call void @println(i32 %a)
 // CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %b, i32 0, i32 0
@@ -36,6 +37,9 @@ fn main() -> void {
 // CHECK-NEXT:   %s = alloca %struct.S, align 8
 // CHECK-NEXT:   %S.tmp = alloca %struct.S, align 8
 // CHECK-NEXT:   %struct.arg.tmp = alloca %struct.S, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %s, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %S.tmp, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.arg.tmp, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 0
 // CHECK-NEXT:   store i32 2, ptr %0, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %S.tmp, i64 4, i1 false)

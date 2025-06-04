@@ -1,8 +1,8 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 struct Color {
-    r: int,
-    g: int,
-    b: int,
+    r: i32,
+    g: i32,
+    b: i32,
 }
 
 fn main() -> void {
@@ -16,9 +16,9 @@ fn main() -> void {
     let x = 1;
 }
 // CHECK: StructDecl Color
-// CHECK-NEXT:   FieldDecl:int r
-// CHECK-NEXT:   FieldDecl:int g
-// CHECK-NEXT:   FieldDecl:int b
+// CHECK-NEXT:   FieldDecl:i32 r
+// CHECK-NEXT:   FieldDecl:i32 g
+// CHECK-NEXT:   FieldDecl:i32 b
 // CHECK-NEXT: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
