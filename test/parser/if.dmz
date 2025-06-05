@@ -2,8 +2,8 @@
 fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:8: error: expected '('
     if {}
-    // CHECK: [[# @LINE + 1 ]]:10: error: expected expression
-    if ( {}
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected expression
+    if () {}
     // CHECK: [[# @LINE + 1 ]]:11: error: expected ')'
     if (0 {}
 

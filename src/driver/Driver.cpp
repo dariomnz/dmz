@@ -342,7 +342,8 @@ int Driver::generate_exec_pass(Type_Module &module) {
 
         cmd = "clang";
         args.emplace_back("clang");
-        args.emplace_back("-O3");
+        args.emplace_back("-O0");
+        args.emplace_back("-ggdb");
         args.emplace_back("-x");
         args.emplace_back("ir");
         args.emplace_back("-");
@@ -354,9 +355,9 @@ int Driver::generate_exec_pass(Type_Module &module) {
             args.emplace_back(m_options.output.c_str());
         }
         args.emplace_back(nullptr);
-        for (auto &&arg : args) {
-            println(arg);
-        }
+        // for (auto &&arg : args) {
+        //     println(arg);
+        // }
 
         execvp(cmd, const_cast<char *const *>(args.data()));
         perror("execvp");

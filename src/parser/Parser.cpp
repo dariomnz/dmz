@@ -1,5 +1,6 @@
 #include "parser/Parser.hpp"
 
+#include <charconv>
 namespace DMZ {
 
 bool Parser::is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
@@ -54,7 +55,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bo
 //  |   'void'
 //  |   <identifier>
 std::optional<Type> Parser::parse_type() {
-    bool isArray = false;
+    int isArray = -1;
     bool isRef = false;
 
     if (m_nextToken.type == TokenType::amp) {
@@ -77,12 +78,20 @@ std::optional<Type> Parser::parse_type() {
 
     if (m_nextToken.type == TokenType::bracket_l) {
         eat_next_token();  // eat '['
-        if (m_nextToken.type != TokenType::bracket_r) {
+        isArray = 0;
+        if (m_nextToken.type == TokenType::lit_int) {
+            int result = 0;
+            auto res = std::from_chars(m_nextToken.str.data(), m_nextToken.str.data() + m_nextToken.str.size(), result);
+            if (result == 0 || res.ec != std::errc()) {
+                dmz_unreachable("unexpected size of 0 array type");
+            }
+            isArray = result;
+            eat_next_token();  // eat lit_int
+        } else if (m_nextToken.type != TokenType::bracket_r) {
             report(m_nextToken.loc, "expected ']' next to a '[' in a type");
             return std::nullopt;
         }
         eat_next_token();  // eat ']'
-        isArray = true;
     }
     Type t;
     if (type == TokenType::ty_void) {
@@ -107,7 +116,7 @@ std::optional<Type> Parser::parse_type() {
         t = Type::custom(name);
     }
 
-    if (isArray) t.isArray = 0;
+    if (isArray != -1) t.isArray = isArray;
     t.isRef = isRef;
 
     if (m_nextToken.type == TokenType::op_quest_mark) {

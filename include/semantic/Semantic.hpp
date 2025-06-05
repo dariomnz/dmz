@@ -96,8 +96,11 @@ class Sema {
     bool check_variable_initialization(const CFG &cfg);
     std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     std::unique_ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
+    std::unique_ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
     std::unique_ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);
+    std::unique_ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(
+        const ArrayInstantiationExpr &arrayInstantiation);
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
@@ -113,7 +116,8 @@ class Sema {
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl, const ModuleID &prevModuleID);
     bool resolve_import_check(ResolvedImportDecl &importDecl);
-    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef, const ModuleID &prevModuleID);
+    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
+                                                                            const ModuleID &prevModuleID);
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
 };

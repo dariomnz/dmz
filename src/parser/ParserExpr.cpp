@@ -62,6 +62,17 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
         return declRefExpr;
     }
+    if (m_nextToken.type == TokenType::block_l) {
+        auto initList = parse_list_with_trailing_comma<Expr>(
+            {TokenType::block_l, "expected '{'"}, &Parser::parse_expr, {TokenType::block_r, "expected '}'"});
+        if (!initList) {
+            synchronize_on({TokenType::block_r});
+            eat_next_token();  // eat '}'
+            return nullptr;
+        }
+
+        return std::make_unique<ArrayInstantiationExpr>(location, std::move(*initList));
+    }
     if (m_nextToken.type == TokenType::kw_catch) {
         return parse_catch_err_expr();
     }
@@ -99,6 +110,18 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
                                                          {TokenType::par_r, "expected ')'"}));
 
         expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList));
+    }
+
+    if (m_nextToken.type == TokenType::bracket_l) {
+        SourceLocation location = m_nextToken.loc;
+        matchOrReturn(TokenType::bracket_l, "expected '['");
+        eat_next_token();  // eat '['
+
+        varOrReturn(index, parse_expr());
+
+        matchOrReturn(TokenType::bracket_r, "expected ']'");
+        eat_next_token();  // eat ']'
+        expr = std::make_unique<ArrayAtExpr>(location, std::move(expr), std::move(index));
     }
 
     while (m_nextToken.type == TokenType::dot) {
@@ -158,6 +181,7 @@ std::unique_ptr<Expr> Parser::parse_expr() {
     switch (tok) {
         case TokenType::op_mult:
         case TokenType::op_div:
+        case TokenType::op_percent:
             return 6;
         case TokenType::op_plus:
         case TokenType::op_minus:

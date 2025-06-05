@@ -61,7 +61,8 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
             store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"), Type::builtinErr("err"));
         } else {
-            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional(), m_currentFunction->type.withoutOptional());
+            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional(),
+                        m_currentFunction->type.withoutOptional());
         }
     }
 
@@ -130,7 +131,9 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
         llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
 
         if (const auto &init = decl->initializer) {
-            store_value(generate_expr(*init), var, init->type, decl->type);
+            auto tmpArray = dynamic_cast<ResolvedArrayInstantiationExpr *>(decl->initializer.get());
+            if (!tmpArray || (tmpArray && tmpArray->type.kind != Type::Kind::Void))
+                store_value(generate_expr(*init), var, init->type, decl->type);
         }
         m_declarations[decl] = var;
         return var;

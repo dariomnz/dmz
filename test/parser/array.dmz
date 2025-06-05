@@ -1,0 +1,45 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    let array:u8[5];
+    array[0] = '9';
+    array[4] = array[0];
+
+    let array:u8[5] = {'1', '2', '3'};
+    array[0] = '9';
+    array[4] = array[0];
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:u8[5] array
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '0'
+// CHECK-NEXT:       CharLiteral ''9''
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '4'
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '0'
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:u8[5] array
+// CHECK-NEXT:         ArrayInstantiationExpr 
+// CHECK-NEXT:           CharLiteral ''1''
+// CHECK-NEXT:           CharLiteral ''2''
+// CHECK-NEXT:           CharLiteral ''3''
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '0'
+// CHECK-NEXT:       CharLiteral ''9''
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '4'
+// CHECK-NEXT:       ArrayAtExpr
+// CHECK-NEXT:         DeclRefExpr array
+// CHECK-NEXT:         IntLiteral '0'

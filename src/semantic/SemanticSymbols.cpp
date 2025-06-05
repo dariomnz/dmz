@@ -213,6 +213,14 @@ void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     base->dump(level + 1);
 }
 
+void ResolvedArrayAtExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedArrayAtExpr:" << type << '\n';
+
+    if (onlySelf) return;
+    array->dump(level + 1);
+    index->dump(level + 1);
+}
+
 void ResolvedFieldInitStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedFieldInitStmt:" << field.type << " " << field.identifier << '\n';
 
@@ -225,6 +233,13 @@ void ResolvedStructInstantiationExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     for (auto &&field : fieldInitializers) field->dump(level + 1);
+}
+
+void ResolvedArrayInstantiationExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedArrayInstantiationExpr:" << type << "\n";
+
+    if (onlySelf) return;
+    for (auto &&initializer : initializers) initializer->dump(level + 1);
 }
 
 void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {

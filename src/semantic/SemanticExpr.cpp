@@ -131,6 +131,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *structInstantiation = dynamic_cast<const StructInstantiationExpr *>(&expr)) {
         return resolve_struct_instantiation(*structInstantiation);
     }
+    if (const auto *arrayInstantiation = dynamic_cast<const ArrayInstantiationExpr *>(&expr)) {
+        return resolve_array_instantiation(*arrayInstantiation);
+    }
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
     }
@@ -207,6 +210,9 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
         return resolve_member_expr(*memberExpr);
 
+    if (const auto *arrayAtExpr = dynamic_cast<const ArrayAtExpr *>(&assignableExpr))
+        return resolve_array_at_expr(*arrayAtExpr);
+
     assignableExpr.dump();
     dmz_unreachable("unexpected assignable expression");
 }
@@ -216,8 +222,7 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     if (!resolvedBase) return nullptr;
 
     if (resolvedBase->type.kind != Type::Kind::Struct)
-        return report(memberExpr.base->location,
-                      "cannot access field of '" + std::string(resolvedBase->type.name) + '\'');
+        return report(memberExpr.base->location, "cannot access field of '" + resolvedBase->type.to_str() + '\'');
 
     const auto *st = lookup_decl<ResolvedStructDecl>(resolvedBase->type.name).first;
 
@@ -231,10 +236,23 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     }
 
     if (!fieldDecl)
-        return report(memberExpr.location, '\'' + std::string(resolvedBase->type.name) + "' has no field called '" +
+        return report(memberExpr.location, '\'' + resolvedBase->type.to_str() + "' has no field called '" +
                                                std::string(memberExpr.field) + '\'');
 
     return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *fieldDecl);
+}
+
+std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
+    auto resolvedBase = resolve_expr(*arrayAtExpr.array);
+    if (!resolvedBase) return nullptr;
+
+    if (!resolvedBase->type.isArray) {
+        return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type.to_str() + '\'');
+    }
+
+    varOrReturn(index, resolve_expr(*arrayAtExpr.index));
+
+    return std::make_unique<ResolvedArrayAtExpr>(arrayAtExpr.location, std::move(resolvedBase), std::move(index));
 }
 
 std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
@@ -303,6 +321,32 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
 
     return std::make_unique<ResolvedStructInstantiationExpr>(structInstantiation.location, *st,
                                                              std::move(resolvedFieldInits));
+}
+
+std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
+    const ArrayInstantiationExpr &arrayInstantiation) {
+    std::vector<std::unique_ptr<ResolvedExpr>> resolvedinitializers;
+    resolvedinitializers.reserve(arrayInstantiation.initializers.size());
+
+    Type type = Type::builtinVoid();
+    for (auto &&initializer : arrayInstantiation.initializers) {
+        varOrReturn(resolvedExpr, resolve_expr(*initializer));
+        auto &resolved = resolvedinitializers.emplace_back(std::move(resolvedExpr));
+
+        resolved->set_constant_value(cee.evaluate(*resolved, false));
+
+        if (type == Type::builtinVoid()) {
+            type = resolved->type;
+        }
+
+        if (resolved->type != type) {
+            return report(initializer->location, "unexpected different types in array instantiation");
+        }
+    }
+    type.isArray = arrayInstantiation.initializers.size();
+
+    return std::make_unique<ResolvedArrayInstantiationExpr>(arrayInstantiation.location, type,
+                                                            std::move(resolvedinitializers));
 }
 
 std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {

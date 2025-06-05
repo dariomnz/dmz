@@ -17,6 +17,7 @@ namespace DMZ {
     if (op == TokenType::op_minus) return "-";
     if (op == TokenType::op_mult) return "*";
     if (op == TokenType::op_div) return "/";
+    if (op == TokenType::op_percent) return "%";
     if (op == TokenType::amp) return "&";
 
     if (op == TokenType::op_not_equal) return "!=";
@@ -126,6 +127,11 @@ struct Type {
     Type withoutOptional() const {
         Type t = *this;
         t.isOptional = false;
+        return t;
+    }
+    Type withoutArray() const {
+        Type t = *this;
+        t.isArray = std::nullopt;
         return t;
     }
 
@@ -251,6 +257,15 @@ struct StructInstantiationExpr : public Expr {
     void dump(size_t level = 0) const override;
 };
 
+struct ArrayInstantiationExpr : public Expr {
+    std::vector<std::unique_ptr<Expr>> initializers;
+
+    ArrayInstantiationExpr(SourceLocation location, std::vector<std::unique_ptr<Expr>> initializers)
+        : Expr(location), initializers(std::move(initializers)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
 struct IntLiteral : public Expr {
     std::string_view value;
 
@@ -320,6 +335,16 @@ struct MemberExpr : public AssignableExpr {
 
     MemberExpr(SourceLocation location, std::unique_ptr<Expr> base, std::string_view field)
         : AssignableExpr(location), base(std::move(base)), field(std::move(field)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ArrayAtExpr : public AssignableExpr {
+    std::unique_ptr<Expr> array;
+    std::unique_ptr<Expr> index;
+
+    ArrayAtExpr(SourceLocation location, std::unique_ptr<Expr> array, std::unique_ptr<Expr> index)
+        : AssignableExpr(location), array(std::move(array)), index(std::move(index)) {}
 
     void dump(size_t level = 0) const override;
 };

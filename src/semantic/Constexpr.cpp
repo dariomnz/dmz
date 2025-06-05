@@ -90,6 +90,8 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
             return val1 * val2;
         case TokenType::op_div:
             return val1 / val2;
+        case TokenType::op_percent:
+            return val1 % val2;
         case TokenType::op_plus:
             return val1 + val2;
         case TokenType::op_minus:

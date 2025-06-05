@@ -273,6 +273,19 @@ struct ResolvedMemberExpr : public ResolvedAssignableExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedArrayAtExpr : public ResolvedAssignableExpr {
+    std::unique_ptr<ResolvedExpr> array;
+    std::unique_ptr<ResolvedExpr> index;
+
+    ResolvedArrayAtExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> array,
+                        std::unique_ptr<ResolvedExpr> index)
+        : ResolvedAssignableExpr(location, array->type.withoutArray()),
+          array(std::move(array)),
+          index(std::move(index)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedGroupingExpr : public ResolvedExpr {
     std::unique_ptr<ResolvedExpr> expr;
 
@@ -355,6 +368,16 @@ struct ResolvedStructInstantiationExpr : public ResolvedExpr {
         : ResolvedExpr(location, structDecl.type),
           structDecl(structDecl),
           fieldInitializers(std::move(fieldInitializers)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
+    std::vector<std::unique_ptr<ResolvedExpr>> initializers;
+
+    ResolvedArrayInstantiationExpr(SourceLocation location, Type type,
+                                   std::vector<std::unique_ptr<ResolvedExpr>> initializers)
+        : ResolvedExpr(location, type), initializers(std::move(initializers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

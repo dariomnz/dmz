@@ -25,6 +25,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(op_minus);
         CASE_TYPE(op_mult);
         CASE_TYPE(op_div);
+        CASE_TYPE(op_percent);
         CASE_TYPE(op_and);
         CASE_TYPE(op_or);
         CASE_TYPE(op_less);
@@ -311,6 +312,11 @@ Token Lexer::next_token() {
     } else if (file_content[0] == '/') {
         debug_msg(TokenType::op_div);
         t.type = TokenType::op_div;
+        t.str = file_content.substr(0, 1);
+        advance();
+    } else if (file_content[0] == '%') {
+        debug_msg(TokenType::op_percent);
+        t.type = TokenType::op_percent;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 2) == "&&") {

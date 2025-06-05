@@ -103,6 +103,11 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
                                             std::string(resolvableType.name) + "' type");
 
     if (resolvedInitializer) {
+        if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get()) &&
+            resolvedInitializer->type.kind == Type::Kind::Void && resolvedInitializer->type.isArray) {
+            resolvedInitializer->type = *type;
+            resolvedInitializer->type.isArray = 0;
+        }
         if (!Type::compare(*type, resolvedInitializer->type))
             return report(resolvedInitializer->location, "initializer type mismatch");
 

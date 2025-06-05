@@ -66,7 +66,9 @@ class Codegen {
     llvm::Value *load_value(llvm::Value *v, Type type);
     llvm::Value *generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer);
     llvm::Value *generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer);
+    llvm::Value *generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer);
     llvm::Value *generate_temporary_struct(const ResolvedStructInstantiationExpr &sie);
+    llvm::Value *generate_temporary_array(const ResolvedArrayInstantiationExpr &aie);
     void generate_struct_decl(const ResolvedStructDecl &structDecl);
     void generate_struct_definition(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);

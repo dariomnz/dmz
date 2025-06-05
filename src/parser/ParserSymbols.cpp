@@ -172,10 +172,23 @@ void MemberExpr::dump(size_t level) const {
     base->dump(level + 1);
 }
 
+void ArrayAtExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ArrayAtExpr"<< '\n';
+
+    array->dump(level + 1);
+    index->dump(level + 1);
+}
+
 void StructInstantiationExpr::dump(size_t level) const {
     std::cerr << indent(level) << "StructInstantiationExpr " << identifier << '\n';
 
     for (auto &&field : fieldInitializers) field->dump(level + 1);
+}
+
+void ArrayInstantiationExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ArrayInstantiationExpr " << '\n';
+
+    for (auto &&initializer : initializers) initializer->dump(level + 1);
 }
 
 void FieldInitStmt::dump(size_t level) const {

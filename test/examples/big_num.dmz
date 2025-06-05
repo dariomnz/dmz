@@ -1,0 +1,51 @@
+// RUN: compiler %s -I %S/../../std -run | filecheck %s
+
+// CHECK: 123456789123456789123456789123456789123456789123456789123456789123456789
+
+// CHECK-NOT: {{.*}}
+import std::io as io;
+
+fn main() -> void {
+    let num:i512 = 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    num = num * 1000000000;
+    num = num + 123456789;
+    if (num == 0) {
+        io::printf(&"0\n");
+        return;
+    }
+
+    let is_negative = false;
+    if (num < 0) {
+        is_negative = true;
+        num = -num;
+        io::printf(&"-");
+    }
+
+    let buffer:i4[512] = {};
+    let i = 0;
+
+    while (num > 0) {
+        buffer[i] = (num % 10);
+        i = i + 1;
+        num = num / 10;
+    }
+
+    let j = i - 1;
+    while (j >= 0) {
+        io::printf(&"%d", buffer[j]);
+        j = j - 1;
+    }
+    io::printf(&"\n");
+}

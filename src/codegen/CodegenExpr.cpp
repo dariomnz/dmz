@@ -49,8 +49,14 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *me = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
         return generate_member_expr(*me, keepPointer);
     }
+    if (auto *arrayAtExpr = dynamic_cast<const ResolvedArrayAtExpr *>(&expr)) {
+        return generate_array_at_expr(*arrayAtExpr, keepPointer);
+    }
     if (auto *sie = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         return generate_temporary_struct(*sie);
+    }
+    if (auto *aie = dynamic_cast<const ResolvedArrayInstantiationExpr *>(&expr)) {
+        return generate_temporary_array(*aie);
     }
     if (auto *err = dynamic_cast<const ResolvedErrDeclRefExpr *>(&expr)) {
         return generate_err_decl_ref_expr(*err);
@@ -216,6 +222,16 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else
             dmz_unreachable("not expected type in op_div");
     }
+    if (binop.op == TokenType::op_percent) {
+        if (binop.lhs->type.kind == Type::Kind::Int)
+            return m_builder.CreateSRem(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::UInt)
+            return m_builder.CreateURem(lhs, rhs);
+        else if (binop.lhs->type.kind == Type::Kind::Float)
+            return m_builder.CreateFRem(lhs, rhs);
+        else
+            dmz_unreachable("not expected type in op_percent");
+    }
     if (binop.op == TokenType::op_less) {
         if (binop.lhs->type.kind == Type::Kind::Int)
             return m_builder.CreateICmpSLT(lhs, rhs);
@@ -311,6 +327,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 
     keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
     keepPointer |= dre.type.kind == Type::Kind::Struct;
+    keepPointer |= dre.type.isArray.has_value();
 
     return keepPointer ? val : load_value(val, dre.type);
 }
@@ -320,6 +337,14 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
     llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, memberExpr.field.index);
 
     return keepPointer ? field : load_value(field, memberExpr.field.type);
+}
+
+llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer) {
+    llvm::Value *base = generate_expr(*arrayAtExpr.array, true);
+    llvm::Value *field = m_builder.CreateGEP(generate_type(arrayAtExpr.array->type), base,
+                                             {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)});
+
+    return keepPointer ? field : load_value(field, arrayAtExpr.array->type.withoutArray());
 }
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
@@ -336,6 +361,22 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     for (auto &&field : sie.structDecl.fields) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(structType), tmp, idx++);
         store_value(initializerVals[field.get()], dst, field->type, field->type);
+    }
+
+    return tmp;
+}
+
+llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationExpr &aie) {
+    Type arrayType = aie.type;
+    std::string varName = "array." + std::string(arrayType.name) + ".tmp";
+    llvm::Value *tmp = allocate_stack_variable(varName, arrayType);
+
+    size_t idx = 0;
+    for (auto &&initExpr : aie.initializers) {
+        auto var = generate_expr(*initExpr);
+        llvm::Value *dst =
+            m_builder.CreateGEP(generate_type(arrayType), tmp, {m_builder.getInt32(0), m_builder.getInt32(idx++)});
+        store_value(var, dst, arrayType.withoutArray(), arrayType.withoutArray());
     }
 
     return tmp;

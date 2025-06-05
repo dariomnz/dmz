@@ -18,6 +18,7 @@ enum class TokenType {
     op_minus,
     op_mult,
     op_div,
+    op_percent,
     op_and,
     op_or,
     op_less,
