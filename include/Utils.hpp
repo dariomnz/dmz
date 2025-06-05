@@ -4,6 +4,7 @@
 #include <iostream>
 #include <mutex>
 #include <optional>
+#include <sstream>
 
 namespace DMZ {
 
@@ -23,6 +24,12 @@ namespace DMZ {
 struct SourceLocation {
     std::string_view file_name = {};
     size_t line = 0, col = 0;
+
+    std::string to_string() const {
+        std::stringstream os;
+        os << *this;
+        return os.str();
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const SourceLocation& s) {
         os << s.file_name.data() << ":" << s.line + 1 << ":" << s.col + 1;

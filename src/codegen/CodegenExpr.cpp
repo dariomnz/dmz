@@ -415,6 +415,13 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
+        auto fmt = m_builder.CreateGlobalStringPtr(
+            errUnwrapExpr.location.to_string() + ": Aborted: Unwrap an error value of '%s' in the function '" +
+            m_currentFunction->moduleID.to_string() + std::string(m_currentFunction->identifier) +
+            "' that not return an optional\n");
+        auto printf_func = m_module->getOrInsertFunction(
+            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getInt8Ty()->getPointerTo(), true));
+        m_builder.CreateCall(printf_func, {fmt, err_value});
         llvm::Function *trapIntrinsic = llvm::Intrinsic::getDeclaration(m_module.get(), llvm::Intrinsic::trap);
         m_builder.CreateCall(trapIntrinsic, {});
     }
