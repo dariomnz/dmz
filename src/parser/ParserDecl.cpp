@@ -2,6 +2,25 @@
 
 namespace DMZ {
 
+std::unique_ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
+    matchOrReturn(TokenType::id, "expected identifier");
+    auto location = m_nextToken.loc;
+    auto identifier = m_nextToken.str;
+    eat_next_token();  // eat id
+    return std::make_unique<GenericTypeDecl>(location, identifier);
+}
+
+std::unique_ptr<GenericTypesDecl> Parser::parse_generic_types_decl() {
+    if (m_nextToken.type != TokenType::op_less) {
+        return nullptr;
+    }
+    auto typesDeclList = (parse_list_with_trailing_comma<GenericTypeDecl>(
+        {TokenType::op_less, "expected '<'"}, &Parser::parse_generic_type_decl, {TokenType::op_more, "expected '>'"}));
+    if (!typesDeclList) return nullptr;
+
+    return std::make_unique<GenericTypesDecl>(std::move(*typesDeclList));
+}
+
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
 std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
@@ -22,6 +41,8 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     std::string_view functionIdentifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
+    auto genericTypes = parse_generic_types_decl();
+
     varOrReturn(parameterList,
                 parse_list_with_trailing_comma<ParamDecl>({TokenType::par_l, "expected '('"}, &Parser::parse_param_decl,
                                                           {TokenType::par_r, "expected ')'"}));
@@ -41,7 +62,8 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block));
+    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block),
+                                          std::move(genericTypes));
 }
 
 // <paramDecl>
@@ -78,7 +100,7 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     std::string_view identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
-    std::optional<Type> type;
+    std::unique_ptr<Type> type;
     if (m_nextToken.type == TokenType::colon) {
         eat_next_token();  // eat ':'
 
@@ -87,13 +109,13 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     }
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return std::make_unique<VarDecl>(location, identifier, type, !isConst);
+        return std::make_unique<VarDecl>(location, identifier, std::move(type), !isConst);
     }
     eat_next_token();  // eat '='
 
     varOrReturn(initializer, parse_expr());
 
-    return std::make_unique<VarDecl>(location, identifier, type, !isConst, std::move(initializer));
+    return std::make_unique<VarDecl>(location, identifier, std::move(type), !isConst, std::move(initializer));
 }
 
 // <structDecl>

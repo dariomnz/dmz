@@ -94,6 +94,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 std::unique_ptr<Expr> Parser::parse_postfix_expr() {
     varOrReturn(expr, parse_primary());
 
+    std::unique_ptr<DMZ::GenericTypes> genericTypes;
     if (auto declRef = dynamic_cast<DeclRefExpr *>(expr.get())) {
         if (m_nextToken.type == TokenType::coloncolon) {
             eat_next_token();  // eat '::'
@@ -103,13 +104,18 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         }
     }
 
+    if (m_nextToken.type == TokenType::op_less &&
+        (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more)) {
+        genericTypes = parse_generic_types();
+    }
+
     if (m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
         varOrReturn(argumentList,
                     parse_list_with_trailing_comma<Expr>({TokenType::par_l, "expected '('"}, &Parser::parse_expr,
                                                          {TokenType::par_r, "expected ')'"}));
 
-        expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList));
+        expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList), std::move(genericTypes));
     }
 
     if (m_nextToken.type == TokenType::bracket_l) {
@@ -251,7 +257,8 @@ std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
 
     varOrReturn(errToCatch, parse_expr());
 
-    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, type, false, std::move(errToCatch));
+    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::make_unique<Type>(std::move(type)), false,
+                                             std::move(errToCatch));
     auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
     return std::make_unique<CatchErrExpr>(location, nullptr, std::move(declaration));
 }
@@ -276,7 +283,7 @@ std::unique_ptr<TryErrExpr> Parser::parse_try_err_expr() {
 
     varOrReturn(errToCatch, parse_expr());
 
-    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::nullopt, false, std::move(errToCatch));
+    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, nullptr, false, std::move(errToCatch));
     auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
     return std::make_unique<TryErrExpr>(location, nullptr, std::move(declaration));
 }

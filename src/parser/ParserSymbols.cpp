@@ -26,8 +26,41 @@ std::ostream &operator<<(std::ostream &os, const Type &t) {
     return os;
 }
 
+void GenericTypes::dump() const { std::cerr << *this; }
+
+std::string GenericTypes::to_str() const {
+    std::stringstream out;
+    out << *this;
+    return out.str();
+}
+
+std::ostream &operator<<(std::ostream &os, const GenericTypes &t) {
+    if (t.types.size() == 0) return os;
+    os << "<";
+    for (size_t i = 0; i < t.types.size(); i++) {
+        os << *t.types[i];
+        if (i != t.types.size() - 1) os << ", ";
+    }
+    os << ">";
+    return os;
+}
+
+void GenericTypeDecl::dump([[maybe_unused]] size_t level) const { std::cerr << identifier; }
+
+void GenericTypesDecl::dump() const {
+    if (types.size() == 0) return;
+    std::cerr << "<";
+    for (size_t i = 0; i < types.size(); i++) {
+        types[i]->dump();
+        if (i != types.size() - 1) std::cerr << ", ";
+    }
+    std::cerr << ">";
+}
+
 void FunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FunctionDecl " << identifier << " -> " << type << "\n";
+    std::cerr << indent(level) << "FunctionDecl " << identifier;
+    if (genericType) (*genericType).dump();
+    std::cerr << " -> " << type << "\n";
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -67,7 +100,9 @@ void DeclRefExpr::dump(size_t level) const {
 }
 
 void CallExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "CallExpr\n";
+    std::cerr << indent(level) << "CallExpr";
+    if (genericType) (*genericType).dump();
+    std::cerr << "\n";
 
     callee->dump(level + 1);
 

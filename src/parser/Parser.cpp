@@ -54,7 +54,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bo
 //  |   'bool'
 //  |   'void'
 //  |   <identifier>
-std::optional<Type> Parser::parse_type() {
+std::unique_ptr<Type> Parser::parse_type() {
     int isArray = -1;
     bool isRef = false;
     std::optional<int> isPointer = std::nullopt;
@@ -78,7 +78,7 @@ std::optional<Type> Parser::parse_type() {
 
     if (types.count(type) == 0) {
         report(m_nextToken.loc, "expected type specifier");
-        return std::nullopt;
+        return nullptr;
     }
     eat_next_token();      // eat type
 
@@ -94,8 +94,7 @@ std::optional<Type> Parser::parse_type() {
             isArray = result;
             eat_next_token();  // eat lit_int
         } else if (m_nextToken.type != TokenType::bracket_r) {
-            report(m_nextToken.loc, "expected ']' next to a '[' in a type");
-            return std::nullopt;
+            return report(m_nextToken.loc, "expected ']' next to a '[' in a type");
         }
         eat_next_token();  // eat ']'
     }
@@ -131,7 +130,18 @@ std::optional<Type> Parser::parse_type() {
         t.isOptional = true;
         eat_next_token();  // eat '?'
     }
-    return t;
+    return std::make_unique<Type>(std::move(t));
+}
+
+std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
+    if (m_nextToken.type != TokenType::op_less) {
+        return nullptr;
+    }
+    auto typesDeclList = (parse_list_with_trailing_comma<Type>(
+        {TokenType::op_less, "expected '<'"}, &Parser::parse_type, {TokenType::op_more, "expected '>'"}));
+    if (!typesDeclList) return nullptr;
+
+    return std::make_unique<GenericTypes>(std::move(*typesDeclList));
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
@@ -205,5 +215,8 @@ template std::unique_ptr<std::vector<std::unique_ptr<FieldInitStmt>>> Parser::pa
     std::pair<TokenType, const char *>);
 template std::unique_ptr<std::vector<std::unique_ptr<Expr>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, std::unique_ptr<Expr> (Parser::*)(), std::pair<TokenType, const char *>);
+template std::unique_ptr<std::vector<std::unique_ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
+    std::pair<TokenType, const char *>, std::unique_ptr<GenericTypeDecl> (Parser::*)(),
+    std::pair<TokenType, const char *>);
 
 }  // namespace DMZ

@@ -155,6 +155,16 @@ struct Type {
     friend std::ostream& operator<<(std::ostream& os, const Type& t);
 };
 
+struct GenericTypes {
+    std::vector<std::unique_ptr<Type>> types;
+
+    GenericTypes(std::vector<std::unique_ptr<Type>> types) : types(std::move(types)) {}
+
+    void dump() const;
+    std::string to_str() const;
+    friend std::ostream& operator<<(std::ostream& os, const GenericTypes& t);
+};
+
 template <typename Ty>
 class ConstantValueContainer {
    protected:
@@ -176,6 +186,20 @@ struct Decl {
     virtual void dump(size_t level = 0) const = 0;
 };
 
+struct GenericTypeDecl : public Decl {
+    GenericTypeDecl(SourceLocation location, std::string_view identifier) : Decl(location, identifier) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct GenericTypesDecl {
+    std::vector<std::unique_ptr<GenericTypeDecl>> types;
+
+    GenericTypesDecl(std::vector<std::unique_ptr<GenericTypeDecl>> types) : types(std::move(types)) {}
+
+    void dump() const;
+};
+
 struct Stmt {
     SourceLocation location;
     Stmt(SourceLocation location) : location(location) {}
@@ -195,7 +219,7 @@ struct Block : public Stmt {
     Block(SourceLocation location, std::vector<std::unique_ptr<Stmt>> statements)
         : Stmt(location), statements(std::move(statements)) {}
 
-    void dump(size_t level = 0) const;
+    void dump(size_t level = 0) const override;
 };
 
 struct IfStmt : public Stmt {
@@ -326,9 +350,14 @@ struct StringLiteral : public Expr {
 struct CallExpr : public Expr {
     std::unique_ptr<Expr> callee;
     std::vector<std::unique_ptr<Expr>> arguments;
+    std::unique_ptr<GenericTypes> genericType;
 
-    CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments)
-        : Expr(location), callee(std::move(callee)), arguments(std::move(arguments)) {}
+    CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments,
+             std::unique_ptr<GenericTypes> genericType = nullptr)
+        : Expr(location),
+          callee(std::move(callee)),
+          arguments(std::move(arguments)),
+          genericType(std::move(genericType)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -442,11 +471,11 @@ struct ParamDecl : public Decl {
 };
 
 struct VarDecl : public Decl {
-    std::optional<Type> type;
+    std::unique_ptr<Type> type;
     std::unique_ptr<Expr> initializer;
     bool isMutable;
 
-    VarDecl(SourceLocation location, std::string_view identifier, std::optional<Type> type, bool isMutable,
+    VarDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<Type> type, bool isMutable,
             std::unique_ptr<Expr> initializer = nullptr)
         : Decl(location, std::move(identifier)),
           type(std::move(type)),
@@ -475,10 +504,14 @@ struct ExternFunctionDecl : public FuncDecl {
 
 struct FunctionDecl : public FuncDecl {
     std::unique_ptr<Block> body;
+    std::unique_ptr<GenericTypesDecl> genericType;
 
     FunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body)
-        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)), body(std::move(body)) {}
+                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
+                 std::unique_ptr<GenericTypesDecl> genericType = nullptr)
+        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)),
+          body(std::move(body)),
+          genericType(std::move(genericType)) {}
 
     void dump(size_t level = 0) const override;
 };

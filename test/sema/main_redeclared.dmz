@@ -1,4 +1,4 @@
-// RUN: compiler %s -run 2>&1 -res-dump | filecheck %s
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn main() -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:1: error: redeclaration of 'main'

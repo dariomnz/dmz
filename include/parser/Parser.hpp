@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <unordered_set>
 
 #include "Utils.hpp"
@@ -35,12 +36,42 @@ class Parser {
         restrictions = prevRestrictions;
         return res;
     }
-
+    std::deque<Token> m_peekedTokens;
     void eat_next_token() {
         do {
-            m_nextToken = m_lexer.next_token();
+            if (!m_peekedTokens.empty()) {
+                m_nextToken = m_peekedTokens.front();
+                m_peekedTokens.pop_front();
+            } else {
+                m_nextToken = m_lexer.next_token();
+            }
         } while (m_nextToken.type == TokenType::comment);
     }
+
+    const Token &peek_token(size_t jump = 0) {
+        while (m_peekedTokens.size() <= jump) {
+            Token nextLexerToken = m_lexer.next_token();
+            if (nextLexerToken.type != TokenType::comment) {
+                m_peekedTokens.push_back(nextLexerToken);
+            }
+            if (nextLexerToken.type == TokenType::eof) {
+                break;
+            }
+        }
+
+        if (jump >= m_peekedTokens.size()) {
+            static const Token eof_token = {TokenType::eof, ""};
+            return eof_token;
+        }
+
+        return m_peekedTokens[jump];
+    }
+    // void eat_next_token() {
+    //     do {
+    //         m_nextToken = m_lexer.next_token();
+    //     } while (m_nextToken.type == TokenType::comment);
+    // }
+
     void synchronize_on(std::unordered_set<TokenType> types);
     void synchronize();
 
@@ -64,7 +95,10 @@ class Parser {
 
    private:
     std::unique_ptr<FuncDecl> parse_function_decl();
-    std::optional<Type> parse_type();
+    std::unique_ptr<Type> parse_type();
+    std::unique_ptr<GenericTypes> parse_generic_types();
+    std::unique_ptr<GenericTypeDecl> parse_generic_type_decl();
+    std::unique_ptr<GenericTypesDecl> parse_generic_types_decl();
     std::unique_ptr<Block> parse_block(bool oneStmt = false);
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<Stmt> parse_statement();

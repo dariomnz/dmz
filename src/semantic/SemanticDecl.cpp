@@ -95,12 +95,12 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
         if (!resolvedInitializer) return nullptr;
     }
 
-    Type resolvableType = varDecl.type.value_or(resolvedInitializer->type);
-    std::optional<Type> type = resolve_type(resolvableType);
+    Type *resolvableType = varDecl.type.get() != nullptr ? varDecl.type.get() : &resolvedInitializer->type;
+    std::optional<Type> type = resolve_type(*resolvableType);
 
     if (!type || type->kind == Type::Kind::Void)
         return report(varDecl.location, "variable '" + std::string(varDecl.identifier) + "' has invalid '" +
-                                            std::string(resolvableType.name) + "' type");
+                                            std::string(resolvableType->name) + "' type");
 
     if (resolvedInitializer) {
         if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get()) &&
