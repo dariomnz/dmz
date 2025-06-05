@@ -105,6 +105,12 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
     if (const auto *unop = dynamic_cast<const ResolvedUnaryOperator *>(&expr)) {
         return insert_expr(*unop->operand, block);
     }
+    if (const auto *refPtrExpr = dynamic_cast<const ResolvedRefPtrExpr *>(&expr)) {
+        return insert_expr(*refPtrExpr->expr, block);
+    }
+    if (const auto *refPtrExpr = dynamic_cast<const ResolvedDerefPtrExpr *>(&expr)) {
+        return insert_expr(*refPtrExpr->expr, block);
+    }
     if (const auto *structInst = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         for (auto it = structInst->fieldInitializers.rbegin(); it != structInst->fieldInitializers.rend(); ++it)
             insert_stmt(**it, block);

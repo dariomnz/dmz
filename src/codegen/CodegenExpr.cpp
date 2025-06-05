@@ -29,7 +29,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return m_builder.getInt1(number->value);
     }
     if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
-        return m_builder.CreateGlobalStringPtr(str->value, "global.str");
+        return m_builder.CreateGlobalString(str->value, "global.str");
     }
     if (auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return generate_decl_ref_expr(*dre, keepPointer);
@@ -42,6 +42,12 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     }
     if (auto *unop = dynamic_cast<const ResolvedUnaryOperator *>(&expr)) {
         return generate_unary_operator(*unop);
+    }
+    if (auto *ptrExpr = dynamic_cast<const ResolvedRefPtrExpr *>(&expr)) {
+        return generate_ref_ptr_expr(*ptrExpr);
+    }
+    if (auto *ptrExpr = dynamic_cast<const ResolvedDerefPtrExpr *>(&expr)) {
+        return generate_deref_ptr_expr(*ptrExpr);
     }
     if (auto *grouping = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return generate_expr(*grouping->expr);
@@ -119,8 +125,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 }
 
 llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop) {
-    bool keepPointer = unop.op == TokenType::amp;
-    llvm::Value *rhs = generate_expr(*unop.operand, keepPointer);
+    llvm::Value *rhs = generate_expr(*unop.operand);
 
     if (unop.op == TokenType::op_minus) {
         if (unop.operand->type.kind == Type::Kind::Int || unop.operand->type.kind == Type::Kind::UInt)
@@ -133,21 +138,27 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
 
     if (unop.op == TokenType::op_excla_mark) return m_builder.CreateNot(to_bool(rhs, unop.operand->type));
 
-    if (unop.op == TokenType::amp) {
-        return rhs;
-    }
-
     unop.dump();
     dmz_unreachable("unknown unary op");
     return nullptr;
 }
 
+llvm::Value *Codegen::generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr) {
+    auto v = generate_expr(*expr.expr, true);
+    return v;
+}
+
+llvm::Value *Codegen::generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr) {
+    auto v = generate_expr(*expr.expr);
+    return v;
+}
+
 llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &binop) {
     TokenType op = binop.op;
 
-    if (op == TokenType::op_and || op == TokenType::op_or) {
+    if (op == TokenType::ampamp || op == TokenType::pipepipe) {
         llvm::Function *function = get_current_function();
-        bool isOr = op == TokenType::op_or;
+        bool isOr = op == TokenType::pipepipe;
 
         auto *rhsTag = isOr ? "or.rhs" : "and.rhs";
         auto *mergeTag = isOr ? "or.merge" : "and.merge";
@@ -204,13 +215,13 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else
             dmz_unreachable("not expected type in op_minus");
     }
-    if (binop.op == TokenType::op_mult) {
+    if (binop.op == TokenType::asterisk) {
         if (binop.lhs->type.kind == Type::Kind::Int || binop.lhs->type.kind == Type::Kind::UInt)
             return m_builder.CreateMul(lhs, rhs);
         else if (binop.lhs->type.kind == Type::Kind::Float)
             return m_builder.CreateFMul(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_mult");
+            dmz_unreachable("not expected type in asterisk");
     }
     if (binop.op == TokenType::op_div) {
         if (binop.lhs->type.kind == Type::Kind::Int)
@@ -299,7 +310,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
     llvm::Function *function = get_current_function();
     const auto *binop = dynamic_cast<const ResolvedBinaryOperator *>(&op);
 
-    if (binop && binop->op == TokenType::op_or) {
+    if (binop && binop->op == TokenType::pipepipe) {
         llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(*m_context, "or.lhs.false", function);
         generate_conditional_operator(*binop->lhs, trueBB, nextBB);
 
@@ -308,7 +319,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
         return;
     }
 
-    if (binop && binop->op == TokenType::op_and) {
+    if (binop && binop->op == TokenType::ampamp) {
         llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(*m_context, "and.lhs.true", function);
         generate_conditional_operator(*binop->lhs, nextBB, falseBB);
 
@@ -415,7 +426,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
-        auto fmt = m_builder.CreateGlobalStringPtr(
+        auto fmt = m_builder.CreateGlobalString(
             errUnwrapExpr.location.to_string() + ": Aborted: Unwrap an error value of '%s' in the function '" +
             m_currentFunction->moduleID.to_string() + std::string(m_currentFunction->identifier) +
             "' that not return an optional\n");

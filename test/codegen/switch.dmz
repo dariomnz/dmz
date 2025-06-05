@@ -1,7 +1,7 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e 'else 10\n10\n')
 
-extern fn printf(fmt:&u8[], ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;
 
 fn main() -> void {
     let x = 10;
@@ -30,20 +30,20 @@ fn main() -> void {
 // CHECK-NEXT:   ]
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case:                                      ; preds = %entry
-// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str)
+// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr @global.str)
 // CHECK-NEXT:   br label %switch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case1:                                     ; preds = %entry
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str.1)
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr @global.str.1)
 // CHECK-NEXT:   br label %switch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case2:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str.2)
+// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr @global.str.2)
 // CHECK-NEXT:   br label %switch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.else:                                      ; preds = %entry
 // CHECK-NEXT:   %4 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str.3, i32 %4)
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr @global.str.3, i32 %4)
 // CHECK-NEXT:   br label %switch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.exit:                                      ; preds = %switch.else, %switch.case2, %switch.case1, %switch.case
@@ -53,12 +53,12 @@ fn main() -> void {
 // CHECK-NEXT:   ]
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case3:                                     ; preds = %switch.exit
-// CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str.4)
+// CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr @global.str.4)
 // CHECK-NEXT:   br label %switch.exit5
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.else4:                                     ; preds = %switch.exit
 // CHECK-NEXT:   %8 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %9 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str.5, i32 %8)
+// CHECK-NEXT:   %9 = call i32 (ptr, ...) @printf(ptr @global.str.5, i32 %8)
 // CHECK-NEXT:   br label %switch.exit5
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.exit5:                                     ; preds = %switch.else4, %switch.case3

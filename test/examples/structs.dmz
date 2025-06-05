@@ -8,7 +8,7 @@
 // CHECK-NEXT: 43
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 
 struct Color {
     r: i32,

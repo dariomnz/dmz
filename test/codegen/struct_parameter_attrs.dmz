@@ -3,7 +3,7 @@
 struct S {
   x: i32,
 }
-extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 
 fn foo(const a: i32, const b: S, c: i32, d: S) -> void {
   println(a);

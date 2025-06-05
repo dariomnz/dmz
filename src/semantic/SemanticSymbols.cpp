@@ -128,6 +128,22 @@ void ResolvedUnaryOperator::dump(size_t level, bool onlySelf) const {
     operand->dump(level + 1);
 }
 
+void ResolvedRefPtrExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedRefPtrExpr:" << type << '\n';
+    if (onlySelf) return;
+    dump_constant_value(level);
+
+    expr->dump(level + 1);
+}
+
+void ResolvedDerefPtrExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedDerefPtrExpr:" << type << '\n';
+    if (onlySelf) return;
+    dump_constant_value(level);
+
+    expr->dump(level + 1);
+}
+
 void ResolvedGroupingExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGroupingExpr:" << type << "\n";
     if (onlySelf) return;

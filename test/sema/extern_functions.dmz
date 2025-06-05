@@ -7,10 +7,10 @@ extern fn bar(a:i32) -> void;
 // CHECK: ResolvedExternFunctionDecl bar -> void
 // CHECK-NEXT:  ResolvedParamDecl:i32 a
 
-extern fn dprintf(fd:i32, format: &u8[], ...) -> i32;
+extern fn dprintf(fd:i32, format: *u8[], ...) -> i32;
 // CHECK: ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:  ResolvedParamDecl:i32 fd
-// CHECK-NEXT:  ResolvedParamDecl:&u8[] format
+// CHECK-NEXT:  ResolvedParamDecl:*u8[] format
 // CHECK-NEXT:  ResolvedParamDecl:vararg ...
 
 fn main() -> void {

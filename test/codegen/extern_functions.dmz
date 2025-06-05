@@ -19,9 +19,9 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %fmt, ptr align 1 @global.str, i64 9, i1 false)
 // CHECK-NEXT:   store i32 1, ptr %fd, align 4
 // CHECK-NEXT:   %2 = load i32, ptr %fd, align 4
-// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr byref(ptr) %fmt, i32 10)
+// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr %fmt, i32 10)
 // CHECK-NEXT:   %4 = load i32, ptr %fd, align 4
-// CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 %4, ptr byref(ptr) @global.str.1)
+// CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 %4, ptr @global.str.1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -29,5 +29,5 @@ fn main() -> void {
 // CHECK: declare i32 @putchar(i32 %0)
 extern fn putchar(c:i32) -> i32;
 
-// CHECK: declare i32 @dprintf(i32 %0, ptr byref(ptr) %1, ...)
-extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;
+// CHECK: declare i32 @dprintf(i32 %0, ptr %1, ...)
+extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;

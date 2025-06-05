@@ -17,26 +17,26 @@ fn main() -> void {
 // CHECK-NEXT:         Block
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf
-// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:             RefPtrExpr
 // CHECK-NEXT:               StringLiteral '"1\n"'
 // CHECK-NEXT:       CaseStmt
 // CHECK-NEXT:         IntLiteral '2'
 // CHECK-NEXT:         Block
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf
-// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:             RefPtrExpr
 // CHECK-NEXT:               StringLiteral '"2\n"'
 // CHECK-NEXT:       CaseStmt
 // CHECK-NEXT:         IntLiteral '3'
 // CHECK-NEXT:         Block
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf
-// CHECK-NEXT:             UnaryOperator '&'
+// CHECK-NEXT:             RefPtrExpr
 // CHECK-NEXT:               StringLiteral '"3\n"'
 // CHECK-NEXT:       ElseBlock
 // CHECK-NEXT:       Block
 // CHECK-NEXT:         CallExpr
 // CHECK-NEXT:           DeclRefExpr printf
-// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:           RefPtrExpr
 // CHECK-NEXT:             StringLiteral '"else %d\n"'
 // CHECK-NEXT:           DeclRefExpr x

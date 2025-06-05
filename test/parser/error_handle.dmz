@@ -39,17 +39,17 @@ fn foo(x:i32) -> i32? {
 // CHECK-NEXT:     ReturnStmt
 // CHECK-NEXT:       IntLiteral '10'
 
-extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;
+extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;
 
 fn main() -> void {
     let result = foo(1);
     if (catch error = result){
-        dprintf(1, &"%s\n", &error);
+        dprintf(1, &"%s\n", error);
     }
     
     let result2 = foo(1);
     if (try value = result2){
-        dprintf(1, &"%d\n", &value);
+        dprintf(1, &"%d\n", value);
     }
 
     dprintf(1, &"No error %d\n", result);
@@ -72,10 +72,9 @@ fn main() -> void {
 // CHECK-NEXT:         CallExpr
 // CHECK-NEXT:           DeclRefExpr dprintf
 // CHECK-NEXT:           IntLiteral '1'
-// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:           RefPtrExpr
 // CHECK-NEXT:             StringLiteral '"%s\n"'
-// CHECK-NEXT:           UnaryOperator '&'
-// CHECK-NEXT:             DeclRefExpr error
+// CHECK-NEXT:           DeclRefExpr error
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: result2
 // CHECK-NEXT:         CallExpr
@@ -90,20 +89,19 @@ fn main() -> void {
 // CHECK-NEXT:         CallExpr
 // CHECK-NEXT:           DeclRefExpr dprintf
 // CHECK-NEXT:           IntLiteral '1'
-// CHECK-NEXT:           UnaryOperator '&'
+// CHECK-NEXT:           RefPtrExpr
 // CHECK-NEXT:             StringLiteral '"%d\n"'
-// CHECK-NEXT:           UnaryOperator '&'
-// CHECK-NEXT:             DeclRefExpr value
+// CHECK-NEXT:           DeclRefExpr value
 // CHECK-NEXT:     CallExpr
 // CHECK-NEXT:       DeclRefExpr dprintf
 // CHECK-NEXT:       IntLiteral '1'
-// CHECK-NEXT:       UnaryOperator '&'
+// CHECK-NEXT:       RefPtrExpr
 // CHECK-NEXT:         StringLiteral '"No error %d\n"'
 // CHECK-NEXT:       DeclRefExpr result
 // CHECK-NEXT:     CallExpr
 // CHECK-NEXT:       DeclRefExpr dprintf
 // CHECK-NEXT:       IntLiteral '1'
-// CHECK-NEXT:       UnaryOperator '&'
+// CHECK-NEXT:       RefPtrExpr
 // CHECK-NEXT:         StringLiteral '"No safe error %d\n"'
 // CHECK-NEXT:       ErrUnwrapExpr 
 // CHECK-NEXT:         CallExpr

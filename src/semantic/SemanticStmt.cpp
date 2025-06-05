@@ -45,7 +45,8 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
     }
 
     if (m_currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
-        return report(returnStmt.location, "unexpected return value in void function");
+        if (!(dynamic_cast<ErrDeclRefExpr *>(returnStmt.expr.get()) && m_currentFunction->type.isOptional))
+            return report(returnStmt.location, "unexpected return value in void function");
 
     if (m_currentFunction->type.kind != Type::Kind::Void && !returnStmt.expr)
         return report(returnStmt.location, "expected a return value");

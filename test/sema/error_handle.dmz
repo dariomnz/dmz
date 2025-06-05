@@ -39,7 +39,7 @@ fn foo(x:i32) -> i32? {
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 
-extern fn dprintf(fd:i32, fmt:&u8[], ...) -> i32;
+extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;
 
 fn main() -> void {
     let result = foo(2);
@@ -78,7 +78,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator:&u8[4] '&'
+// CHECK-NEXT:       ResolvedRefPtrExpr:*u8[4]
 // CHECK-NEXT:         ResolvedStringLiteral:u8[4] '%s\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:err result_e
 // CHECK-NEXT:     ResolvedIfStmt
@@ -90,7 +90,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator:&u8[4] '&'
+// CHECK-NEXT:           ResolvedRefPtrExpr:*u8[4]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[4] '%s\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:err error
 // CHECK-NEXT:     ResolvedDeclStmt
@@ -107,7 +107,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator:&u8[4] '&'
+// CHECK-NEXT:           ResolvedRefPtrExpr:*u8[4]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[4] '%d\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 value
 // CHECK-NEXT:     ResolvedIfStmt
@@ -117,7 +117,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator:&u8[20] '&'
+// CHECK-NEXT:           ResolvedRefPtrExpr:*u8[20]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[20] 'There are an error\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr:i1 
@@ -128,18 +128,18 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
-// CHECK-NEXT:           ResolvedUnaryOperator:&u8[20] '&'
+// CHECK-NEXT:           ResolvedRefPtrExpr:*u8[20]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[20] 'There are an error\n'
 // CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:       ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:         ResolvedStringLiteral:u8[13] 'No error %d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32? result
 // CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
-// CHECK-NEXT:       ResolvedUnaryOperator:&u8[18] '&'
+// CHECK-NEXT:       ResolvedRefPtrExpr:*u8[18]
 // CHECK-NEXT:         ResolvedStringLiteral:u8[18] 'No safe error %d\n'
 // CHECK-NEXT:       ResolvedErrUnwrapExpr:i32
 // CHECK-NEXT:         ResolvedCallExpr:i32? foo

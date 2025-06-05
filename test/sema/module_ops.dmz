@@ -11,7 +11,7 @@ fn print(x:i32) -> void {
     println(x);
 }
 
-extern fn printf(fmt:&u8[], ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;
 
 fn println(const n:i32) -> void {printf(&"%d\n", n);}
 // CHECK:   ResolvedFunctionDecl ops::print -> void

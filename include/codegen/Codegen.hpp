@@ -52,6 +52,8 @@ class Codegen {
     void generate_main_wrapper();
     llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
+    llvm::Value *generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr);
+    llvm::Value *generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr);
     llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
     llvm::Value *cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs);
     llvm::Value *to_bool(llvm::Value *v, const Type &type);

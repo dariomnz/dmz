@@ -1,0 +1,37 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let i: i32 = 10;
+
+    let i_ptr: *i32 = &i;
+    let i_ptr2: *i32 = i_ptr;
+
+    printf("%d\n", i);
+    *i_ptr = 12;
+    printf("%d\n", i);
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:i32 i
+// CHECK-NEXT:         IntLiteral '10'
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:*i32 i_ptr
+// CHECK-NEXT:         RefPtrExpr
+// CHECK-NEXT:           DeclRefExpr i
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:*i32 i_ptr2
+// CHECK-NEXT:         DeclRefExpr i_ptr
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       DeclRefExpr printf
+// CHECK-NEXT:       StringLiteral '"%d\n"'
+// CHECK-NEXT:       DeclRefExpr i
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       DerefPtrExpr
+// CHECK-NEXT:         DeclRefExpr i_ptr
+// CHECK-NEXT:       IntLiteral '12'
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       DeclRefExpr printf
+// CHECK-NEXT:       StringLiteral '"%d\n"'
+// CHECK-NEXT:       DeclRefExpr i

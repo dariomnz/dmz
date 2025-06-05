@@ -29,10 +29,12 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
 
 llvm::Type *Codegen::generate_type(const Type &type) {
     llvm::Type *ret = nullptr;
-    if (type.kind == Type::Kind::Err) {
+    if (type.kind == Type::Kind::Err || type.isPointer) {
         ret = llvm::PointerType::get(*m_context, 0);
-        // ret = m_builder.getIntPtrTy(m_module->getDataLayout());
         return ret;
+    }
+    if (type.kind == Type::Kind::Void) {
+        ret = m_builder.getVoidTy();
     }
     if (type.kind == Type::Kind::Int || type.kind == Type::Kind::UInt) {
         ret = m_builder.getIntNTy(type.size);
@@ -104,7 +106,10 @@ void Codegen::generate_main_wrapper() {
 llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
     // println("type: " << type.to_str());
     // v->dump();
-    if (type.kind == Type::Kind::Int) {
+    if (type.isPointer || type.kind == Type::Kind::Err) {
+        v = m_builder.CreatePtrToInt(v, m_builder.getInt64Ty());
+        return m_builder.CreateICmpNE(v, m_builder.getInt64(0), "ptr.to.bool");
+    } else if (type.kind == Type::Kind::Int) {
         if (type.size == 1) return v;
         return m_builder.CreateICmpNE(v, llvm::ConstantInt::get(generate_type(type), 0, type.kind == Type::Kind::Int),
                                       "int.to.bool");
@@ -114,9 +119,6 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
                                       "uint.to.bool");
     } else if (type.kind == Type::Kind::Float) {
         return m_builder.CreateFCmpONE(v, llvm::ConstantFP::get(generate_type(type), 0.0), "float.to.bool");
-    } else if (type.kind == Type::Kind::Err) {
-        v = m_builder.CreatePtrToInt(v, m_builder.getInt64Ty());
-        return m_builder.CreateICmpNE(v, m_builder.getInt64(0), "ptr.to.bool");
     } else {
         type.dump();
         dmz_unreachable("unsuported type in to_bool");
@@ -126,7 +128,13 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
 llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) {
     // println("From: " << from.to_str() << " to: " << to.to_str());
     // v->dump();
-    if (from.kind == Type::Kind::Int) {
+    if (from.isPointer) {
+        if (to.isPointer) {
+            return v;
+        } else {
+            dmz_unreachable("unsuported type from ptr");
+        }
+    } else if (from.kind == Type::Kind::Int) {
         if (to.kind == Type::Kind::Int) {
             if (from.size == 1) return m_builder.CreateZExtOrTrunc(v, generate_type(to), "bool.to.int");
             return m_builder.CreateSExtOrTrunc(v, generate_type(to), "int.to.int");
@@ -211,7 +219,11 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
         ret = llvm::StructType::create(*m_context, structName);
 
         std::vector<llvm::Type *> fieldTypes;
-        fieldTypes.emplace_back(llvmType);
+        if (type.kind == Type::Kind::Void) {
+            fieldTypes.emplace_back(m_builder.getInt1Ty());
+        } else {
+            fieldTypes.emplace_back(llvmType);
+        }
         fieldTypes.emplace_back(generate_type(Type::builtinErr("err")));
         ret->setBody(fieldTypes);
     }

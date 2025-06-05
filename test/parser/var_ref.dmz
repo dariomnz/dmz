@@ -14,5 +14,5 @@ fn main() -> void {
 
 // CHECK:      CallExpr
 // CHECK-NEXT:   DeclRefExpr foo
-// CHECK-NEXT:   UnaryOperator '&'
+// CHECK-NEXT:   RefPtrExpr
 // CHECK-NEXT:     DeclRefExpr i

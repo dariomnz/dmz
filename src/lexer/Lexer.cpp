@@ -23,11 +23,11 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(lit_string);
         CASE_TYPE(op_plus);
         CASE_TYPE(op_minus);
-        CASE_TYPE(op_mult);
+        CASE_TYPE(asterisk);
         CASE_TYPE(op_div);
         CASE_TYPE(op_percent);
-        CASE_TYPE(op_and);
-        CASE_TYPE(op_or);
+        CASE_TYPE(ampamp);
+        CASE_TYPE(pipepipe);
         CASE_TYPE(op_less);
         CASE_TYPE(op_more);
         CASE_TYPE(op_less_eq);
@@ -305,8 +305,8 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '*') {
-        debug_msg(TokenType::op_mult);
-        t.type = TokenType::op_mult;
+        debug_msg(TokenType::asterisk);
+        t.type = TokenType::asterisk;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '/') {
@@ -320,13 +320,13 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 2) == "&&") {
-        debug_msg(TokenType::op_and);
-        t.type = TokenType::op_and;
+        debug_msg(TokenType::ampamp);
+        t.type = TokenType::ampamp;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "||") {
-        debug_msg(TokenType::op_or);
-        t.type = TokenType::op_or;
+        debug_msg(TokenType::pipepipe);
+        t.type = TokenType::pipepipe;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "==") {

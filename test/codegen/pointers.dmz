@@ -1,0 +1,35 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '10\n12\n')
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let i: i32 = 10;
+
+    let i_ptr: *i32 = &i;
+    let i_ptr2: *i32 = i_ptr;
+
+    printf("%d\n", i);
+    *i_ptr = 12;
+    printf("%d\n", i);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %i = alloca i32, align 4
+// CHECK-NEXT:   %i_ptr = alloca ptr, align 8
+// CHECK-NEXT:   %i_ptr2 = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i_ptr, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i_ptr2, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store i32 10, ptr %i, align 4
+// CHECK-NEXT:   store ptr %i, ptr %i_ptr, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %i_ptr, align 8
+// CHECK-NEXT:   store ptr %0, ptr %i_ptr2, align 8
+// CHECK-NEXT:   %1 = load i32, ptr %i, align 4
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %1)
+// CHECK-NEXT:   %3 = load ptr, ptr %i_ptr, align 8
+// CHECK-NEXT:   store i32 12, ptr %3, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %i, align 4
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr @global.str.1, i32 %4)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

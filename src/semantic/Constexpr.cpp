@@ -59,7 +59,7 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
 
     if (!lhs && !allowSideEffects) return std::nullopt;
 
-    if (binop.op == TokenType::op_or) {
+    if (binop.op == TokenType::pipepipe) {
         if (to_bool(lhs) == true) return true;
 
         std::optional<int> rhs = evaluate(*binop.rhs, allowSideEffects);
@@ -68,7 +68,7 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
 
         return std::nullopt;
     }
-    if (binop.op == TokenType::op_and) {
+    if (binop.op == TokenType::ampamp) {
         if (to_bool(lhs) == false) return false;
 
         std::optional<int> rhs = evaluate(*binop.rhs, allowSideEffects);
@@ -86,7 +86,7 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
     int val1 = *lhs;
     int val2 = *rhs;
     switch (binop.op) {
-        case TokenType::op_mult:
+        case TokenType::asterisk:
             return val1 * val2;
         case TokenType::op_div:
             return val1 / val2;

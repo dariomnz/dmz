@@ -18,7 +18,7 @@ fn bar(x:i32) -> i32? {
 // CHECK-NEXT:    ResolvedDeferStmt
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedCallExpr:i32 printf
-// CHECK-NEXT:          ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:          ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:            ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:    ResolvedDeclStmt
 // CHECK-NEXT:      ResolvedVarDecl:i32 result
@@ -28,7 +28,7 @@ fn bar(x:i32) -> i32? {
 // CHECK-NEXT:          ResolvedDeferRefStmt
 // CHECK-NEXT:            ResolvedBlock
 // CHECK-NEXT:              ResolvedCallExpr:i32 printf
-// CHECK-NEXT:                ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:                ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:                  ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedErrUnwrapExpr:i32
@@ -37,12 +37,12 @@ fn bar(x:i32) -> i32? {
 // CHECK-NEXT:        ResolvedDeferRefStmt
 // CHECK-NEXT:          ResolvedBlock
 // CHECK-NEXT:            ResolvedCallExpr:i32 printf
-// CHECK-NEXT:              ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:              ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:                ResolvedStringLiteral:u8[13] 'Defered bar\n'
 // CHECK-NEXT:      ResolvedDeferRefStmt
 // CHECK-NEXT:        ResolvedBlock
 // CHECK-NEXT:          ResolvedCallExpr:i32 printf
-// CHECK-NEXT:            ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:            ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:              ResolvedStringLiteral:u8[13] 'Defered bar\n'
 
 fn foo(x:i32) -> i32? {
@@ -58,7 +58,7 @@ fn foo(x:i32) -> i32? {
 // CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:i32 printf
-// CHECK-NEXT:           ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:           ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[13] 'Defered foo\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedBinaryOperator:i1 '=='
@@ -70,17 +70,17 @@ fn foo(x:i32) -> i32? {
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:i32 printf
-// CHECK-NEXT:                 ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:                 ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:                   ResolvedStringLiteral:u8[13] 'Defered foo\n'
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:       ResolvedDeferRefStmt
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:i32 printf
-// CHECK-NEXT:             ResolvedUnaryOperator:&u8[13] '&'
+// CHECK-NEXT:             ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:               ResolvedStringLiteral:u8[13] 'Defered foo\n'
 
-extern fn printf(fmt:&u8[], ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;
 
 fn main() -> void {
     let result = foo(1);

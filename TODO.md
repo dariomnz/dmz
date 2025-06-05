@@ -9,6 +9,7 @@
 - [x] Types i32 u32 f32
 - [x] Conversion between types cast
 - [x] Modules and import
+- [x] Pointers
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits

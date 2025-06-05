@@ -10,7 +10,7 @@ bool op_generate_bool(TokenType op) {
     static const std::unordered_set<TokenType> op_bool = {
         TokenType::op_excla_mark, TokenType::op_less,    TokenType::op_less_eq,
         TokenType::op_more,       TokenType::op_more_eq, TokenType::op_equal,
-        TokenType::op_not_equal,  TokenType::op_or,      TokenType::op_and,
+        TokenType::op_not_equal,  TokenType::pipepipe,   TokenType::ampamp,
     };
     return op_bool.count(op) != 0;
 }
@@ -70,8 +70,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
                                                          "'");
             }
             if (resolvedFuncDecl->params[idx]->type.isRef) {
-                auto unary = dynamic_cast<const ResolvedUnaryOperator *>(resolvedArg.get());
-                if (!unary || (unary && unary->op != TokenType::amp)) {
+                if (!dynamic_cast<const ResolvedRefPtrExpr *>(resolvedArg.get())) {
                     return report(resolvedArg->location, "expected to reference the value with '&'");
                 }
             }
@@ -128,6 +127,12 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *unaryOperator = dynamic_cast<const UnaryOperator *>(&expr)) {
         return resolve_unary_operator(*unaryOperator);
     }
+    if (const auto *refPtrExpr = dynamic_cast<const RefPtrExpr *>(&expr)) {
+        return resolve_ref_ptr_expr(*refPtrExpr);
+    }
+    if (const auto *derefPtrExpr = dynamic_cast<const DerefPtrExpr *>(&expr)) {
+        return resolve_deref_ptr_expr(*derefPtrExpr);
+    }
     if (const auto *structInstantiation = dynamic_cast<const StructInstantiationExpr *>(&expr)) {
         return resolve_struct_instantiation(*structInstantiation);
     }
@@ -156,9 +161,7 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
 std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    if (resolvedRHS->type.kind == Type::Kind::Void ||
-        (unary.op != TokenType::amp && resolvedRHS->type.kind != Type::Kind::Int &&
-         (unary.op == TokenType::op_excla_mark && !Type::compare(Type::builtinBool(), resolvedRHS->type))))
+    if (resolvedRHS->type.kind == Type::Kind::Void || !Type::compare(Type::builtinBool(), resolvedRHS->type))
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
                                                  "' cannot be used as an operand to unary operator '" +
                                                  std::string(get_op_str(unary.op)) + "'");
@@ -167,9 +170,19 @@ std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryO
         ret->type = Type::builtinBool();
     }
     if (unary.op == TokenType::amp) {
-        ret->type.isRef = true;
+        ret->type = ret->type.pointer();
     }
     return ret;
+}
+
+std::unique_ptr<ResolvedRefPtrExpr> Sema::resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr) {
+    varOrReturn(resolvedExpr, resolve_expr(*refPtrExpr.expr));
+    return std::make_unique<ResolvedRefPtrExpr>(refPtrExpr.location, std::move(resolvedExpr));
+}
+
+std::unique_ptr<ResolvedDerefPtrExpr> Sema::resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr) {
+    varOrReturn(resolvedExpr, resolve_expr(*derefPtrExpr.expr));
+    return std::make_unique<ResolvedDerefPtrExpr>(derefPtrExpr.location, std::move(resolvedExpr));
 }
 
 std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &binop) {
@@ -212,6 +225,9 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
 
     if (const auto *arrayAtExpr = dynamic_cast<const ArrayAtExpr *>(&assignableExpr))
         return resolve_array_at_expr(*arrayAtExpr);
+
+    if (const auto *derefExpr = dynamic_cast<const DerefPtrExpr *>(&assignableExpr))
+        return resolve_deref_ptr_expr(*derefExpr);
 
     assignableExpr.dump();
     dmz_unreachable("unexpected assignable expression");

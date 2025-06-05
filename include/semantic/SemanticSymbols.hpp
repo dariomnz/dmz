@@ -317,6 +317,24 @@ struct ResolvedUnaryOperator : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedRefPtrExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedRefPtrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedExpr(location, expr->type.pointer()), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedDerefPtrExpr : public ResolvedAssignableExpr {
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedDerefPtrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedAssignableExpr(location, expr->type.remove_pointer()), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedDeclStmt : public ResolvedStmt {
     std::unique_ptr<ResolvedVarDecl> varDecl;
 

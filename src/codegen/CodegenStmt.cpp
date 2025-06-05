@@ -139,14 +139,14 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
         return var;
     } else {
         // Only permit ref with a unary operator
-        if (const auto init = dynamic_cast<ResolvedUnaryOperator *>(decl->initializer.get())) {
-            if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->operand.get())) {
+        if (const auto init = dynamic_cast<ResolvedRefPtrExpr *>(decl->initializer.get())) {
+            if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->expr.get())) {
                 m_declarations[decl] = m_declarations[&operand->decl];
                 return m_declarations[&operand->decl];
             }
         }
         stmt.dump();
-        dmz_unreachable("Only permit ref with a unary operator");
+        dmz_unreachable("Only permit ref with a '&' operator");
     }
 
     return nullptr;

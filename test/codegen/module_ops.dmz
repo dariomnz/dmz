@@ -15,13 +15,13 @@ fn print(x:i32) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-extern fn printf(fmt:&u8[], ...) -> i32;
-// CHECK: declare i32 @printf(ptr byref(ptr) %0, ...)
+extern fn printf(fmt:*u8, ...) -> i32;
+// CHECK: declare i32 @printf(ptr %0, ...)
 
 fn println(const n:i32) -> void {printf(&"%d\n", n);}
 // CHECK: define void @ops__println(i32 %n) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(ptr) @global.str, i32 %n)
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %n)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

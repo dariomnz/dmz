@@ -1,6 +1,6 @@
 // RUN: compiler %s -cfg-dump 2>&1 | filecheck %s
 
-extern fn printf(fmt:&u8[], ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;
 
 fn main() -> void {
     let const x = 10;
@@ -38,7 +38,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 10 
 // CHECK-NEXT:   succs: 7 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[9] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[9]
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
@@ -46,7 +46,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 10(U) 
 // CHECK-NEXT:   succs: 7 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[3] '1\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[3] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[3]
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
 // CHECK-NEXT: [7]
@@ -59,7 +59,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 7(U) 
 // CHECK-NEXT:   succs: 4 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[9] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[9]
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
@@ -67,7 +67,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 7 
 // CHECK-NEXT:   succs: 4 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[4] '10\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[4] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[4]
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]
@@ -80,7 +80,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 4 
 // CHECK-NEXT:   succs: 1 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[9] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[9]
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
@@ -88,7 +88,7 @@ fn main() -> void {
 // CHECK-NEXT:   preds: 4 
 // CHECK-NEXT:   succs: 1 
 // CHECK-NEXT:   ResolvedStringLiteral:u8[4] '10\n'
-// CHECK-NEXT:   ResolvedUnaryOperator:&u8[4] '&'
+// CHECK-NEXT:   ResolvedRefPtrExpr:*u8[4]
 // CHECK-NEXT:   ResolvedCallExpr:i32 printf
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]

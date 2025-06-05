@@ -12,6 +12,8 @@ std::string Type::to_str() const {
 
 std::ostream &operator<<(std::ostream &os, const Type &t) {
     if (t.isRef) os << "&";
+    if (t.isPointer)
+        for (int i = 0; i < *t.isPointer; i++) os << "*";
     os << t.name;
     if (t.isArray) {
         os << "[";
@@ -95,6 +97,18 @@ void UnaryOperator::dump(size_t level) const {
     operand->dump(level + 1);
 }
 
+void RefPtrExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "RefPtrExpr" << '\n';
+
+    expr->dump(level + 1);
+}
+
+void DerefPtrExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "DerefPtrExpr" << '\n';
+
+    expr->dump(level + 1);
+}
+
 void GroupingExpr::dump(size_t level) const {
     std::cerr << indent(level) << "GroupingExpr\n";
 
@@ -173,7 +187,7 @@ void MemberExpr::dump(size_t level) const {
 }
 
 void ArrayAtExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ArrayAtExpr"<< '\n';
+    std::cerr << indent(level) << "ArrayAtExpr" << '\n';
 
     array->dump(level + 1);
     index->dump(level + 1);

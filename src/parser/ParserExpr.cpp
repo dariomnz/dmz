@@ -63,8 +63,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return declRefExpr;
     }
     if (m_nextToken.type == TokenType::block_l) {
-        auto initList = parse_list_with_trailing_comma<Expr>(
-            {TokenType::block_l, "expected '{'"}, &Parser::parse_expr, {TokenType::block_r, "expected '}'"});
+        auto initList = parse_list_with_trailing_comma<Expr>({TokenType::block_l, "expected '{'"}, &Parser::parse_expr,
+                                                             {TokenType::block_r, "expected '}'"});
         if (!initList) {
             synchronize_on({TokenType::block_r});
             eat_next_token();  // eat '}'
@@ -160,6 +160,7 @@ std::unique_ptr<Expr> Parser::parse_prefix_expr() {
         TokenType::op_minus,
         TokenType::op_excla_mark,
         TokenType::amp,
+        TokenType::asterisk,
     };
 
     if (unaryOps.count(tok.type) == 0) {
@@ -169,7 +170,14 @@ std::unique_ptr<Expr> Parser::parse_prefix_expr() {
 
     varOrReturn(rhs, parse_prefix_expr());
 
-    return std::make_unique<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
+    switch (tok.type) {
+        case TokenType::asterisk:
+            return std::make_unique<DerefPtrExpr>(tok.loc, std::move(rhs));
+        case TokenType::amp:
+            return std::make_unique<RefPtrExpr>(tok.loc, std::move(rhs));
+        default:
+            return std::make_unique<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
+    }
 }
 
 std::unique_ptr<Expr> Parser::parse_expr() {
@@ -179,7 +187,7 @@ std::unique_ptr<Expr> Parser::parse_expr() {
 
 [[maybe_unused]] constexpr static inline int get_token_precedence(TokenType tok) {
     switch (tok) {
-        case TokenType::op_mult:
+        case TokenType::asterisk:
         case TokenType::op_div:
         case TokenType::op_percent:
             return 6;
@@ -194,9 +202,9 @@ std::unique_ptr<Expr> Parser::parse_expr() {
         case TokenType::op_equal:
         case TokenType::op_not_equal:
             return 3;
-        case TokenType::op_and:
+        case TokenType::ampamp:
             return 2;
-        case TokenType::op_or:
+        case TokenType::pipepipe:
             return 1;
         default:
             return -1;

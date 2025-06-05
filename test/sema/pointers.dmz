@@ -1,0 +1,37 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let i: i32 = 10;
+
+    let i_ptr: *i32 = &i;
+    let i_ptr2: *i32 = i_ptr;
+
+    printf("%d\n", i);
+    *i_ptr = 12;
+    printf("%d\n", i);
+}
+// CHECK: ResolvedFunctionDecl main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:i32 i
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:         | value: 10
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr
+// CHECK-NEXT:         ResolvedRefPtrExpr:*i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr2
+// CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
+// CHECK-NEXT:     ResolvedCallExpr:i32 printf
+// CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:     ResolvedAssignment
+// CHECK-NEXT:       ResolvedDerefPtrExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '12'
+// CHECK-NEXT:       | value: 12
+// CHECK-NEXT:     ResolvedCallExpr:i32 printf
+// CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 i

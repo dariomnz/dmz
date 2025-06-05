@@ -57,10 +57,16 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bo
 std::optional<Type> Parser::parse_type() {
     int isArray = -1;
     bool isRef = false;
+    std::optional<int> isPointer = std::nullopt;
 
     if (m_nextToken.type == TokenType::amp) {
         isRef = true;
         eat_next_token();  // eat '&'
+    }
+
+    while (m_nextToken.type == TokenType::asterisk) {
+        isPointer = isPointer.has_value() ? *isPointer + 1 : 1;
+        eat_next_token();  // eat '*'
     }
     TokenType type = m_nextToken.type;
     std::string_view name = m_nextToken.str;
@@ -93,6 +99,7 @@ std::optional<Type> Parser::parse_type() {
         }
         eat_next_token();  // eat ']'
     }
+
     Type t;
     if (type == TokenType::ty_void) {
         t = Type::builtinVoid();
@@ -118,6 +125,7 @@ std::optional<Type> Parser::parse_type() {
 
     if (isArray != -1) t.isArray = isArray;
     t.isRef = isRef;
+    t.isPointer = isPointer;
 
     if (m_nextToken.type == TokenType::op_quest_mark) {
         t.isOptional = true;

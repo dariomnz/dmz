@@ -18,11 +18,11 @@ fn foo(x: &i32) -> void {
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:&i32 x
 
-extern fn printf(fmt:&u8[], ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
     let i = 10;
-    let i_ref = &i;
+    let i_ref:&i32 = &i;
     println(i_ref);
     foo(&i_ref);
     println(i);
@@ -36,12 +36,12 @@ fn main() -> void {
 // CHECK-NEXT:         | value: 10
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:&i32 i_ref
-// CHECK-NEXT:         ResolvedUnaryOperator:&i32 '&'
+// CHECK-NEXT:         ResolvedRefPtrExpr:*i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:&i32 i_ref
 // CHECK-NEXT:     ResolvedCallExpr:void foo
-// CHECK-NEXT:       ResolvedUnaryOperator:&i32 '&'
+// CHECK-NEXT:       ResolvedRefPtrExpr:&*i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:&i32 i_ref
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i

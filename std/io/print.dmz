@@ -1,6 +1,6 @@
 module std::io;
 
-extern fn printf(fmt: &u8[], ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 fn println(n:i32) -> i32 {
     return printf(&"%d\n", n);

@@ -15,15 +15,15 @@ namespace DMZ {
 [[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
     if (op == TokenType::op_plus) return "+";
     if (op == TokenType::op_minus) return "-";
-    if (op == TokenType::op_mult) return "*";
+    if (op == TokenType::asterisk) return "*";
     if (op == TokenType::op_div) return "/";
     if (op == TokenType::op_percent) return "%";
     if (op == TokenType::amp) return "&";
 
     if (op == TokenType::op_not_equal) return "!=";
     if (op == TokenType::op_equal) return "==";
-    if (op == TokenType::op_and) return "&&";
-    if (op == TokenType::op_or) return "||";
+    if (op == TokenType::ampamp) return "&&";
+    if (op == TokenType::pipepipe) return "||";
     if (op == TokenType::op_less) return "<";
     if (op == TokenType::op_less_eq) return "<=";
     if (op == TokenType::op_more) return ">";
@@ -41,6 +41,7 @@ struct Type {
     std::string_view name;
     int size = 0;
     std::optional<int> isArray = std::nullopt;
+    std::optional<int> isPointer = std::nullopt;
     bool isRef = false;
     bool isOptional = false;
 
@@ -132,6 +133,22 @@ struct Type {
     Type withoutArray() const {
         Type t = *this;
         t.isArray = std::nullopt;
+        return t;
+    }
+    Type pointer() const {
+        Type t = *this;
+        t.isPointer = t.isPointer.has_value() ? *t.isPointer + 1 : 1;
+        return t;
+    }
+    Type remove_pointer() const {
+        Type t = *this;
+        if (t.isPointer) {
+            if (*t.isPointer == 1) {
+                t.isPointer = std::nullopt;
+            } else {
+                t.isPointer = *t.isPointer - 1;
+            }
+        }
         return t;
     }
 
@@ -374,6 +391,23 @@ struct UnaryOperator : public Expr {
 
     UnaryOperator(SourceLocation location, std::unique_ptr<Expr> operand, TokenType op)
         : Expr(location), operand(std::move(operand)), op(op) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct RefPtrExpr : public Expr {
+    std::unique_ptr<Expr> expr;
+
+    RefPtrExpr(SourceLocation location, std::unique_ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct DerefPtrExpr : public AssignableExpr {
+    std::unique_ptr<Expr> expr;
+
+    DerefPtrExpr(SourceLocation location, std::unique_ptr<Expr> expr)
+        : AssignableExpr(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
