@@ -21,6 +21,23 @@ void ResolvedExpr::dump_constant_value(size_t level) const {
     }
 }
 
+void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedGenericTypeDecl " << identifier << '\n';
+    if (specializedType) {
+        std::cerr << indent(level) << "Specialized type";
+        (*specializedType).dump();
+        std::cerr << '\n';
+    }
+}
+
+void ResolvedGenericTypesDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedGenericTypesDecl\n";
+    if (onlySelf) return;
+    for (size_t i = 0; i < types.size(); i++) {
+        types[i]->dump(level + 1, onlySelf);
+    }
+}
+
 void ResolvedIntLiteral::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedIntLiteral:" << type << " '" << value << "'\n";
     if (onlySelf) return;
@@ -96,6 +113,22 @@ void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedFunctionDecl " << moduleID << identifier << " -> " << type << '\n';
+    if (genericTypes) genericTypes->dump(level + 1, onlySelf);
+
+    if (onlySelf) return;
+    for (auto &&param : params) param->dump(level + 1);
+
+    body->dump(level + 1);
+
+    for (auto &&func : specializations) {
+        func->dump(level + 1);
+    }
+}
+
+void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << moduleID << identifier;
+    genericTypes.dump();
+    std::cerr << " -> " << type << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);

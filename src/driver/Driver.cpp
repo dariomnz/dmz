@@ -1,9 +1,6 @@
 // #define DEBUG
 #include "driver/Driver.hpp"
 
-#include <wait.h>
-
-#include <barrier>
 
 namespace DMZ {
 void Driver::display_help() {
@@ -191,7 +188,6 @@ Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts &asts) {
     std::vector<std::vector<std::unique_ptr<ResolvedDecl>>> resolvedTrees;
     semas.resize(asts.size());
     resolvedTrees.resize(asts.size());
-    std::barrier barrier(asts.size());
     for (size_t index = 0; index < asts.size(); index++) {
         debug_msg("Ast[" << index << "] size " << asts[index].size());
         m_workers.submit([&, index]() {

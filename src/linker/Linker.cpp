@@ -1,8 +1,5 @@
 #include "linker/Linker.hpp"
 
-#include <iostream>
-
-#include "Debug.hpp"
 
 namespace DMZ {
 Linker::Linker(std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules) : m_modules(std::move(modules)) {}

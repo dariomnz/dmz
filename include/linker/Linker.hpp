@@ -1,10 +1,6 @@
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-#include "llvm/Linker/Linker.h"
-#pragma GCC diagnostic pop
+#include "DMZPCHLLVM.hpp"
 
 namespace DMZ {
 

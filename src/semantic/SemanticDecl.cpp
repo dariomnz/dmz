@@ -1,6 +1,3 @@
-#include <map>
-#include <stack>
-#include <unordered_set>
 
 #include "semantic/Semantic.hpp"
 
@@ -32,7 +29,34 @@ std::unique_ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &par
                                                param.isVararg);
 }
 
+std::unique_ptr<ResolvedGenericTypeDecl> Sema::resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl) {
+    return std::make_unique<ResolvedGenericTypeDecl>(genericTypeDecl.location, genericTypeDecl.identifier,
+                                                     m_currentModuleID);
+}
+
+std::unique_ptr<ResolvedGenericTypesDecl> Sema::resolve_generic_types_decl(const GenericTypesDecl &genericTypesDecl,
+                                                                           const GenericTypes &specifiedTypes) {
+    std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> resolvedTypes;
+    resolvedTypes.reserve(genericTypesDecl.types.size());
+    for (size_t i = 0; i < genericTypesDecl.types.size(); i++) {
+        auto resolvedGenericType = resolve_generic_type_decl(*genericTypesDecl.types[i]);
+        if (specifiedTypes.types.size() >= i + 1) resolvedGenericType->specializedType = specifiedTypes.types[i];
+        if (!resolvedGenericType || !insert_decl_to_current_scope(*resolvedGenericType)) return nullptr;
+        resolvedTypes.emplace_back(std::move(resolvedGenericType));
+    }
+    return std::make_unique<ResolvedGenericTypesDecl>(std::move(resolvedTypes));
+}
+
 std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
+    ScopeRAII paramScope(*this);
+    std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
+    if (auto func = dynamic_cast<const FunctionDecl *>(&function)) {
+        if (func->genericType) {
+            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericType);
+            if (!resolvedGenericTypesDecl) return nullptr;
+        }
+    }
+
     std::optional<Type> type = resolve_type(function.type);
 
     if (!type)
@@ -54,7 +78,6 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
 
     std::vector<std::unique_ptr<ResolvedParamDecl>> resolvedParams;
 
-    ScopeRAII paramScope(*this);
     bool haveVararg = false;
     for (auto &&param : function.params) {
         auto resolvedParam = resolve_param_decl(*param);
@@ -77,12 +100,73 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
         return std::make_unique<ResolvedExternFunctionDecl>(function.location, function.identifier, m_currentModuleID,
                                                             *type, std::move(resolvedParams));
     }
-    if (dynamic_cast<const FunctionDecl *>(&function)) {
+    if (auto functionDecl = dynamic_cast<const FunctionDecl *>(&function)) {
         return std::make_unique<ResolvedFunctionDecl>(function.location, function.identifier, m_currentModuleID, *type,
-                                                      std::move(resolvedParams), nullptr);
+                                                      std::move(resolvedParams), std::move(resolvedGenericTypesDecl),
+                                                      functionDecl, nullptr);
     }
     function.dump();
     dmz_unreachable("unexpected function");
+}
+
+ResolvedFuncDecl *Sema::specialize_generic_function(ResolvedFunctionDecl &funcDecl, const GenericTypes &genericTypes) {
+    static std::mutex specialize_func_mutex;
+    std::unique_lock lock(specialize_func_mutex);
+    // Search if is specified
+    for (auto &&func : funcDecl.specializations) {
+        if (genericTypes == func->genericTypes) return func.get();
+    }
+
+    // If not found specialize the function
+    ScopeRAII paramScope(*this);
+    std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
+    if (auto func = dynamic_cast<const FunctionDecl *>(funcDecl.functionDecl)) {
+        if (func->genericType) {
+            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericType, genericTypes);
+            if (!resolvedGenericTypesDecl) return nullptr;
+        }
+    }
+
+    std::optional<Type> type = resolve_type(funcDecl.functionDecl->type);
+
+    if (!type)
+        return report(funcDecl.location, "function '" + std::string(funcDecl.identifier) + "' has invalid '" +
+                                             std::string(funcDecl.type.name) + "' type");
+
+    std::vector<std::unique_ptr<ResolvedParamDecl>> resolvedParams;
+
+    bool haveVararg = false;
+    for (auto &&param : funcDecl.functionDecl->params) {
+        auto resolvedParam = resolve_param_decl(*param);
+        if (haveVararg) {
+            report(resolvedParam->location, "vararg '...' can only be in the last argument");
+            return nullptr;
+        }
+
+        if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam)) return nullptr;
+
+        if (resolvedParam->isVararg) {
+            haveVararg = true;
+        }
+        resolvedParams.emplace_back(std::move(resolvedParam));
+    }
+
+    auto resolvedFunc =
+        std::make_unique<ResolvedSpecializedFunctionDecl>(funcDecl.location, funcDecl.identifier, funcDecl.moduleID,
+                                                          *type, std::move(resolvedParams), genericTypes, nullptr);
+
+    auto &retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc));
+
+    auto prevFunc = m_currentFunction;
+    m_currentFunction = retFunc.get();
+    auto body = funcDecl.functionDecl->body.get();
+    if (auto resolvedBody = resolve_block(*body)) {
+        retFunc->body = std::move(resolvedBody);
+        // TODO: think if necesary in specialization
+        //  if (!run_flow_sensitive_checks(*retFunc)) return nullptr;
+    }
+    m_currentFunction = prevFunc;
+    return retFunc.get();
 }
 
 std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {

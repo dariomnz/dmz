@@ -1,6 +1,5 @@
 #include "parser/Parser.hpp"
 
-#include <charconv>
 namespace DMZ {
 
 bool Parser::is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
@@ -141,7 +140,13 @@ std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
         {TokenType::op_less, "expected '<'"}, &Parser::parse_type, {TokenType::op_more, "expected '>'"}));
     if (!typesDeclList) return nullptr;
 
-    return std::make_unique<GenericTypes>(std::move(*typesDeclList));
+    std::vector<Type> types;
+    types.reserve(typesDeclList->size());
+    for (auto &&type : *typesDeclList) {
+        types.emplace_back(*type);
+    }
+
+    return std::make_unique<GenericTypes>(std::move(types));
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {

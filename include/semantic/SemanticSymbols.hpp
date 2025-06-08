@@ -1,14 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <variant>
-
-#include "Debug.hpp"
-#include "Stats.hpp"
-#include "Utils.hpp"
+#include "DMZPCH.hpp"
+#include "DMZPCHSymbols.hpp"
 #include "lexer/Lexer.hpp"
-#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -59,6 +53,23 @@ struct ResolvedDecl {
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
+};
+
+struct ResolvedGenericTypeDecl : public ResolvedDecl {
+    std::optional<Type> specializedType;
+
+    ResolvedGenericTypeDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID)
+        : ResolvedDecl(location, identifier, std::move(moduleID), Type::custom(identifier), false) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const;
+};
+
+struct ResolvedGenericTypesDecl {
+    std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> types;
+
+    ResolvedGenericTypesDecl(std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> types) : types(std::move(types)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const;
 };
 
 // Forward declaration
@@ -173,12 +184,34 @@ struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedFunctionDecl : public ResolvedFuncDecl {
+struct ResolvedSpecializedFunctionDecl : public ResolvedFuncDecl {
+    GenericTypes genericTypes;
     std::unique_ptr<ResolvedBlock> body;
 
-    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
-                         std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
+    ResolvedSpecializedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+                                    std::vector<std::unique_ptr<ResolvedParamDecl>> params, GenericTypes genericTypes,
+                                    std::unique_ptr<ResolvedBlock> body)
         : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)),
+          genericTypes(std::move(genericTypes)),
+          body(std::move(body)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedFunctionDecl : public ResolvedFuncDecl {
+    std::unique_ptr<ResolvedGenericTypesDecl> genericTypes;
+    const FunctionDecl *functionDecl;
+    std::unique_ptr<ResolvedBlock> body;
+
+    std::vector<std::unique_ptr<ResolvedSpecializedFunctionDecl>> specializations;
+
+    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+                         std::vector<std::unique_ptr<ResolvedParamDecl>> params,
+                         std::unique_ptr<ResolvedGenericTypesDecl> genericTypes, const FunctionDecl *functionDecl,
+                         std::unique_ptr<ResolvedBlock> body)
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)),
+          genericTypes(std::move(genericTypes)),
+          functionDecl(functionDecl),
           body(std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;

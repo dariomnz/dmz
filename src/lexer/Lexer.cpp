@@ -1,9 +1,5 @@
 #include "lexer/Lexer.hpp"
 
-#include <filesystem>
-#include <fstream>
-
-#include "Debug.hpp"
 
 namespace DMZ {
 std::ostream& operator<<(std::ostream& os, const TokenType& t) {

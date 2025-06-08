@@ -1,15 +1,30 @@
 #include "codegen/Codegen.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/TargetParser/Host.h>
-#pragma GCC diagnostic pop
-
 namespace DMZ {
 
+std::string Codegen::generate_function_name(const ResolvedFuncDecl &functionDecl) {
+    std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)
+                                    ? std::string(functionDecl.identifier)
+                                    : functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
+    if (auto specificationFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
+        modIdentifier += "__gen";
+        for (auto &&t : specificationFunc->genericTypes.types) {
+            modIdentifier += "__" + t.to_str();
+        }
+    }
+    return functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(modIdentifier);
+}
+
 void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
+        if (resolvedFunctionDecl->genericTypes) {
+            for (auto &&func : resolvedFunctionDecl->specializations) {
+                generate_function_decl(*func.get());
+            }
+            return;
+        }
+    }
+
     llvm::Type *retType = generate_type(functionDecl.type);
     std::vector<llvm::Type *> paramTypes;
 
@@ -32,10 +47,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     }
 
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
-    std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)
-                                    ? std::string(functionDecl.identifier)
-                                    : functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
-    std::string funcName = functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(modIdentifier);
+    std::string funcName = generate_function_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }
@@ -73,12 +85,18 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
     return llvm::AttributeList::get(*m_context, llvm::AttributeSet{}, llvm::AttributeSet{}, argsAttrSets);
 }
 
-void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
+void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
+        if (resolvedFunctionDecl->genericTypes) {
+            for (auto &&func : resolvedFunctionDecl->specializations) {
+                generate_function_body(*func.get());
+            }
+            return;
+        }
+    }
+
     m_currentFunction = &functionDecl;
-    std::string funcName =
-        functionDecl.identifier == "main"
-            ? "__builtin_main"
-            : generate_symbol_name(functionDecl.moduleID.to_string() + std::string(functionDecl.identifier));
+    std::string funcName = generate_function_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);
@@ -120,7 +138,17 @@ void Codegen::generate_function_body(const ResolvedFunctionDecl &functionDecl) {
     // if (functionDecl.identifier == "println")
     // generate_builtin_println_body(functionDecl);
     // else
-    generate_block(*functionDecl.body);
+    ResolvedBlock* body;
+    if (auto specFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl*>(&functionDecl)){
+        body = specFunc->body.get();
+    }
+    if (auto function = dynamic_cast<const ResolvedFunctionDecl*>(&functionDecl)){
+        body = function->body.get();
+    }
+    if (!body){
+        dmz_unreachable("unexpected void body");
+    }
+    generate_block(*body);
 
     if (retBB->hasNPredecessorsOrMore(1)) {
         break_into_bb(retBB);

@@ -1,10 +1,5 @@
 #include "semantic/Semantic.hpp"
 
-#include <cassert>
-#include <map>
-#include <stack>
-#include <unordered_set>
-
 // #define DEBUG
 
 namespace DMZ {
@@ -70,16 +65,19 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 #ifdef DEBUG
     println("==================================");
     println("insert_decl_to_current_scope " << identifier);
-    println("==================================");
 #endif
     const auto &[foundDecl, scopeIdx] = lookup_decl<ResolvedDecl>(identifier);
 
-    if (!dynamic_cast<ResolvedImportDecl *>(&decl) && foundDecl && scopeIdx == 0) {
+    if (foundDecl && scopeIdx == 0) {
         report(decl.location, "redeclaration of '" + identifier + '\'');
         return false;
     }
 
     m_scopes.back().emplace_back(&decl);
+#ifdef DEBUG
+    dump_scopes();
+    println("==================================");
+#endif
     return true;
 }
 
@@ -186,6 +184,13 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
     if (parsedType.kind == Type::Kind::Custom) {
         if (lookup_decl<ResolvedStructDecl>(parsedType.name).first) {
             return Type::structType(parsedType);
+        }
+        if (auto resolvedGenericTypeDecl = lookup_decl<ResolvedGenericTypeDecl>(parsedType.name).first) {
+            if (resolvedGenericTypeDecl->specializedType) {
+                return resolvedGenericTypeDecl->specializedType;
+            } else {
+                return Type::genericType(parsedType);
+            }
         }
 
         return std::nullopt;

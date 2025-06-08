@@ -1,7 +1,3 @@
-#include <map>
-#include <stack>
-#include <unordered_set>
-
 #include "semantic/Semantic.hpp"
 
 namespace DMZ {
@@ -50,6 +46,18 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     const auto *resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
+
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedFuncDecl)) {
+        if (call.genericTypes) {
+            resolvedFuncDecl = specialize_generic_function(*const_cast<ResolvedFunctionDecl *>(resolvedFunctionDecl),
+                                                           *call.genericTypes);
+            if (!resolvedFuncDecl) return nullptr;
+        } else {
+            if (resolvedFunctionDecl->genericTypes) {
+                return report(call.location, "try to call a generic function without specialization");
+            }
+        }
+    }
 
     bool isVararg = (resolvedFuncDecl->params.size() != 0) ? resolvedFuncDecl->params.back()->isVararg : false;
     size_t funcDeclArgs = isVararg ? (resolvedFuncDecl->params.size() - 1) : resolvedFuncDecl->params.size();

@@ -38,7 +38,7 @@ std::ostream &operator<<(std::ostream &os, const GenericTypes &t) {
     if (t.types.size() == 0) return os;
     os << "<";
     for (size_t i = 0; i < t.types.size(); i++) {
-        os << *t.types[i];
+        os << t.types[i];
         if (i != t.types.size() - 1) os << ", ";
     }
     os << ">";
@@ -101,7 +101,7 @@ void DeclRefExpr::dump(size_t level) const {
 
 void CallExpr::dump(size_t level) const {
     std::cerr << indent(level) << "CallExpr";
-    if (genericType) (*genericType).dump();
+    if (genericTypes) (*genericTypes).dump();
     std::cerr << "\n";
 
     callee->dump(level + 1);

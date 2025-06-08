@@ -1,15 +1,7 @@
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/IRBuilder.h>
-
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-#pragma GCC diagnostic pop
-
-#include <map>
-
-#include "semantic/SemanticSymbols.hpp"
+#include "DMZPCHLLVM.hpp"
+#include "DMZPCHSymbols.hpp"
 
 namespace DMZ {
 
@@ -27,7 +19,7 @@ class Codegen {
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint;
     llvm::Instruction *m_memsetInsertPoint;
-    const ResolvedFunctionDecl *m_currentFunction;
+    const ResolvedFuncDecl *m_currentFunction;
     llvm::Value *m_success = nullptr;
 
     llvm::Value *retVal = nullptr;
@@ -39,8 +31,9 @@ class Codegen {
     std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir();
     llvm::Type *generate_type(const Type &type);
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
+    std::string generate_function_name(const ResolvedFuncDecl &functionDecl);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
-    void generate_function_body(const ResolvedFunctionDecl &functionDecl);
+    void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);

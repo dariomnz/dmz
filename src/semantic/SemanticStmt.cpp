@@ -1,7 +1,3 @@
-#include <map>
-#include <stack>
-#include <unordered_set>
-
 #include "semantic/Semantic.hpp"
 
 namespace DMZ {

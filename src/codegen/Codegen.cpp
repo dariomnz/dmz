@@ -1,11 +1,5 @@
 #include "codegen/Codegen.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/TargetParser/Host.h>
-#pragma GCC diagnostic pop
 
 namespace DMZ {
 Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath)

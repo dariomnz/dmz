@@ -1,12 +1,5 @@
 #include "codegen/Codegen.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/TargetParser/Host.h>
-#pragma GCC diagnostic pop
-
 namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
@@ -85,10 +78,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     const ResolvedFuncDecl &calleeDecl = call.callee;
-    std::string modIdentifier = dynamic_cast<const ResolvedExternFunctionDecl *>(&calleeDecl)
-                                    ? std::string(calleeDecl.identifier)
-                                    : call.callee.moduleID.to_string() + std::string(calleeDecl.identifier);
-    auto symbolName = generate_symbol_name(modIdentifier);
+    auto symbolName = generate_function_name(call.callee);
     llvm::Function *callee = m_module->getFunction(generate_symbol_name(symbolName));
     if (!callee) {
         generate_function_decl(calleeDecl);

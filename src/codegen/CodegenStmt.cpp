@@ -1,12 +1,5 @@
 #include "codegen/Codegen.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/TargetParser/Host.h>
-#pragma GCC diagnostic pop
-
 namespace DMZ {
 
 void Codegen::generate_block(const ResolvedBlock &block) {

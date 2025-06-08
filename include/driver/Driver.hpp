@@ -1,9 +1,6 @@
 #pragma once
 
-#include <filesystem>
-#include <vector>
-
-#include "ThreadPool.hpp"
+#include "DMZPCH.hpp"
 #include "codegen/Codegen.hpp"
 #include "lexer/Lexer.hpp"
 #include "linker/Linker.hpp"
@@ -54,7 +51,8 @@ class Driver {
     void check_sources_pass(Type_Sources& sources);
     Type_Lexers lexer_pass(Type_Sources& sources);
     Type_Asts parser_pass(Type_Lexers& lexers, bool expectMain = true);
-    Type_Sources find_modules(const Type_Sources& includeDirs, const std::unordered_set<std::string_view>& importedModuleIDs);
+    Type_Sources find_modules(const Type_Sources& includeDirs,
+                              const std::unordered_set<std::string_view>& importedModuleIDs);
     void include_pass(Type_Lexers& lexers, Type_Asts& asts);
     Type_ResolvedTrees semantic_pass(Type_Asts& asts);
     Type_Modules codegen_pass(Type_ResolvedTrees& resolvedTrees);

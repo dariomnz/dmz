@@ -1,11 +1,8 @@
 #pragma once
 
-#include <deque>
-#include <unordered_set>
-
-#include "Utils.hpp"
+#include "DMZPCH.hpp"
+#include "DMZPCHSymbols.hpp"
 #include "lexer/Lexer.hpp"
-#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 

@@ -1,13 +1,6 @@
 #pragma once
 
-#include <charconv>
-#include <memory>
-#include <optional>
-#include <variant>
-
-#include "Debug.hpp"
-#include "Stats.hpp"
-#include "Utils.hpp"
+#include "DMZPCH.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -35,7 +28,7 @@ namespace DMZ {
 }
 
 struct Type {
-    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Err };
+    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err };
 
     Kind kind;
     std::string_view name;
@@ -74,6 +67,11 @@ struct Type {
     static Type structType(Type t) {
         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
         t.kind = Kind::Struct;
+        return t;
+    }
+    static Type genericType(Type t) {
+        if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to generic");
+        t.kind = Kind::Generic;
         return t;
     }
     static Type builtinErr(const std::string_view& name) { return {Kind::Err, name}; }
@@ -156,13 +154,29 @@ struct Type {
 };
 
 struct GenericTypes {
-    std::vector<std::unique_ptr<Type>> types;
+    std::vector<Type> types;
 
-    GenericTypes(std::vector<std::unique_ptr<Type>> types) : types(std::move(types)) {}
+    GenericTypes(std::vector<Type> types) : types(std::move(types)) {}
 
     void dump() const;
     std::string to_str() const;
     friend std::ostream& operator<<(std::ostream& os, const GenericTypes& t);
+
+    bool operator==(const GenericTypes& other) const {
+        if (types.size() != other.types.size()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < types.size(); ++i) {
+            const auto& a = types[i];
+            const auto& b = other.types[i];
+
+            if (!(a == b)) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 template <typename Ty>
@@ -350,14 +364,14 @@ struct StringLiteral : public Expr {
 struct CallExpr : public Expr {
     std::unique_ptr<Expr> callee;
     std::vector<std::unique_ptr<Expr>> arguments;
-    std::unique_ptr<GenericTypes> genericType;
+    std::unique_ptr<GenericTypes> genericTypes;
 
     CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments,
-             std::unique_ptr<GenericTypes> genericType = nullptr)
+             std::unique_ptr<GenericTypes> genericTypes = nullptr)
         : Expr(location),
           callee(std::move(callee)),
           arguments(std::move(arguments)),
-          genericType(std::move(genericType)) {}
+          genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
 };

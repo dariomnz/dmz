@@ -1,4 +1,6 @@
-#include <atomic>  // For std::atomic
+#pragma once
+
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
-#include "Utils.hpp"
+#include "DMZPCH.hpp"
+#include "DMZPCHSymbols.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
-#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -37,7 +34,7 @@ class Sema {
     void dump_scopes() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
-    ResolvedFunctionDecl *m_currentFunction;
+    ResolvedFuncDecl *m_currentFunction;
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
     ModuleID m_currentModuleID;
@@ -75,6 +72,10 @@ class Sema {
     bool insert_decl_to_modules(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
+    std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
+    std::unique_ptr<ResolvedGenericTypesDecl> resolve_generic_types_decl(const GenericTypesDecl &genericTypesDecl, const GenericTypes& specifiedTypes = GenericTypes{{}});
+    ResolvedFuncDecl *specialize_generic_function(ResolvedFunctionDecl &funcDecl,
+                                                  const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);
