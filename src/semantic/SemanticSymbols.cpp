@@ -125,6 +125,14 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     }
 }
 
+void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedMemberFunctionDecl\n";
+    structDecl.dump(level + 1, true);
+
+    function->dump(level + 1, onlySelf);
+    if (onlySelf) return;
+}
+
 void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << moduleID << identifier;
     genericTypes.dump();

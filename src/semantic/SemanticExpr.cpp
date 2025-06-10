@@ -39,11 +39,21 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
 }
 
 std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
-    const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
-    if (!dre) return report(call.location, "expression cannot be called as a function");
+    const ResolvedFuncDecl *resolvedFuncDecl = nullptr;
+    const ResolvedMemberFunctionDecl *resolvedMemberFuncDecl = nullptr;
+    bool isMemberCall = false;
+    if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
+        resolvedMemberFuncDecl =
+            lookup_decl_in_modules<ResolvedMemberFunctionDecl>(m_currentModuleIDRef, memberExpr->field);
+        resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
+        isMemberCall = true;
+    } else {
+        const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
+        if (!dre) return report(call.location, "expression cannot be called as a function");
 
-    varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
-    const auto *resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
+        varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
+        resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
+    }
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
@@ -59,19 +69,43 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         }
     }
 
-    bool isVararg = (resolvedFuncDecl->params.size() != 0) ? resolvedFuncDecl->params.back()->isVararg : false;
-    size_t funcDeclArgs = isVararg ? (resolvedFuncDecl->params.size() - 1) : resolvedFuncDecl->params.size();
-    if (call.arguments.size() != resolvedFuncDecl->params.size()) {
-        if (!isVararg || (isVararg && call.arguments.size() < funcDeclArgs))
+    size_t call_args_num = call.arguments.size();
+    size_t func_args_num = resolvedFuncDecl->params.size();
+    if (isMemberCall) func_args_num -= 1;
+    bool isVararg = (func_args_num != 0) ? resolvedFuncDecl->params.back()->isVararg : false;
+    size_t funcDeclArgs = isVararg ? (func_args_num - 1) : func_args_num;
+    if (call_args_num != func_args_num) {
+        if (!isVararg || (isVararg && call_args_num < funcDeclArgs))
             return report(call.location, "argument count mismatch in function call");
     }
 
     std::vector<std::unique_ptr<ResolvedExpr>> resolvedArguments;
+
+    if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
+        if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(memberExpr->base.get())) {
+            varOrReturn(resolvedDeclRefExpr, resolve_decl_ref_expr(*declRefExpr));
+            auto resolvedRefPtrExpr =
+                std::make_unique<ResolvedRefPtrExpr>(resolvedDeclRefExpr->location, std::move(resolvedDeclRefExpr));
+            resolvedRefPtrExpr->type = resolvedRefPtrExpr->type.remove_pointer();
+            resolvedRefPtrExpr->type.isRef = true;
+            resolvedArguments.emplace_back(std::move(resolvedRefPtrExpr));
+        } else {
+            return report(declRefExpr->location, "unexpected expr in call member function");
+        }
+    }
+
     size_t idx = 0;
+    if (isMemberCall) idx += 1;
     for (auto &&arg : call.arguments) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
         // Only check until vararg
         if (idx < funcDeclArgs) {
+            // Modifi ptr to reference
+            if (resolvedFuncDecl->params[idx]->type.isRef && resolvedArg->type.isPointer) {
+                resolvedArg->type = resolvedArg->type.remove_pointer();
+                resolvedArg->type.isRef = true;
+            }
+
             if (!Type::compare(resolvedFuncDecl->params[idx]->type, resolvedArg->type)) {
                 return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type.to_str() +
                                                          "' expected '" + resolvedFuncDecl->params[idx]->type.to_str() +
@@ -90,6 +124,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     }
     // resolvedFuncDecl->dump();
     // println("param ptr " << resolvedFuncDecl->params[0].get());
+    if (resolvedMemberFuncDecl) resolvedFuncDecl = resolvedMemberFuncDecl;
     return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
 }
 
@@ -253,6 +288,8 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     if (!st) {
         return report(memberExpr.location, "failed to lookup struct");
     }
+
+    // lookup_decl_in_modules<ResolvedMem
 
     const ResolvedFieldDecl *fieldDecl = nullptr;
     for (auto &&field : st->fields) {

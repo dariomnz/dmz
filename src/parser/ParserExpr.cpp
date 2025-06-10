@@ -109,15 +109,6 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         genericTypes = parse_generic_types();
     }
 
-    if (m_nextToken.type == TokenType::par_l) {
-        SourceLocation location = m_nextToken.loc;
-        varOrReturn(argumentList,
-                    parse_list_with_trailing_comma<Expr>({TokenType::par_l, "expected '('"}, &Parser::parse_expr,
-                                                         {TokenType::par_r, "expected ')'"}));
-
-        expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList), std::move(genericTypes));
-    }
-
     if (m_nextToken.type == TokenType::bracket_l) {
         SourceLocation location = m_nextToken.loc;
         matchOrReturn(TokenType::bracket_l, "expected '['");
@@ -130,15 +121,26 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         expr = std::make_unique<ArrayAtExpr>(location, std::move(expr), std::move(index));
     }
 
-    while (m_nextToken.type == TokenType::dot) {
-        SourceLocation location = m_nextToken.loc;
-        eat_next_token();  // eat '.'
+    while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l) {
+        if (m_nextToken.type == TokenType::par_l) {
+            SourceLocation location = m_nextToken.loc;
+            varOrReturn(argumentList,
+                        parse_list_with_trailing_comma<Expr>({TokenType::par_l, "expected '('"}, &Parser::parse_expr,
+                                                             {TokenType::par_r, "expected ')'"}));
 
-        matchOrReturn(TokenType::id, "expected field identifier");
-        // assert(m_nextToken.value && "identifier without value");
+            expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList),
+                                              std::move(genericTypes));
+        }
+        if (m_nextToken.type == TokenType::dot) {
+            SourceLocation location = m_nextToken.loc;
+            eat_next_token();  // eat '.'
 
-        expr = std::make_unique<MemberExpr>(location, std::move(expr), m_nextToken.str);
-        eat_next_token();  // eat identifier
+            matchOrReturn(TokenType::id, "expected field identifier");
+            // assert(m_nextToken.value && "identifier without value");
+
+            expr = std::make_unique<MemberExpr>(location, std::move(expr), m_nextToken.str);
+            eat_next_token();  // eat identifier
+        }
     }
 
     if (m_nextToken.type == TokenType::op_quest_mark) {

@@ -62,7 +62,7 @@ struct Type {
     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
     static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
-    static Type custom(const std::string_view& name) { return {Kind::Custom, name}; }
+    static Type customType(const std::string_view& name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
     static Type structType(Type t) {
         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
@@ -526,6 +526,17 @@ struct FunctionDecl : public FuncDecl {
         : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)),
           body(std::move(body)),
           genericType(std::move(genericType)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct MemberFunctionDecl : public FuncDecl {
+    Type base;
+    std::unique_ptr<FunctionDecl> function;
+
+    MemberFunctionDecl(SourceLocation location, std::string_view identifier, Type base,
+                       std::unique_ptr<FunctionDecl> function)
+        : FuncDecl(location, identifier, function->type, {}), base(std::move(base)), function(std::move(function)) {}
 
     void dump(size_t level = 0) const override;
 };

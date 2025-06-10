@@ -39,6 +39,7 @@ class Sema {
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
     ModuleID m_currentModuleID;
     ModuleID m_currentModuleIDRef;
+    Type m_currentSelf;
 
     class ScopeRAII {
         Sema &m_sema;

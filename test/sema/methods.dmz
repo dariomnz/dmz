@@ -1,0 +1,49 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+struct Color {
+    r: i32,
+    g: i32,
+    b: i32,
+}
+
+fn Color.print(self:&Color) -> i32 {
+    return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
+}
+// CHECK: ResolvedMemberFunctionDecl
+// CHECK-NEXT:   ResolvedStructDecl:Color Color
+// CHECK-NEXT:   ResolvedFunctionDecl print -> i32
+// CHECK-NEXT:     ResolvedParamDecl:&Color self
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedReturnStmt
+// CHECK-NEXT:         ResolvedCallExpr:i32 printf
+// CHECK-NEXT:           ResolvedStringLiteral:u8[19] 'Color{%d, %d, %d}\n'
+// CHECK-NEXT:           ResolvedMemberExpr:i32 r
+// CHECK-NEXT:             ResolvedDeclRefExpr:&Color self
+// CHECK-NEXT:           ResolvedMemberExpr:i32 g
+// CHECK-NEXT:             ResolvedDeclRefExpr:&Color self
+// CHECK-NEXT:           ResolvedMemberExpr:i32 b
+// CHECK-NEXT:             ResolvedDeclRefExpr:&Color self
+
+fn main() -> void {
+    let c:Color = Color{r:1, g:2, b:3};
+    c.print(); 
+}
+// CHECK: ResolvedFunctionDecl main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:Color c
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 g
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 b
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:             | value: 3
+// CHECK-NEXT:     ResolvedCallExpr:i32 print
+// CHECK-NEXT:       ResolvedRefPtrExpr:&Color
+// CHECK-NEXT:         ResolvedDeclRefExpr:Color c

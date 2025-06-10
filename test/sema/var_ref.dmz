@@ -41,7 +41,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:&i32 i_ref
 // CHECK-NEXT:     ResolvedCallExpr:void foo
-// CHECK-NEXT:       ResolvedRefPtrExpr:&*i32
+// CHECK-NEXT:       ResolvedRefPtrExpr:&i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:&i32 i_ref
 // CHECK-NEXT:     ResolvedCallExpr:void println
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i

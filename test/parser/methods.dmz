@@ -1,0 +1,46 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+fn Color.print(self:&Color) -> i32 {
+    return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
+}
+// CHECK: MemberFunctionDecl:Color
+// CHECK-NEXT:   FunctionDecl print -> i32
+// CHECK-NEXT:     ParamDecl:&Color self
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr printf
+// CHECK-NEXT:           StringLiteral '"Color{%d, %d, %d}\n"'
+// CHECK-NEXT:           MemberExpr .r
+// CHECK-NEXT:             DeclRefExpr self
+// CHECK-NEXT:           MemberExpr .g
+// CHECK-NEXT:             DeclRefExpr self
+// CHECK-NEXT:           MemberExpr .b
+// CHECK-NEXT:             DeclRefExpr self
+
+fn main() -> void {
+    let c:Color = Color{r:1, g:2, b:3};
+    c.print(); 
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:Color c
+// CHECK-NEXT:         StructInstantiationExpr Color
+// CHECK-NEXT:           FieldInitStmt r
+// CHECK-NEXT:             IntLiteral '1'
+// CHECK-NEXT:           FieldInitStmt g
+// CHECK-NEXT:             IntLiteral '2'
+// CHECK-NEXT:           FieldInitStmt b
+// CHECK-NEXT:             IntLiteral '3'
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       MemberExpr .print
+// CHECK-NEXT:         DeclRefExpr c

@@ -67,6 +67,14 @@ void FunctionDecl::dump(size_t level) const {
     body->dump(level + 1);
 }
 
+void MemberFunctionDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "MemberFunctionDecl:";
+    base.dump();
+    std::cerr << "\n";
+
+    function->dump(level + 1);
+}
+
 void ExternFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type << "\n";
 

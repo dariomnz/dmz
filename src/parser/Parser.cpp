@@ -118,7 +118,7 @@ std::unique_ptr<Type> Parser::parse_type() {
         t = Type::builtinUN(name);
     }
     if (type == TokenType::id) {
-        t = Type::custom(name);
+        t = Type::customType(name);
     }
 
     if (isArray != -1) t.isArray = isArray;

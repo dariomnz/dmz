@@ -12,8 +12,6 @@ fn main() -> void {
     // CHECK: [[# @LINE -1 ]]:15: error: expected field identifier
 
     let r = s().r.x();
-    // CHECK: [[# @LINE -1 ]]:20: error: expected ';' after declaration
 
     s.r.x();
-    // CHECK: [[# @LINE -1 ]]:10: error: expected ';' at the end of expression
 }

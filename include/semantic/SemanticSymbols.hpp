@@ -59,7 +59,7 @@ struct ResolvedGenericTypeDecl : public ResolvedDecl {
     std::optional<Type> specializedType;
 
     ResolvedGenericTypeDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID)
-        : ResolvedDecl(location, identifier, std::move(moduleID), Type::custom(identifier), false) {}
+        : ResolvedDecl(location, identifier, std::move(moduleID), Type::customType(identifier), false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const;
 };
@@ -223,6 +223,19 @@ struct ResolvedStructDecl : public ResolvedDecl {
     ResolvedStructDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields)
         : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false), fields(std::move(fields)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedMemberFunctionDecl : public ResolvedFuncDecl {
+    const ResolvedStructDecl &structDecl;
+    std::unique_ptr<ResolvedFunctionDecl> function;
+
+    ResolvedMemberFunctionDecl(SourceLocation location, std::string_view identifier, const ResolvedStructDecl& structDecl,
+                               ModuleID moduleID, std::unique_ptr<ResolvedFunctionDecl> function)
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), function->type, {}),
+          structDecl(structDecl),
+          function(std::move(function)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

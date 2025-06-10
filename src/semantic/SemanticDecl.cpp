@@ -48,6 +48,18 @@ std::unique_ptr<ResolvedGenericTypesDecl> Sema::resolve_generic_types_decl(const
 }
 
 std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
+    if (auto memberFunctionDecl = dynamic_cast<const MemberFunctionDecl *>(&function)) {
+        varOrReturn(resolvedStructDecl, lookup_decl<ResolvedStructDecl>(memberFunctionDecl->base.name).first);
+        varOrReturn(resolvedFunc, resolve_function_decl(*memberFunctionDecl->function));
+        varOrReturn(resolvedFunction, dynamic_cast<ResolvedFunctionDecl *>(resolvedFunc.get()));
+
+        resolvedFunc.release();
+        std::unique_ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunction);
+
+        return std::make_unique<ResolvedMemberFunctionDecl>(function.location, function.identifier, *resolvedStructDecl,
+                                                            m_currentModuleID, std::move(resolvedFunctionDecl));
+    }
+
     ScopeRAII paramScope(*this);
     std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
     if (auto func = dynamic_cast<const FunctionDecl *>(&function)) {
@@ -70,11 +82,6 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
         if (!function.params.empty())
             return report(function.location, "'main' function is expected to take no arguments");
     }
-    //  else if (function.identifier == "printf") {
-    //     return report(function.location,
-    //                   "'printf' is a reserved function name and cannot be used for "
-    //                   "user-defined functions");
-    // }
 
     std::vector<std::unique_ptr<ResolvedParamDecl>> resolvedParams;
 
@@ -375,12 +382,14 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                                                                     insert_decl_to_modules(*resolvedDecl)) {
                     auto &resolvedDeclEmpaced = resolvedTree.emplace_back(std::move(resolvedDecl));
                     if (auto resolvedfndecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDeclEmpaced.get())) {
-                        // for (auto &&param : resolvedfndecl->params) {
-                        //     param->dump();
-                        // }
-
                         if (auto fndecl = dynamic_cast<const FunctionDecl *>(fn)) {
                             m_functionsToResolveMap[resolvedfndecl] = fndecl->body.get();
+                        }
+                    }
+                    if (auto resolvedfndecl =
+                            dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedDeclEmpaced.get())) {
+                        if (auto fndecl = dynamic_cast<const MemberFunctionDecl *>(fn)) {
+                            m_functionsToResolveMap[resolvedfndecl->function.get()] = fndecl->function->body.get();
                         }
                     }
                     continue;
@@ -399,16 +408,20 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
     bool error = false;
     {
         ScopedTimer st(Stats::type::semanticResolveBodysTime);
-        for (auto &&currentDecl : decls) {
-            if (auto *importDecl = dynamic_cast<ResolvedImportDecl *>(currentDecl.get())) {
+        for (auto &&currentDeclRef : decls) {
+            auto currentDecl = currentDeclRef.get();
+            if (auto *importDecl = dynamic_cast<ResolvedImportDecl *>(currentDecl)) {
                 if (!resolve_import_check(*importDecl)) error = true;
                 continue;
             }
-            if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl.get())) {
+            if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
                 if (!resolve_struct_fields(*st)) error = true;
                 continue;
             }
-            if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl.get())) {
+            if (auto *fn = dynamic_cast<ResolvedMemberFunctionDecl *>(currentDecl)) {
+                currentDecl = fn->function.get();
+            }
+            if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
                 ScopeRAII paramScope(*this);
                 for (auto &&param : fn->params) insert_decl_to_current_scope(*param);
 

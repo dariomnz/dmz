@@ -79,7 +79,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     const ResolvedFuncDecl &calleeDecl = call.callee;
     auto symbolName = generate_function_name(call.callee);
-    llvm::Function *callee = m_module->getFunction(generate_symbol_name(symbolName));
+    llvm::Function *callee = m_module->getFunction(symbolName);
     if (!callee) {
         generate_function_decl(calleeDecl);
         callee = m_module->getFunction(symbolName);
@@ -98,7 +98,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     for (auto &&arg : call.arguments) {
         llvm::Value *val = generate_expr(*arg);
 
-        if (arg->type.kind == Type::Kind::Struct && calleeDecl.params[argIdx]->isMutable && !arg->type.isRef) {
+        if (arg->type.kind == Type::Kind::Struct && !arg->type.isRef && calleeDecl.params[argIdx]->isMutable) {
             llvm::Value *tmpVar = allocate_stack_variable("struct.arg.tmp", arg->type);
             store_value(val, tmpVar, arg->type, arg->type);
             val = tmpVar;
