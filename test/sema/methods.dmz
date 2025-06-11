@@ -17,7 +17,8 @@ fn Color.print(self:&Color) -> i32 {
 // CHECK-NEXT:     ResolvedParamDecl:&Color self
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
-// CHECK-NEXT:         ResolvedCallExpr:i32 printf
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedExternFunctionDecl printf -> i32
 // CHECK-NEXT:           ResolvedStringLiteral:u8[19] 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:           ResolvedMemberExpr:i32 r
 // CHECK-NEXT:             ResolvedDeclRefExpr:&Color self
@@ -44,6 +45,7 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 b
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:             | value: 3
-// CHECK-NEXT:     ResolvedCallExpr:i32 print
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedFunctionDecl print -> i32
 // CHECK-NEXT:       ResolvedRefPtrExpr:&Color
 // CHECK-NEXT:         ResolvedDeclRefExpr:Color c

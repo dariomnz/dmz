@@ -9,24 +9,38 @@ std::string Codegen::generate_struct_name(const ResolvedStructDecl &structDecl) 
 
 std::string Codegen::generate_function_name(const ResolvedFuncDecl &functionDecl) {
     std::string name;
+    if (functionDecl.parent) {
+        name += generate_function_name(*functionDecl.parent);
+        if (dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) return name;
+    }
+
     if (auto memberFunction = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        name = generate_struct_name(memberFunction->structDecl);
+        name += generate_struct_name(memberFunction->structDecl);
         name += "__";
     }
 
-    name += dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)
-                ? std::string(functionDecl.identifier)
-                : functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
-    if (auto specificationFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
+    if (dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)) {
+        name += std::string(functionDecl.identifier);
+    } else if (dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl) ||
+               dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
+        name += functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
+    }
+
+    if (auto specializedFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
         name += "__gen";
-        for (auto &&t : specificationFunc->genericTypes.types) {
+        for (auto &&t : specializedFunc->genericTypes.types) {
             name += "__" + t.to_str();
         }
     }
-    return functionDecl.identifier == "main" ? "__builtin_main" : generate_symbol_name(name);
+
+    if (functionDecl.identifier == "main") {
+        return "__builtin_main";
+    }
+
+    return generate_symbol_name(name);
 }
 
-void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl, std::string funcName) {
+void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
         if (resolvedFunctionDecl->genericTypes) {
             for (auto &&func : resolvedFunctionDecl->specializations) {
@@ -36,8 +50,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl, std::
         }
     }
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        generate_function_decl(*resolvedFunctionDecl->function.get(), generate_function_name(*resolvedFunctionDecl));
-        return;
+        return generate_function_decl(*resolvedFunctionDecl->function.get());
     }
 
     llvm::Type *retType = generate_type(functionDecl.type);
@@ -62,9 +75,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl, std::
     }
 
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
-    if (funcName.empty()) {
-        funcName = generate_function_name(functionDecl);
-    }
+    std::string funcName = generate_function_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(functionDecl));
 }
@@ -108,7 +119,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
     return llvm::AttributeList::get(*m_context, llvm::AttributeSet{}, llvm::AttributeSet{}, argsAttrSets);
 }
 
-void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl, std::string funcName) {
+void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
         if (resolvedFunctionDecl->genericTypes) {
             for (auto &&func : resolvedFunctionDecl->specializations) {
@@ -118,14 +129,11 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl, std::
         }
     }
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        generate_function_body(*resolvedFunctionDecl->function.get(), generate_function_name(*resolvedFunctionDecl));
-        return;
+        return generate_function_body(*resolvedFunctionDecl->function.get());
     }
 
     m_currentFunction = &functionDecl;
-    if (funcName.empty()) {
-        funcName = generate_function_name(functionDecl);
-    }
+    std::string funcName = generate_function_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);

@@ -1,3 +1,4 @@
+// #define DEBUG
 #include "semantic/Semantic.hpp"
 
 namespace DMZ {
@@ -12,6 +13,7 @@ bool op_generate_bool(TokenType op) {
 }
 
 std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee) {
+    debug_func(declRefExpr.location);
     // Search in the module scope
     ResolvedDecl *decl = lookup_decl<ResolvedDecl>(declRefExpr.identifier).first;
     if (!decl) {
@@ -34,18 +36,23 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
         return report(declRefExpr.location, "expected an instance of '" + std::string(decl->type.name) + '\'');
 
     // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
-
-    return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl);
+    varOrReturn(type, resolve_type(decl->type));
+    // println(type->to_str());
+    return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl, *type);
 }
 
 std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
+    debug_func(call.location);
+    const ResolvedFuncDecl *parentFunc = nullptr;
     const ResolvedFuncDecl *resolvedFuncDecl = nullptr;
     const ResolvedMemberFunctionDecl *resolvedMemberFuncDecl = nullptr;
     bool isMemberCall = false;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
         resolvedMemberFuncDecl =
             lookup_decl_in_modules<ResolvedMemberFunctionDecl>(m_currentModuleIDRef, memberExpr->field);
+        if (!resolvedMemberFuncDecl) return report(memberExpr->location, "cannot fount struct of member function");
         resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
+        parentFunc = resolvedMemberFuncDecl;
         isMemberCall = true;
     } else {
         const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
@@ -53,14 +60,15 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
         varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
+        parentFunc = resolvedFuncDecl;
     }
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedFuncDecl)) {
         if (call.genericTypes) {
-            resolvedFuncDecl = specialize_generic_function(*const_cast<ResolvedFunctionDecl *>(resolvedFunctionDecl),
-                                                           *call.genericTypes);
+            resolvedFuncDecl = specialize_generic_function(
+                *parentFunc, *const_cast<ResolvedFunctionDecl *>(resolvedFunctionDecl), *call.genericTypes);
             if (!resolvedFuncDecl) return nullptr;
         } else {
             if (resolvedFunctionDecl->genericTypes) {
@@ -124,11 +132,11 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     }
     // resolvedFuncDecl->dump();
     // println("param ptr " << resolvedFuncDecl->params[0].get());
-    if (resolvedMemberFuncDecl) resolvedFuncDecl = resolvedMemberFuncDecl;
     return std::make_unique<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
 }
 
 std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
+    debug_func(expr.location);
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
         return std::make_unique<ResolvedIntLiteral>(number->location, std::stod(std::string(number->value)));
     }
@@ -202,6 +210,7 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
 }
 
 std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
+    debug_func(unary.location);
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
     if (resolvedRHS->type.kind == Type::Kind::Void || !Type::compare(Type::builtinBool(), resolvedRHS->type))
@@ -219,16 +228,19 @@ std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryO
 }
 
 std::unique_ptr<ResolvedRefPtrExpr> Sema::resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr) {
+    debug_func(refPtrExpr.location);
     varOrReturn(resolvedExpr, resolve_expr(*refPtrExpr.expr));
     return std::make_unique<ResolvedRefPtrExpr>(refPtrExpr.location, std::move(resolvedExpr));
 }
 
 std::unique_ptr<ResolvedDerefPtrExpr> Sema::resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr) {
+    debug_func(derefPtrExpr.location);
     varOrReturn(resolvedExpr, resolve_expr(*derefPtrExpr.expr));
     return std::make_unique<ResolvedDerefPtrExpr>(derefPtrExpr.location, std::move(resolvedExpr));
 }
 
 std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &binop) {
+    debug_func(binop.location);
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
@@ -255,11 +267,13 @@ std::unique_ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const Bina
 }
 
 std::unique_ptr<ResolvedGroupingExpr> Sema::resolve_grouping_expr(const GroupingExpr &grouping) {
+    debug_func(grouping.location);
     varOrReturn(resolvedExpr, resolve_expr(*grouping.expr));
     return std::make_unique<ResolvedGroupingExpr>(grouping.location, std::move(resolvedExpr));
 }
 
 std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &assignableExpr) {
+    debug_func(assignableExpr.location);
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&assignableExpr))
         return resolve_decl_ref_expr(*declRefExpr);
 
@@ -277,6 +291,7 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
 }
 
 std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
+    debug_func(memberExpr.location);
     auto resolvedBase = resolve_expr(*memberExpr.base);
     if (!resolvedBase) return nullptr;
 
@@ -304,6 +319,7 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
 }
 
 std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
+    debug_func(arrayAtExpr.location);
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
 
@@ -318,6 +334,7 @@ std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtEx
 
 std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     const StructInstantiationExpr &structInstantiation) {
+    debug_func(structInstantiation.location);
     const auto *st = lookup_decl<ResolvedStructDecl>(structInstantiation.identifier).first;
 
     if (!st)
@@ -386,6 +403,7 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
 
 std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
     const ArrayInstantiationExpr &arrayInstantiation) {
+    debug_func(arrayInstantiation.location);
     std::vector<std::unique_ptr<ResolvedExpr>> resolvedinitializers;
     resolvedinitializers.reserve(arrayInstantiation.initializers.size());
 
@@ -411,6 +429,7 @@ std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiatio
 }
 
 std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {
+    debug_func(errDeclRef.location);
     // Search in the module scope
     ResolvedErrDecl *lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
     if (!lookupErr) {
@@ -430,6 +449,7 @@ std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const Er
 }
 
 std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr) {
+    debug_func(errUnwrapExpr.location);
     varOrReturn(resolvedToUnwrap, resolve_expr(*errUnwrapExpr.errToUnwrap));
     if (!resolvedToUnwrap->type.isOptional)
         return report(errUnwrapExpr.location,
@@ -444,6 +464,7 @@ std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUn
 }
 
 std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchErrExpr &catchErrExpr) {
+    debug_func(catchErrExpr.location);
     if (catchErrExpr.errTocatch) {
         auto resolvedErr = resolve_expr(*catchErrExpr.errTocatch);
         return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, std::move(resolvedErr), nullptr);
@@ -456,6 +477,7 @@ std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchEr
 }
 
 std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr &tryErrExpr) {
+    debug_func(tryErrExpr.location);
     if (tryErrExpr.errTotry) {
         auto resolvedErr = resolve_expr(*tryErrExpr.errTotry);
         return std::make_unique<ResolvedTryErrExpr>(tryErrExpr.location, std::move(resolvedErr), nullptr);
@@ -470,6 +492,7 @@ std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr 
 
 std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
                                                                               const ModuleID &prevModuleID) {
+    debug_func(moduleDeclRef.location);
     ModuleID currentModuleID = prevModuleID;
     currentModuleID.modules.emplace_back(moduleDeclRef.identifier);
     m_currentModuleIDRef = currentModuleID;

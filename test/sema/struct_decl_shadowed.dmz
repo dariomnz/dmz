@@ -15,6 +15,7 @@ fn main() -> void {
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:S x
-// CHECK-NEXT:     ResolvedCallExpr:void println
+// CHECK-NEXT:     ResolvedCallExpr:void
+// CHECK-NEXT:       ResolvedFunctionDecl println -> void
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 S
 // CHECK-NEXT:       | value: 1

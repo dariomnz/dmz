@@ -169,17 +169,20 @@ struct ResolvedVarDecl : public ResolvedDecl {
 };
 
 struct ResolvedFuncDecl : public ResolvedDecl {
+    const ResolvedFuncDecl *parent;
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
 
-    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
-                     std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false), params(std::move(params)) {}
+    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
+                     const ResolvedFuncDecl *parent, Type type, std::vector<std::unique_ptr<ResolvedParamDecl>> params)
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false),
+          parent(parent),
+          params(std::move(params)) {}
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
     ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
                                std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)) {}
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), nullptr, type, std::move(params)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -188,10 +191,11 @@ struct ResolvedSpecializedFunctionDecl : public ResolvedFuncDecl {
     GenericTypes genericTypes;
     std::unique_ptr<ResolvedBlock> body;
 
-    ResolvedSpecializedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+    ResolvedSpecializedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
+                                    const ResolvedFuncDecl *parent, Type type,
                                     std::vector<std::unique_ptr<ResolvedParamDecl>> params, GenericTypes genericTypes,
                                     std::unique_ptr<ResolvedBlock> body)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)),
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), parent, type, std::move(params)),
           genericTypes(std::move(genericTypes)),
           body(std::move(body)) {}
 
@@ -205,11 +209,12 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 
     std::vector<std::unique_ptr<ResolvedSpecializedFunctionDecl>> specializations;
 
-    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
+                         const ResolvedFuncDecl *parent, Type type,
                          std::vector<std::unique_ptr<ResolvedParamDecl>> params,
                          std::unique_ptr<ResolvedGenericTypesDecl> genericTypes, const FunctionDecl *functionDecl,
                          std::unique_ptr<ResolvedBlock> body)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), type, std::move(params)),
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), parent, type, std::move(params)),
           genericTypes(std::move(genericTypes)),
           functionDecl(functionDecl),
           body(std::move(body)) {}
@@ -231,9 +236,10 @@ struct ResolvedMemberFunctionDecl : public ResolvedFuncDecl {
     const ResolvedStructDecl &structDecl;
     std::unique_ptr<ResolvedFunctionDecl> function;
 
-    ResolvedMemberFunctionDecl(SourceLocation location, std::string_view identifier, const ResolvedStructDecl& structDecl,
-                               ModuleID moduleID, std::unique_ptr<ResolvedFunctionDecl> function)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), function->type, {}),
+    ResolvedMemberFunctionDecl(SourceLocation location, std::string_view identifier,
+                               const ResolvedStructDecl &structDecl, ModuleID moduleID,
+                               std::unique_ptr<ResolvedFunctionDecl> function)
+        : ResolvedFuncDecl(location, std::move(identifier), std::move(moduleID), nullptr, function->type, {}),
           structDecl(structDecl),
           function(std::move(function)) {}
 
@@ -303,8 +309,8 @@ struct ResolvedAssignableExpr : public ResolvedExpr {
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &decl;
 
-    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl)
-        : ResolvedAssignableExpr(location, decl.type), decl(decl) {}
+    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl, Type type)
+        : ResolvedAssignableExpr(location, type), decl(decl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

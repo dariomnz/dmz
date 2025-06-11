@@ -81,9 +81,12 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     auto symbolName = generate_function_name(call.callee);
     llvm::Function *callee = m_module->getFunction(symbolName);
     if (!callee) {
-        generate_function_decl(calleeDecl);
+        generate_function_decl(call.callee);
         callee = m_module->getFunction(symbolName);
-        assert(callee && "Cannot generate declaration of extern function");
+        if (!callee) {
+            println("Cannot generate declaration of " << symbolName);
+            dmz_unreachable("Cannot generate declaration of func");
+        }
     }
 
     bool isReturningStruct = calleeDecl.type.kind == Type::Kind::Struct || calleeDecl.type.isOptional;

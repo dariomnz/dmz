@@ -104,11 +104,6 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         }
     }
 
-    if (m_nextToken.type == TokenType::op_less &&
-        (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more)) {
-        genericTypes = parse_generic_types();
-    }
-
     if (m_nextToken.type == TokenType::bracket_l) {
         SourceLocation location = m_nextToken.loc;
         matchOrReturn(TokenType::bracket_l, "expected '['");
@@ -121,7 +116,13 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         expr = std::make_unique<ArrayAtExpr>(location, std::move(expr), std::move(index));
     }
 
-    while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l) {
+    while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l ||
+           (m_nextToken.type == TokenType::op_less &&
+            (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more))) {
+        if (m_nextToken.type == TokenType::op_less &&
+            (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more)) {
+            genericTypes = parse_generic_types();
+        }
         if (m_nextToken.type == TokenType::par_l) {
             SourceLocation location = m_nextToken.loc;
             varOrReturn(argumentList,

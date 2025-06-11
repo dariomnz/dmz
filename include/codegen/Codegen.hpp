@@ -2,6 +2,7 @@
 
 #include "DMZPCHLLVM.hpp"
 #include "DMZPCHSymbols.hpp"
+#include "Debug.hpp"
 
 namespace DMZ {
 
@@ -33,8 +34,8 @@ class Codegen {
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
     std::string generate_struct_name(const ResolvedStructDecl &structDecl);
     std::string generate_function_name(const ResolvedFuncDecl &functionDecl);
-    void generate_function_decl(const ResolvedFuncDecl &functionDecl, std::string funcName = "");
-    void generate_function_body(const ResolvedFuncDecl &functionDecl, std::string funcName = "");
+    void generate_function_decl(const ResolvedFuncDecl &functionDecl);
+    void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);

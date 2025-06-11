@@ -2,6 +2,7 @@
 
 #include "DMZPCH.hpp"
 #include "DMZPCHSymbols.hpp"
+#include "Debug.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
 
@@ -74,8 +75,9 @@ class Sema {
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
-    std::unique_ptr<ResolvedGenericTypesDecl> resolve_generic_types_decl(const GenericTypesDecl &genericTypesDecl, const GenericTypes& specifiedTypes = GenericTypes{{}});
-    ResolvedFuncDecl *specialize_generic_function(ResolvedFunctionDecl &funcDecl,
+    std::unique_ptr<ResolvedGenericTypesDecl> resolve_generic_types_decl(
+        const GenericTypesDecl &genericTypesDecl, const GenericTypes &specifiedTypes = GenericTypes{{}});
+    ResolvedFuncDecl *specialize_generic_function(const ResolvedFuncDecl &parentFunc, ResolvedFunctionDecl &funcDecl,
                                                   const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
@@ -92,8 +94,8 @@ class Sema {
     std::unique_ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
     std::unique_ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
     std::unique_ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
-    bool run_flow_sensitive_checks(const ResolvedFunctionDecl &fn);
-    bool check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg);
+    bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
+    bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
     std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
     std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);

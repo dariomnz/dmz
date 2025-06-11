@@ -24,7 +24,8 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr2
 // CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
-// CHECK-NEXT:     ResolvedCallExpr:i32 printf
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
 // CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:     ResolvedAssignment
@@ -32,6 +33,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '12'
 // CHECK-NEXT:       | value: 12
-// CHECK-NEXT:     ResolvedCallExpr:i32 printf
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
 // CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i

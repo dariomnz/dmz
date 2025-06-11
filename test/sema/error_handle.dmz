@@ -68,14 +68,16 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32? result
-// CHECK-NEXT:         ResolvedCallExpr:i32? foo
+// CHECK-NEXT:         ResolvedCallExpr:i32?
+// CHECK-NEXT:           ResolvedFunctionDecl foo -> i32?
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:           | value: 2
 // CHECK-NEXT:     ResolvedCatchErrExpr:i1 
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:const err result_e
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32? result
-// CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:       ResolvedRefPtrExpr:*u8[4]
@@ -87,7 +89,8 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedVarDecl:const err error
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32? result
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedRefPtrExpr:*u8[4]
@@ -95,7 +98,8 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedDeclRefExpr:err error
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32? result2
-// CHECK-NEXT:         ResolvedCallExpr:i32? foo
+// CHECK-NEXT:         ResolvedCallExpr:i32?
+// CHECK-NEXT:           ResolvedFunctionDecl foo -> i32?
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:           | value: 10
 // CHECK-NEXT:     ResolvedIfStmt
@@ -104,7 +108,8 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedVarDecl:const i32 value
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32? result2
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedRefPtrExpr:*u8[4]
@@ -114,34 +119,40 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedCatchErrExpr:i1 
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32? result
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedRefPtrExpr:*u8[20]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[20] 'There are an error\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedCatchErrExpr:i1 
-// CHECK-NEXT:         ResolvedCallExpr:i32? foo
+// CHECK-NEXT:         ResolvedCallExpr:i32?
+// CHECK-NEXT:           ResolvedFunctionDecl foo -> i32?
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:           | value: 2
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedRefPtrExpr:*u8[20]
 // CHECK-NEXT:             ResolvedStringLiteral:u8[20] 'There are an error\n'
-// CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:       ResolvedRefPtrExpr:*u8[13]
 // CHECK-NEXT:         ResolvedStringLiteral:u8[13] 'No error %d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32? result
-// CHECK-NEXT:     ResolvedCallExpr:i32 dprintf
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl dprintf -> i32
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:       ResolvedRefPtrExpr:*u8[18]
 // CHECK-NEXT:         ResolvedStringLiteral:u8[18] 'No safe error %d\n'
 // CHECK-NEXT:       ResolvedErrUnwrapExpr:i32
-// CHECK-NEXT:         ResolvedCallExpr:i32? foo
+// CHECK-NEXT:         ResolvedCallExpr:i32?
+// CHECK-NEXT:           ResolvedFunctionDecl foo -> i32?
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:           | value: 10

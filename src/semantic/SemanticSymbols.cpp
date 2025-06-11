@@ -76,7 +76,8 @@ void ResolvedDeclRefExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedCallExpr:" << type << " " << callee.moduleID << callee.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedCallExpr:" << type << '\n';
+    callee.dump(level + 1, true);
 
     if (onlySelf) return;
     dump_constant_value(level);
@@ -118,7 +119,7 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1);
 
-    body->dump(level + 1);
+    if (body) body->dump(level + 1);
 
     for (auto &&func : specializations) {
         func->dump(level + 1);

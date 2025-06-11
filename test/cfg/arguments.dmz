@@ -18,7 +18,8 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
 // CHECK-NEXT:   ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:   ResolvedCallExpr:void foo
+// CHECK-NEXT:   ResolvedCallExpr:void
+// CHECK-NEXT:     ResolvedFunctionDecl foo -> void
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 

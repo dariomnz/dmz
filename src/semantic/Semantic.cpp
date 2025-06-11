@@ -1,6 +1,7 @@
+// #define DEBUG
 #include "semantic/Semantic.hpp"
 
-// #define DEBUG
+// #define DEBUG_SCOPES
 
 namespace DMZ {
 
@@ -54,6 +55,7 @@ void Sema::dump_scopes() const {
 }
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
+    debug_func(decl.location);
     std::string identifier(decl.identifier);
     if (auto importDecl = dynamic_cast<ResolvedImportDecl *>(&decl)) {
         if (importDecl->alias.empty()) {
@@ -62,7 +64,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
             identifier = importDecl->alias;
         }
     }
-#ifdef DEBUG
+#ifdef DEBUG_SCOPES
     println("==================================");
     println("insert_decl_to_current_scope " << identifier);
 #endif
@@ -74,7 +76,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     }
 
     m_scopes.back().emplace_back(&decl);
-#ifdef DEBUG
+#ifdef DEBUG_SCOPES
     dump_scopes();
     println("==================================");
 #endif
@@ -82,7 +84,8 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 }
 
 bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
-#ifdef DEBUG
+    debug_func(decl.location);
+#ifdef DEBUG_SCOPES
     println("==================================");
     println("insert_decl_to_modules " << decl.moduleID << " " << decl.identifier);
     println("==================================");
@@ -101,7 +104,8 @@ bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
 
 template <typename T>
 std::pair<T *, int> Sema::lookup_decl(const std::string_view id) {
-#ifdef DEBUG
+    debug_func("");
+#ifdef DEBUG_SCOPES
     println("-----------------------------------------");
     println("lookup_decl " << std::quoted(std::string(id)));
     dump_scopes();
@@ -139,7 +143,8 @@ template std::pair<ResolvedModuleDecl *, int> Sema::lookup_decl(std::string_view
 
 template <typename T>
 T *Sema::lookup_decl_in_modules(const ModuleID &moduleID, const std::string_view id) {
-#ifdef DEBUG
+    debug_func("");
+#ifdef DEBUG_SCOPES
     println("-----------------------------------------");
     println("lookup_decl_in_modules " << moduleID << " " << id);
     dump_module_scopes();
@@ -164,7 +169,8 @@ template ResolvedErrDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::st
 template ResolvedMemberFunctionDecl *Sema::lookup_decl_in_modules(const ModuleID &, std::string_view);
 
 bool Sema::lookup_in_modules(const ModuleID &moduleID, const std::string_view id) {
-#ifdef DEBUG
+    debug_func("");
+#ifdef DEBUG_SCOPES
     println("-----------------------------------------");
     println("lookup_in_modules " << moduleID << " " << id);
     dump_module_scopes();
@@ -182,6 +188,7 @@ bool Sema::lookup_in_modules(const ModuleID &moduleID, const std::string_view id
 }
 
 std::optional<Type> Sema::resolve_type(Type parsedType) {
+    debug_func(parsedType);
     if (parsedType.kind == Type::Kind::Custom) {
         if (lookup_decl<ResolvedStructDecl>(parsedType.name).first) {
             return Type::structType(parsedType);
@@ -201,6 +208,7 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
 }
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
+    debug_func("");
     ScopedTimer st(Stats::type::semanticTime);
 
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
@@ -237,6 +245,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
 }
 
 bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
+    debug_func("");
     if (!resolve_in_module_body(decls)) {
         return false;
     }
@@ -273,8 +282,19 @@ bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
 //     return decls;
 // }
 
-bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
-    CFG cfg = CFGBuilder().build(fn);
+bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
+    debug_func(fn.location);
+    const ResolvedBlock *block;
+    if (auto resfn = dynamic_cast<const ResolvedFunctionDecl *>(&fn)) {
+        block = resfn->body.get();
+    } else if (auto resfn = dynamic_cast<const ResolvedMemberFunctionDecl *>(&fn)) {
+        block = resfn->function->body.get();
+    } else if (auto resfn = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&fn)) {
+        block = resfn->body.get();
+    } else {
+        dmz_unreachable("unexpected function");
+    }
+    CFG cfg = CFGBuilder().build(*block);
 
     bool error = false;
     error |= check_return_on_all_paths(fn, cfg);
@@ -283,7 +303,8 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFunctionDecl &fn) {
     return error;
 };
 
-bool Sema::check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &cfg) {
+bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg) {
+    debug_func(fn.location);
     if (fn.type.kind == Type::Kind::Void) return false;
 
     int returnCount = 0;
@@ -321,6 +342,7 @@ bool Sema::check_return_on_all_paths(const ResolvedFunctionDecl &fn, const CFG &
 }
 
 bool Sema::check_variable_initialization(const CFG &cfg) {
+    debug_func("");
     enum class State { Bottom, Unassigned, Assigned, Top };
 
     using Lattice = std::map<const ResolvedDecl *, State>;

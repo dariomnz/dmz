@@ -1,7 +1,6 @@
 // #define DEBUG
 #include "driver/Driver.hpp"
 
-
 namespace DMZ {
 void Driver::display_help() {
     println("Usage:");
@@ -225,7 +224,7 @@ Driver::Type_ResolvedTrees Driver::semantic_pass(Type_Asts &asts) {
                     if (!fn) continue;
 
                     std::cerr << fn->identifier << ':' << '\n';
-                    CFGBuilder().build(*fn).dump();
+                    CFGBuilder().build(*fn->body).dump();
                 }
             }
         }

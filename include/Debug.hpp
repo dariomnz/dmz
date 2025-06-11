@@ -59,8 +59,13 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
         std::cerr << std::dec << ::DMZ::time_stamp() << " [" << ::DMZ::get_file_name(__FILE__) << ":" << __LINE__ \
                   << "] [" << __func__ << "] " << out_format << std::endl;                                        \
     }
+#define debug_func(out_format)                                 \
+    auto ____func_name = __func__;                             \
+    debug_msg("BEGIN " << ____func_name << " " << out_format); \
+    defer([&] { debug_msg("END " << ____func_name << " " << out_format); });
 #else
 #define debug_msg(out_format)
+#define debug_func(out_format)
 #endif
 
 #define println(out_format)                                                  \

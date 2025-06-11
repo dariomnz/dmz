@@ -1,9 +1,8 @@
 #pragma once
 
 #include "DMZPCH.hpp"
-
-#include "semantic/Constexpr.hpp"
 #include "DMZPCHSymbols.hpp"
+#include "semantic/Constexpr.hpp"
 
 namespace DMZ {
 
@@ -44,7 +43,7 @@ class CFGBuilder {
     ConstantExpressionEvaluator cee;
 
    public:
-    CFG build(const ResolvedFunctionDecl &fn);
+    CFG build(const ResolvedBlock &block);
 
    private:
     int insert_block(const ResolvedBlock &block, int succ);

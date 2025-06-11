@@ -1,8 +1,10 @@
+// #define DEBUG
 #include "semantic/Semantic.hpp"
 
 namespace DMZ {
 
 std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
+    debug_func(stmt.location);
     if (auto *expr = dynamic_cast<const Expr *>(&stmt)) {
         return resolve_expr(*expr);
     }
@@ -36,6 +38,7 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
 }
 
 std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {
+    debug_func(returnStmt.location);
     if (!m_currentFunction) {
         return report(returnStmt.location, "unexpected return stmt outside a function");
     }
@@ -64,6 +67,7 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
 }
 
 std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
+    debug_func(block.location);
     std::vector<std::unique_ptr<ResolvedStmt>> resolvedStatements;
 
     bool error = false;
@@ -97,6 +101,7 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 }
 
 std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
+    debug_func(ifStmt.location);
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
     if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
@@ -117,6 +122,7 @@ std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
 }
 
 std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
+    debug_func(whileStmt.location);
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
     if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
@@ -131,6 +137,7 @@ std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whi
 }
 
 std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
+    debug_func(declStmt.location);
     varOrReturn(resolvedVarDecl, resolve_var_decl(*declStmt.varDecl));
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
@@ -139,6 +146,7 @@ std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declSt
 }
 
 std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
+    debug_func(assignment.location);
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
@@ -156,6 +164,7 @@ std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &a
 }
 
 std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
+    debug_func(deferStmt.location);
     varOrReturn(block, resolve_block(*deferStmt.block));
     auto resolvedDeferStmt = std::make_unique<ResolvedDeferStmt>(deferStmt.location, std::move(block));
     m_defers.back().emplace_back(resolvedDeferStmt.get());
@@ -163,6 +172,7 @@ std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &def
 }
 
 std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope) {
+    debug_func("");
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
     // Traversing in reverse the defers vector
     for (int i = m_defers.size() - 1; i >= 0; --i) {
@@ -176,6 +186,7 @@ std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(
 }
 
 std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) {
+    debug_func(switchStmt.location);
     varOrReturn(condition, resolve_expr(*switchStmt.condition));
 
     if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
@@ -198,6 +209,7 @@ std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &
 }
 
 std::unique_ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt) {
+    debug_func(caseStmt.location);
     varOrReturn(condition, resolve_expr(*caseStmt.condition));
 
     varOrReturn(block, resolve_block(*caseStmt.block));

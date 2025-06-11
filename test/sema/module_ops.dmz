@@ -17,7 +17,8 @@ fn println(const n:i32) -> void {printf(&"%d\n", n);}
 // CHECK:   ResolvedFunctionDecl ops::print -> void
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:void ops::println
+// CHECK-NEXT:       ResolvedCallExpr:void
+// CHECK-NEXT:         ResolvedFunctionDecl ops::println -> void
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 
 module ops::integer;

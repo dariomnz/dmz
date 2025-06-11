@@ -1,12 +1,12 @@
 #include "semantic/CFG.hpp"
 
 namespace DMZ {
-CFG CFGBuilder::build(const ResolvedFunctionDecl &fn) {
+CFG CFGBuilder::build(const ResolvedBlock &block) {
     ScopedTimer st(Stats::type::CFGTime);
     cfg = {};
     cfg.exit = cfg.insert_new_block();
 
-    int body = insert_block(*fn.body, cfg.exit);
+    int body = insert_block(block, cfg.exit);
 
     cfg.entry = cfg.insert_new_block_before(body, true);
     return cfg;
