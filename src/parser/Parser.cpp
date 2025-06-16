@@ -79,7 +79,9 @@ std::unique_ptr<Type> Parser::parse_type() {
         report(m_nextToken.loc, "expected type specifier");
         return nullptr;
     }
-    eat_next_token();      // eat type
+    eat_next_token();  // eat type
+
+    auto genericTypes = parse_generic_types();
 
     if (m_nextToken.type == TokenType::bracket_l) {
         eat_next_token();  // eat '['
@@ -121,6 +123,7 @@ std::unique_ptr<Type> Parser::parse_type() {
         t = Type::customType(name);
     }
 
+    if (genericTypes) t.genericTypes = std::move(*genericTypes);
     if (isArray != -1) t.isArray = isArray;
     t.isRef = isRef;
     t.isPointer = isPointer;
@@ -140,13 +143,7 @@ std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
         {TokenType::op_less, "expected '<'"}, &Parser::parse_type, {TokenType::op_more, "expected '>'"}));
     if (!typesDeclList) return nullptr;
 
-    std::vector<Type> types;
-    types.reserve(typesDeclList->size());
-    for (auto &&type : *typesDeclList) {
-        types.emplace_back(*type);
-    }
-
-    return std::make_unique<GenericTypes>(std::move(types));
+    return std::make_unique<GenericTypes>(std::move(*typesDeclList));
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
@@ -224,4 +221,29 @@ template std::unique_ptr<std::vector<std::unique_ptr<GenericTypeDecl>>> Parser::
     std::pair<TokenType, const char *>, std::unique_ptr<GenericTypeDecl> (Parser::*)(),
     std::pair<TokenType, const char *>);
 
+bool Parser::nextToken_is_generic(TokenType nextToken) {
+    if (m_nextToken.type == TokenType::op_less) {
+        int blocks = 0;
+        int actual_jump = 0;
+        while (true) {
+            TokenType type = peek_token(actual_jump).type;
+
+            if (type == TokenType::op_less) {
+                ++blocks;
+            } else if (type == TokenType::op_more) {
+                if (blocks == 0) break;
+                --blocks;
+            } else if (type == TokenType::eof || type == TokenType::block_l || type == TokenType::semicolon) {
+                return false;
+            }
+            actual_jump++;
+        }
+        return peek_token(actual_jump + 1).type == nextToken;
+    }
+    return false;
+
+    // return (m_nextToken.type == TokenType::op_less &&
+    //         (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more ||
+    //          peek_token(1).type == TokenType::op_less));
+}
 }  // namespace DMZ

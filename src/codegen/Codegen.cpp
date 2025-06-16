@@ -1,5 +1,5 @@
+// #define DEBUG
 #include "codegen/Codegen.hpp"
-
 
 namespace DMZ {
 Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath)
@@ -12,6 +12,7 @@ Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree,
 }
 
 std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
+    debug_func("");
     ScopedTimer st(Stats::type::codegenTime);
     // TODO: rethink lock to not lock all threads
     auto lock = get_shared_context().getLock();
@@ -22,6 +23,7 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
 }
 
 llvm::Type *Codegen::generate_type(const Type &type) {
+    debug_func(type);
     llvm::Type *ret = nullptr;
     if (type.kind == Type::Kind::Err || type.isPointer) {
         ret = llvm::PointerType::get(*m_context, 0);
@@ -50,7 +52,11 @@ llvm::Type *Codegen::generate_type(const Type &type) {
         }
     }
     if (type.kind == Type::Kind::Struct) {
-        ret = llvm::StructType::getTypeByName(*m_context, "struct." + std::string(type.name));
+        std::string name = "struct." + type.withoutRef().to_str();
+        debug_msg(name);
+        ret = llvm::StructType::getTypeByName(*m_context, name);
+        // ret->dump();
+        // ret = llvm::StructType::getTypeByName(*m_context, "struct." + std::string(type.name));
     }
     if (ret == nullptr) return m_builder.getVoidTy();
 
@@ -69,6 +75,7 @@ llvm::Type *Codegen::generate_type(const Type &type) {
 }
 
 llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identifier, const Type &type) {
+    debug_func("");
     llvm::IRBuilder<> tmpBuilder(*m_context);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
     auto value = tmpBuilder.CreateAlloca(generate_type(type), nullptr, identifier);
@@ -83,6 +90,7 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
 }
 
 void Codegen::generate_main_wrapper() {
+    debug_func("");
     auto *builtinMain = m_module->getFunction("__builtin_main");
     if (!builtinMain) return;
 
@@ -98,6 +106,7 @@ void Codegen::generate_main_wrapper() {
 }
 
 llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
+    debug_func("");
     // println("type: " << type.to_str());
     // v->dump();
     if (type.isPointer || type.kind == Type::Kind::Err) {
@@ -120,6 +129,7 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
 }
 
 llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) {
+    debug_func("");
     // println("From: " << from.to_str() << " to: " << to.to_str());
     // v->dump();
     if (from.isPointer) {
@@ -180,6 +190,7 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };
 
 void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
+    debug_func("");
     llvm::BasicBlock *currentBB = m_builder.GetInsertBlock();
 
     if (currentBB && !currentBB->getTerminator()) m_builder.CreateBr(targetBB);
@@ -188,6 +199,7 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &from, const Type &to) {
+    debug_func("");
     if (from.kind == Type::Kind::Struct || from.isOptional) {
         const llvm::DataLayout &dl = m_module->getDataLayout();
         const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
@@ -204,9 +216,13 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type
     return m_builder.CreateStore(cast_to(val, from, to), ptr);
 }
 
-llvm::Value *Codegen::load_value(llvm::Value *v, Type type) { return m_builder.CreateLoad(generate_type(type), v); }
+llvm::Value *Codegen::load_value(llvm::Value *v, Type type) {
+    debug_func("");
+    return m_builder.CreateLoad(generate_type(type), v);
+}
 
 llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmType) {
+    debug_func("");
     std::string structName("err.struct." + type.withoutOptional().to_str());
     auto ret = llvm::StructType::getTypeByName(*m_context, structName);
     if (!ret) {
@@ -225,6 +241,7 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
 }
 
 std::string Codegen::generate_symbol_name(std::string modIdentifier) {
+    debug_func(modIdentifier);
     std::string_view to_find = "::";
     std::string_view to_replace = "__";
 
@@ -237,6 +254,7 @@ std::string Codegen::generate_symbol_name(std::string modIdentifier) {
 }
 
 void Codegen::generate_builtin_get_errno() {
+    debug_func("");
     llvm::Type *i32PtrTy = llvm::PointerType::get(m_builder.getInt32Ty(), 0);
 
     llvm::FunctionType *errnoLocationFTy = llvm::FunctionType::get(i32PtrTy, false);

@@ -4,7 +4,7 @@ struct Color {
   g: i32,
   b: i32,
 }
-// CHECK: ResolvedStructDecl:Color Color
+// CHECK: ResolvedStructDecl Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
 // CHECK-NEXT:   ResolvedFieldDecl:i32 g
 // CHECK-NEXT:   ResolvedFieldDecl:i32 b

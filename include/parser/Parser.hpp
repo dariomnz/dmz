@@ -2,6 +2,7 @@
 
 #include "DMZPCH.hpp"
 #include "DMZPCHSymbols.hpp"
+#include "Debug.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -91,6 +92,7 @@ class Parser {
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
 
    private:
+    bool nextToken_is_generic(TokenType nextToken);
     std::unique_ptr<FuncDecl> parse_function_decl();
     std::unique_ptr<Type> parse_type();
     std::unique_ptr<GenericTypes> parse_generic_types();

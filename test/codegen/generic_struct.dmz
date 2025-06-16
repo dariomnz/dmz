@@ -1,0 +1,50 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e 'Point 1 2\n')
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+struct Point<T> {
+    x:T,
+    y:T,
+}
+// CHECK: %"struct.Point<f64>" = type { double, double }
+// CHECK: %"struct.Point<i32>" = type { i32, i32 }
+
+fn main() -> void {
+    let p1 = Point<f64>{x:1.0, y:2.0};
+    let p:Point<i32> = Point<i32>{x:1, y:2};
+    p.x = 1;
+    p.y = 2;
+    printf(&"Point %d %d\n", p.x, p.y);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %p1 = alloca %"struct.Point<f64>", align 8
+// CHECK-NEXT:   %Point.tmp = alloca %"struct.Point<f64>", align 8
+// CHECK-NEXT:   %p = alloca %"struct.Point<i32>", align 8
+// CHECK-NEXT:   %Point.tmp1 = alloca %"struct.Point<i32>", align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Point.tmp, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Point.tmp1, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   %0 = getelementptr inbounds %"struct.Point<f64>", ptr %Point.tmp, i32 0, i32 0
+// CHECK-NEXT:   store double 1.000000e+00, ptr %0, align 8
+// CHECK-NEXT:   %1 = getelementptr inbounds %"struct.Point<f64>", ptr %Point.tmp, i32 0, i32 1
+// CHECK-NEXT:   store double 2.000000e+00, ptr %1, align 8
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %p1, ptr align 8 %Point.tmp, i64 16, i1 false)
+// CHECK-NEXT:   %2 = getelementptr inbounds %"struct.Point<i32>", ptr %Point.tmp1, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %2, align 4
+// CHECK-NEXT:   %3 = getelementptr inbounds %"struct.Point<i32>", ptr %Point.tmp1, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %3, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %Point.tmp1, i64 8, i1 false)
+// CHECK-NEXT:   %4 = getelementptr inbounds %"struct.Point<i32>", ptr %p, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %4, align 4
+// CHECK-NEXT:   %5 = getelementptr inbounds %"struct.Point<i32>", ptr %p, i32 0, i32 1
+// CHECK-NEXT:   store i32 2, ptr %5, align 4
+// CHECK-NEXT:   %6 = getelementptr inbounds %"struct.Point<i32>", ptr %p, i32 0, i32 0
+// CHECK-NEXT:   %7 = load i32, ptr %6, align 4
+// CHECK-NEXT:   %8 = getelementptr inbounds %"struct.Point<i32>", ptr %p, i32 0, i32 1
+// CHECK-NEXT:   %9 = load i32, ptr %8, align 4
+// CHECK-NEXT:   %10 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %7, i32 %9)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

@@ -3,7 +3,7 @@ struct Point {
   x: i32,
   y: i32,
 }
-// CHECK: ResolvedStructDecl:Point Point
+// CHECK: ResolvedStructDecl Point
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
@@ -13,7 +13,7 @@ struct Color {
   b: i32,
   p: Point,
 }
-// CHECK: ResolvedStructDecl:Color Color
+// CHECK: ResolvedStructDecl Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
 // CHECK-NEXT:   ResolvedFieldDecl:i32 g
 // CHECK-NEXT:   ResolvedFieldDecl:i32 b

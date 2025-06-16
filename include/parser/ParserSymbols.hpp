@@ -26,17 +26,57 @@ namespace DMZ {
 
     dmz_unreachable("unexpected operator");
 }
+// Forward declaration
+struct Type;
 
+struct GenericTypes {
+    std::vector<std::unique_ptr<Type>> types;
+
+    GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept : types(std::move(types)) {}
+
+    GenericTypes(const GenericTypes& other) {
+        types.reserve(other.types.size());
+        for (const auto& ptr : other.types) {
+            if (ptr) {
+                types.emplace_back(std::make_unique<Type>(*ptr));
+            } else {
+                types.emplace_back(nullptr);
+            }
+        }
+    }
+    GenericTypes& operator=(const GenericTypes& other) {
+        if (this != &other) {
+            types.clear();
+            types.reserve(other.types.size());
+            for (const auto& ptr : other.types) {
+                if (ptr) {
+                    types.emplace_back(std::make_unique<Type>(*ptr));
+                } else {
+                    types.emplace_back(nullptr);
+                }
+            }
+        }
+        return *this;
+    }
+    GenericTypes(GenericTypes&& other) noexcept : types(std::move(other.types)) {}
+
+    void dump() const;
+    std::string to_str() const;
+    friend std::ostream& operator<<(std::ostream& os, const GenericTypes& t);
+
+    bool operator==(const GenericTypes& other) const;
+};
 struct Type {
     enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err };
 
-    Kind kind;
-    std::string_view name;
+    Kind kind = Kind::Void;
+    std::string_view name = "";
     int size = 0;
     std::optional<int> isArray = std::nullopt;
     std::optional<int> isPointer = std::nullopt;
     bool isRef = false;
     bool isOptional = false;
+    std::optional<GenericTypes> genericTypes = std::nullopt;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinBool() { return {Kind::Int, "i1", 1}; }
@@ -128,6 +168,11 @@ struct Type {
         t.isOptional = false;
         return t;
     }
+    Type withoutRef() const {
+        Type t = *this;
+        t.isRef = false;
+        return t;
+    }
     Type withoutArray() const {
         Type t = *this;
         t.isArray = std::nullopt;
@@ -151,32 +196,6 @@ struct Type {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Type& t);
-};
-
-struct GenericTypes {
-    std::vector<Type> types;
-
-    GenericTypes(std::vector<Type> types) : types(std::move(types)) {}
-
-    void dump() const;
-    std::string to_str() const;
-    friend std::ostream& operator<<(std::ostream& os, const GenericTypes& t);
-
-    bool operator==(const GenericTypes& other) const {
-        if (types.size() != other.types.size()) {
-            return false;
-        }
-
-        for (size_t i = 0; i < types.size(); ++i) {
-            const auto& a = types[i];
-            const auto& b = other.types[i];
-
-            if (!(a == b)) {
-                return false;
-            }
-        }
-        return true;
-    }
 };
 
 template <typename Ty>
@@ -302,12 +321,12 @@ struct FieldInitStmt : public Stmt {
 };
 
 struct StructInstantiationExpr : public Expr {
-    std::string_view identifier;
+    Type structType;
     std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers;
 
-    StructInstantiationExpr(SourceLocation location, std::string_view identifier,
+    StructInstantiationExpr(SourceLocation location, Type structType,
                             std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers)
-        : Expr(location), identifier(identifier), fieldInitializers(std::move(fieldInitializers)) {}
+        : Expr(location), structType(std::move(structType)), fieldInitializers(std::move(fieldInitializers)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -466,9 +485,11 @@ struct FieldDecl : public Decl {
 
 struct StructDecl : public Decl {
     std::vector<std::unique_ptr<FieldDecl>> fields;
+    std::unique_ptr<GenericTypesDecl> genericTypes;
 
-    StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields)
-        : Decl(location, std::move(identifier)), fields(std::move(fields)) {}
+    StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields,
+               std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
+        : Decl(location, std::move(identifier)), fields(std::move(fields)), genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -518,14 +539,14 @@ struct ExternFunctionDecl : public FuncDecl {
 
 struct FunctionDecl : public FuncDecl {
     std::unique_ptr<Block> body;
-    std::unique_ptr<GenericTypesDecl> genericType;
+    std::unique_ptr<GenericTypesDecl> genericTypes;
 
     FunctionDecl(SourceLocation location, std::string_view identifier, Type type,
                  std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                 std::unique_ptr<GenericTypesDecl> genericType = nullptr)
+                 std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
         : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)),
           body(std::move(body)),
-          genericType(std::move(genericType)) {}
+          genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
 };

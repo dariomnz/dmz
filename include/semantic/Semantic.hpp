@@ -79,6 +79,7 @@ class Sema {
         const GenericTypesDecl &genericTypesDecl, const GenericTypes &specifiedTypes = GenericTypes{{}});
     ResolvedFuncDecl *specialize_generic_function(const ResolvedFuncDecl &parentFunc, ResolvedFunctionDecl &funcDecl,
                                                   const GenericTypes &genericTypes);
+    ResolvedStructDecl *specialize_generic_struct(ResolvedStructDecl &struDecl, const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);

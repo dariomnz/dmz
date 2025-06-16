@@ -300,11 +300,12 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
 
     const auto *st = lookup_decl<ResolvedStructDecl>(resolvedBase->type.name).first;
 
-    if (!st) {
-        return report(memberExpr.location, "failed to lookup struct");
-    }
+    if (!st) return report(memberExpr.location, "failed to lookup struct");
 
-    // lookup_decl_in_modules<ResolvedMem
+    if (resolvedBase->type.genericTypes) {
+        st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st), *resolvedBase->type.genericTypes);
+        if (!st) return report(memberExpr.location, "failed to specialize generic struct");
+    }
 
     const ResolvedFieldDecl *fieldDecl = nullptr;
     for (auto &&field : st->fields) {
@@ -335,11 +336,18 @@ std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtEx
 std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
-    const auto *st = lookup_decl<ResolvedStructDecl>(structInstantiation.identifier).first;
+    // TODO: fix
+    const auto *st = lookup_decl<ResolvedStructDecl>(structInstantiation.structType.name).first;
 
     if (!st)
         return report(structInstantiation.location,
-                      "'" + std::string(structInstantiation.identifier) + "' is not a struct type");
+                      "'" + std::string(structInstantiation.structType.name) + "' is not a struct type");
+
+    if (st->genericTypes) {
+        st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st),
+                                       *structInstantiation.structType.genericTypes);
+        if (!st) return nullptr;
+    }
 
     std::vector<std::unique_ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
     std::map<std::string_view, const ResolvedFieldInitStmt *> inits;

@@ -151,11 +151,13 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
     std::string_view structIdentifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
+    auto genericTypes = parse_generic_types_decl();
+
     varOrReturn(fieldList, parse_list_with_trailing_comma<FieldDecl>({TokenType::block_l, "expected '{'"},
                                                                      &Parser::parse_field_decl,
                                                                      {TokenType::block_r, "expected '}'"}));
 
-    return std::make_unique<StructDecl>(location, structIdentifier, std::move(*fieldList));
+    return std::make_unique<StructDecl>(location, structIdentifier, std::move(*fieldList), std::move(genericTypes));
 }
 
 // <fieldDecl>

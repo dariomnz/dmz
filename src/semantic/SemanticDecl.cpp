@@ -30,7 +30,7 @@ std::unique_ptr<ResolvedGenericTypesDecl> Sema::resolve_generic_types_decl(const
     resolvedTypes.reserve(genericTypesDecl.types.size());
     for (size_t i = 0; i < genericTypesDecl.types.size(); i++) {
         auto resolvedGenericType = resolve_generic_type_decl(*genericTypesDecl.types[i]);
-        if (specifiedTypes.types.size() >= i + 1) resolvedGenericType->specializedType = specifiedTypes.types[i];
+        if (specifiedTypes.types.size() >= i + 1) resolvedGenericType->specializedType = *specifiedTypes.types[i];
         if (!resolvedGenericType || !insert_decl_to_current_scope(*resolvedGenericType)) return nullptr;
         resolvedTypes.emplace_back(std::move(resolvedGenericType));
     }
@@ -57,8 +57,8 @@ std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &fu
     ScopeRAII paramScope(*this);
     std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
     if (auto func = dynamic_cast<const FunctionDecl *>(&function)) {
-        if (func->genericType) {
-            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericType);
+        if (func->genericTypes) {
+            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericTypes);
             if (!resolvedGenericTypesDecl) return nullptr;
         }
     }
@@ -124,8 +124,8 @@ ResolvedFuncDecl *Sema::specialize_generic_function(const ResolvedFuncDecl &pare
     ScopeRAII paramScope(*this);
     std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
     if (auto func = dynamic_cast<const FunctionDecl *>(funcDecl.functionDecl)) {
-        if (func->genericType) {
-            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericType, genericTypes);
+        if (func->genericTypes) {
+            resolvedGenericTypesDecl = resolve_generic_types_decl(*func->genericTypes, genericTypes);
             if (!resolvedGenericTypesDecl) return nullptr;
         }
     }
@@ -171,6 +171,45 @@ ResolvedFuncDecl *Sema::specialize_generic_function(const ResolvedFuncDecl &pare
     return retFunc.get();
 }
 
+ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl, const GenericTypes &genericTypes) {
+    debug_func(struDecl.location);
+    static std::mutex specialize_stru_mutex;
+    std::unique_lock lock(specialize_stru_mutex);
+    // Search if is specified
+    for (auto &&stru : struDecl.specializations) {
+        if (genericTypes == stru->specGenericTypes) return stru.get();
+    }
+
+    // If not found specialize the function
+    debug_func(structDecl.location);
+    ScopeRAII paramScope(*this);
+
+    std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
+    resolvedGenericTypesDecl = resolve_generic_types_decl(*struDecl.structDecl->genericTypes, genericTypes);
+    if (!resolvedGenericTypesDecl) return nullptr;
+
+    std::vector<std::unique_ptr<ResolvedFieldDecl>> resolvedFields;
+
+    unsigned idx = 0;
+    for (auto &&field : struDecl.fields) {
+        auto type = resolve_type(field->type);
+        if (!type) return report(field->location, "cannot resolve '" + field->type.to_str() + "' type");
+        resolvedFields.emplace_back(
+            std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, *type, idx++));
+    }
+
+    auto resolvedStruct = std::make_unique<ResolvedStructDecl>(
+        struDecl.location, struDecl.identifier, m_currentModuleID, struDecl.structDecl,
+        Type::structType(struDecl.identifier), nullptr, std::move(resolvedFields));
+
+    if (!resolve_struct_fields(*resolvedStruct)) return nullptr;
+
+    auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
+    retStruct->type.genericTypes = genericTypes;
+    retStruct->specGenericTypes = genericTypes;
+    return retStruct.get();
+}
+
 std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     debug_func(varDecl.location);
     if (!varDecl.type && !varDecl.initializer)
@@ -209,6 +248,12 @@ std::unique_ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &
     std::set<std::string_view> identifiers;
     std::vector<std::unique_ptr<ResolvedFieldDecl>> resolvedFields;
 
+    ScopeRAII fieldScope(*this);
+    std::unique_ptr<ResolvedGenericTypesDecl> resolvedGenericTypesDecl;
+    if (structDecl.genericTypes) {
+        resolvedGenericTypesDecl = resolve_generic_types_decl(*structDecl.genericTypes);
+        if (!resolvedGenericTypesDecl) return nullptr;
+    }
     unsigned idx = 0;
     for (auto &&field : structDecl.fields) {
         if (!identifiers.emplace(field->identifier).second)
@@ -219,11 +264,13 @@ std::unique_ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &
     }
 
     return std::make_unique<ResolvedStructDecl>(structDecl.location, structDecl.identifier, m_currentModuleID,
-                                                Type::structType(structDecl.identifier), std::move(resolvedFields));
+                                                &structDecl, Type::structType(structDecl.identifier),
+                                                std::move(resolvedGenericTypesDecl), std::move(resolvedFields));
 }
 
 bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
     debug_func(resolvedStructDecl.location);
+    if (resolvedStructDecl.genericTypes) return true;
     std::stack<std::pair<ResolvedStructDecl *, std::set<const ResolvedStructDecl *>>> worklist;
     worklist.push({&resolvedStructDecl, {}});
 

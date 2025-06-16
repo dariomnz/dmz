@@ -8,7 +8,7 @@ fn main() -> void {
 
   let y = s.x;
 }
-// CHECK: ResolvedStructDecl:S S
+// CHECK: ResolvedStructDecl S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock

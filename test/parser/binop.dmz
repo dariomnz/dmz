@@ -115,4 +115,6 @@ fn main() -> void {
     // CHECK-NEXT:       BinaryOperator '||'
     // CHECK-NEXT:         IntLiteral '4'
     // CHECK-NEXT:         IntLiteral '5'
+
+    1 < 3 > 1;
 }

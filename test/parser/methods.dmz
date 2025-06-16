@@ -34,7 +34,7 @@ fn main() -> void {
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl:Color c
-// CHECK-NEXT:         StructInstantiationExpr Color
+// CHECK-NEXT:         StructInstantiationExpr:Color
 // CHECK-NEXT:           FieldInitStmt r
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:           FieldInitStmt g

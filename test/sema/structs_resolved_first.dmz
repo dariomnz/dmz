@@ -7,11 +7,11 @@ fn main() -> void {}
 
 struct S { x: i32, y:i32}
 struct S2 { x: i32, y:i32}
-// CHECK: ResolvedStructDecl:S S
+// CHECK: ResolvedStructDecl S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-// CHECK-NEXT: ResolvedStructDecl:S2 S2
+// CHECK-NEXT: ResolvedStructDecl S2
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 

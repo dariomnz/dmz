@@ -12,7 +12,7 @@ fn Color.print(self:&Color) -> i32 {
     return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
 }
 // CHECK: ResolvedMemberFunctionDecl
-// CHECK-NEXT:   ResolvedStructDecl:Color Color
+// CHECK-NEXT:   ResolvedStructDecl Color
 // CHECK-NEXT:   ResolvedFunctionDecl print -> i32
 // CHECK-NEXT:     ResolvedParamDecl:&Color self
 // CHECK-NEXT:     ResolvedBlock

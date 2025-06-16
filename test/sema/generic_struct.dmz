@@ -1,0 +1,60 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+struct Point<T> {
+    x:T,
+    y:T,
+}
+// CHECK: ResolvedStructDecl Point
+// CHECK-NEXT:   ResolvedFieldDecl:T x
+// CHECK-NEXT:   ResolvedFieldDecl:T y
+// CHECK-NEXT:   ResolvedStructDecl Point<i32>
+// CHECK-NEXT:     ResolvedFieldDecl:i32 x
+// CHECK-NEXT:     ResolvedFieldDecl:i32 y
+
+fn main() -> void {
+    let p1 = Point<i32>{x:1, y:2};
+    let p:Point<i32> = Point<i32>{x:1, y:2};
+    p.x = 1;
+    p.y = 2;
+    printf(&"Point %d %d\n", p.x, p.y);
+}
+// CHECK: ResolvedFunctionDecl main -> void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:Point<i32> p1
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:     ResolvedDeclStmt
+// CHECK-NEXT:       ResolvedVarDecl:Point<i32> p
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:     ResolvedAssignment
+// CHECK-NEXT:       ResolvedMemberExpr:i32 x
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:     ResolvedAssignment
+// CHECK-NEXT:       ResolvedMemberExpr:i32 y
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:       | value: 2
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:       ResolvedRefPtrExpr:*u8[13]
+// CHECK-NEXT:         ResolvedStringLiteral:u8[13] 'Point %d %d\n'
+// CHECK-NEXT:       ResolvedMemberExpr:i32 x
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:       ResolvedMemberExpr:i32 y
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p

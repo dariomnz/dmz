@@ -24,7 +24,7 @@ void ResolvedExpr::dump_constant_value(size_t level) const {
 void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericTypeDecl " << identifier << '\n';
     if (specializedType) {
-        std::cerr << indent(level) << "Specialized type";
+        std::cerr << indent(level) << "Specialized type ";
         (*specializedType).dump();
         std::cerr << '\n';
     }
@@ -258,10 +258,11 @@ void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedStructDecl:" << type << " " << moduleID << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedStructDecl " << moduleID << type << '\n';
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1);
+    for (auto &&spec : specializations) spec->dump(level + 1);
 }
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {

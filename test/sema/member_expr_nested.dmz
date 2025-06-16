@@ -13,10 +13,10 @@ fn main() -> void {
 
   let x = s.n.x;
 }
-// CHECK: ResolvedStructDecl:S S
+// CHECK: ResolvedStructDecl S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:S2 n
-// CHECK-NEXT: ResolvedStructDecl:S2 S2
+// CHECK-NEXT: ResolvedStructDecl S2
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 
 // CHECK-NEXT: ResolvedFunctionDecl main -> void

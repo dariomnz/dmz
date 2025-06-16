@@ -223,11 +223,21 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 };
 
 struct ResolvedStructDecl : public ResolvedDecl {
+    std::unique_ptr<ResolvedGenericTypesDecl> genericTypes;
     std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID, Type type,
+    // For specialization
+    const StructDecl *structDecl;
+    GenericTypes specGenericTypes = GenericTypes{{}};
+    std::vector<std::unique_ptr<ResolvedStructDecl>> specializations = {};
+
+    ResolvedStructDecl(SourceLocation location, std::string_view identifier, ModuleID moduleID,
+                       const StructDecl *structDecl, Type type, std::unique_ptr<ResolvedGenericTypesDecl> genericTypes,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields)
-        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false), fields(std::move(fields)) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(moduleID), type, false),
+          genericTypes(std::move(genericTypes)),
+          fields(std::move(fields)),
+          structDecl(structDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

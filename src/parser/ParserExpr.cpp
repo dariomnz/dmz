@@ -44,7 +44,10 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
 
-        if (!(restrictions & StructNotAllowed) && m_nextToken.type == TokenType::block_l) {
+        if (!(restrictions & StructNotAllowed) &&
+            (m_nextToken.type == TokenType::block_l || nextToken_is_generic(TokenType::block_l))) {
+            auto genericTypes = parse_generic_types();
+
             auto fieldInitList = parse_list_with_trailing_comma<FieldInitStmt>({TokenType::block_l, "expected '{'"},
                                                                                &Parser::parse_field_init_stmt,
                                                                                {TokenType::block_r, "expected '}'"});
@@ -55,8 +58,10 @@ std::unique_ptr<Expr> Parser::parse_primary() {
                 return nullptr;
             }
 
-            return std::make_unique<StructInstantiationExpr>(location, std::move(identifier),
-                                                             std::move(*fieldInitList));
+            Type t = Type::customType(identifier);
+            if (genericTypes) t.genericTypes = *genericTypes;
+
+            return std::make_unique<StructInstantiationExpr>(location, std::move(t), std::move(*fieldInitList));
         }
 
         auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
@@ -117,11 +122,13 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
     }
 
     while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l ||
-           (m_nextToken.type == TokenType::op_less &&
-            (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more))) {
-        if (m_nextToken.type == TokenType::op_less &&
-            (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more)) {
+           nextToken_is_generic(TokenType::par_l)) {
+        if (nextToken_is_generic(TokenType::par_l)) {
             genericTypes = parse_generic_types();
+
+            // if (auto structIns = dynamic_cast<StructInstantiationExpr *>(expr.get())) {
+            //     if (genericTypes) structIns->structType.genericTypes = *genericTypes;
+            // }
         }
         if (m_nextToken.type == TokenType::par_l) {
             SourceLocation location = m_nextToken.loc;

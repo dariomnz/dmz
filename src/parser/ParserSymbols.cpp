@@ -15,6 +15,9 @@ std::ostream &operator<<(std::ostream &os, const Type &t) {
     if (t.isPointer)
         for (int i = 0; i < *t.isPointer; i++) os << "*";
     os << t.name;
+    if (t.genericTypes) {
+        os << (*t.genericTypes);
+    }
     if (t.isArray) {
         os << "[";
         if (*t.isArray != 0) {
@@ -38,11 +41,24 @@ std::ostream &operator<<(std::ostream &os, const GenericTypes &t) {
     if (t.types.size() == 0) return os;
     os << "<";
     for (size_t i = 0; i < t.types.size(); i++) {
-        os << t.types[i];
+        os << *t.types[i];
         if (i != t.types.size() - 1) os << ", ";
     }
     os << ">";
     return os;
+}
+
+bool GenericTypes::operator==(const GenericTypes &other) const {
+    if (types.size() != other.types.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (!(*types[i] == *other.types[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void GenericTypeDecl::dump([[maybe_unused]] size_t level) const { std::cerr << identifier; }
@@ -59,7 +75,7 @@ void GenericTypesDecl::dump() const {
 
 void FunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FunctionDecl " << identifier;
-    if (genericType) (*genericType).dump();
+    if (genericTypes) (*genericTypes).dump();
     std::cerr << " -> " << type << "\n";
 
     for (auto &&param : params) param->dump(level + 1);
@@ -218,7 +234,9 @@ void FieldDecl::dump(size_t level) const {
 }
 
 void StructDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "StructDecl " << identifier << '\n';
+    std::cerr << indent(level) << "StructDecl " << identifier;
+    if (genericTypes) (*genericTypes).dump();
+    std::cerr << '\n';
 
     for (auto &&field : fields) field->dump(level + 1);
 }
@@ -237,7 +255,7 @@ void ArrayAtExpr::dump(size_t level) const {
 }
 
 void StructInstantiationExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "StructInstantiationExpr " << identifier << '\n';
+    std::cerr << indent(level) << "StructInstantiationExpr:" << structType << '\n';
 
     for (auto &&field : fieldInitializers) field->dump(level + 1);
 }
