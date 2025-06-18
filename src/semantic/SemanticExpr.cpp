@@ -324,7 +324,7 @@ std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtEx
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
 
-    if (!resolvedBase->type.isArray) {
+    if (!resolvedBase->type.isArray && !resolvedBase->type.isPointer) {
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type.to_str() + '\'');
     }
 

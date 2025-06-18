@@ -1,0 +1,34 @@
+// RUN: compiler %s -run | filecheck %s
+
+// CHECK: Memory successfully allocated for 5 integers.
+// CHECK-NEXT: Element 0: 1
+// CHECK-NEXT: Element 1: 2
+// CHECK-NEXT: Element 2: 3
+// CHECK-NEXT: Element 3: 4
+// CHECK-NEXT: Element 4: 5
+// CHECK-NEXT: Memory freed.
+// CHECK-NOT: {{.*}}
+
+extern fn printf(fmt:*u8, ...) -> i32;
+extern fn malloc(size:i32) -> *i32;
+extern fn free(ptr:*i32) -> void;
+extern fn exit(code:i32) -> void;
+
+fn main() -> void {
+    let ptr:*i32;
+    let numElementos:i32 = 5;
+
+    ptr = malloc(numElementos * 4);
+
+    printf("Memory successfully allocated for %d integers.\n", numElementos);
+
+    let i:i32 = 0;
+    while (i < numElementos) {
+        ptr[i] = i + 1;
+        printf("Element %d: %d\n", i, ptr[i]);
+        i = i + 1;
+    }
+
+    free(ptr);
+    printf("Memory freed.\n");
+}

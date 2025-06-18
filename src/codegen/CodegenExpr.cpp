@@ -344,9 +344,17 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
 }
 
 llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer) {
-    llvm::Value *base = generate_expr(*arrayAtExpr.array, true);
-    llvm::Value *field = m_builder.CreateGEP(generate_type(arrayAtExpr.array->type), base,
-                                             {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)});
+    llvm::Value *base = generate_expr(*arrayAtExpr.array, !arrayAtExpr.array->type.isPointer);
+    llvm::Type *type = nullptr;
+    std::vector<llvm::Value *> idxs;
+    if (arrayAtExpr.array->type.isPointer) {
+        type = generate_type(arrayAtExpr.type);
+        idxs = {generate_expr(*arrayAtExpr.index)};
+    } else {
+        type = generate_type(arrayAtExpr.array->type);
+        idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
+    }
+    llvm::Value *field = m_builder.CreateGEP(type, base, idxs);
 
     return keepPointer ? field : load_value(field, arrayAtExpr.array->type.withoutArray());
 }

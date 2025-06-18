@@ -341,7 +341,7 @@ struct ResolvedArrayAtExpr : public ResolvedAssignableExpr {
 
     ResolvedArrayAtExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> array,
                         std::unique_ptr<ResolvedExpr> index)
-        : ResolvedAssignableExpr(location, array->type.withoutArray()),
+        : ResolvedAssignableExpr(location, array->type.withoutArray().remove_pointer()),
           array(std::move(array)),
           index(std::move(index)) {}
 

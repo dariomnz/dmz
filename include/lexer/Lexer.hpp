@@ -53,7 +53,6 @@ enum class TokenType {
     kw_true,
     kw_false,
     kw_fn,
-    kw_ptr,
     kw_if,
     kw_else,
     kw_let,
@@ -78,7 +77,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t);
 
 const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"fn", TokenType::kw_fn},
-    {"ptr", TokenType::kw_ptr},
     {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},
     {"let", TokenType::kw_let},
