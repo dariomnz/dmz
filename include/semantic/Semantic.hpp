@@ -65,11 +65,8 @@ class Sema {
     bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
 
    private:
-    template <typename T>
-    std::pair<T *, int> lookup_decl(const std::string_view id);
-    template <typename T>
-    T *lookup_decl_in_modules(const ModuleID &moduleID, const std::string_view id);
-    bool lookup_in_modules(const ModuleID &moduleID, const std::string_view id);
+    std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type);
+    ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     bool insert_decl_to_modules(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();

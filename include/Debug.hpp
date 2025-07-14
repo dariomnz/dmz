@@ -68,11 +68,18 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
 #define debug_func(out_format)
 #endif
 
+#ifdef DMZ_SINGLE_THREADED
 #define println(out_format)                                                  \
     {                                                                        \
         std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock()); \
         std::cout << std::dec << out_format << std::endl;                    \
     }
-
+#else  // DMZ_SINGLE_THREADED
+#define println(out_format)                                                                            \
+    {                                                                                                  \
+        std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock());                           \
+        std::cout << "[" << std::this_thread::get_id() << "] " << std::dec << out_format << std::endl; \
+    }
+#endif  // DMZ_SINGLE_THREADED
 #define TODO(msg) assert(false && "TODO" && msg)
 }  // namespace DMZ

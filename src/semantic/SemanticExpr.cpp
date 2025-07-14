@@ -15,14 +15,14 @@ bool op_generate_bool(TokenType op) {
 std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee) {
     debug_func(declRefExpr.location);
     // Search in the module scope
-    ResolvedDecl *decl = lookup_decl<ResolvedDecl>(declRefExpr.identifier).first;
+    ResolvedDecl *decl = lookup(declRefExpr.identifier, ResolvedDeclType::ResolvedDecl).first;
     if (!decl) {
         // Search in the current module
-        decl = lookup_decl_in_modules<ResolvedDecl>(m_currentModuleID, declRefExpr.identifier);
+        decl = lookup_in_modules(m_currentModuleID, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
     }
     if (!decl) {
         // Search in the imports
-        decl = lookup_decl_in_modules<ResolvedDecl>(m_currentModuleIDRef, declRefExpr.identifier);
+        decl = lookup_in_modules(m_currentModuleIDRef, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
     }
     if (!decl) {
         dump_scopes();
@@ -48,8 +48,8 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     const ResolvedMemberFunctionDecl *resolvedMemberFuncDecl = nullptr;
     bool isMemberCall = false;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
-        resolvedMemberFuncDecl =
-            lookup_decl_in_modules<ResolvedMemberFunctionDecl>(m_currentModuleIDRef, memberExpr->field);
+        resolvedMemberFuncDecl = static_cast<const ResolvedMemberFunctionDecl *>(
+            lookup_in_modules(m_currentModuleIDRef, memberExpr->field, ResolvedDeclType::ResolvedMemberFunctionDecl));
         if (!resolvedMemberFuncDecl) return report(memberExpr->location, "cannot fount struct of member function");
         resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
         parentFunc = resolvedMemberFuncDecl;
@@ -298,7 +298,8 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     if (resolvedBase->type.kind != Type::Kind::Struct)
         return report(memberExpr.base->location, "cannot access field of '" + resolvedBase->type.to_str() + '\'');
 
-    const auto *st = lookup_decl<ResolvedStructDecl>(resolvedBase->type.name).first;
+    const auto *st = static_cast<const ResolvedStructDecl *>(
+        lookup(resolvedBase->type.name, ResolvedDeclType::ResolvedStructDecl).first);
 
     if (!st) return report(memberExpr.location, "failed to lookup struct");
 
@@ -337,8 +338,8 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
     const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
     // TODO: fix
-    const auto *st = lookup_decl<ResolvedStructDecl>(structInstantiation.structType.name).first;
-
+    const auto *st = static_cast<const ResolvedStructDecl *>(
+        lookup(structInstantiation.structType.name, ResolvedDeclType::ResolvedStructDecl).first);
     if (!st)
         return report(structInstantiation.location,
                       "'" + std::string(structInstantiation.structType.name) + "' is not a struct type");
@@ -439,14 +440,17 @@ std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiatio
 std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {
     debug_func(errDeclRef.location);
     // Search in the module scope
-    ResolvedErrDecl *lookupErr = lookup_decl<ResolvedErrDecl>(errDeclRef.identifier).first;
+    ResolvedErrDecl *lookupErr =
+        static_cast<ResolvedErrDecl *>(lookup(errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl).first);
     if (!lookupErr) {
         // Search in the current module
-        lookupErr = lookup_decl_in_modules<ResolvedErrDecl>(m_currentModuleID, errDeclRef.identifier);
+        lookupErr = static_cast<ResolvedErrDecl *>(
+            lookup_in_modules(m_currentModuleID, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
     }
     if (!lookupErr) {
         // Search in the imports
-        lookupErr = lookup_decl_in_modules<ResolvedErrDecl>(m_currentModuleIDRef, errDeclRef.identifier);
+        lookupErr = static_cast<ResolvedErrDecl *>(
+            lookup_in_modules(m_currentModuleIDRef, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
     }
 
     if (!lookupErr) {
@@ -506,14 +510,15 @@ std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(co
     m_currentModuleIDRef = currentModuleID;
     // Only check imported of the last module
     if (!dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
-        std::string strToLookUp = currentModuleID.to_string();
-        std::string prevStr = prevModuleID.to_string();
-        auto newSize = currentModuleID.modules.size() > 0 ? strToLookUp.size() - 2 : strToLookUp.size();
-        strToLookUp = strToLookUp.substr(0, newSize);
-        const auto &[importDecl, _] = lookup_decl<ResolvedImportDecl>(strToLookUp);
+        // std::string strToLookUp = currentModuleID.to_string();
+        // std::string prevStr = prevModuleID.to_string();
+        // auto newSize = currentModuleID.modules.size() > 0 ? strToLookUp.size() - 2 : strToLookUp.size();
+        // strToLookUp = strToLookUp.substr(0, newSize);
+        auto *importDecl = static_cast<ResolvedImportDecl *>(
+            lookup_in_modules(m_currentModuleID, moduleDeclRef.identifier, ResolvedDeclType::ResolvedImportDecl));
         if (!importDecl) {
             // moduleDeclRef.dump();
-            return report(moduleDeclRef.location, "module '" + strToLookUp + "' not imported");
+            return report(moduleDeclRef.location, "module '" + currentModuleID.to_string() + "' not imported");
         }
         if (!importDecl->alias.empty()) {
             m_currentModuleIDRef = importDecl->moduleID;

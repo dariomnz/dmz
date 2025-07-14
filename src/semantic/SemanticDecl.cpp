@@ -40,7 +40,9 @@ std::unique_ptr<ResolvedGenericTypesDecl> Sema::resolve_generic_types_decl(const
 std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     debug_msg(function.location);
     if (auto memberFunctionDecl = dynamic_cast<const MemberFunctionDecl *>(&function)) {
-        varOrReturn(resolvedStructDecl, lookup_decl<ResolvedStructDecl>(memberFunctionDecl->base.name).first);
+        varOrReturn(resolvedStructDecl,
+                    static_cast<ResolvedStructDecl *>(
+                        lookup(memberFunctionDecl->base.name, ResolvedDeclType::ResolvedStructDecl).first));
         varOrReturn(resolvedFunc, resolve_function_decl(*memberFunctionDecl->function));
         varOrReturn(resolvedFunction, dynamic_cast<ResolvedFunctionDecl *>(resolvedFunc.get()));
 
@@ -297,7 +299,8 @@ bool Sema::resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl) {
             }
 
             if (type->kind == Type::Kind::Struct) {
-                auto *nestedStruct = lookup_decl<ResolvedStructDecl>(type->name).first;
+                auto *nestedStruct =
+                    static_cast<ResolvedStructDecl *>(lookup(type->name, ResolvedDeclType::ResolvedStructDecl).first);
                 if (!nestedStruct) {
                     report(field->location, "unexpected type");
                     return false;
@@ -516,7 +519,7 @@ std::unique_ptr<ResolvedImportDecl> Sema::resolve_import_decl(const ImportDecl &
 
 bool Sema::resolve_import_check(ResolvedImportDecl &importDecl) {
     debug_func(importDecl.location);
-    const auto moduleDecl = lookup_in_modules(importDecl.moduleID, importDecl.identifier);
+    const auto moduleDecl = lookup_in_modules(importDecl.moduleID, importDecl.identifier, ResolvedDeclType::Module);
     if (!moduleDecl) {
         report(importDecl.location, "module '" + std::string(importDecl.identifier) + "' not found");
         return false;
@@ -525,6 +528,6 @@ bool Sema::resolve_import_check(ResolvedImportDecl &importDecl) {
         return resolve_import_check(*importDecl.nestedImport);
     }
 
-    return insert_decl_to_current_scope(importDecl);
+    return insert_decl_to_modules(importDecl);
 }
 }  // namespace DMZ

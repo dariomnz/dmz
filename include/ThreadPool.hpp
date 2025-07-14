@@ -11,6 +11,16 @@ namespace DMZ {
 
 class ThreadPool {
    public:
+#ifdef DMZ_SINGLE_THREADED
+    ThreadPool(size_t num_threads = std::thread::hardware_concurrency()) {}
+
+    void submit(std::function<void()> task) { task(); }
+
+    void wait() {}
+
+    ~ThreadPool() {}
+
+#else
     ThreadPool(size_t num_threads = std::thread::hardware_concurrency()) : stop(false), active_tasks(0) {
         for (size_t i = 0; i < num_threads; ++i) {
             workers.emplace_back([this] {
@@ -64,7 +74,7 @@ class ThreadPool {
 
    private:
     std::vector<std::thread> workers;
-    std::queue<std::function<void()>> tasks;
+    std::queue<std::function<void()> > tasks;
 
     std::mutex queue_mutex;
     std::condition_variable condition;
@@ -72,5 +82,6 @@ class ThreadPool {
 
     bool stop;
     std::atomic<int> active_tasks;
+#endif  // DMZ_SINGLE_THREADED
 };
 }  // namespace DMZ

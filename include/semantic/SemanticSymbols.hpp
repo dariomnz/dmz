@@ -55,6 +55,17 @@ struct ResolvedDecl {
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
 };
 
+enum struct ResolvedDeclType {
+    Module,
+    ResolvedDecl,
+    ResolvedStructDecl,
+    ResolvedErrDecl,
+    ResolvedImportDecl,
+    ResolvedModuleDecl,
+    ResolvedMemberFunctionDecl,
+    ResolvedGenericTypeDecl,
+};
+
 struct ResolvedGenericTypeDecl : public ResolvedDecl {
     std::optional<Type> specializedType;
 
