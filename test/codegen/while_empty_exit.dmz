@@ -7,15 +7,11 @@ fn foo(x: i32) -> void {
 }
 // CHECK: define void @foo(i32 %x) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %x1 = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 
 // CHECK-NEXT: while.cond:                                       ; preds = %entry
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %1 = icmp sgt i32 %0, 1
-// CHECK-NEXT:   br i1 %1, label %while.body, label %while.exit
+// CHECK-NEXT:   %0 = icmp sgt i32 %x, 1
+// CHECK-NEXT:   br i1 %0, label %while.body, label %while.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: while.body:                                       ; preds = %while.cond
 // CHECK-NEXT:   br label %return

@@ -10,7 +10,7 @@ struct S2 {
   y: i32,
   z: i32,
 }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
 fn foo() -> void {
   println(S2 { x: 1, y: 2, z: 3 }.z);

@@ -1,23 +1,24 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '3\n2\n1\n1\n')
 
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 fn mutableParam(n: i32) -> void {
-  n = 3;
-  println(n);
+  let y = n;
+  y = 3;
+  println(y);
 }
 // CHECK: define void @mutableParam(i32 %n) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %n1 = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %n, ptr %n1, align 4
-// CHECK-NEXT:   store i32 3, ptr %n1, align 4
-// CHECK-NEXT:   %0 = load i32, ptr %n1, align 4
+// CHECK-NEXT:   %y = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %n, ptr %y, align 4
+// CHECK-NEXT:   store i32 3, ptr %y, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %y, align 4
 // CHECK-NEXT:   call void @println(i32 %0)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn immutableParam(const n: i32) -> void {
+fn immutableParam(n: i32) -> void {
   println(n);
 }
 // CHECK: define void @immutableParam(i32 %n) {

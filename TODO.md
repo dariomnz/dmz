@@ -10,6 +10,7 @@
 - [x] Conversion between types cast
 - [x] Modules and import
 - [x] Pointers
+- [ ] Change modules and import
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits

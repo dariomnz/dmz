@@ -4,7 +4,7 @@ fn mutableParam(n: i32) -> void {
   n = 1;
 }
 
-fn immutableParam(const n: i32) -> void {
+fn immutableParam(n: i32) -> void {
   n = 1;
   // CHECK: [[# @LINE - 1 ]]:5: error: 'n' cannot be mutated
 }

@@ -5,15 +5,17 @@ struct S {
 }
 
 fn foo(s: S) -> void {
-  s.x = 6;
-  println(s.x);
+  let aux = s;
+  aux.x = 6;
+  println(aux.x);
 }
 
 fn bar(s: S) -> S {
-  s.y = 8;
-  return s;
+  let aux = s;
+  aux.y = 8;
+  return aux;
 }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
   let s = S { x: 1, y: 2 };

@@ -97,9 +97,6 @@ std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
         return std::make_unique<ParamDecl>(location, std::move(identifier), Type::builtinVoid(), false, true);
     }
 
-    bool isConst = m_nextToken.type == TokenType::kw_const;
-    if (isConst) eat_next_token();  // eat 'const'
-
     matchOrReturn(TokenType::id, "expected parameter declaration");
 
     std::string_view identifier = m_nextToken.str;
@@ -110,7 +107,7 @@ std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
 
     varOrReturn(type, parse_type());
 
-    return std::make_unique<ParamDecl>(location, std::move(identifier), std::move(*type), !isConst);
+    return std::make_unique<ParamDecl>(location, std::move(identifier), std::move(*type), false);
 }
 
 std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {

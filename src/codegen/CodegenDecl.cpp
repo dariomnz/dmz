@@ -103,15 +103,14 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
         debug_msg("Param: " << param->type);
         llvm::AttrBuilder paramAttrs(*m_context);
         if (param->type.kind == Type::Kind::Struct) {
-            if (param->isMutable) {
-                // generate_type(param->type)->dump();
-                if (param->type.isRef) {
-                    paramAttrs.addByRefAttr(generate_type(param->type));
-                } else {
-                    paramAttrs.addByValAttr(generate_type(param->type));
-                }
+            if (param->type.isRef) {
+                paramAttrs.addByRefAttr(generate_type(param->type));
             } else {
-                paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
+                if (param->isMutable) {
+                    paramAttrs.addByValAttr(generate_type(param->type));
+                } else {
+                    paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
+                }
             }
         } else {
             if (param->type.isRef) {

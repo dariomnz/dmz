@@ -1,6 +1,6 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '2\n')
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 fn foo(x: i32) -> void {
     let i: i32 = x;
 
@@ -15,26 +15,22 @@ fn main() -> void {
 }
 // CHECK: define void @foo(i32 %x) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   %i = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   store i32 %0, ptr %i, align 4
+// CHECK-NEXT:   store i32 %x, ptr %i, align 4
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 
 // CHECK-NEXT: while.cond:                                       ; preds = %while.body, %entry
-// CHECK-NEXT:   %1 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %2 = icmp sgt i32 %1, 1
-// CHECK-NEXT:   br i1 %2, label %while.body, label %while.exit
+// CHECK-NEXT:   %0 = load i32, ptr %i, align 4
+// CHECK-NEXT:   %1 = icmp sgt i32 %0, 1
+// CHECK-NEXT:   br i1 %1, label %while.body, label %while.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: while.body:                                       ; preds = %while.cond
+// CHECK-NEXT:   %2 = load i32, ptr %i, align 4
+// CHECK-NEXT:   call void @println(i32 %2)
 // CHECK-NEXT:   %3 = load i32, ptr %i, align 4
-// CHECK-NEXT:   call void @println(i32 %3)
-// CHECK-NEXT:   %4 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %5 = sub i32 %4, 1
-// CHECK-NEXT:   store i32 %5, ptr %i, align 4
+// CHECK-NEXT:   %4 = sub i32 %3, 1
+// CHECK-NEXT:   store i32 %4, ptr %i, align 4
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 
 // CHECK-NEXT: while.exit:                                       ; preds = %while.cond

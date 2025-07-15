@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn main() -> void {
-    let const x: i32;
+    const x: i32;
     
     if (1) {
         x = 2;
@@ -12,7 +12,7 @@ fn main() -> void {
 }
 
 fn modifyImmutable() -> void {
-    let const x: i32 = 1;
+    const x: i32 = 1;
     
     if (1) {
         // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
@@ -27,10 +27,10 @@ fn modifyImmutable() -> void {
 }
 
 fn uninitOneBranch() -> void {
-    let const x: i32;
+    const x: i32;
     
     if (1) {
-        let const x: i32;
+        const x: i32;
         x = 1; // init inner 'x'
     } else {
         x = 2;
@@ -71,7 +71,7 @@ fn initConditionVar() -> void {
 }
 
 fn loop() -> void {
-    let const x: i32;
+    const x: i32;
     let y: i32;
     
     while (1) {
@@ -89,10 +89,10 @@ fn loop() -> void {
 }
 
 fn shadowInitialization() -> void {
-    let const x: i32;
+    const x: i32;
     
     if (1) {
-        let const x: i32;
+        const x: i32;
         x = 1;
     } else {
         x = 2;
@@ -103,11 +103,11 @@ fn shadowInitialization() -> void {
 }
 
 fn shadowInitialized() -> void {
-    let const x: i32;
+    const x: i32;
     
     if (1) {
         x = 1;
-        let const x: i32;
+        const x: i32;
         // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
         x;
     } else {

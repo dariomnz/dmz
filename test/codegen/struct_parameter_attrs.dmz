@@ -3,28 +3,24 @@
 struct S {
   x: i32,
 }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
-fn foo(const a: i32, const b: S, c: i32, d: S) -> void {
+fn foo(a: i32, b: S, c: i32, d: S) -> void {
   println(a);
   println(b.x);
   println(c);
   println(d.x);
 }
-// CHECK:      define void @foo(i32 %a, ptr readonly %b, i32 %c, ptr byval(%struct.S) %d) {
+// CHECK: define void @foo(i32 %a, ptr readonly %b, i32 %c, ptr readonly %d) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %c1 = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %c, ptr %c1, align 4
 // CHECK-NEXT:   call void @println(i32 %a)
 // CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %b, i32 0, i32 0
 // CHECK-NEXT:   %1 = load i32, ptr %0, align 4
 // CHECK-NEXT:   call void @println(i32 %1)
-// CHECK-NEXT:   %2 = load i32, ptr %c1, align 4
-// CHECK-NEXT:   call void @println(i32 %2)
-// CHECK-NEXT:   %3 = getelementptr inbounds %struct.S, ptr %d, i32 0, i32 0
-// CHECK-NEXT:   %4 = load i32, ptr %3, align 4
-// CHECK-NEXT:   call void @println(i32 %4)
+// CHECK-NEXT:   call void @println(i32 %c)
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.S, ptr %d, i32 0, i32 0
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   call void @println(i32 %3)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -32,18 +28,15 @@ fn main() -> void {
   let s = S { x: 2 };
   foo(1, s, 3, s);
 }
-// CHECK:      define void @__builtin_main() {
+// CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %s = alloca %struct.S, align 8
 // CHECK-NEXT:   %S.tmp = alloca %struct.S, align 8
-// CHECK-NEXT:   %struct.arg.tmp = alloca %struct.S, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %s, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %S.tmp, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.arg.tmp, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = getelementptr inbounds %struct.S, ptr %S.tmp, i32 0, i32 0
 // CHECK-NEXT:   store i32 2, ptr %0, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %S.tmp, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %struct.arg.tmp, ptr align 4 %s, i64 4, i1 false)
-// CHECK-NEXT:   call void @foo(i32 1, ptr readonly %s, i32 3, ptr byval(%struct.S) %struct.arg.tmp)
+// CHECK-NEXT:   call void @foo(i32 1, ptr readonly %s, i32 3, ptr readonly %s)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

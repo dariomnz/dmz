@@ -6,29 +6,23 @@ fn foo(x: i32) -> void {
 }
 // CHECK: define void @foo(i32 %x) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %x1 = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %1 = icmp eq i32 %0, 1
-// CHECK-NEXT:   br i1 %1, label %or.merge, label %or.rhs
+// CHECK-NEXT:   %0 = icmp eq i32 %x, 1
+// CHECK-NEXT:   br i1 %0, label %or.merge, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %entry
-// CHECK-NEXT:   %2 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %3 = icmp eq i32 %2, 2
-// CHECK-NEXT:   br i1 %3, label %and.rhs, label %and.merge
+// CHECK-NEXT:   %1 = icmp eq i32 %x, 2
+// CHECK-NEXT:   br i1 %1, label %and.rhs, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %and.merge, %entry
-// CHECK-NEXT:   %4 = phi i1 [ %7, %and.merge ], [ true, %entry ]
-// CHECK-NEXT:   br i1 %4, label %if.true, label %if.exit
+// CHECK-NEXT:   %2 = phi i1 [ %4, %and.merge ], [ true, %entry ]
+// CHECK-NEXT:   br i1 %2, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %or.rhs
-// CHECK-NEXT:   %5 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %6 = icmp sgt i32 %5, 3
+// CHECK-NEXT:   %3 = icmp sgt i32 %x, 3
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.merge:                                        ; preds = %and.rhs, %or.rhs
-// CHECK-NEXT:   %7 = phi i1 [ %6, %and.rhs ], [ false, %or.rhs ]
+// CHECK-NEXT:   %4 = phi i1 [ %3, %and.rhs ], [ false, %or.rhs ]
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %or.merge

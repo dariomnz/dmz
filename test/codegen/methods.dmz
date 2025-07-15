@@ -31,7 +31,7 @@ fn Color.print(self:&Color) -> i32 {
 // CHECK-NEXT:   ret i32 %7
 // CHECK-NEXT: }
 
-fn Color.add<T>(self:&Color, const n:T) -> void {
+fn Color.add<T>(self:&Color, n:T) -> void {
     self.r = self.r + n;
     self.g = self.g + n;
     self.b = self.b + n;

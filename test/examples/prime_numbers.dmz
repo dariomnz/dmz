@@ -12,7 +12,7 @@
 // CHECK-NEXT: 29
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 fn divides(n: i32, divisor: i32) -> i32 {
     let i = 1;
     while (i <= n) {

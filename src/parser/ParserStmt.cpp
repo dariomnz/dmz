@@ -27,7 +27,7 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
-    if (m_nextToken.type == TokenType::kw_let) return parse_decl_stmt();
+    if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
     if (m_nextToken.type == TokenType::kw_defer) return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
     if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
@@ -124,13 +124,8 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
 
 std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
     Token tok = m_nextToken;
-    eat_next_token();  // eat 'let'
-
-    bool isConst = false;
-    if (m_nextToken.type == TokenType::kw_const) {
-        eat_next_token();  // eat 'const'
-        isConst = true;
-    }
+    bool isConst = m_nextToken.type == TokenType::kw_const;
+    eat_next_token();  // eat 'let' or 'const'
 
     matchOrReturn(TokenType::id, "expected identifier");
     varOrReturn(varDecl, parse_var_decl(isConst));

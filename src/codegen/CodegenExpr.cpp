@@ -329,7 +329,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     const ResolvedDecl &decl = dre.decl;
     llvm::Value *val = m_declarations[&decl];
 
-    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
+    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable && !decl.type.isRef;
     keepPointer |= dre.type.kind == Type::Kind::Struct;
     keepPointer |= dre.type.isArray.has_value();
 

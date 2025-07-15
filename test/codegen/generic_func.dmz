@@ -3,7 +3,7 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-fn print<T>(const param:T) -> void {
+fn print<T>(param:T) -> void {
     printf("One integer %d\n", param);
 }
 
@@ -19,7 +19,7 @@ fn print<T>(const param:T) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn foo<T, F, G>(const param1:T, const param2:F, const param3:G) -> void {
+fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
     printf("Integers %d %d %d\n", param1, param2, param3);
 }
 

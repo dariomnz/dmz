@@ -22,25 +22,18 @@ fn foo(x: i32) -> Small {
 }
 // CHECK: define void @foo(ptr sret(%struct.Small) %ret, i32 %x) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   %s = alloca %struct.Small, align 8
 // CHECK-NEXT:   %Small.tmp = alloca %struct.Small, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %s, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Small.tmp, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
-
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %1 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %2 = add i32 %1, 5
-// CHECK-NEXT:   %3 = getelementptr inbounds %struct.Small, ptr %Small.tmp, i32 0, i32 0
-// CHECK-NEXT:   store i32 %0, ptr %3, align 4
-// CHECK-NEXT:   %4 = getelementptr inbounds %struct.Small, ptr %Small.tmp, i32 0, i32 1
-// CHECK-NEXT:   store i32 %2, ptr %4, align 4
+// CHECK-NEXT:   %0 = add i32 %x, 5
+// CHECK-NEXT:   %1 = getelementptr inbounds %struct.Small, ptr %Small.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 %x, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr inbounds %struct.Small, ptr %Small.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 %0, ptr %2, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %Small.tmp, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ret, ptr align 4 %s, i64 8, i1 false)
 // CHECK-NEXT:   br label %return
-
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
 // CHECK-NEXT:   ret void
@@ -72,7 +65,7 @@ fn bar() -> S {
 // CHECK-NEXT: return:                                           ; preds = %entry
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
   println(bar().x);

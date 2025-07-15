@@ -3,30 +3,25 @@
 fn negate(x: i32) -> i32 {
     return -x;
     
-    // CHECK: %0 = load i32, ptr %x1, align 4
-    // CHECK-NEXT: %1 = sub i32 0, %0
+    // CHECK: %0 = sub i32 0, %x
 }
 
 fn null(x: i32) -> i32 {
     return --x;
 
-    // CHECK: %0 = load i32, ptr %x1, align 4
+    // CHECK: %0 = sub i32 0, %x
     // CHECK-NEXT: %1 = sub i32 0, %0
-    // CHECK-NEXT: %2 = sub i32 0, %1
 }
 
 fn timesNeg3(x: i32) -> i32 {
     return -(x - -x -(-x));
-    // CHECK: %0 = load i32, ptr %x1, align 4
-    // CHECK-NEXT: %1 = load i32, ptr %x1, align 4
-    // CHECK-NEXT: %2 = sub i32 0, %1
-    // CHECK-NEXT: %3 = sub i32 %0, %2
-    // CHECK-NEXT: %4 = load i32, ptr %x1, align 4
-    // CHECK-NEXT: %5 = sub i32 0, %4
-    // CHECK-NEXT: %6 = sub i32 %3, %5
-    // CHECK-NEXT: %7 = sub i32 0, %6
+    // CHECK:  %0 = sub i32 0, %x
+    // CHECK-NEXT:  %1 = sub i32 %x, %0
+    // CHECK-NEXT:  %2 = sub i32 0, %x
+    // CHECK-NEXT:  %3 = sub i32 %1, %2
+    // CHECK-NEXT:  %4 = sub i32 0, %3
 }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
 fn main() -> void {
     println(negate(234));

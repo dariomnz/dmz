@@ -3,7 +3,7 @@
 extern fn printf(fmt:*u8, ...) -> i32;
 
 fn main() -> void {
-    let const x = 10;
+    const x = 10;
     let y = 10;
 
     switch(x) {

@@ -8,7 +8,7 @@
 // CHECK-NEXT: 43
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 
 struct Color {
     r: i32,
@@ -16,17 +16,18 @@ struct Color {
     b: i32,
 }
 
-fn print_color(const n: Color) -> void {
+fn print_color(n: Color) -> void {
     println(n.r);
     println(n.g);
     println(n.b);
 }
 
 fn add_color(n:Color, add:i32) -> Color {
-    n.r = n.r + add;
-    n.g = n.g + add;
-    n.b = n.b + add;
-    return n;
+    let aux = n;
+    aux.r = n.r + add;
+    aux.g = n.g + add;
+    aux.b = n.b + add;
+    return aux;
 }
 
 fn main() -> void {

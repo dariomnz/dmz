@@ -402,7 +402,8 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
 
                     const auto *decl = dynamic_cast<const ResolvedDecl *>(&dre->decl);
 
-                    if (!decl->isMutable && tmp[decl] != State::Unassigned) {
+                    if (!decl->isMutable && !decl->type.isRef && !decl->type.isPointer &&
+                        tmp[decl] != State::Unassigned) {
                         std::string msg = '\'' + std::string(decl->identifier) + "' cannot be mutated";
                         pendingErrors.emplace_back(assignment->location, std::move(msg));
                     }

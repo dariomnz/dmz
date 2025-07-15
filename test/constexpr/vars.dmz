@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
 fn pass() -> i32 {
-    let const x: i32 = 2;
+    const x: i32 = 2;
     return x * 10;
 }
 // CHECK:     ResolvedReturnStmt
@@ -10,7 +10,7 @@ fn pass() -> i32 {
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
 
 fn pass2() -> i32 {
-    let const x: i32 = 2;
+    const x: i32 = 2;
     return x;
 }
 // CHECK:     ResolvedReturnStmt
@@ -18,7 +18,7 @@ fn pass2() -> i32 {
 // CHECK-NEXT:       | value: 2
 
 fn error() -> i32 {
-    let const x: i32;
+    const x: i32;
     x = 2;
     return x * 10;
 }

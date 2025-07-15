@@ -1,6 +1,6 @@
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run) <(echo -n -e '2\n10\n52\n')
-extern fn printf(fmt:*u8, ...) -> i32; fn println(const n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 fn foo(x: i32) -> i32 {
     if (x == 1) {
         return 2;
@@ -17,37 +17,32 @@ fn foo(x: i32) -> i32 {
 // CHECK: define i32 @foo(i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %1 = icmp eq i32 %0, 1
-// CHECK-NEXT:   br i1 %1, label %if.true, label %if.false
+// CHECK-NEXT:   %0 = icmp eq i32 %x, 1
+// CHECK-NEXT:   br i1 %0, label %if.true, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
 // CHECK-NEXT:   store i32 2, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %entry
-// CHECK-NEXT:   %2 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %3 = icmp eq i32 %2, 2
-// CHECK-NEXT:   br i1 %3, label %if.true2, label %if.exit
+// CHECK-NEXT:   %1 = icmp eq i32 %x, 2
+// CHECK-NEXT:   br i1 %1, label %if.true1, label %if.exit
 // CHECK-NEXT: 
-// CHECK-NEXT: if.true2:                                         ; preds = %if.false
+// CHECK-NEXT: if.true1:                                         ; preds = %if.false
 // CHECK-NEXT:   store i32 10, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false
-// CHECK-NEXT:   br label %if.exit3
+// CHECK-NEXT:   br label %if.exit2
 // CHECK-NEXT: 
-// CHECK-NEXT: if.exit3:                                         ; preds = %if.exit
+// CHECK-NEXT: if.exit2:                                         ; preds = %if.exit
 // CHECK-NEXT:   store i32 52, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
-// CHECK-NEXT: return:                                           ; preds = %if.exit3, %if.true2, %if.true
-// CHECK-NEXT:   %4 = load i32, ptr %retval, align 4
-// CHECK-NEXT:   ret i32 %4
+// CHECK-NEXT: return:                                           ; preds = %if.exit2, %if.true1, %if.true
+// CHECK-NEXT:   %2 = load i32, ptr %retval, align 4
+// CHECK-NEXT:   ret i32 %2
 // CHECK-NEXT: }
 
 fn main() -> void {

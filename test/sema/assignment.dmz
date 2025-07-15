@@ -23,7 +23,7 @@ fn main() -> void {
     z = 3;
 }
 
-fn assignParam(const x: i32) -> void {
+fn assignParam(x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
     x = 1;
 }
