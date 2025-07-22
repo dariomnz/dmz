@@ -1,4 +1,4 @@
-// RUN: compiler %s %S/module_ops.dmz -ast-dump 2>&1 | filecheck %s
+// RUN: compiler %s %S/module_ops.dmz -res-dump 2>&1 | filecheck %s
 
 const ops = import("ops");
 // CHECK: ResolvedImportDecl ops

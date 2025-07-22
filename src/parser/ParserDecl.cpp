@@ -29,9 +29,7 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     debug_func("");
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
-    std::string_view structIdentifier;
     bool isExtern = false;
-    // bool isMember = false;
 
     if (m_nextToken.type == TokenType::kw_extern) {
         isExtern = true;
@@ -47,15 +45,6 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     std::string_view functionIdentifier = m_nextToken.str;
     structLocation = m_nextToken.loc;
     eat_next_token();  // eat identifier
-
-    // if (m_nextToken.type == TokenType::dot) {
-    //     isMember = true;
-    //     eat_next_token();  // eat '.'
-    //     matchOrReturn(TokenType::id, "expected identifier");
-    //     structIdentifier = functionIdentifier;
-    //     functionIdentifier = m_nextToken.str;
-    //     eat_next_token();  // eat identifier
-    // }
 
     auto genericTypes = parse_generic_types_decl();
 
@@ -78,14 +67,8 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    auto funcDecl = std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
+    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
                                                    std::move(block), std::move(genericTypes));
-
-    // if (isMember) {
-    //     auto declRefExpr = Type::customType(structIdentifier);
-    //     return std::make_unique<MemberFunctionDecl>(std::move(declRefExpr), std::move(funcDecl));
-    // }
-    return funcDecl;
 }
 
 // <paramDecl>

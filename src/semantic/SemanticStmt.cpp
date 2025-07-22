@@ -178,7 +178,7 @@ std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(
     for (int i = m_defers.size() - 1; i >= 0; --i) {
         for (int j = m_defers[i].size() - 1; j >= 0; --j) {
             auto deferStmt = m_defers[i][j];
-            defers.emplace_back(std::make_unique<ResolvedDeferRefStmt>(*deferStmt));
+            defers.emplace_back(std::make_unique<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
         }
         if (isScope) break;
     }

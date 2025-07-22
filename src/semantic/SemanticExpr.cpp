@@ -37,8 +37,11 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
 
     // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
     varOrReturn(type, resolve_type(decl->type));
+    auto resolvedDeclRefExpr = std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl, *type);
+    
+    resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
     // println(type->to_str());
-    return std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl, *type);
+    return resolvedDeclRefExpr;
 }
 
 std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {

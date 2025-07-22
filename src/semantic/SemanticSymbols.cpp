@@ -103,15 +103,15 @@ void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    for (auto &&arg : arguments) arg->dump(level + 1);
+    for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);
 }
 
 void ResolvedBlock::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedBlock\n";
 
     if (onlySelf) return;
-    for (auto &&stmt : statements) stmt->dump(level + 1);
-    for (auto &&d : defers) d->dump(level + 1);
+    for (auto &&stmt : statements) stmt->dump(level + 1, onlySelf);
+    for (auto &&d : defers) d->dump(level + 1, onlySelf);
 }
 
 void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
@@ -130,7 +130,7 @@ void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedExternFunctionDecl " << identifier << " -> " << type << '\n';
 
     if (onlySelf) return;
-    for (auto &&param : params) param->dump(level + 1);
+    for (auto &&param : params) param->dump(level + 1, onlySelf);
 }
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
@@ -138,12 +138,12 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     if (genericTypes) genericTypes->dump(level + 1, onlySelf);
 
     if (onlySelf) return;
-    for (auto &&param : params) param->dump(level + 1);
+    for (auto &&param : params) param->dump(level + 1, onlySelf);
 
-    if (body) body->dump(level + 1);
+    if (body) body->dump(level + 1, onlySelf);
 
     for (auto &&func : specializations) {
-        func->dump(level + 1);
+        func->dump(level + 1, onlySelf);
     }
 }
 
@@ -161,17 +161,17 @@ void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << " -> " << type << '\n';
 
     if (onlySelf) return;
-    for (auto &&param : params) param->dump(level + 1);
+    for (auto &&param : params) param->dump(level + 1, onlySelf);
 
-    body->dump(level + 1);
+    body->dump(level + 1, onlySelf);
 }
 
 void ResolvedReturnStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedReturnStmt\n";
 
     if (onlySelf) return;
-    if (expr) expr->dump(level + 1);
-    for (auto &&d : defers) d->dump(level + 1);
+    if (expr) expr->dump(level + 1, onlySelf);
+    for (auto &&d : defers) d->dump(level + 1, onlySelf);
 }
 
 void ResolvedBinaryOperator::dump(size_t level, bool onlySelf) const {
@@ -179,8 +179,8 @@ void ResolvedBinaryOperator::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    lhs->dump(level + 1);
-    rhs->dump(level + 1);
+    lhs->dump(level + 1, onlySelf);
+    rhs->dump(level + 1, onlySelf);
 }
 
 void ResolvedUnaryOperator::dump(size_t level, bool onlySelf) const {
@@ -188,7 +188,7 @@ void ResolvedUnaryOperator::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    operand->dump(level + 1);
+    operand->dump(level + 1, onlySelf);
 }
 
 void ResolvedRefPtrExpr::dump(size_t level, bool onlySelf) const {
@@ -196,7 +196,7 @@ void ResolvedRefPtrExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    expr->dump(level + 1);
+    expr->dump(level + 1, onlySelf);
 }
 
 void ResolvedDerefPtrExpr::dump(size_t level, bool onlySelf) const {
@@ -204,7 +204,7 @@ void ResolvedDerefPtrExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    expr->dump(level + 1);
+    expr->dump(level + 1, onlySelf);
 }
 
 void ResolvedGroupingExpr::dump(size_t level, bool onlySelf) const {
@@ -212,65 +212,65 @@ void ResolvedGroupingExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
 
-    expr->dump(level + 1);
+    expr->dump(level + 1, onlySelf);
 }
 
 void ResolvedIfStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedIfStmt\n";
 
     if (onlySelf) return;
-    condition->dump(level + 1);
-    trueBlock->dump(level + 1);
-    if (falseBlock) falseBlock->dump(level + 1);
+    condition->dump(level + 1, onlySelf);
+    trueBlock->dump(level + 1, onlySelf);
+    if (falseBlock) falseBlock->dump(level + 1, onlySelf);
 }
 
 void ResolvedWhileStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedWhileStmt\n";
 
     if (onlySelf) return;
-    condition->dump(level + 1);
-    body->dump(level + 1);
+    condition->dump(level + 1, onlySelf);
+    body->dump(level + 1, onlySelf);
 }
 
 void ResolvedCaseStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCaseStmt\n";
 
     if (onlySelf) return;
-    condition->dump(level + 1);
-    block->dump(level + 1);
+    condition->dump(level + 1, onlySelf);
+    block->dump(level + 1, onlySelf);
 }
 
 void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSwitchStmt\n";
 
     if (onlySelf) return;
-    condition->dump(level + 1);
+    condition->dump(level + 1, onlySelf);
 
     for (auto &&c : cases) {
-        c->dump(level + 1);
+        c->dump(level + 1, onlySelf);
     }
     std::cerr << indent(level + 1) << "ElseBlock\n";
-    elseBlock->dump(level + 1);
+    elseBlock->dump(level + 1, onlySelf);
 }
 
 void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ") << type << " " << identifier
               << '\n';
     if (onlySelf) return;
-    if (initializer) initializer->dump(level + 1);
+    if (initializer) initializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeclStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedDeclStmt\n";
     if (onlySelf) return;
-    varDecl->dump(level + 1);
+    varDecl->dump(level + 1, onlySelf);
 }
 
 void ResolvedAssignment::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedAssignment\n";
     if (onlySelf) return;
-    assignee->dump(level + 1);
-    expr->dump(level + 1);
+    assignee->dump(level + 1, onlySelf);
+    expr->dump(level + 1, onlySelf);
 }
 
 void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
@@ -282,57 +282,57 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedStructDecl " << type << '\n';
 
     if (onlySelf) return;
-    for (auto &&field : fields) field->dump(level + 1);
-    for (auto &&function : functions) function->dump(level + 1);
-    for (auto &&spec : specializations) spec->dump(level + 1);
+    for (auto &&field : fields) field->dump(level + 1, onlySelf);
+    for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&spec : specializations) spec->dump(level + 1, onlySelf);
 }
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type << " " << field.identifier << '\n';
 
     if (onlySelf) return;
-    base->dump(level + 1);
+    base->dump(level + 1, onlySelf);
 }
 
 void ResolvedArrayAtExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedArrayAtExpr:" << type << '\n';
 
     if (onlySelf) return;
-    array->dump(level + 1);
-    index->dump(level + 1);
+    array->dump(level + 1, onlySelf);
+    index->dump(level + 1, onlySelf);
 }
 
 void ResolvedFieldInitStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedFieldInitStmt:" << field.type << " " << field.identifier << '\n';
 
     if (onlySelf) return;
-    initializer->dump(level + 1);
+    initializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedStructInstantiationExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedStructInstantiationExpr:" << structDecl.type << "\n";
 
     if (onlySelf) return;
-    for (auto &&field : fieldInitializers) field->dump(level + 1);
+    for (auto &&field : fieldInitializers) field->dump(level + 1, onlySelf);
 }
 
 void ResolvedArrayInstantiationExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedArrayInstantiationExpr:" << type << "\n";
 
     if (onlySelf) return;
-    for (auto &&initializer : initializers) initializer->dump(level + 1);
+    for (auto &&initializer : initializers) initializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedDeferStmt\n";
     if (onlySelf) return;
-    block->dump(level + 1);
+    block->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeferRefStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedDeferRefStmt\n";
     if (onlySelf) return;
-    resolvedDefer.block->dump(level + 1);
+    resolvedDefer.block->dump(level + 1, onlySelf);
 }
 
 void ResolvedErrDecl::dump(size_t level, bool onlySelf) const {
@@ -349,37 +349,36 @@ void ResolvedErrGroupDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedErrGroupDecl" << '\n';
 
     if (onlySelf) return;
-    for (auto &&err : errs) err->dump(level + 1);
+    for (auto &&err : errs) err->dump(level + 1, onlySelf);
 }
 
 void ResolvedErrUnwrapExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedErrUnwrapExpr:" << type << '\n';
 
     if (onlySelf) return;
-    errToUnwrap->dump(level + 1);
-    for (auto &&d : defers) d->dump(level + 1);
+    errToUnwrap->dump(level + 1, onlySelf);
+    for (auto &&d : defers) d->dump(level + 1, onlySelf);
 }
 
 void ResolvedCatchErrExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCatchErrExpr:" << type << '\n';
 
     if (onlySelf) return;
-    if (declaration) declaration->dump(level + 1);
-    if (errToCatch) errToCatch->dump(level + 1);
+    if (declaration) declaration->dump(level + 1, onlySelf);
+    if (errToCatch) errToCatch->dump(level + 1, onlySelf);
 }
 
 void ResolvedTryErrExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTryErrExpr:" << type << '\n';
 
     if (onlySelf) return;
-    if (declaration) declaration->dump(level + 1);
-    if (errToTry) errToTry->dump(level + 1);
+    if (declaration) declaration->dump(level + 1, onlySelf);
+    if (errToTry) errToTry->dump(level + 1, onlySelf);
 }
 
 void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedModuleDecl " << identifier << '\n';
 
-    if (nestedModule) nestedModule->dump(level + 1, onlySelf);
     for (auto &&decl : declarations) decl->dump(level + 1, onlySelf);
     if (onlySelf) return;
 }

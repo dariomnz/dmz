@@ -384,8 +384,8 @@ std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module_decl(const ModuleDecl &
     //                                                               prevModuleID, std::move(nestedModule));
     // } else {
     auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations);
-    resolvedModuleDecl = std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, nullptr,
-                                                              std::move(resolvedDecls));
+    resolvedModuleDecl =
+        std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, std::move(resolvedDecls));
     // }
     insert_decl_to_current_scope(*resolvedModuleDecl);
     return resolvedModuleDecl;
@@ -398,11 +398,11 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     // ModuleID currentModuleID = moduleDecl.moduleID;
     // currentModuleID.modules.emplace_back(moduleDecl.identifier);
     // m_currentModuleID = currentModuleID;
-    if (moduleDecl.nestedModule) {
-        result = resolve_module_body(*moduleDecl.nestedModule);
-    } else {
-        result = resolve_in_module_body(moduleDecl.declarations);
-    }
+    // if (moduleDecl.nestedModule) {
+    //     result = resolve_module_body(*moduleDecl.nestedModule);
+    // } else {
+    result = resolve_in_module_body(moduleDecl.declarations);
+    // }
     return result;
 }
 
@@ -520,6 +520,10 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
 
                 error = true;
             }
+
+            if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
+                resolvedTree.emplace_back(resolve_decl_stmt(*ds));
+            }
         }
     }
 
@@ -531,10 +535,45 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
     debug_func("");
     bool error = false;
     ScopeRAII moduleScope(*this);
+
+    for (auto &&currentDeclRef : decls) {
+        auto currentDecl = currentDeclRef.get();
+        if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
+            if (!insert_decl_to_current_scope(*st)) {
+                error = true;
+                continue;
+            }
+            for (auto &&func : st->functions) {
+                if (!insert_decl_to_current_scope(*func)) {
+                    error = true;
+                    continue;
+                }
+            }
+            continue;
+        }
+        if (auto *fn = dynamic_cast<ResolvedFuncDecl *>(currentDecl)) {
+            if (!insert_decl_to_current_scope(*fn)) {
+                error = true;
+            }
+            continue;
+        }
+
+        if (auto *fn = dynamic_cast<ResolvedDeclStmt *>(currentDecl)) {
+            if (!insert_decl_to_current_scope(*fn->varDecl)) {
+                error = true;
+            }
+            continue;
+        }
+    }
     {
         ScopedTimer st(Stats::type::semanticResolveBodysTime);
         for (auto &&currentDeclRef : decls) {
             auto currentDecl = currentDeclRef.get();
+
+            if (auto *st = dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
+                error |= resolve_in_module_body(st->declarations);
+                continue;
+            }
             // if (auto *importDecl = dynamic_cast<ResolvedImportDecl *>(currentDecl)) {
             //     if (!resolve_import_check(*importDecl)) error = true;
             //     continue;

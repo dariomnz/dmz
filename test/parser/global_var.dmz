@@ -1,0 +1,33 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+let num = 24;
+const cnum = 100;
+// CHECK: DeclStmt
+// CHECK-NEXT:   VarDecl: num
+// CHECK-NEXT:     IntLiteral '24'
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT:   VarDecl:const  cnum
+// CHECK-NEXT:     IntLiteral '100'
+
+fn main() -> void {
+    num = 320;
+    num = num + cnum;
+    printf("Num %d cnum %d\n", num, cnum);
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       DeclRefExpr num
+// CHECK-NEXT:       IntLiteral '320'
+// CHECK-NEXT:     Assignment
+// CHECK-NEXT:       DeclRefExpr num
+// CHECK-NEXT:       BinaryOperator '+'
+// CHECK-NEXT:         DeclRefExpr num
+// CHECK-NEXT:         DeclRefExpr cnum
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       DeclRefExpr printf
+// CHECK-NEXT:       StringLiteral '"Num %d cnum %d\n"'
+// CHECK-NEXT:       DeclRefExpr num
+// CHECK-NEXT:       DeclRefExpr cnum

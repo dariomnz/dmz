@@ -81,7 +81,16 @@ struct ResolvedGenericTypesDecl {
 };
 
 // Forward declaration
-struct ResolvedDeferRefStmt;
+struct ResolvedDeferStmt;
+
+struct ResolvedDeferRefStmt : public ResolvedStmt {
+    ResolvedDeferStmt &resolvedDefer;
+
+    ResolvedDeferRefStmt(SourceLocation location, ResolvedDeferStmt &resolvedDefer)
+        : ResolvedStmt(location), resolvedDefer(resolvedDefer) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
 
 struct ResolvedBlock : public ResolvedStmt {
     std::vector<std::unique_ptr<ResolvedStmt>> statements;
@@ -92,6 +101,15 @@ struct ResolvedBlock : public ResolvedStmt {
         : ResolvedStmt(location), statements(std::move(statements)), defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const;
+};
+
+struct ResolvedDeferStmt : public ResolvedStmt {
+    std::unique_ptr<ResolvedBlock> block;
+
+    ResolvedDeferStmt(SourceLocation location, std::unique_ptr<ResolvedBlock> block)
+        : ResolvedStmt(location), block(std::move(block)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
 struct ResolvedIfStmt : public ResolvedStmt {
@@ -472,24 +490,6 @@ struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedDeferStmt : public ResolvedStmt {
-    std::unique_ptr<ResolvedBlock> block;
-
-    ResolvedDeferStmt(SourceLocation location, std::unique_ptr<ResolvedBlock> block)
-        : ResolvedStmt(location), block(std::move(block)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
-struct ResolvedDeferRefStmt : public ResolvedStmt {
-    ResolvedDeferStmt &resolvedDefer;
-
-    ResolvedDeferRefStmt(ResolvedDeferStmt &resolvedDefer)
-        : ResolvedStmt(resolvedDefer.location), resolvedDefer(resolvedDefer) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
 struct ResolvedErrDecl : public ResolvedDecl {
     ResolvedErrDecl(SourceLocation location, std::string_view identifier)
         : ResolvedDecl(location, std::move(identifier), Type::builtinErr(identifier), false) {}
@@ -553,14 +553,11 @@ struct ResolvedTryErrExpr : public ResolvedExpr {
 };
 
 struct ResolvedModuleDecl : public ResolvedDecl {
-    std::unique_ptr<ResolvedModuleDecl> nestedModule;
     std::vector<std::unique_ptr<ResolvedDecl>> declarations;
 
     ResolvedModuleDecl(SourceLocation location, std::string_view identifier,
-                       std::unique_ptr<ResolvedModuleDecl> nestedModule,
-                       std::vector<std::unique_ptr<ResolvedDecl>> declarations = {})
-        : ResolvedDecl(location, identifier, Type::builtinVoid(), false),
-          nestedModule(std::move(nestedModule)),
+                       std::vector<std::unique_ptr<ResolvedDecl>> declarations)
+        : ResolvedDecl(location, identifier, Type::moduleType(identifier), false),
           declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;

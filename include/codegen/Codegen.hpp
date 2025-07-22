@@ -79,5 +79,6 @@ class Codegen {
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal = false);
     std::string generate_symbol_name(std::string modIdentifier);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
+    void generate_global_var_decl(const ResolvedDeclStmt &stmt);
 };
 }  // namespace DMZ

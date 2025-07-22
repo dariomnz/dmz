@@ -200,7 +200,7 @@ std::unique_ptr<Expr> Parser::parse_expr() {
     return parse_expr_rhs(std::move(lhs), 0);
 }
 
-[[maybe_unused]] constexpr static inline int get_token_precedence(TokenType tok) {
+[[maybe_unused]] static inline int get_token_precedence(TokenType tok) {
     debug_func("");
     switch (tok) {
         case TokenType::asterisk:

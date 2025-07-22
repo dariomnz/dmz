@@ -256,7 +256,7 @@ void Codegen::generate_err_no_err() {
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     debug_func("");
     for (auto &err : errGroupDecl.errs) {
-        auto name =  std::string(err->identifier);
+        auto name = std::string(err->identifier);
         auto symbol_name = generate_symbol_name(name);
         llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, name, true);
         m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
@@ -267,11 +267,11 @@ void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) 
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
-    if (moduleDecl.nestedModule) {
-        generate_module_decl(*moduleDecl.nestedModule);
-    } else {
-        generate_in_module_decl(moduleDecl.declarations);
-    }
+    // if (moduleDecl.nestedModule) {
+    //     generate_module_decl(*moduleDecl.nestedModule);
+    // } else {
+    generate_in_module_decl(moduleDecl.declarations);
+    // }
 }
 
 void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal) {
@@ -285,6 +285,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             }
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
+        } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
+            generate_global_var_decl(*ds);
         } else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
                    dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
@@ -306,7 +308,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
 
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get())) {
+            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             continue;
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);
@@ -319,5 +322,17 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             dmz_unreachable("unexpected top level in module declaration");
         }
     }
+}
+
+void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
+    llvm::Constant *initializer = nullptr;
+    if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
+        initializer = m_builder.getInt32(*constVal);
+    }
+    auto globalVar =
+        new llvm::GlobalVariable(generate_type(stmt.type), !stmt.isMutable,
+                                 llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.identifier);
+    m_module->insertGlobalVariable(globalVar);
+    m_declarations[stmt.varDecl.get()] = globalVar;
 }
 }  // namespace DMZ

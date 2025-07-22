@@ -349,6 +349,12 @@ bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg)
 bool Sema::check_variable_initialization(const CFG &cfg) {
     debug_func("");
     enum class State { Bottom, Unassigned, Assigned, Top };
+    std::unordered_map<State, std::string_view> state_to_string = {
+        {State::Bottom, "Bottom"},
+        {State::Unassigned, "Unassigned"},
+        {State::Assigned, "Assigned"},
+        {State::Top, "Top"},
+    };
 
     using Lattice = std::map<const ResolvedDecl *, State>;
 
@@ -412,11 +418,15 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                 }
 
                 if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(stmt)) {
-                    const auto *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+                    if (const auto *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl)) {
+                        if (var->initializer) {
+                            tmp[var] = State::Assigned;
+                        }
 
-                    if (var && tmp[var] != State::Assigned) {
-                        std::string msg = '\'' + std::string(var->identifier) + "' is not initialized";
-                        pendingErrors.emplace_back(dre->location, std::move(msg));
+                        if (tmp[var] != State::Assigned) {
+                            std::string msg = '\'' + std::string(var->identifier) + "' is not initialized";
+                            pendingErrors.emplace_back(dre->location, std::move(msg));
+                        }
                     }
 
                     continue;

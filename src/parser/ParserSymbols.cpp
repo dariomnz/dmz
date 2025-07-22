@@ -29,6 +29,36 @@ std::ostream &operator<<(std::ostream &os, const Type &t) {
     return os;
 }
 
+GenericTypes::GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept : types(std::move(types)) {}
+
+GenericTypes::GenericTypes(const GenericTypes &other) {
+    types.reserve(other.types.size());
+    for (const auto &ptr : other.types) {
+        if (ptr) {
+            types.emplace_back(std::make_unique<Type>(*ptr));
+        } else {
+            types.emplace_back(nullptr);
+        }
+    }
+}
+
+GenericTypes &GenericTypes::operator=(const GenericTypes &other) {
+    if (this != &other) {
+        types.clear();
+        types.reserve(other.types.size());
+        for (const auto &ptr : other.types) {
+            if (ptr) {
+                types.emplace_back(std::make_unique<Type>(*ptr));
+            } else {
+                types.emplace_back(nullptr);
+            }
+        }
+    }
+    return *this;
+}
+
+GenericTypes::GenericTypes(GenericTypes &&other) noexcept : types(std::move(other.types)) {}
+
 void GenericTypes::dump() const { std::cerr << *this; }
 
 std::string GenericTypes::to_str() const {

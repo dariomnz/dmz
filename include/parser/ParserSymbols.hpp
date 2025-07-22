@@ -32,33 +32,11 @@ struct Type;
 struct GenericTypes {
     std::vector<std::unique_ptr<Type>> types;
 
-    GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept : types(std::move(types)) {}
+    GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept;
 
-    GenericTypes(const GenericTypes& other) {
-        types.reserve(other.types.size());
-        for (const auto& ptr : other.types) {
-            if (ptr) {
-                types.emplace_back(std::make_unique<Type>(*ptr));
-            } else {
-                types.emplace_back(nullptr);
-            }
-        }
-    }
-    GenericTypes& operator=(const GenericTypes& other) {
-        if (this != &other) {
-            types.clear();
-            types.reserve(other.types.size());
-            for (const auto& ptr : other.types) {
-                if (ptr) {
-                    types.emplace_back(std::make_unique<Type>(*ptr));
-                } else {
-                    types.emplace_back(nullptr);
-                }
-            }
-        }
-        return *this;
-    }
-    GenericTypes(GenericTypes&& other) noexcept : types(std::move(other.types)) {}
+    GenericTypes(const GenericTypes& other);
+    GenericTypes& operator=(const GenericTypes& other);
+    GenericTypes(GenericTypes&& other) noexcept;
 
     void dump() const;
     std::string to_str() const;
