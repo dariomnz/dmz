@@ -3,7 +3,7 @@
 // CHECK: 3.1415858269
 
 // CHECK-NOT: {{.*}}
-import std::io as io;
+const io = import("std").io;
 
 fn calculate_pi_leibniz(iterations:i32) -> f32 {
     let pi_estimate:f32 = 0.0;
@@ -22,5 +22,5 @@ fn calculate_pi_leibniz(iterations:i32) -> f32 {
 fn main() -> void {
     let num_iterations = 100000;
     let pi_calculated = calculate_pi_leibniz(num_iterations);
-    io::printf32(pi_calculated, 10);
+    io.printf32(pi_calculated, 10);
 }

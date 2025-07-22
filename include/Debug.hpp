@@ -33,13 +33,29 @@ struct time_stamp {
         return os;
     }
 };
+
 class debug_lock {
    public:
     static std::recursive_mutex &get_lock() {
         static std::recursive_mutex mutex;
         return mutex;
     }
+    static uint32_t &get_count() {
+        static uint32_t count;
+        return count;
+    }
 };
+
+struct indent_os {
+    friend std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const indent_os &logger) {
+        auto count = debug_lock::get_count();
+        for (size_t i = 0; i < count; i++) {
+            os << "  ";
+        }
+        return os;
+    }
+};
+
 #ifdef DEBUG
 template <typename T>
 std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
@@ -53,16 +69,21 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
     os << "]";
     return os;
 }
-#define debug_msg(out_format)                                                                                     \
-    {                                                                                                             \
-        std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock());                                      \
-        std::cerr << std::dec << ::DMZ::time_stamp() << " [" << ::DMZ::get_file_name(__FILE__) << ":" << __LINE__ \
-                  << "] [" << __func__ << "] " << out_format << std::endl;                                        \
+#define debug_msg(out_format) debug_msg_func(__func__, out_format)
+#define debug_msg_func(func, out_format)                                                                             \
+    {                                                                                                                \
+        std::unique_lock internal_debug_lock(::DMZ::debug_lock::get_lock());                                         \
+        std::cerr << indent_os{} << std::dec << ::DMZ::time_stamp() << " [" << ::DMZ::get_file_name(__FILE__) << ":" \
+                  << __LINE__ << "] [" << func << "] " << out_format << std::endl;                                   \
     }
-#define debug_func(out_format)                                 \
-    auto ____func_name = __func__;                             \
-    debug_msg("BEGIN " << ____func_name << " " << out_format); \
-    defer([&] { debug_msg("END " << ____func_name << " " << out_format); });
+#define debug_func(out_format)                                                       \
+    auto ____func_name = __func__;                                                   \
+    debug_msg("BEGIN " << ____func_name << " " << out_format);                       \
+    debug_lock::get_count()++;                                                       \
+    defer([&] {                                                                      \
+        debug_lock::get_count()--;                                                   \
+        debug_msg_func(____func_name, "END " << ____func_name << " " << out_format); \
+    });
 #else
 #define debug_msg(out_format)
 #define debug_func(out_format)

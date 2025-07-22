@@ -38,8 +38,8 @@ class Sema {
     ResolvedFuncDecl *m_currentFunction;
 
     std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
-    ModuleID m_currentModuleID;
-    ModuleID m_currentModuleIDRef;
+    // ModuleID m_currentModuleID;
+    // ModuleID m_currentModuleIDRef;
     Type m_currentSelf;
 
     class ScopeRAII {
@@ -66,9 +66,9 @@ class Sema {
 
    private:
     std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type);
-    ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
+    // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
-    bool insert_decl_to_modules(ResolvedDecl &decl);
+    // bool insert_decl_to_modules(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
@@ -78,6 +78,8 @@ class Sema {
                                                   const GenericTypes &genericTypes);
     ResolvedStructDecl *specialize_generic_struct(ResolvedStructDecl &struDecl, const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
+    std::unique_ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
+                                                                             const MemberFunctionDecl &function);
     std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);
     std::unique_ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
@@ -106,7 +108,8 @@ class Sema {
     std::unique_ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(
         const ArrayInstantiationExpr &arrayInstantiation);
     std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
-    bool resolve_struct_fields(ResolvedStructDecl &resolvedStructDecl);
+    bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);
+    bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope);
     std::unique_ptr<ResolvedErrGroupDecl> resolve_err_group_decl(const ErrGroupDecl &errGroupDecl);
@@ -114,15 +117,16 @@ class Sema {
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
     std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
     std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
-    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl, const ModuleID &prevModuleID);
+    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
-    std::unique_ptr<ResolvedImportDecl> resolve_import_decl(const ImportDecl &importDecl, const ModuleID &prevModuleID);
-    bool resolve_import_check(ResolvedImportDecl &importDecl);
-    std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
-                                                                            const ModuleID &prevModuleID);
+    std::unique_ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
+    bool resolve_import_check(ResolvedImportExpr &importExpr);
+    // std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
+    //                                                                         const ModuleID &prevModuleID);
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
+    bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
 };
 }  // namespace DMZ

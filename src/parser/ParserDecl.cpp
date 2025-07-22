@@ -3,6 +3,7 @@
 namespace DMZ {
 
 std::unique_ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
+    debug_func("");
     matchOrReturn(TokenType::id, "expected identifier");
     auto location = m_nextToken.loc;
     auto identifier = m_nextToken.str;
@@ -11,6 +12,7 @@ std::unique_ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
 }
 
 std::unique_ptr<GenericTypesDecl> Parser::parse_generic_types_decl() {
+    debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
         return nullptr;
     }
@@ -24,11 +26,12 @@ std::unique_ptr<GenericTypesDecl> Parser::parse_generic_types_decl() {
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
 std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
+    debug_func("");
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
     std::string_view structIdentifier;
     bool isExtern = false;
-    bool isMember = false;
+    // bool isMember = false;
 
     if (m_nextToken.type == TokenType::kw_extern) {
         isExtern = true;
@@ -45,14 +48,14 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     structLocation = m_nextToken.loc;
     eat_next_token();  // eat identifier
 
-    if (m_nextToken.type == TokenType::dot) {
-        isMember = true;
-        eat_next_token();  // eat '.'
-        matchOrReturn(TokenType::id, "expected identifier");
-        structIdentifier = functionIdentifier;
-        functionIdentifier = m_nextToken.str;
-        eat_next_token();  // eat identifier
-    }
+    // if (m_nextToken.type == TokenType::dot) {
+    //     isMember = true;
+    //     eat_next_token();  // eat '.'
+    //     matchOrReturn(TokenType::id, "expected identifier");
+    //     structIdentifier = functionIdentifier;
+    //     functionIdentifier = m_nextToken.str;
+    //     eat_next_token();  // eat identifier
+    // }
 
     auto genericTypes = parse_generic_types_decl();
 
@@ -78,17 +81,17 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     auto funcDecl = std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
                                                    std::move(block), std::move(genericTypes));
 
-    if (isMember) {
-        auto declRefExpr = Type::customType(structIdentifier);
-        return std::make_unique<MemberFunctionDecl>(loc, functionIdentifier, std::move(declRefExpr),
-                                                    std::move(funcDecl));
-    }
+    // if (isMember) {
+    //     auto declRefExpr = Type::customType(structIdentifier);
+    //     return std::make_unique<MemberFunctionDecl>(std::move(declRefExpr), std::move(funcDecl));
+    // }
     return funcDecl;
 }
 
 // <paramDecl>
 //  ::= 'const'? <identifier> ':' <type>
 std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::dotdotdot) {
@@ -111,6 +114,7 @@ std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
 }
 
 std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
 
     std::string_view identifier = m_nextToken.str;
@@ -140,6 +144,7 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
 // <fieldList>
 //  ::= '{' (<fieldDecl> (',' <fieldDecl>)* ','?)? '}'
 std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat struct
 
@@ -150,16 +155,46 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
 
     auto genericTypes = parse_generic_types_decl();
 
-    varOrReturn(fieldList, parse_list_with_trailing_comma<FieldDecl>({TokenType::block_l, "expected '{'"},
-                                                                     &Parser::parse_field_decl,
-                                                                     {TokenType::block_r, "expected '}'"}));
+    matchOrReturn(TokenType::block_l, "expected '{'");
+    eat_next_token();  // eat openingToken
 
-    return std::make_unique<StructDecl>(location, structIdentifier, std::move(*fieldList), std::move(genericTypes));
+    std::vector<std::unique_ptr<FieldDecl>> fieldList;
+    std::vector<std::unique_ptr<MemberFunctionDecl>> funcList;
+
+    auto structDecl = std::make_unique<StructDecl>(location, structIdentifier, std::move(fieldList),
+                                                   std::move(funcList), std::move(genericTypes));
+
+    while (true) {
+        if (m_nextToken.type == TokenType::block_r) break;
+
+        if (m_nextToken.type == TokenType::id) {
+            varOrReturn(init, parse_field_decl());
+            fieldList.emplace_back(std::move(init));
+            if (m_nextToken.type != TokenType::comma) break;
+            eat_next_token();  // eat ','
+        } else if (m_nextToken.type == TokenType::kw_fn) {
+            varOrReturn(init, parse_function_decl());
+            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
+            init.release();
+            std::unique_ptr<FunctionDecl> uniqueFunc(func);
+            auto memberFunc = std::make_unique<MemberFunctionDecl>(structDecl.get(), std::move(uniqueFunc));
+            funcList.emplace_back(std::move(memberFunc));
+        }
+    }
+
+    matchOrReturn(TokenType::block_r, "expected '}'");
+    eat_next_token();  // eat closingToken
+
+    structDecl->fields = std::move(fieldList);
+    structDecl->functions = std::move(funcList);
+
+    return structDecl;
 }
 
 // <fieldDecl>
 //  ::= <identifier> ':' <type>
 std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
+    debug_func("");
     matchOrReturn(TokenType::id, "expected field declaration");
 
     SourceLocation location = m_nextToken.loc;
@@ -177,6 +212,7 @@ std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
 };
 
 std::unique_ptr<ErrGroupDecl> Parser::parse_err_group_decl() {
+    debug_func("");
     matchOrReturn(TokenType::kw_err, "expected 'err'");
     auto location = m_nextToken.loc;
     auto id = m_nextToken.str;
@@ -190,6 +226,7 @@ std::unique_ptr<ErrGroupDecl> Parser::parse_err_group_decl() {
 }
 
 std::unique_ptr<ErrDecl> Parser::parse_err_decl() {
+    debug_func("");
     matchOrReturn(TokenType::id, "expected identifier");
     auto location = m_nextToken.loc;
     auto id = m_nextToken.str;
@@ -198,38 +235,40 @@ std::unique_ptr<ErrDecl> Parser::parse_err_decl() {
     return std::make_unique<ErrDecl>(location, id);
 }
 
-std::unique_ptr<ModuleDecl> Parser::parse_module_decl(bool haveEatModule) {
+std::unique_ptr<ModuleDecl> Parser::parse_module_decl() {
+    debug_func("");
     auto location = m_nextToken.loc;
-    if (!haveEatModule) {
-        matchOrReturn(TokenType::kw_module, "expected 'module'");
-        eat_next_token();  // eat module
-    }
+    matchOrReturn(TokenType::kw_module, "expected 'module'");
+    eat_next_token();  // eat module
 
     matchOrReturn(TokenType::id, "expected identifier");
     auto identifier = m_nextToken.str;
-    eat_next_token();      // eat identifier
+    eat_next_token();  // eat identifier
 
-    if (m_nextToken.type == TokenType::coloncolon) {
-        eat_next_token();  // eat ::
-        varOrReturn(nestedModule, parse_module_decl(true));
-        return std::make_unique<ModuleDecl>(location, identifier, std::move(nestedModule));
-    }
-
-    matchOrReturn(TokenType::semicolon, "expected ';'");
-    eat_next_token();  // eat ;
+    matchOrReturn(TokenType::block_l, "expected '{'");
+    eat_next_token();  // eat {
 
     auto declarations = parse_in_module_decl();
 
-    return std::make_unique<ModuleDecl>(location, identifier, nullptr, std::move(declarations));
+    matchOrReturn(TokenType::block_r, "expected '}'");
+    eat_next_token();  // eat {
+
+    return std::make_unique<ModuleDecl>(location, identifier, std::move(declarations));
 }
 
 std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
+    debug_func("");
     std::vector<std::unique_ptr<Decl>> declarations;
 
-    while (m_nextToken.type != TokenType::eof && m_nextToken.type != TokenType::kw_module) {
+    while (m_nextToken.type != TokenType::eof && m_nextToken.type != TokenType::block_r) {
         if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
             if (auto fn = parse_function_decl()) {
                 declarations.emplace_back(std::move(fn));
+                continue;
+            }
+        } else if (m_nextToken.type == TokenType::kw_const || m_nextToken.type == TokenType::kw_let) {
+            if (auto st = parse_decl_stmt()) {
+                declarations.emplace_back(std::move(st));
                 continue;
             }
         } else if (m_nextToken.type == TokenType::kw_struct) {
@@ -242,45 +281,19 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
+        } else if (m_nextToken.type == TokenType::kw_module) {
+            if (auto st = parse_module_decl()) {
+                declarations.emplace_back(std::move(st));
+                continue;
+            }
         } else {
-            report(m_nextToken.loc, "expected function, struct, err declaration inside a module");
+            report(m_nextToken.loc, "expected declaration");
         }
 
-        synchronize_on({TokenType::kw_extern, TokenType::kw_fn, TokenType::kw_struct, TokenType::kw_err});
+        synchronize_on(top_top_level_tokens);
         continue;
     }
 
     return declarations;
-}
-
-std::unique_ptr<ImportDecl> Parser::parse_import_decl(bool haveEatImport) {
-    auto location = m_nextToken.loc;
-    if (!haveEatImport) {
-        matchOrReturn(TokenType::kw_import, "expected 'import'");
-        eat_next_token();  // eat import
-    }
-
-    matchOrReturn(TokenType::id, "expected identifier");
-    auto identifier = m_nextToken.str;
-    eat_next_token();      // eat identifier
-
-    if (m_nextToken.type == TokenType::coloncolon) {
-        eat_next_token();  // eat ::
-        varOrReturn(nestedImport, parse_import_decl(true));
-        return std::make_unique<ImportDecl>(location, identifier, std::move(nestedImport));
-    }
-
-    std::string_view alias = "";
-    if (m_nextToken.type == TokenType::kw_as) {
-        eat_next_token();  // eat as
-        matchOrReturn(TokenType::id, "expected identifier");
-        alias = m_nextToken.str;
-        eat_next_token();  // eat id
-    }
-
-    matchOrReturn(TokenType::semicolon, "expected ';'");
-    eat_next_token();  // eat ;
-
-    return std::make_unique<ImportDecl>(location, identifier, nullptr, alias);
 }
 }  // namespace DMZ

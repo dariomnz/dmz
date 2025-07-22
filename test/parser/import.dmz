@@ -1,17 +1,20 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 
-import mod1;
-// CHECK: ImportDecl mod1
-import modnest1::modnest2::modnest3::modnest4;
-// CHECK: ImportDecl modnest1
-// CHECK-NEXT:   ImportDecl modnest2
-// CHECK-NEXT:     ImportDecl modnest3
-// CHECK-NEXT:       ImportDecl modnest4
+const std = import("std");
+// CHECK: DeclStmt
+// CHECK-NEXT:   VarDecl:const  std
+// CHECK-NEXT:     ImportExpr "std"
+const modnest4 = import("modnest1.modnest2.modnest3.modnest4");
+// CHECK: DeclStmt
+// CHECK-NEXT:   VarDecl:const  modnest4
+// CHECK-NEXT:     ImportExpr "modnest1.modnest2.modnest3.modnest4"
 
 fn main() -> void {
-    std::printf("asdf");
-// CHECK: ModuleDeclRefExpr std
-// CHECK-NEXT:   CallExpr
-// CHECK-NEXT:     DeclRefExpr printf
-// CHECK-NEXT:     StringLiteral '"asdf"'
+    std.printf("asdf");
 }
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     CallExpr
+// CHECK-NEXT:       MemberExpr .printf
+// CHECK-NEXT:         DeclRefExpr std
+// CHECK-NEXT:       StringLiteral '"asdf"'

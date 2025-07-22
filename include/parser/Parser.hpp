@@ -74,15 +74,19 @@ class Parser {
     void synchronize();
 
     const std::unordered_set<TokenType> top_level_tokens = {
-        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct,
-        TokenType::kw_extern, TokenType::kw_module, TokenType::kw_import,
+        TokenType::eof,       TokenType::kw_fn,    TokenType::kw_struct, TokenType::kw_extern,
+        TokenType::kw_module, TokenType::kw_const, TokenType::kw_let,
+    };
+    const std::unordered_set<TokenType> top_top_level_tokens = {
+        TokenType::eof, TokenType::kw_fn, TokenType::kw_struct, TokenType::kw_extern, TokenType::kw_module,
     };
     const std::unordered_set<TokenType> top_stmt_level_tokens = {
-        TokenType::kw_if,  TokenType::kw_while, TokenType::kw_return,
-        TokenType::kw_let, TokenType::kw_defer, TokenType::kw_switch,
+        TokenType::kw_if,    TokenType::kw_while, TokenType::kw_return, TokenType::kw_let,
+        TokenType::kw_const, TokenType::kw_defer, TokenType::kw_switch,
     };
 
     bool is_top_level_token(TokenType tok);
+    bool is_top_top_level_token(TokenType tok);
     bool is_top_stmt_level_token(TokenType tok);
 
    public:
@@ -125,9 +129,9 @@ class Parser {
     std::unique_ptr<ErrDecl> parse_err_decl();
     std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
     std::unique_ptr<TryErrExpr> parse_try_err_expr();
-    std::unique_ptr<ModuleDecl> parse_module_decl(bool haveEatModule = false);
+    std::unique_ptr<ModuleDecl> parse_module_decl();
     std::vector<std::unique_ptr<Decl>> parse_in_module_decl();
-    std::unique_ptr<ImportDecl> parse_import_decl(bool haveEatImport = false);
+    std::unique_ptr<ImportExpr> parse_import_expr();
     std::unique_ptr<SwitchStmt> parse_switch_stmt();
     std::unique_ptr<CaseStmt> parse_case_stmt();
 };

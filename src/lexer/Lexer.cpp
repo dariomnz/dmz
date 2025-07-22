@@ -71,7 +71,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_try);
         CASE_TYPE(kw_module);
         CASE_TYPE(kw_import);
-        CASE_TYPE(kw_as);
         CASE_TYPE(kw_switch);
         CASE_TYPE(kw_case);
         CASE_TYPE(unknown);
@@ -121,7 +120,6 @@ void Lexer::advance(int num) {
     m_position += num;
 }
 Token Lexer::next_token() {
-    debug_msg("Begin pos " << m_position);
     if (m_position >= m_file_content.size())
         return Token{.type = TokenType::eof, .loc = {.file_name = m_file_name, .line = m_line, .col = m_col}};
 
@@ -137,10 +135,8 @@ Token Lexer::next_token() {
 
     Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_name, .line = m_line, .col = m_col}};
     if (file_content[0] == '\0') {
-        debug_msg(TokenType::eof);
         t.type = TokenType::eof;
     } else if (std::isdigit(file_content[0])) {
-        debug_msg(TokenType::lit_int);
         size_t digit_count = 1;
         while (std::isdigit(file_content[digit_count])) {
             digit_count++;
@@ -166,7 +162,6 @@ Token Lexer::next_token() {
         advance(digit_count);
 
     } else if (std::isalpha(file_content[0]) || file_content[0] == '_') {
-        debug_msg(TokenType::id);
         size_t alpha_count = 1;
         while (std::isalnum(file_content[alpha_count]) || file_content[alpha_count] == '_') {
             alpha_count++;
@@ -190,7 +185,6 @@ Token Lexer::next_token() {
         }
 
     } else if (file_content.substr(0, 2) == "//") {
-        debug_msg(TokenType::comment);
         size_t comment_count = 2;
         // For the //
         advance(2);
@@ -201,57 +195,46 @@ Token Lexer::next_token() {
         t.type = TokenType::comment;
         t.str = file_content.substr(0, comment_count);
     } else if (file_content[0] == '{') {
-        debug_msg(TokenType::block_l);
         t.type = TokenType::block_l;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '}') {
-        debug_msg(TokenType::block_r);
         t.type = TokenType::block_r;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '(') {
-        debug_msg(TokenType::par_l);
         t.type = TokenType::par_l;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ')') {
-        debug_msg(TokenType::par_r);
         t.type = TokenType::par_r;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '[') {
-        debug_msg(TokenType::bracket_l);
         t.type = TokenType::bracket_l;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ']') {
-        debug_msg(TokenType::bracket_r);
         t.type = TokenType::bracket_r;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 2) == "::") {
-        debug_msg(TokenType::coloncolon);
         t.type = TokenType::coloncolon;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content[0] == ':') {
-        debug_msg(TokenType::colon);
         t.type = TokenType::colon;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ';') {
-        debug_msg(TokenType::semicolon);
         t.type = TokenType::semicolon;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == ',') {
-        debug_msg(TokenType::comma);
         t.type = TokenType::comma;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '\"') {
-        debug_msg(TokenType::lit_string);
         size_t str_count = 1;
         advance();
         while (file_content[str_count] != '\"' && file_content[str_count] != '\n') {
@@ -264,7 +247,6 @@ Token Lexer::next_token() {
         t.type = TokenType::lit_string;
         t.str = file_content.substr(0, str_count);
     } else if (file_content[0] == '\'') {
-        debug_msg(TokenType::lit_char);
         int char_size = 1;
         if (file_content[char_size] == '\\') {
             char_size++;
@@ -281,122 +263,99 @@ Token Lexer::next_token() {
         t.type = TokenType::lit_char;
         t.str = file_content.substr(0, char_size);
     } else if (file_content.substr(0, 2) == "->") {
-        debug_msg(TokenType::return_arrow);
         t.type = TokenType::return_arrow;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "=>") {
-        debug_msg(TokenType::switch_arrow);
         t.type = TokenType::switch_arrow;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content[0] == '+') {
-        debug_msg(TokenType::op_plus);
         t.type = TokenType::op_plus;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '-') {
-        debug_msg(TokenType::op_minus);
         t.type = TokenType::op_minus;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '*') {
-        debug_msg(TokenType::asterisk);
         t.type = TokenType::asterisk;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '/') {
-        debug_msg(TokenType::op_div);
         t.type = TokenType::op_div;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '%') {
-        debug_msg(TokenType::op_percent);
         t.type = TokenType::op_percent;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 2) == "&&") {
-        debug_msg(TokenType::ampamp);
         t.type = TokenType::ampamp;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "||") {
-        debug_msg(TokenType::pipepipe);
         t.type = TokenType::pipepipe;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "==") {
-        debug_msg(TokenType::op_equal);
         t.type = TokenType::op_equal;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content[0] == '=') {
-        debug_msg(TokenType::op_assign);
         t.type = TokenType::op_assign;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 2) == "!=") {
-        debug_msg(TokenType::op_not_equal);
         t.type = TokenType::op_not_equal;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == "<=") {
-        debug_msg(TokenType::op_less_eq);
         t.type = TokenType::op_less_eq;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content.substr(0, 2) == ">=") {
-        debug_msg(TokenType::op_more_eq);
         t.type = TokenType::op_more_eq;
         t.str = file_content.substr(0, 2);
         advance(2);
     } else if (file_content[0] == '<') {
-        debug_msg(TokenType::op_less);
         t.type = TokenType::op_less;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '>') {
-        debug_msg(TokenType::op_more);
         t.type = TokenType::op_more;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content.substr(0, 3) == "...") {
-        debug_msg(TokenType::dotdotdot);
         t.type = TokenType::dotdotdot;
         t.str = file_content.substr(0, 3);
         advance(3);
     } else if (file_content[0] == '.') {
-        debug_msg(TokenType::dot);
         t.type = TokenType::dot;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '|') {
-        debug_msg(TokenType::pipe);
         t.type = TokenType::pipe;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '&') {
-        debug_msg(TokenType::amp);
         t.type = TokenType::amp;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '?') {
-        debug_msg(TokenType::op_quest_mark);
         t.type = TokenType::op_quest_mark;
         t.str = file_content.substr(0, 1);
         advance();
     } else if (file_content[0] == '!') {
-        debug_msg(TokenType::op_excla_mark);
         t.type = TokenType::op_excla_mark;
         t.str = file_content.substr(0, 1);
         advance();
     } else {
-        debug_msg(TokenType::unknown);
         t.type = TokenType::unknown;
         t.str = file_content.substr(0, 1);
         advance();
     }
-    debug_msg("End " << t);
+    debug_msg(t);
     return t;
 }
 

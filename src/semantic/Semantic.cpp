@@ -20,13 +20,13 @@ Sema::ModuleScope *Sema::ModuleScope::lookup_module(const std::string_view id) {
 
 bool Sema::ModuleScope::insert(ResolvedDecl &decl) {
     std::string identifier(decl.identifier);
-    if (auto *importDecl = dynamic_cast<ResolvedImportDecl *>(&decl)) {
-        if (importDecl->alias.empty()) {
-            // identifier = importDecl->moduleID.to_string() + identifier;
-        } else {
-            identifier = importDecl->alias;
-        }
-    }
+    // if (auto *importDecl = dynamic_cast<ResolvedImportExpr *>(&decl)) {
+    //     if (importDecl->alias.empty()) {
+    //         // identifier = importDecl->moduleID.to_string() + identifier;
+    //     } else {
+    //         identifier = importDecl->alias;
+    //     }
+    // }
 #ifdef DEBUG_SCOPES
     println("insert " << identifier);
 #endif
@@ -67,15 +67,15 @@ void Sema::dump_scopes() const {
 }
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
-    debug_func(decl.location);
+    debug_func(decl.identifier << " " << decl.location);
     std::string identifier(decl.identifier);
-    if (auto importDecl = dynamic_cast<ResolvedImportDecl *>(&decl)) {
-        if (importDecl->alias.empty()) {
-            identifier = importDecl->moduleID.to_string() + identifier;
-        } else {
-            identifier = importDecl->alias;
-        }
-    }
+    // if (auto importDecl = dynamic_cast<ResolvedImportExpr *>(&decl)) {
+    //     if (importDecl->alias.empty()) {
+    //         identifier = importDecl->moduleID.to_string() + identifier;
+    //     } else {
+    //         identifier = importDecl->alias;
+    //     }
+    // }
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << identifier << " ======================");
 #endif
@@ -94,25 +94,26 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     return true;
 }
 
-bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
-    debug_func(decl.location);
-    std::unique_lock lock(m_moduleScopesMutex);
-    auto *currentModule = &m_globalmodule;
-    auto &moduleID = dynamic_cast<ResolvedImportDecl *>(&decl) ? m_currentModuleID : decl.moduleID;
+// bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
+//     debug_func(decl.location);
+//     std::unique_lock lock(m_moduleScopesMutex);
+//     auto *currentModule = &m_globalmodule;
+//     dmz_unreachable("TODO");
+//     // auto &moduleID = dynamic_cast<ResolvedImportDecl *>(&decl) ? m_currentModuleID : decl.moduleID;
 
-#ifdef DEBUG_SCOPES
-    println("======================insert_decl_to_modules " << moduleID << " " << decl.identifier
-                                                            << " ======================");
-#endif
-    for (auto &&modName : moduleID.modules) {
-        currentModule->insert(modName);
-        currentModule = currentModule->lookup_module(modName);
-        assert(currentModule);
-    }
+// #ifdef DEBUG_SCOPES
+//     println("======================insert_decl_to_modules " << moduleID << " " << decl.identifier
+//                                                             << " ======================");
+// #endif
+//     // for (auto &&modName : moduleID.modules) {
+//     //     currentModule->insert(modName);
+//     //     currentModule = currentModule->lookup_module(modName);
+//     //     assert(currentModule);
+//     // }
 
-    if (dynamic_cast<ResolvedModuleDecl *>(&decl)) return true;
-    return currentModule->insert(decl);
-}
+//     if (dynamic_cast<ResolvedModuleDecl *>(&decl)) return true;
+//     return currentModule->insert(decl);
+// }
 
 #define switch_resolved_decl_type(type, decl, bool, expresion)                    \
     switch (type) {                                                               \
@@ -124,8 +125,8 @@ bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
         case ResolvedDeclType::ResolvedErrDecl:                                   \
             if (bool dynamic_cast<ResolvedErrDecl *>(decl)) expresion;            \
             break;                                                                \
-        case ResolvedDeclType::ResolvedImportDecl:                                \
-            if (bool dynamic_cast<ResolvedImportDecl *>(decl)) expresion;         \
+        case ResolvedDeclType::ResolvedImportExpr:                                \
+            if (bool dynamic_cast<ResolvedImportExpr *>(decl)) expresion;         \
             break;                                                                \
         case ResolvedDeclType::ResolvedMemberFunctionDecl:                        \
             if (bool dynamic_cast<ResolvedMemberFunctionDecl *>(decl)) expresion; \
@@ -142,7 +143,7 @@ bool Sema::insert_decl_to_modules(ResolvedDecl &decl) {
     }
 
 std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedDeclType type) {
-    debug_func("");
+    debug_func(id << " " << type);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
     dump_scopes();
@@ -152,17 +153,17 @@ std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedD
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         for (auto &&decl : *it) {
             switch_resolved_decl_type(type, decl, !, continue);
-            if (auto importDecl = dynamic_cast<ResolvedImportDecl *>(decl)) {
-                std::string identifier(decl->identifier);
-                if (importDecl->alias.empty()) {
-                    identifier = importDecl->moduleID.to_string() + identifier;
-                } else {
-                    identifier = importDecl->alias;
-                }
-                if (identifier != id) continue;
-            } else {
-                if (decl->identifier != id) continue;
-            }
+            // if (auto importDecl = dynamic_cast<ResolvedImportExpr *>(decl)) {
+            //     std::string identifier(decl->identifier);
+            //     if (importDecl->alias.empty()) {
+            //         identifier = importDecl->moduleID.to_string() + identifier;
+            //     } else {
+            //         identifier = importDecl->alias;
+            //     }
+            //     if (identifier != id) continue;
+            // } else {
+            if (decl->identifier != id) continue;
+            // }
 
             return {decl, scopeIdx};
         }
@@ -171,26 +172,26 @@ std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedD
     }
     return {nullptr, -1};
 }
-ResolvedDecl *Sema::lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type) {
-    debug_func("");
-#ifdef DEBUG_SCOPES
-    println("---------------------->>lookup_in_modules " << moduleID << " " << id << " ----------------------");
-    dump_module_scopes();
-    println("----------------------<<lookup_in_modules " << moduleID << " " << id << " ----------------------");
-#endif
-    std::unique_lock lock(m_moduleScopesMutex);
-    auto *currentModule = &m_globalmodule;
-    for (auto &&modName : moduleID.modules) {
-        currentModule = currentModule->lookup_module(modName);
-        if (!currentModule) return nullptr;
-    }
+// ResolvedDecl *Sema::lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type) {
+//     debug_func("");
+// #ifdef DEBUG_SCOPES
+//     println("---------------------->>lookup_in_modules " << moduleID << " " << id << " ----------------------");
+//     dump_module_scopes();
+//     println("----------------------<<lookup_in_modules " << moduleID << " " << id << " ----------------------");
+// #endif
+//     std::unique_lock lock(m_moduleScopesMutex);
+//     auto *currentModule = &m_globalmodule;
+//     for (auto &&modName : moduleID.modules) {
+//         currentModule = currentModule->lookup_module(modName);
+//         if (!currentModule) return nullptr;
+//     }
 
-    if (type == ResolvedDeclType::Module) return reinterpret_cast<ResolvedDecl *>(currentModule->lookup_module(id));
-    auto decl = currentModule->lookup_decl(id);
-    if (!decl) return nullptr;
-    switch_resolved_decl_type(type, decl, , return decl);
-    return nullptr;
-}
+//     if (type == ResolvedDeclType::Module) return reinterpret_cast<ResolvedDecl *>(currentModule->lookup_module(id));
+//     auto decl = currentModule->lookup_decl(id);
+//     if (!decl) return nullptr;
+//     switch_resolved_decl_type(type, decl, , return decl);
+//     return nullptr;
+// }
 
 std::optional<Type> Sema::resolve_type(Type parsedType) {
     debug_func(parsedType);
@@ -217,65 +218,63 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer st(Stats::type::semanticTime);
 
-    std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
+    // std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
 
-    for (auto &&decl : m_ast) {
-        if (!dynamic_cast<const ModuleDecl *>(decl.get())) {
-            m_ast_withoutModules.emplace_back(std::move(decl));
-        }
-    }
-    // Clear the withoutModules from m_ast
-    std::erase_if(m_ast, [](const std::unique_ptr<Decl> &decl) { return decl.get() == nullptr; });
+    // for (auto &&decl : m_ast) {
+    //     if (!dynamic_cast<const ModuleDecl *>(decl.get())) {
+    //         m_ast_withoutModules.emplace_back(std::move(decl));
+    //     }
+    // }
+    // // Clear the withoutModules from m_ast
+    // std::erase_if(m_ast, [](const std::unique_ptr<Decl> &decl) { return decl.get() == nullptr; });
 
-    auto resolvedDecls = resolve_in_module_decl(m_ast_withoutModules);
+    auto resolvedDecls = resolve_in_module_decl(m_ast);
 
-    for (auto &&decl : resolvedDecls) {
-        resolvedTree.emplace_back(std::move(decl));
-    }
+    // for (auto &&decl : resolvedDecls) {
+    //     resolvedTree.emplace_back(std::move(decl));
+    // }
 
-    // Now resolve the modules
-    bool error = false;
-    for (auto &&decl : m_ast) {
-        if (const auto *mod = dynamic_cast<const ModuleDecl *>(decl.get())) {
-            auto resolvedModDecl = resolve_module_decl(*mod, ModuleID{});
-            resolvedTree.emplace_back(std::move(resolvedModDecl));
-            continue;
-        }
-    }
+    // // Now resolve the modules
+    // bool error = false;
+    // for (auto &&decl : m_ast) {
+    //     if (const auto *mod = dynamic_cast<const ModuleDecl *>(decl.get())) {
+    //         auto resolvedModDecl = resolve_module_decl(*mod);
+    //         resolvedTree.emplace_back(std::move(resolvedModDecl));
+    //         continue;
+    //     }
+    // }
 
-    if (error) return {};
+    // if (error) return {};
 
     // dump_scopes();
     // dump_module_scopes();
-    return resolvedTree;
+    return resolvedDecls;
 }
 
 bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
     debug_func("");
-    if (!resolve_in_module_body(decls)) {
-        return false;
-    }
+    return resolve_in_module_body(decls);
 
     // Now resolve the modules
-    bool error = false;
-    for (auto &&decl : decls) {
-        if (auto *mod = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
-            if (!resolve_module_body(*mod)) {
-                error = true;
-                continue;
-            }
-            continue;
-        }
-    }
+    // bool error = false;
+    // for (auto &&decl : decls) {
+    //     if (auto *mod = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
+    //         if (!resolve_module_body(*mod)) {
+    //             error = true;
+    //             continue;
+    //         }
+    //         continue;
+    //     }
+    // }
 
-    if (error) {
-        decls.clear();
-        return false;
-    }
+    // if (error) {
+    //     decls.clear();
+    //     return false;
+    // }
 
-    // dump_scopes();
-    // dump_module_scopes();
-    return true;
+    // // dump_scopes();
+    // // dump_module_scopes();
+    // return true;
 }
 
 // std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast() {
@@ -305,7 +304,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
     bool error = false;
     error |= check_return_on_all_paths(fn, cfg);
     error |= check_variable_initialization(cfg);
-
+    debug_msg("error " << error);
     return error;
 };
 

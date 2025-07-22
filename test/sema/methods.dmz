@@ -6,11 +6,12 @@ struct Color {
     r: i32,
     g: i32,
     b: i32,
+    
+    fn print(self:&Color) -> i32 {
+        return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
+    }
 }
 
-fn Color.print(self:&Color) -> i32 {
-    return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
-}
 // CHECK: ResolvedMemberFunctionDecl
 // CHECK-NEXT:   ResolvedStructDecl Color
 // CHECK-NEXT:   ResolvedFunctionDecl print -> i32

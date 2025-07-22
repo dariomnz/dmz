@@ -16,14 +16,14 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     debug_func(declRefExpr.location);
     // Search in the module scope
     ResolvedDecl *decl = lookup(declRefExpr.identifier, ResolvedDeclType::ResolvedDecl).first;
-    if (!decl) {
-        // Search in the current module
-        decl = lookup_in_modules(m_currentModuleID, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
-    }
-    if (!decl) {
-        // Search in the imports
-        decl = lookup_in_modules(m_currentModuleIDRef, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
-    }
+    // if (!decl) {
+    //     // Search in the current module
+    //     decl = lookup_in_modules(m_currentModuleID, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
+    // }
+    // if (!decl) {
+    //     // Search in the imports
+    //     decl = lookup_in_modules(m_currentModuleIDRef, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
+    // }
     if (!decl) {
         dump_scopes();
         return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
@@ -48,8 +48,18 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     const ResolvedMemberFunctionDecl *resolvedMemberFuncDecl = nullptr;
     bool isMemberCall = false;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
-        resolvedMemberFuncDecl = static_cast<const ResolvedMemberFunctionDecl *>(
-            lookup_in_modules(m_currentModuleIDRef, memberExpr->field, ResolvedDeclType::ResolvedMemberFunctionDecl));
+        const auto *dre = dynamic_cast<const DeclRefExpr *>(memberExpr->base.get());
+        if (!dre) return report(call.location, "expression cannot be called as a function");
+        auto decl_ref_expr = resolve_decl_ref_expr(*dre, false);
+
+        const auto *st = static_cast<const ResolvedStructDecl *>(
+            lookup(decl_ref_expr->type.name, ResolvedDeclType::ResolvedStructDecl).first);
+        if (!st) return report(dre->location, "struct '" + std::string(decl_ref_expr->type.name) + "' not found");
+        for (auto &&function : st->functions) {
+            debug_msg("Func: " << function->identifier << " Member: " << memberExpr->field);
+            if (function->identifier == memberExpr->field) resolvedMemberFuncDecl = function.get();
+        }
+
         if (!resolvedMemberFuncDecl) return report(memberExpr->location, "cannot fount struct of member function");
         resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
         parentFunc = resolvedMemberFuncDecl;
@@ -201,9 +211,6 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
         return resolve_try_err_expr(*tryErrExpr);
-    }
-    if (const auto *modDeclRefExpr = dynamic_cast<const ModuleDeclRefExpr *>(&expr)) {
-        return resolve_module_decl_ref_expr(*modDeclRefExpr, ModuleID{});
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -442,16 +449,16 @@ std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const Er
     // Search in the module scope
     ResolvedErrDecl *lookupErr =
         static_cast<ResolvedErrDecl *>(lookup(errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl).first);
-    if (!lookupErr) {
-        // Search in the current module
-        lookupErr = static_cast<ResolvedErrDecl *>(
-            lookup_in_modules(m_currentModuleID, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
-    }
-    if (!lookupErr) {
-        // Search in the imports
-        lookupErr = static_cast<ResolvedErrDecl *>(
-            lookup_in_modules(m_currentModuleIDRef, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
-    }
+    // if (!lookupErr) {
+    //     // Search in the current module
+    //     lookupErr = static_cast<ResolvedErrDecl *>(
+    //         lookup_in_modules(m_currentModuleID, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
+    // }
+    // if (!lookupErr) {
+    //     // Search in the imports
+    //     lookupErr = static_cast<ResolvedErrDecl *>(
+    //         lookup_in_modules(m_currentModuleIDRef, errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl));
+    // }
 
     if (!lookupErr) {
         return report(errDeclRef.location, "err '" + std::string(errDeclRef.identifier) + "' not found");
@@ -502,39 +509,39 @@ std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr 
     }
 }
 
-std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
-                                                                              const ModuleID &prevModuleID) {
-    debug_func(moduleDeclRef.location);
-    ModuleID currentModuleID = prevModuleID;
-    currentModuleID.modules.emplace_back(moduleDeclRef.identifier);
-    m_currentModuleIDRef = currentModuleID;
-    // Only check imported of the last module
-    if (!dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
-        // std::string strToLookUp = currentModuleID.to_string();
-        // std::string prevStr = prevModuleID.to_string();
-        // auto newSize = currentModuleID.modules.size() > 0 ? strToLookUp.size() - 2 : strToLookUp.size();
-        // strToLookUp = strToLookUp.substr(0, newSize);
-        auto *importDecl = static_cast<ResolvedImportDecl *>(
-            lookup_in_modules(m_currentModuleID, moduleDeclRef.identifier, ResolvedDeclType::ResolvedImportDecl));
-        if (!importDecl) {
-            // moduleDeclRef.dump();
-            return report(moduleDeclRef.location, "module '" + currentModuleID.to_string() + "' not imported");
-        }
-        if (!importDecl->alias.empty()) {
-            m_currentModuleIDRef = importDecl->moduleID;
-            m_currentModuleIDRef.modules.emplace_back(importDecl->identifier);
-        }
-    }
+// std::unique_ptr<ResolvedModuleDeclRefExpr> Sema::resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef)
+// {
+//     debug_func(moduleDeclRef.location);
+//     ModuleID currentModuleID = prevModuleID;
+//     currentModuleID.modules.emplace_back(moduleDeclRef.identifier);
+//     m_currentModuleIDRef = currentModuleID;
+//     // Only check imported of the last module
+//     if (!dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
+//         // std::string strToLookUp = currentModuleID.to_string();
+//         // std::string prevStr = prevModuleID.to_string();
+//         // auto newSize = currentModuleID.modules.size() > 0 ? strToLookUp.size() - 2 : strToLookUp.size();
+//         // strToLookUp = strToLookUp.substr(0, newSize);
+//         auto *importDecl = static_cast<ResolvedImportDecl *>(
+//             lookup_in_modules(m_currentModuleID, moduleDeclRef.identifier, ResolvedDeclType::ResolvedImportDecl));
+//         if (!importDecl) {
+//             // moduleDeclRef.dump();
+//             return report(moduleDeclRef.location, "module '" + currentModuleID.to_string() + "' not imported");
+//         }
+//         if (!importDecl->alias.empty()) {
+//             m_currentModuleIDRef = importDecl->moduleID;
+//             m_currentModuleIDRef.modules.emplace_back(importDecl->identifier);
+//         }
+//     }
 
-    std::unique_ptr<ResolvedExpr> resolvedExpr;
-    if (auto nextmoduleDeclRef = dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
-        resolvedExpr = resolve_module_decl_ref_expr(*nextmoduleDeclRef, currentModuleID);
-    } else {
-        resolvedExpr = resolve_expr(*moduleDeclRef.expr);
-    }
-    if (!resolvedExpr) return nullptr;
+//     std::unique_ptr<ResolvedExpr> resolvedExpr;
+//     if (auto nextmoduleDeclRef = dynamic_cast<ModuleDeclRefExpr *>(moduleDeclRef.expr.get())) {
+//         resolvedExpr = resolve_module_decl_ref_expr(*nextmoduleDeclRef, currentModuleID);
+//     } else {
+//         resolvedExpr = resolve_expr(*moduleDeclRef.expr);
+//     }
+//     if (!resolvedExpr) return nullptr;
 
-    return std::make_unique<ResolvedModuleDeclRefExpr>(moduleDeclRef.location, currentModuleID,
-                                                       std::move(resolvedExpr));
-}
+//     return std::make_unique<ResolvedModuleDeclRefExpr>(moduleDeclRef.location, currentModuleID,
+//                                                        std::move(resolvedExpr));
+// }
 }  // namespace DMZ

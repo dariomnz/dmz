@@ -67,7 +67,7 @@ struct GenericTypes {
     bool operator==(const GenericTypes& other) const;
 };
 struct Type {
-    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err };
+    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err, Module };
 
     Kind kind = Kind::Void;
     std::string_view name = "";
@@ -102,6 +102,7 @@ struct Type {
     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
     static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
+    static Type moduleType(const std::string_view& name) { return {Kind::Module, name}; }
     static Type customType(const std::string_view& name) { return {Kind::Custom, name}; }
     static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
     static Type structType(Type t) {
@@ -474,26 +475,6 @@ struct DerefPtrExpr : public AssignableExpr {
     void dump(size_t level = 0) const override;
 };
 
-struct FieldDecl : public Decl {
-    Type type;
-
-    FieldDecl(SourceLocation location, std::string_view identifier, Type type)
-        : Decl(location, std::move(identifier)), type(std::move(type)) {}
-
-    void dump(size_t level = 0) const override;
-};
-
-struct StructDecl : public Decl {
-    std::vector<std::unique_ptr<FieldDecl>> fields;
-    std::unique_ptr<GenericTypesDecl> genericTypes;
-
-    StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields,
-               std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
-        : Decl(location, std::move(identifier)), fields(std::move(fields)), genericTypes(std::move(genericTypes)) {}
-
-    void dump(size_t level = 0) const override;
-};
-
 struct ParamDecl : public Decl {
     Type type;
     bool isMutable;
@@ -551,21 +532,51 @@ struct FunctionDecl : public FuncDecl {
     void dump(size_t level = 0) const override;
 };
 
+// Forware declaration
+struct StructDecl;
 struct MemberFunctionDecl : public FuncDecl {
-    Type base;
+    StructDecl* structBase;
     std::unique_ptr<FunctionDecl> function;
 
-    MemberFunctionDecl(SourceLocation location, std::string_view identifier, Type base,
-                       std::unique_ptr<FunctionDecl> function)
-        : FuncDecl(location, identifier, function->type, {}), base(std::move(base)), function(std::move(function)) {}
+    MemberFunctionDecl(StructDecl* structBase, std::unique_ptr<FunctionDecl> function)
+        : FuncDecl(function->location, function->identifier, function->type, {}),
+          structBase(structBase),
+          function(std::move(function)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct DeclStmt : public Stmt {
+struct FieldDecl : public Decl {
+    Type type;
+
+    FieldDecl(SourceLocation location, std::string_view identifier, Type type)
+        : Decl(location, std::move(identifier)), type(std::move(type)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct StructDecl : public Decl {
+    std::vector<std::unique_ptr<FieldDecl>> fields;
+    std::vector<std::unique_ptr<MemberFunctionDecl>> functions;
+    std::unique_ptr<GenericTypesDecl> genericTypes;
+
+    StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields,
+               std::vector<std::unique_ptr<MemberFunctionDecl>> functions,
+               std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
+        : Decl(location, std::move(identifier)),
+          fields(std::move(fields)),
+          functions(std::move(functions)),
+          genericTypes(std::move(genericTypes)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct DeclStmt : public Decl, public Stmt {
+    SourceLocation location;
     std::unique_ptr<VarDecl> varDecl;
 
-    DeclStmt(SourceLocation location, std::unique_ptr<VarDecl> varDecl) : Stmt(location), varDecl(std::move(varDecl)) {}
+    DeclStmt(SourceLocation location, std::unique_ptr<VarDecl> varDecl)
+        : Decl(location, varDecl->identifier), Stmt(location), location(location), varDecl(std::move(varDecl)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -641,35 +652,19 @@ struct TryErrExpr : public Expr {
 };
 
 struct ModuleDecl : public Decl {
-    std::unique_ptr<ModuleDecl> nestedModule;
     std::vector<std::unique_ptr<Decl>> declarations;
 
-    ModuleDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ModuleDecl> nestedModule,
+    ModuleDecl(SourceLocation location, std::string_view identifier,
                std::vector<std::unique_ptr<Decl>> declarations = {})
-        : Decl(location, identifier), nestedModule(std::move(nestedModule)), declarations(std::move(declarations)) {}
+        : Decl(location, identifier), declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct ModuleDeclRefExpr : public Expr {
+struct ImportExpr : public Expr {
     std::string_view identifier;
-    std::unique_ptr<Expr> expr;
-
-    ModuleDeclRefExpr(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> expr)
-        : Expr(location), identifier(identifier), expr(std::move(expr)) {}
+    ImportExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
 
     void dump(size_t level = 0) const override;
-};
-
-struct ImportDecl : public Decl {
-    std::unique_ptr<ImportDecl> nestedImport;
-    std::string_view alias;
-
-    ImportDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<ImportDecl> nestedImport = nullptr,
-               std::string_view alias = "")
-        : Decl(location, identifier), nestedImport(std::move(nestedImport)), alias(std::move(alias)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string get_moduleID() const;
 };
 }  // namespace DMZ

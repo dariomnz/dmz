@@ -1,5 +1,6 @@
-// RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s -module -ast-dump 2>&1 | filecheck %s
 module ops {
+    const std = import("asdf");
     struct str_ops {
         x:i32,
         y:i32,

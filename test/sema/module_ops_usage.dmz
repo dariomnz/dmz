@@ -1,20 +1,17 @@
-// RUN: compiler %s %S/module_ops.dmz -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s %S/module_ops.dmz -ast-dump 2>&1 | filecheck %s
 
-import ops;
+const ops = import("ops");
 // CHECK: ResolvedImportDecl ops
-import ops::integer;
-// CHECK: ResolvedImportDecl ops
-// CHECK-NEXT: ResolvedImportDecl ops::integer
 
 fn main() -> void {
     let x = 1;
     let y = 2;
 
-    ops::print(x);
+    ops.print(x);
 
-    let result = ops::integer::add(x, y);
+    let result = ops.integer.add(x, y);
     
-    ops::print(result);
+    ops.print(result);
 }
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock

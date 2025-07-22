@@ -5,6 +5,7 @@ namespace DMZ {
 // <returnStmt>
 //   ::= 'return' <expr>? ';'
 std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'return'
     if (restrictions & ReturnNotAllowed) {
@@ -24,6 +25,7 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
 }
 
 std::unique_ptr<Stmt> Parser::parse_statement() {
+    debug_func("");
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
@@ -37,6 +39,7 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
 // <block>
 //   ::= '{' <statement>* '}'
 std::unique_ptr<Block> Parser::parse_block(bool oneStmt) {
+    debug_func("");
     SourceLocation loc = m_nextToken.loc;
     if (!oneStmt) eat_next_token();  // eat '{'
 
@@ -46,7 +49,7 @@ std::unique_ptr<Block> Parser::parse_block(bool oneStmt) {
             if (m_nextToken.type == TokenType::block_r) break;
 
         if (!oneStmt)
-            if (is_top_level_token(m_nextToken.type))
+            if (is_top_top_level_token(m_nextToken.type))
                 return report(m_nextToken.loc, "expected '}' at the end of a block");
 
         auto stmt = parse_statement();
@@ -66,6 +69,7 @@ std::unique_ptr<Block> Parser::parse_block(bool oneStmt) {
 }
 
 std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'if'
 
@@ -105,6 +109,7 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
 }
 
 std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'while'
 
@@ -123,6 +128,7 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
 }
 
 std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
+    debug_func("");
     Token tok = m_nextToken;
     bool isConst = m_nextToken.type == TokenType::kw_const;
     eat_next_token();  // eat 'let' or 'const'
@@ -137,6 +143,7 @@ std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
 }
 
 std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
+    debug_func("");
     varOrReturn(lhs, parse_prefix_expr());
 
     if (m_nextToken.type != TokenType::op_assign) {
@@ -164,6 +171,7 @@ std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
 }
 
 std::unique_ptr<Assignment> Parser::parse_assignment_rhs(std::unique_ptr<AssignableExpr> lhs) {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat '='
 
@@ -175,6 +183,7 @@ std::unique_ptr<Assignment> Parser::parse_assignment_rhs(std::unique_ptr<Assigna
 // <fieldInit>
 //  ::= <identifier> ':' <expr>
 std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
+    debug_func("");
     matchOrReturn(TokenType::id, "expected field initialization");
 
     SourceLocation location = m_nextToken.loc;
@@ -192,6 +201,7 @@ std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
 }
 
 std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
+    debug_func("");
     matchOrReturn(TokenType::kw_defer, "expected defer");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat defer
@@ -203,6 +213,7 @@ std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
 }
 
 std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
+    debug_func("");
     matchOrReturn(TokenType::kw_switch, "expected switch");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat switch
@@ -249,6 +260,7 @@ std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
 }
 
 std::unique_ptr<CaseStmt> Parser::parse_case_stmt() {
+    debug_func("");
     auto location = m_nextToken.loc;
     if (m_nextToken.type != TokenType::kw_case && m_nextToken.type != TokenType::kw_else) {
         return report(location, "expected case or else");

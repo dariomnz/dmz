@@ -4,7 +4,7 @@
 namespace DMZ {
 
 std::string Codegen::generate_struct_name(const ResolvedStructDecl &structDecl) {
-    std::string name = "struct." + structDecl.moduleID.to_string() + structDecl.type.to_str();
+    std::string name = "struct." + structDecl.type.to_str();
     debug_func(name);
     name = generate_symbol_name(name);
     return name;
@@ -19,7 +19,7 @@ std::string Codegen::generate_function_name(const ResolvedFuncDecl &functionDecl
     }
 
     if (auto memberFunction = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        name += generate_struct_name(memberFunction->structDecl);
+        name += generate_struct_name(*memberFunction->structDecl);
         name += ".";
     }
 
@@ -27,7 +27,8 @@ std::string Codegen::generate_function_name(const ResolvedFuncDecl &functionDecl
         name += std::string(functionDecl.identifier);
     } else if (dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl) ||
                dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        name += functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
+        name += std::string(functionDecl.identifier);
+        // name += functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
     }
 
     if (auto specializedFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
@@ -83,7 +84,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 }
 
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDecl) {
-    debug_func(funcDecl.moduleID << funcDecl.identifier);
+    debug_func(funcDecl.identifier);
     const ResolvedFuncDecl *fn;
     if (auto resFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&funcDecl)) {
         fn = resFunctionDecl->function.get();
@@ -255,7 +256,7 @@ void Codegen::generate_err_no_err() {
 void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
     debug_func("");
     for (auto &err : errGroupDecl.errs) {
-        auto name = err->moduleID.to_string() + std::string(err->identifier);
+        auto name =  std::string(err->identifier);
         auto symbol_name = generate_symbol_name(name);
         llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, name, true);
         m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
@@ -285,8 +286,7 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
         } else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
-                   dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
-                   dynamic_cast<const ResolvedImportDecl *>(decl.get())) {
+                   dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
         } else {
             decl->dump();
@@ -306,8 +306,7 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
 
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedImportDecl *>(decl.get())) {
+            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get())) {
             continue;
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);

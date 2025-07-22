@@ -84,9 +84,7 @@ void FunctionDecl::dump(size_t level) const {
 }
 
 void MemberFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "MemberFunctionDecl:";
-    base.dump();
-    std::cerr << "\n";
+    std::cerr << indent(level) << "MemberFunctionDecl:" << structBase->identifier << "\n";
 
     function->dump(level + 1);
 }
@@ -239,6 +237,7 @@ void StructDecl::dump(size_t level) const {
     std::cerr << '\n';
 
     for (auto &&field : fields) field->dump(level + 1);
+    for (auto &&function : functions) function->dump(level + 1);
 }
 
 void MemberExpr::dump(size_t level) const {
@@ -310,32 +309,8 @@ void ModuleDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ModuleDecl " << identifier << '\n';
 
     for (auto &&decl : declarations) decl->dump(level + 1);
-
-    if (nestedModule) nestedModule->dump(level + 1);
 }
 
-void ModuleDeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ModuleDeclRefExpr " << identifier << '\n';
+void ImportExpr::dump(size_t level) const { std::cerr << indent(level) << "ImportExpr " << identifier << '\n'; }
 
-    if (expr) expr->dump(level + 1);
-}
-
-void ImportDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ImportDecl " << identifier;
-    if (!alias.empty()) std::cerr << " as " << alias;
-    std::cerr << '\n';
-
-    if (nestedImport) nestedImport->dump(level + 1);
-}
-
-std::string ImportDecl::get_moduleID() const {
-    std::string moduleID(identifier);
-    const ImportDecl *currentImportDecl = this;
-    while (currentImportDecl->nestedImport) {
-        currentImportDecl = currentImportDecl->nestedImport.get();
-        moduleID += "::";
-        moduleID += currentImportDecl->identifier;
-    }
-    return moduleID;
-}
 }  // namespace DMZ

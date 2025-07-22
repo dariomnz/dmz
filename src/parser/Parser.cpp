@@ -3,41 +3,16 @@
 namespace DMZ {
 
 bool Parser::is_top_level_token(TokenType tok) { return top_level_tokens.count(tok) != 0; }
+bool Parser::is_top_top_level_token(TokenType tok) { return top_top_level_tokens.count(tok) != 0; }
 bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_tokens.count(tok) != 0; }
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
 std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bool expectMain) {
+    debug_func("");
     ScopedTimer st(Stats::type::parseTime);
-    std::vector<std::unique_ptr<Decl>> declarations;
 
-    while (m_nextToken.type != TokenType::eof) {
-        if (m_nextToken.type == TokenType::kw_module) {
-            if (auto mod = parse_module_decl()) {
-                declarations.emplace_back(std::move(mod));
-                continue;
-            }
-        } else if (m_nextToken.type == TokenType::kw_import) {
-            if (auto mod = parse_import_decl()) {
-                declarations.emplace_back(std::move(mod));
-                continue;
-            }
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_extern ||
-                   m_nextToken.type == TokenType::kw_err || m_nextToken.type == TokenType::kw_struct) {
-            auto decls = parse_in_module_decl();
-            if (decls.size() > 0) {
-                for (auto &&decl : decls) {
-                    declarations.emplace_back(std::move(decl));
-                }
-                continue;
-            }
-        } else {
-            report(m_nextToken.loc, "expected module, import, function, struct or err declaration on the top level");
-        }
-
-        synchronize_on(top_level_tokens);
-        continue;
-    }
+    auto declarations = parse_in_module_decl();
 
     bool hasMainFunction = !expectMain;
     for (auto &&fn : declarations) hasMainFunction |= fn->identifier == "main";
@@ -54,6 +29,7 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bo
 //  |   'void'
 //  |   <identifier>
 std::unique_ptr<Type> Parser::parse_type() {
+    debug_func("");
     int isArray = -1;
     bool isRef = false;
     std::optional<int> isPointer = std::nullopt;
@@ -136,6 +112,7 @@ std::unique_ptr<Type> Parser::parse_type() {
 }
 
 std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
+    debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
         return nullptr;
     }
@@ -147,6 +124,7 @@ std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
+    debug_func("");
     m_incompleteAST = true;
 
     while (types.count(m_nextToken.type) == 0 && m_nextToken.type != TokenType::eof) {
@@ -155,6 +133,7 @@ void Parser::synchronize_on(std::unordered_set<TokenType> types) {
 }
 
 void Parser::synchronize() {
+    debug_func("");
     m_incompleteAST = true;
 
     int blocks = 0;
@@ -186,6 +165,7 @@ void Parser::synchronize() {
 template <typename T, typename F>
 std::unique_ptr<std::vector<std::unique_ptr<T>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *> openingToken, F parser, std::pair<TokenType, const char *> closingToken) {
+    debug_func("");
     matchOrReturn(openingToken.first, openingToken.second);
     eat_next_token();  // eat openingToken
 
@@ -222,6 +202,7 @@ template std::unique_ptr<std::vector<std::unique_ptr<GenericTypeDecl>>> Parser::
     std::pair<TokenType, const char *>);
 
 bool Parser::nextToken_is_generic(TokenType nextToken) {
+    debug_func("");
     if (m_nextToken.type == TokenType::op_less) {
         int blocks = 0;
         int actual_jump = 0;

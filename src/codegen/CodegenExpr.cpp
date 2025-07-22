@@ -69,9 +69,6 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *tryErr = dynamic_cast<const ResolvedTryErrExpr *>(&expr)) {
         return generate_try_err_expr(*tryErr);
     }
-    if (auto *modDeclRef = dynamic_cast<const ResolvedModuleDeclRefExpr *>(&expr)) {
-        return generate_expr(*modDeclRef->expr);
-    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -429,8 +426,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
     } else {
         auto fmt = m_builder.CreateGlobalString(
             errUnwrapExpr.location.to_string() + ": Aborted: Unwrap an error value of '%s' in the function '" +
-            m_currentFunction->moduleID.to_string() + std::string(m_currentFunction->identifier) +
-            "' that not return an optional\n");
+            std::string(m_currentFunction->identifier) + "' that not return an optional\n");
         auto printf_func = m_module->getOrInsertFunction(
             "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getInt8Ty()->getPointerTo(), true));
         m_builder.CreateCall(printf_func, {fmt, err_value});
