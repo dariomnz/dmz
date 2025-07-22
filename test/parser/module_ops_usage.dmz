@@ -3,7 +3,7 @@
 const ops = import("ops");
 // CHECK: DeclStmt
 // CHECK-NEXT:   VarDecl:const  ops
-// CHECK-NEXT:     ImportExpr "ops"
+// CHECK-NEXT:     ImportExpr ops
 
 fn main() -> void {
     let x = 1;

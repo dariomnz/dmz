@@ -384,7 +384,7 @@ void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedImportExpr " << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedImportExpr " << moduleDecl.identifier << '\n';
     if (onlySelf) return;
 }
 }  // namespace DMZ

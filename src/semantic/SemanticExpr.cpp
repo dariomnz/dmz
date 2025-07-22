@@ -38,7 +38,7 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
     // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
     varOrReturn(type, resolve_type(decl->type));
     auto resolvedDeclRefExpr = std::make_unique<ResolvedDeclRefExpr>(declRefExpr.location, *decl, *type);
-    
+
     resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
     // println(type->to_str());
     return resolvedDeclRefExpr;
@@ -55,18 +55,38 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (!dre) return report(call.location, "expression cannot be called as a function");
         auto decl_ref_expr = resolve_decl_ref_expr(*dre, false);
 
-        const auto *st = static_cast<const ResolvedStructDecl *>(
-            lookup(decl_ref_expr->type.name, ResolvedDeclType::ResolvedStructDecl).first);
-        if (!st) return report(dre->location, "struct '" + std::string(decl_ref_expr->type.name) + "' not found");
-        for (auto &&function : st->functions) {
-            debug_msg("Func: " << function->identifier << " Member: " << memberExpr->field);
-            if (function->identifier == memberExpr->field) resolvedMemberFuncDecl = function.get();
+        const auto *decl = cast_lookup(decl_ref_expr->type.name, ResolvedDecl);
+        if (!decl) return report(dre->location, "symbol '" + std::string(decl_ref_expr->type.name) + "' not found");
+
+        if (auto struDecl = dynamic_cast<const ResolvedStructDecl *>(decl)) {
+            for (auto &&function : struDecl->functions) {
+                debug_msg("Func: " << function->identifier << " Member: " << memberExpr->field);
+                if (function->identifier == memberExpr->field) resolvedMemberFuncDecl = function.get();
+            }
+
+            if (!resolvedMemberFuncDecl) return report(memberExpr->location, "cannot fount member function");
+            resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
+            parentFunc = resolvedMemberFuncDecl;
+            isMemberCall = true;
+        } else if (auto varDecl = dynamic_cast<const ResolvedVarDecl *>(decl)) {
+            if (varDecl->type.kind != Type::Kind::Module) return report(decl_ref_expr->location, "expected a module");
+
+            if (!varDecl->initializer) return report(varDecl->location, "expect a initializer");
+            if (auto mod = dynamic_cast<ResolvedImportExpr *>(varDecl->initializer.get())) {
+                for (auto &&modDecl : mod->moduleDecl.declarations) {
+                    if (auto function = dynamic_cast<ResolvedFuncDecl *>(modDecl.get())) {
+                        debug_msg("Func: " << function->identifier << " Member: " << memberExpr->field);
+                        if (function->identifier == memberExpr->field) resolvedFuncDecl = function;
+                    }
+                }
+            } else {
+                return report(varDecl->initializer->location, "expected a import expr");
+            }
+
+            if (!resolvedFuncDecl) return report(memberExpr->location, "cannot fount function");
+            parentFunc = resolvedFuncDecl;
         }
 
-        if (!resolvedMemberFuncDecl) return report(memberExpr->location, "cannot fount struct of member function");
-        resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
-        parentFunc = resolvedMemberFuncDecl;
-        isMemberCall = true;
     } else {
         const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
         if (!dre) return report(call.location, "expression cannot be called as a function");
@@ -104,6 +124,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
         if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(memberExpr->base.get())) {
+            // TODO: check if is struct or module
             varOrReturn(resolvedDeclRefExpr, resolve_decl_ref_expr(*declRefExpr));
             auto resolvedRefPtrExpr =
                 std::make_unique<ResolvedRefPtrExpr>(resolvedDeclRefExpr->location, std::move(resolvedDeclRefExpr));
@@ -214,6 +235,9 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
         return resolve_try_err_expr(*tryErrExpr);
+    }
+    if (const auto *importExpr = dynamic_cast<const ImportExpr *>(&expr)) {
+        return resolve_import_expr(*importExpr);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");

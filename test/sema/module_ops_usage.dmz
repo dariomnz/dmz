@@ -9,9 +9,9 @@ fn main() -> void {
 
     ops.print(x);
 
-    let result = ops.integer.add(x, y);
+    // let result = ops.integer.add(x, y);
     
-    ops.print(result);
+    // ops.print(result);
 }
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock

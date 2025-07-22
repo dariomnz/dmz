@@ -26,12 +26,12 @@ class Sema {
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
     std::vector<std::unique_ptr<Decl>> m_ast_withoutModules;
-    std::vector<std::vector<ResolvedDecl *>> m_scopes;
+    std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
 
     static std::mutex m_moduleScopesMutex;
     static ModuleScope m_globalmodule;
 
-    void dump_module_scopes() const;
+    // void dump_module_scopes() const;
     void dump_scopes() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
@@ -66,6 +66,7 @@ class Sema {
 
    private:
     std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type);
+#define cast_lookup(id, type) static_cast<type *>(lookup(id, ResolvedDeclType::type).first)
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     // bool insert_decl_to_modules(ResolvedDecl &decl);

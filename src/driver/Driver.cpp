@@ -123,6 +123,14 @@ Driver::Type_Asts Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
 
     m_workers.wait();
 
+    for (size_t i = 1; i < asts.size(); i++) {
+        for (auto &&decl : asts[i]) {
+            asts[0].emplace_back(std::move(decl));
+        }
+    }
+
+    asts.resize(1);
+
     if (m_options.astDump) {
         for (auto &&ast : asts) {
             for (auto &&fn : ast) {

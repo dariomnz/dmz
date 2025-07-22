@@ -311,7 +311,7 @@ std::unique_ptr<ImportExpr> Parser::parse_import_expr() {
     eat_next_token();  // eat (
 
     matchOrReturn(TokenType::lit_string, "expected string literal");
-    auto identifier = m_nextToken.str;
+    auto identifier = m_nextToken.str.substr(1, m_nextToken.str.size() - 2);
     eat_next_token();  // eat (
 
     matchOrReturn(TokenType::par_r, "expected ')'");

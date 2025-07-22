@@ -564,10 +564,10 @@ struct ResolvedModuleDecl : public ResolvedDecl {
 };
 
 struct ResolvedImportExpr : public ResolvedExpr {
-    std::string_view identifier;
+    ResolvedModuleDecl &moduleDecl;
 
-    ResolvedImportExpr(SourceLocation location, std::string_view identifier)
-        : ResolvedExpr(location, Type::moduleType(identifier)), identifier(std::move(identifier)) {}
+    ResolvedImportExpr(SourceLocation location, ResolvedModuleDecl &moduleDecl)
+        : ResolvedExpr(location, Type::moduleType(moduleDecl.identifier)), moduleDecl(moduleDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

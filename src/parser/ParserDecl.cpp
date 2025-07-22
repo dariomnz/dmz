@@ -67,8 +67,8 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
-                                                   std::move(block), std::move(genericTypes));
+    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block),
+                                          std::move(genericTypes));
 }
 
 // <paramDecl>
@@ -162,6 +162,8 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
             std::unique_ptr<FunctionDecl> uniqueFunc(func);
             auto memberFunc = std::make_unique<MemberFunctionDecl>(structDecl.get(), std::move(uniqueFunc));
             funcList.emplace_back(std::move(memberFunc));
+        } else {
+            return report(m_nextToken.loc, "expected identifier or fn in struct");
         }
     }
 
@@ -178,11 +180,11 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
 //  ::= <identifier> ':' <type>
 std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
     debug_func("");
-    matchOrReturn(TokenType::id, "expected field declaration");
 
     SourceLocation location = m_nextToken.loc;
     // assert(nextToken.value && "identifier token without value");
 
+    matchOrReturn(TokenType::id, "expected field declaration");
     std::string_view identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 

@@ -3,11 +3,11 @@
 const std = import("std");
 // CHECK: DeclStmt
 // CHECK-NEXT:   VarDecl:const  std
-// CHECK-NEXT:     ImportExpr "std"
+// CHECK-NEXT:     ImportExpr std
 const modnest4 = import("modnest1.modnest2.modnest3.modnest4");
 // CHECK: DeclStmt
 // CHECK-NEXT:   VarDecl:const  modnest4
-// CHECK-NEXT:     ImportExpr "modnest1.modnest2.modnest3.modnest4"
+// CHECK-NEXT:     ImportExpr modnest1.modnest2.modnest3.modnest4
 
 fn main() -> void {
     std.printf("asdf");

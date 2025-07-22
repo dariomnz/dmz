@@ -411,7 +411,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
     debug_func("Decls " << decls.size());
     bool error = false;
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
-
+    ScopeRAII moduleScope(*this);
     // Resolve every struct first so that functions have access to them in their
     // signature.
     {
@@ -445,8 +445,19 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                 resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
+            if (const auto *err = dynamic_cast<const ErrGroupDecl *>(decl.get())) {
+                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_err_group_decl(*err);
+                if (!resolvedDecl) {
+                    error = true;
+                    continue;
+                }
+                resolvedTree.emplace_back(std::move(resolvedDecl));
+                continue;
+            }
         }
     }
+
+    debug_msg("Finish semanticResolveTypesTime");
     // {
     //     ScopedTimer st(Stats::type::semanticResolveStructsTime);
     //     for (auto &&decl : decls) {
@@ -522,7 +533,12 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
             }
 
             if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
-                resolvedTree.emplace_back(resolve_decl_stmt(*ds));
+                if (auto declStmt = resolve_decl_stmt(*ds)) {
+                    resolvedTree.emplace_back(std::move(declStmt));
+                } else {
+                    error = true;
+                }
+                continue;
             }
         }
     }
@@ -538,6 +554,7 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
 
     for (auto &&currentDeclRef : decls) {
         auto currentDecl = currentDeclRef.get();
+        debug_msg(currentDecl << " " << currentDecl->identifier << " " << currentDecl->location);
         if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
             if (!insert_decl_to_current_scope(*st)) {
                 error = true;
@@ -561,6 +578,14 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
         if (auto *fn = dynamic_cast<ResolvedDeclStmt *>(currentDecl)) {
             if (!insert_decl_to_current_scope(*fn->varDecl)) {
                 error = true;
+            }
+            continue;
+        }
+        if (auto *eg = dynamic_cast<ResolvedErrGroupDecl *>(currentDecl)) {
+            for (auto &&e : eg->errs) {
+                if (!insert_decl_to_current_scope(*e)) {
+                    error = true;
+                }
             }
             continue;
         }
@@ -627,8 +652,11 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
 std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) {
     debug_func(importExpr.location);
 
-    (void)importExpr;
-    dmz_unreachable("TODO");
+    auto lookupModule = cast_lookup(importExpr.identifier, ResolvedModuleDecl);
+    if (!lookupModule)
+        return report(importExpr.location, "module '" + std::string(importExpr.identifier) + "' not found");
+
+    return std::make_unique<ResolvedImportExpr>(importExpr.location, *lookupModule);
     // ModuleID currentModuleID = prevModuleID;
     // currentModuleID.modules.emplace_back(importDecl.identifier);
     // std::unique_ptr<ResolvedImportDecl> resolvedImportDecl;

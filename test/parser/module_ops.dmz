@@ -30,7 +30,7 @@ module ops {
 // CHECK: ModuleDecl ops
 // CHECK-NEXT:   DeclStmt
 // CHECK-NEXT:     VarDecl:const  std
-// CHECK-NEXT:       ImportExpr "asdf"
+// CHECK-NEXT:       ImportExpr asdf
 // CHECK-NEXT:   StructDecl str_ops
 // CHECK-NEXT:     FieldDecl:i32 x
 // CHECK-NEXT:     FieldDecl:i32 y

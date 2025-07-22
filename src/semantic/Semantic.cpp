@@ -51,15 +51,18 @@ void Sema::ModuleScope::dump(size_t level) const {
     }
 }
 
-void Sema::dump_module_scopes() const {
-    std::unique_lock lock(m_moduleScopesMutex);
-    m_globalmodule.dump();
-}
+// void Sema::dump_module_scopes() const {
+//     std::unique_lock lock(m_moduleScopesMutex);
+//     m_globalmodule.dump();
+// }
 
 void Sema::dump_scopes() const {
+    debug_msg("m_scopes.size " << m_scopes.size());
     size_t level = 0;
     for (auto &&scope : m_scopes) {
-        for (auto &&decl : scope) {
+        debug_msg("m_scopes[" << level << "].size " << scope.size());
+        for (auto &&[id, decl] : scope) {
+            println("Identifier: " << id);
             decl->dump(level, true);
         }
         level++;
@@ -69,13 +72,9 @@ void Sema::dump_scopes() const {
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     debug_func(decl.identifier << " " << decl.location);
     std::string identifier(decl.identifier);
-    // if (auto importDecl = dynamic_cast<ResolvedImportExpr *>(&decl)) {
-    //     if (importDecl->alias.empty()) {
-    //         identifier = importDecl->moduleID.to_string() + identifier;
-    //     } else {
-    //         identifier = importDecl->alias;
-    //     }
-    // }
+    if (dynamic_cast<ResolvedModuleDecl *>(&decl)) {
+        identifier = "module " + identifier;
+    }
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << identifier << " ======================");
 #endif
@@ -86,7 +85,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
         return false;
     }
 
-    m_scopes.back().emplace_back(&decl);
+    m_scopes.back().emplace(identifier, &decl);
 #ifdef DEBUG_SCOPES
     dump_scopes();
     println("======================<<insert_decl_to_current_scope " << identifier << " ======================");
@@ -143,7 +142,11 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     }
 
 std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedDeclType type) {
-    debug_func(id << " " << type);
+    std::string identifier(id);
+    if (type == ResolvedDeclType::ResolvedModuleDecl) {
+        identifier = "module " + identifier;
+    }
+    debug_func(identifier << " " << type);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
     dump_scopes();
@@ -151,20 +154,11 @@ std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedD
 #endif
     int scopeIdx = 0;
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
-        for (auto &&decl : *it) {
+        for (auto &&[id, decl] : *it) {
             switch_resolved_decl_type(type, decl, !, continue);
-            // if (auto importDecl = dynamic_cast<ResolvedImportExpr *>(decl)) {
-            //     std::string identifier(decl->identifier);
-            //     if (importDecl->alias.empty()) {
-            //         identifier = importDecl->moduleID.to_string() + identifier;
-            //     } else {
-            //         identifier = importDecl->alias;
-            //     }
-            //     if (identifier != id) continue;
-            // } else {
-            if (decl->identifier != id) continue;
-            // }
-
+            // debug_msg("check " << decl->identifier << " " << identifier);
+            if (id != identifier) continue;
+            // debug_msg("Found");
             return {decl, scopeIdx};
         }
 
