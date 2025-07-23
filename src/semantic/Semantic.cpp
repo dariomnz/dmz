@@ -143,8 +143,8 @@ ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const
 std::optional<Type> Sema::resolve_type(Type parsedType) {
     debug_func(parsedType);
     if (parsedType.kind == Type::Kind::Custom) {
-        if (lookup(parsedType.name, ResolvedDeclType::ResolvedStructDecl).first) {
-            return Type::structType(parsedType);
+        if (auto structDecl = cast_lookup(parsedType.name, ResolvedStructDecl)) {
+            return Type::structType(parsedType, structDecl);
         }
         if (auto decl = lookup((parsedType.name), ResolvedDeclType::ResolvedGenericTypeDecl).first) {
             auto resolvedGenericTypeDecl = dynamic_cast<ResolvedGenericTypeDecl *>(decl);
@@ -164,7 +164,9 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer st(Stats::type::semanticTime);
-    return resolve_in_module_decl(m_ast);
+    auto declarations = resolve_in_module_decl(m_ast);
+    resolve_symbol_names(declarations);
+    return declarations;
 }
 
 bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
@@ -330,5 +332,54 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
     }
 
     return !pendingErrors.empty();
+}
+
+void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
+    struct elem {
+        ResolvedDecl *decl;
+        int level;
+        std::string symbol;
+    };
+    std::stack<elem> stack;
+    for (auto &&decl : declarations) {
+        decl->symbolName = decl->identifier;
+        if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
+            stack.push(elem{decl.get(), 0, ""});
+        } else if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
+                   dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
+                   dynamic_cast<const ResolvedErrGroupDecl *>(decl.get())) {
+        } else {
+            dmz_unreachable("unexpected declaration");
+        }
+    }
+
+    while (!stack.empty()) {
+        elem e = stack.top();
+        stack.pop();
+
+        e.decl->symbolName = e.symbol + std::string(e.decl->identifier);
+        if (const auto *func = dynamic_cast<const ResolvedMemberFunctionDecl *>(e.decl)) {
+            func->function->symbolName = e.decl->symbolName;
+        }
+        // println(indent(e.level) << "Symbol identifier: " << e.decl->identifier);
+        // println(indent(e.level) << "e Symbol: " << e.symbol);
+        // println(indent(e.level) << "Symbol name: " << e.decl->symbolName);
+        // e.decl->dump();
+        // std::cout << indent(e.level) << e.decl->symbolName << std::endl;
+
+        if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(e.decl)) {
+            for (auto &&decl : modDecl->declarations) {
+                stack.push(elem{decl.get(), e.level + 1, e.decl->symbolName + "."});
+            }
+        } else if (const auto *strDecl = dynamic_cast<const ResolvedStructDecl *>(e.decl)) {
+            for (auto &&decl : strDecl->functions) {
+                stack.push(elem{decl.get(), e.level + 1, e.decl->symbolName + "."});
+            }
+        } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl)) {
+        } else {
+            dmz_unreachable("unexpected declaration");
+        }
+    }
 }
 }  // namespace DMZ

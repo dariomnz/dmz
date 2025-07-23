@@ -52,7 +52,7 @@ llvm::Type *Codegen::generate_type(const Type &type) {
         }
     }
     if (type.kind == Type::Kind::Struct) {
-        std::string name = "struct." + type.withoutRef().to_str();
+        std::string name = generate_decl_name(*type.decl);
         debug_msg(name);
         ret = llvm::StructType::getTypeByName(*m_context, name);
         // ret->dump();
@@ -240,18 +240,18 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
     return ret;
 }
 
-std::string Codegen::generate_symbol_name(std::string modIdentifier) {
-    debug_func(modIdentifier);
-    std::string_view to_find = "::";
-    std::string_view to_replace = "__";
+// std::string Codegen::generate_symbol_name(std::string modIdentifier) {
+//     debug_func(modIdentifier);
+//     std::string_view to_find = "::";
+//     std::string_view to_replace = "__";
 
-    size_t pos = modIdentifier.find(to_find);
-    while (pos != std::string::npos) {
-        modIdentifier.replace(pos, to_find.length(), to_replace);
-        pos = modIdentifier.find(to_find, pos + to_replace.length());
-    }
-    return modIdentifier;
-}
+//     size_t pos = modIdentifier.find(to_find);
+//     while (pos != std::string::npos) {
+//         modIdentifier.replace(pos, to_find.length(), to_replace);
+//         pos = modIdentifier.find(to_find, pos + to_replace.length());
+//     }
+//     return modIdentifier;
+// }
 
 void Codegen::generate_builtin_get_errno() {
     debug_func("");

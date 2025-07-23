@@ -40,6 +40,7 @@ struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
 struct ResolvedDecl {
     SourceLocation location;
     std::string_view identifier;
+    std::string symbolName;
     Type type;
     bool isMutable;
 
@@ -268,11 +269,11 @@ struct ResolvedStructDecl : public ResolvedDecl {
     GenericTypes specGenericTypes = GenericTypes{{}};
     std::vector<std::unique_ptr<ResolvedStructDecl>> specializations = {};
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl, Type type,
+    ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl, 
                        std::unique_ptr<ResolvedGenericTypesDecl> genericTypes,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                        std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions)
-        : ResolvedDecl(location, std::move(identifier), type, false),
+        : ResolvedDecl(location, std::move(identifier), Type::structType(identifier, this), false),
           genericTypes(std::move(genericTypes)),
           fields(std::move(fields)),
           functions(std::move(functions)),
@@ -558,7 +559,7 @@ struct ResolvedModuleDecl : public ResolvedDecl {
 
     ResolvedModuleDecl(SourceLocation location, std::string_view identifier,
                        std::vector<std::unique_ptr<ResolvedDecl>> declarations)
-        : ResolvedDecl(location, identifier, Type::moduleType(identifier), false),
+        : ResolvedDecl(location, identifier, Type::moduleType(identifier, this), false),
           declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -568,7 +569,7 @@ struct ResolvedImportExpr : public ResolvedExpr {
     ResolvedModuleDecl &moduleDecl;
 
     ResolvedImportExpr(SourceLocation location, ResolvedModuleDecl &moduleDecl)
-        : ResolvedExpr(location, Type::moduleType(moduleDecl.identifier)), moduleDecl(moduleDecl) {}
+        : ResolvedExpr(location, Type::moduleType(moduleDecl.identifier, &moduleDecl)), moduleDecl(moduleDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

@@ -9,8 +9,6 @@
 namespace DMZ {
 
 class Sema {
-   public:
-
    private:
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
@@ -49,7 +47,7 @@ class Sema {
                                    ResolvedDeclType type);
     ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
                                    ResolvedDeclType type);
-#define cast_lookup(id, type) static_cast<type *>(lookup(id, ResolvedDeclType::type).first)
+#define cast_lookup(id, type)                 static_cast<type *>(lookup(id, ResolvedDeclType::type).first)
 #define cast_lookup_in_module(decl, id, type) static_cast<type *>(lookup_in_module(decl, id, ResolvedDeclType::type))
 #define cast_lookup_in_struct(decl, id, type) static_cast<type *>(lookup_in_struct(decl, id, ResolvedDeclType::type))
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
@@ -112,5 +110,6 @@ class Sema {
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     ResolvedModuleDecl *resolve_module_from_ref(const ResolvedExpr &expr);
+    void resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
 };
 }  // namespace DMZ

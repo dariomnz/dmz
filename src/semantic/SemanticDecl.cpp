@@ -188,9 +188,9 @@ ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl
     std::vector<std::unique_ptr<ResolvedFieldDecl>> resolvedFields;
     std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
 
-    auto resolvedStruct = std::make_unique<ResolvedStructDecl>(
-        struDecl.location, struDecl.identifier, struDecl.structDecl, Type::structType(struDecl.identifier), nullptr,
-        std::move(resolvedFields), std::move(resolvedFunctions));
+    auto resolvedStruct =
+        std::make_unique<ResolvedStructDecl>(struDecl.location, struDecl.identifier, struDecl.structDecl, nullptr,
+                                             std::move(resolvedFields), std::move(resolvedFunctions));
 
     unsigned idx = 0;
     for (auto &&field : struDecl.fields) {
@@ -264,9 +264,9 @@ std::unique_ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &
         resolvedGenericTypesDecl = resolve_generic_types_decl(*structDecl.genericTypes);
         if (!resolvedGenericTypesDecl) return nullptr;
     }
-    auto resStructDecl = std::make_unique<ResolvedStructDecl>(
-        structDecl.location, structDecl.identifier, &structDecl, Type::structType(structDecl.identifier),
-        std::move(resolvedGenericTypesDecl), std::move(resolvedFields), std::move(resolvedFunctions));
+    auto resStructDecl = std::make_unique<ResolvedStructDecl>(structDecl.location, structDecl.identifier, &structDecl,
+                                                              std::move(resolvedGenericTypesDecl),
+                                                              std::move(resolvedFields), std::move(resolvedFunctions));
 
     unsigned idx = 0;
     for (auto &&field : structDecl.fields) {

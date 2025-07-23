@@ -32,8 +32,9 @@ class Codegen {
     std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir();
     llvm::Type *generate_type(const Type &type);
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
-    std::string generate_struct_name(const ResolvedStructDecl &structDecl);
-    std::string generate_function_name(const ResolvedFuncDecl &functionDecl);
+    std::string generate_decl_name(const ResolvedDecl &decl);
+    // std::string generate_struct_name(const ResolvedStructDecl &structDecl);
+    // std::string generate_function_name(const ResolvedFuncDecl &functionDecl);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
@@ -77,7 +78,7 @@ class Codegen {
     llvm::Value *generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal = false);
-    std::string generate_symbol_name(std::string modIdentifier);
+    // std::string generate_symbol_name(std::string modIdentifier);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
 };

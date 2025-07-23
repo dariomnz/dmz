@@ -1,4 +1,4 @@
-// RUN: compiler %s -run | filecheck %s
+// RUN: compiler %s ../sema/module_ops.dmz -run | filecheck %s
 
 // CHECK: 1
 // CHECK-NEXT: 2
@@ -8,8 +8,7 @@
 // CHECK-NEXT: 43
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
-
+const ops = import("ops");
 struct Color {
     r: i32,
     g: i32,
@@ -17,9 +16,9 @@ struct Color {
 }
 
 fn print_color(n: Color) -> void {
-    println(n.r);
-    println(n.g);
-    println(n.b);
+    ops.println(n.r);
+    ops.println(n.g);
+    ops.println(n.b);
 }
 
 fn add_color(n:Color, add:i32) -> Color {

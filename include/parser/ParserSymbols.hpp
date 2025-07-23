@@ -44,6 +44,9 @@ struct GenericTypes {
 
     bool operator==(const GenericTypes& other) const;
 };
+
+// Forward declaration
+struct ResolvedDecl;
 struct Type {
     enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err, Module };
 
@@ -55,6 +58,7 @@ struct Type {
     bool isRef = false;
     bool isOptional = false;
     std::optional<GenericTypes> genericTypes = std::nullopt;
+    ResolvedDecl* decl;  // For user defined types
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinBool() { return {Kind::Int, "i1", 1}; }
@@ -80,12 +84,17 @@ struct Type {
     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
     static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
-    static Type moduleType(const std::string_view& name) { return {Kind::Module, name}; }
+    static Type moduleType(const std::string_view& name, ResolvedDecl* decl) {
+        return Type{.kind = Kind::Module, .name = name, .decl = decl};
+    }
     static Type customType(const std::string_view& name) { return {Kind::Custom, name}; }
-    static Type structType(const std::string_view& name) { return {Kind::Struct, name}; }
-    static Type structType(Type t) {
+    static Type structType(const std::string_view& name, ResolvedDecl* decl) {
+        return Type{.kind = Kind::Struct, .name = name, .decl = decl};
+    }
+    static Type structType(Type t, ResolvedDecl* decl) {
         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
         t.kind = Kind::Struct;
+        t.decl = decl;
         return t;
     }
     static Type genericType(Type t) {

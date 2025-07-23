@@ -3,6 +3,7 @@
 namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
+    debug_func("");
     if (auto val = expr.get_constant_value()) {
         if (expr.type == Type::builtinBool()) {
             return m_builder.getInt1(*val != 0);
@@ -74,8 +75,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
+    debug_func("");
     const ResolvedFuncDecl &calleeDecl = call.callee;
-    auto symbolName = generate_function_name(call.callee);
+    auto symbolName = generate_decl_name(call.callee);
     llvm::Function *callee = m_module->getFunction(symbolName);
     if (!callee) {
         generate_function_decl(call.callee);
@@ -115,6 +117,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 }
 
 llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop) {
+    debug_func("");
     llvm::Value *rhs = generate_expr(*unop.operand);
 
     if (unop.op == TokenType::op_minus) {
@@ -134,16 +137,19 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
 }
 
 llvm::Value *Codegen::generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr) {
+    debug_func("");
     auto v = generate_expr(*expr.expr, true);
     return v;
 }
 
 llvm::Value *Codegen::generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr) {
+    debug_func("");
     auto v = generate_expr(*expr.expr);
     return v;
 }
 
 llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &binop) {
+    debug_func("");
     TokenType op = binop.op;
 
     if (op == TokenType::ampamp || op == TokenType::pipepipe) {
@@ -187,6 +193,7 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
 }
 
 llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs) {
+    debug_func("");
     rhs = cast_to(rhs, binop.rhs->type, binop.lhs->type);
 
     if (binop.op == TokenType::op_plus) {
@@ -297,6 +304,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
 
 void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicBlock *trueBB,
                                             llvm::BasicBlock *falseBB) {
+    debug_func("");
     llvm::Function *function = get_current_function();
     const auto *binop = dynamic_cast<const ResolvedBinaryOperator *>(&op);
 
@@ -323,6 +331,7 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
 }
 
 llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer) {
+    debug_func("");
     const ResolvedDecl &decl = dre.decl;
     llvm::Value *val = m_declarations[&decl];
 
@@ -334,15 +343,20 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 }
 
 llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer) {
+    debug_func("");
     llvm::Value *base = generate_expr(*memberExpr.base, true);
-    dmz_unreachable("TODO");
-    // llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, memberExpr.field.index);
-
-    // return keepPointer ? field : load_value(field, memberExpr.field.type);
+    if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
+        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, member->index);
+        return keepPointer ? field : load_value(field, member->type);
+    } else {
+        memberExpr.dump();
+        dmz_unreachable("TODO");
+    }
     return nullptr;
 }
 
 llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer) {
+    debug_func("");
     llvm::Value *base = generate_expr(*arrayAtExpr.array, !arrayAtExpr.array->type.isPointer);
     llvm::Type *type = nullptr;
     std::vector<llvm::Value *> idxs;
@@ -359,6 +373,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
 }
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
+    debug_func("");
     Type structType = sie.type;
     std::string varName(structType.name);
     varName += ".tmp";
@@ -378,6 +393,7 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
 }
 
 llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationExpr &aie) {
+    debug_func("");
     Type arrayType = aie.type;
     std::string varName = "array." + std::string(arrayType.name) + ".tmp";
     llvm::Value *tmp = allocate_stack_variable(varName, arrayType);
@@ -394,10 +410,12 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
 }
 
 llvm::Value *Codegen::generate_err_decl_ref_expr(const ResolvedErrDeclRefExpr &errDeclRefExpr) {
+    debug_func("");
     return m_declarations[&errDeclRefExpr.decl];
 }
 
 llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errUnwrapExpr) {
+    debug_func("");
     llvm::Function *function = get_current_function();
 
     auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.unwrap");
@@ -445,6 +463,7 @@ llvm::Value *Codegen::generate_err_unwrap_expr(const ResolvedErrUnwrapExpr &errU
 }
 
 llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchErrExpr) {
+    debug_func("");
     llvm::Value *err_struct = nullptr;
     llvm::Value *decl_value = nullptr;
     Type err_type;
@@ -475,6 +494,7 @@ llvm::Value *Codegen::generate_catch_err_expr(const ResolvedCatchErrExpr &catchE
 }
 
 llvm::Value *Codegen::generate_try_err_expr(const ResolvedTryErrExpr &tryErrExpr) {
+    debug_func("");
     llvm::Value *err_struct = nullptr;
     llvm::Value *decl_value = nullptr;
     Type err_type;

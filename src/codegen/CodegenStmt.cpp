@@ -3,6 +3,7 @@
 namespace DMZ {
 
 void Codegen::generate_block(const ResolvedBlock &block) {
+    debug_func("");
     for (auto &stmt : block.statements) {
         generate_stmt(*stmt);
 
@@ -16,6 +17,7 @@ void Codegen::generate_block(const ResolvedBlock &block) {
 }
 
 llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
+    debug_func("");
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return generate_expr(*expr);
     }
@@ -49,6 +51,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
+    debug_func("");
     if (stmt.expr) {
         if (stmt.expr->type.kind == Type::Kind::Err) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
@@ -69,6 +72,7 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
+    debug_func("");
     llvm::Function *function = get_current_function();
 
     auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true");
@@ -98,6 +102,7 @@ llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
+    debug_func("");
     llvm::Function *function = get_current_function();
 
     auto *header = llvm::BasicBlock::Create(*m_context, "while.cond", function);
@@ -119,6 +124,7 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
+    debug_func("");
     const auto *decl = stmt.varDecl.get();
     if (!decl->type.isRef) {
         llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
@@ -146,11 +152,13 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
+    debug_func("");
     llvm::Value *val = generate_expr(*stmt.expr);
     return store_value(val, generate_expr(*stmt.assignee, true), stmt.expr->type, stmt.assignee->type);
 }
 
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
+    debug_func("");
     llvm::Function *function = get_current_function();
     auto *elseBB = llvm::BasicBlock::Create(*m_context, "switch.else");
     auto *exitBB = llvm::BasicBlock::Create(*m_context, "switch.exit");

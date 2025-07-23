@@ -1,56 +1,55 @@
 // RUN: compiler %s -module -llvm-dump 2>&1 | filecheck %s
-module ops;
+module ops {
+    fn print(x:i32) -> void {
+        println(x);
+    }
+    // CHECK: define void @ops.print(i32 %x) {
+    // CHECK-NEXT: entry:
+    // CHECK-NEXT:   call void @ops.println(i32 %x)
+    // CHECK-NEXT:   ret void
+    // CHECK-NEXT: }
 
-fn print(x:i32) -> void {
-    println(x);
+    extern fn printf(fmt:*u8, ...) -> i32;
+    // CHECK: declare i32 @printf(ptr %0, ...)
+
+    fn println(n:i32) -> void {printf(&"%d\n", n);}
+    // CHECK: define void @ops.println(i32 %n) {
+    // CHECK-NEXT: entry:
+    // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %n)
+    // CHECK-NEXT:   ret void
+    // CHECK-NEXT: }
+
+    module integer{
+        fn add(x:i32, y:i32) -> i32 {
+            return x + y;
+        }
+        // CHECK: define i32 @ops.integer.add(i32 %x, i32 %y) {
+        // CHECK-NEXT: entry:
+        // CHECK-NEXT:   %retval = alloca i32, align 4
+        // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+        // CHECK-NEXT:   %0 = add i32 %x, %y
+        // CHECK-NEXT:   store i32 %0, ptr %retval, align 4
+        // CHECK-NEXT:   br label %return
+        // CHECK-NEXT: 
+        // CHECK-NEXT: return:                                           ; preds = %entry
+        // CHECK-NEXT:   %1 = load i32, ptr %retval, align 4
+        // CHECK-NEXT:   ret i32 %1
+        // CHECK-NEXT: }
+
+        fn sub(x:i32, y:i32) -> i32 {
+            return x - y;
+        }
+        // CHECK: define i32 @ops.integer.sub(i32 %x, i32 %y) {
+        // CHECK-NEXT: entry:
+        // CHECK-NEXT:   %retval = alloca i32, align 4
+        // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
+        // CHECK-NEXT:   %0 = sub i32 %x, %y
+        // CHECK-NEXT:   store i32 %0, ptr %retval, align 4
+        // CHECK-NEXT:   br label %return
+        // CHECK-NEXT: 
+        // CHECK-NEXT: return:                                           ; preds = %entry
+        // CHECK-NEXT:   %1 = load i32, ptr %retval, align 4
+        // CHECK-NEXT:   ret i32 %1
+        // CHECK-NEXT: }
+    }
 }
-
-// CHECK: define void @ops__print(i32 %x) {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   call void @ops__println(i32 %x)
-// CHECK-NEXT:   ret void
-// CHECK-NEXT: }
-
-extern fn printf(fmt:*u8, ...) -> i32;
-// CHECK: declare i32 @printf(ptr %0, ...)
-
-fn println(n:i32) -> void {printf(&"%d\n", n);}
-// CHECK: define void @ops__println(i32 %n) {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %n)
-// CHECK-NEXT:   ret void
-// CHECK-NEXT: }
-
-module ops::integer;
-
-fn add(x:i32, y:i32) -> i32 {
-    return x + y;
-}
-// CHECK: define i32 @ops__integer__add(i32 %x, i32 %y) {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   %0 = add i32 %x, %y
-// CHECK-NEXT:   store i32 %0, ptr %retval, align 4
-// CHECK-NEXT:   br label %return
-// CHECK-NEXT: 
-// CHECK-NEXT: return:                                           ; preds = %entry
-// CHECK-NEXT:   %1 = load i32, ptr %retval, align 4
-// CHECK-NEXT:   ret i32 %1
-// CHECK-NEXT: }
-
-fn sub(x:i32, y:i32) -> i32 {
-    return x - y;
-}
-// CHECK: define i32 @ops__integer__sub(i32 %x, i32 %y) {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %retval = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   %0 = sub i32 %x, %y
-// CHECK-NEXT:   store i32 %0, ptr %retval, align 4
-// CHECK-NEXT:   br label %return
-// CHECK-NEXT: 
-// CHECK-NEXT: return:                                           ; preds = %entry
-// CHECK-NEXT:   %1 = load i32, ptr %retval, align 4
-// CHECK-NEXT:   ret i32 %1
-// CHECK-NEXT: }
