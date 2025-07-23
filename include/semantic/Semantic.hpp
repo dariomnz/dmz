@@ -10,37 +10,16 @@ namespace DMZ {
 
 class Sema {
    public:
-    class ModuleScope {
-        std::unordered_map<std::string, ModuleScope> m_modules;
-        std::unordered_map<std::string, ResolvedDecl *> m_decls;
-
-       public:
-        ResolvedDecl *lookup_decl(const std::string_view id);
-        ModuleScope *lookup_module(const std::string_view id);
-        bool insert(ResolvedDecl &decl);
-        bool insert(const std::string_view id);
-        void dump(size_t level = 0) const;
-    };
 
    private:
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<Decl>> m_ast;
-    std::vector<std::unique_ptr<Decl>> m_ast_withoutModules;
     std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
 
-    static std::mutex m_moduleScopesMutex;
-    static ModuleScope m_globalmodule;
-
-    // void dump_module_scopes() const;
     void dump_scopes() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction;
-
-    std::unordered_map<const ResolvedFuncDecl *, Block *> m_functionsToResolveMap;
-    // ModuleID m_currentModuleID;
-    // ModuleID m_currentModuleIDRef;
-    Type m_currentSelf;
 
     class ScopeRAII {
         Sema &m_sema;
@@ -66,7 +45,13 @@ class Sema {
 
    private:
     std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type);
+    ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
+                                   ResolvedDeclType type);
+    ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
+                                   ResolvedDeclType type);
 #define cast_lookup(id, type) static_cast<type *>(lookup(id, ResolvedDeclType::type).first)
+#define cast_lookup_in_module(decl, id, type) static_cast<type *>(lookup_in_module(decl, id, ResolvedDeclType::type))
+#define cast_lookup_in_struct(decl, id, type) static_cast<type *>(lookup_in_struct(decl, id, ResolvedDeclType::type))
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     // bool insert_decl_to_modules(ResolvedDecl &decl);
@@ -123,11 +108,9 @@ class Sema {
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     std::unique_ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
-    bool resolve_import_check(ResolvedImportExpr &importExpr);
-    // std::unique_ptr<ResolvedModuleDeclRefExpr> resolve_module_decl_ref_expr(const ModuleDeclRefExpr &moduleDeclRef,
-    //                                                                         const ModuleID &prevModuleID);
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
+    ResolvedModuleDecl *resolve_module_from_ref(const ResolvedExpr &expr);
 };
 }  // namespace DMZ

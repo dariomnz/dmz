@@ -12,9 +12,9 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
     y;
 
+    // CHECK: [[# @LINE + 1 ]]:9: error: redeclaration of 'foo'
     let foo: i32 = 2;
 
-    // CHECK: [[# @LINE + 1 ]]:8: error: calling non-function symbol
     foo();
 }
 

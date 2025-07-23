@@ -30,8 +30,8 @@ fn uninitOneBranch() -> void {
     const x: i32;
     
     if (1) {
-        const x: i32;
-        x = 1; // init inner 'x'
+        const y: i32;
+        y = 1; // init inner 'x'
     } else {
         x = 2;
     }
@@ -92,13 +92,13 @@ fn shadowInitialization() -> void {
     const x: i32;
     
     if (1) {
+        // CHECK: [[# @LINE + 1 ]]:15: error: redeclaration of 'x'
         const x: i32;
         x = 1;
     } else {
         x = 2;
     }
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' is not initialized
     x;
 }
 
@@ -107,8 +107,8 @@ fn shadowInitialized() -> void {
     
     if (1) {
         x = 1;
+        // CHECK: [[# @LINE + 1 ]]:15: error: redeclaration of 'x'
         const x: i32;
-        // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
         x;
     } else {
         x = 2;

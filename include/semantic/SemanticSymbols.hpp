@@ -58,6 +58,7 @@ enum struct ResolvedDeclType {
     ResolvedImportExpr,
     ResolvedModuleDecl,
     ResolvedMemberFunctionDecl,
+    ResolvedFieldDecl,
     ResolvedGenericTypeDecl,
 };
 
@@ -351,10 +352,10 @@ struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
 
 struct ResolvedMemberExpr : public ResolvedAssignableExpr {
     std::unique_ptr<ResolvedExpr> base;
-    const ResolvedFieldDecl &field;
+    const ResolvedDecl &member;
 
-    ResolvedMemberExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> base, const ResolvedFieldDecl &field)
-        : ResolvedAssignableExpr(location, field.type), base(std::move(base)), field(field) {}
+    ResolvedMemberExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> base, const ResolvedDecl &member)
+        : ResolvedAssignableExpr(location, member.type), base(std::move(base)), member(member) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

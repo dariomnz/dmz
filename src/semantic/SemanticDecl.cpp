@@ -373,37 +373,15 @@ std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGrou
 
 std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module_decl(const ModuleDecl &moduleDecl) {
     debug_func(moduleDecl.location);
-    ScopeRAII moduleScope(*this);
-    std::unique_ptr<ResolvedModuleDecl> resolvedModuleDecl;
-    // ModuleID currentModuleID = prevModuleID;
-    // currentModuleID.modules.emplace_back(moduleDecl.identifier);
-    // m_currentModuleID = currentModuleID;
-    // if (moduleDecl.nestedModule) {
-    //     varOrReturn(nestedModule, resolve_module_decl(*moduleDecl.nestedModule, currentModuleID));
-    //     resolvedModuleDecl = std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier,
-    //                                                               prevModuleID, std::move(nestedModule));
-    // } else {
     auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations);
-    resolvedModuleDecl =
+    auto resolvedModuleDecl =
         std::make_unique<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, std::move(resolvedDecls));
-    // }
-    insert_decl_to_current_scope(*resolvedModuleDecl);
     return resolvedModuleDecl;
 }
 
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_func(moduleDecl.location);
-    ScopeRAII moduleScope(*this);
-    bool result;
-    // ModuleID currentModuleID = moduleDecl.moduleID;
-    // currentModuleID.modules.emplace_back(moduleDecl.identifier);
-    // m_currentModuleID = currentModuleID;
-    // if (moduleDecl.nestedModule) {
-    //     result = resolve_module_body(*moduleDecl.nestedModule);
-    // } else {
-    result = resolve_in_module_body(moduleDecl.declarations);
-    // }
-    return result;
+    return resolve_in_module_body(moduleDecl.declarations);
 }
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
@@ -412,8 +390,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
     bool error = false;
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
     ScopeRAII moduleScope(*this);
-    // Resolve every struct first so that functions have access to them in their
-    // signature.
+    // Resolve every struct first so that functions have access to them in their signature.
     {
         ScopedTimer st(Stats::type::semanticResolveStructsTime);
         for (auto &&decl : decls) {
@@ -457,75 +434,15 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
         }
     }
 
-    debug_msg("Finish semanticResolveTypesTime");
-    // {
-    //     ScopedTimer st(Stats::type::semanticResolveStructsTime);
-    //     for (auto &&decl : decls) {
-    //         if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
-    //             std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
-
-    //             if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
-    //                 error = true;
-    //                 continue;
-    //             }
-
-    //             resolvedTree.emplace_back(std::move(resolvedDecl));
-    //             continue;
-    //         }
-
-    //         if (dynamic_cast<const FuncDecl *>(decl.get())) {
-    //             continue;
-    //         }
-    //         if (const auto *err = dynamic_cast<const ErrGroupDecl *>(decl.get())) {
-    //             std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_err_group_decl(*err);
-    //             if (!resolvedDecl) {
-    //                 error = true;
-    //                 continue;
-    //             }
-    //             resolvedTree.emplace_back(std::move(resolvedDecl));
-    //             continue;
-    //         }
-    //         // if (const auto *import = dynamic_cast<const ImportExpr *>(decl.get())) {
-    //         //     if (m_currentModuleID.empty()) {
-    //         //         auto resolvedImport = resolve_import_decl(*import, ModuleID{});
-    //         //         if (!resolvedImport) {
-    //         //             error = true;
-    //         //             continue;
-    //         //         }
-    //         //         resolvedTree.emplace_back(std::move(resolvedImport));
-    //         //         continue;
-    //         //     }
-    //         // }
-    //         decl->dump();
-    //         dmz_unreachable("unexpected declaration");
-    //     }
-    // }
-
     if (error) return {};
 
-    // if (expectMain && m_scopes.size() == 1) {
-    //     // Insert println first to be able to detect a possible redeclaration.
-    //     auto *printlnDecl = resolvedTree.emplace_back(create_builtin_println()).get();
-    //     insert_decl_to_current_scope(*printlnDecl);
-    // }
     {
         ScopedTimer st(Stats::type::semanticResolveFunctionsTime);
         for (auto &&decl : decls) {
             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
                 if (auto resolvedDecl = resolve_function_decl(*fn);
                     resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
-                    auto &resolvedDeclEmpaced = resolvedTree.emplace_back(std::move(resolvedDecl));
-                    if (auto resolvedfndecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDeclEmpaced.get())) {
-                        if (auto fndecl = dynamic_cast<const FunctionDecl *>(fn)) {
-                            m_functionsToResolveMap[resolvedfndecl] = fndecl->body.get();
-                        }
-                    }
-                    if (auto resolvedfndecl =
-                            dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedDeclEmpaced.get())) {
-                        if (auto fndecl = dynamic_cast<const MemberFunctionDecl *>(fn)) {
-                            m_functionsToResolveMap[resolvedfndecl->function.get()] = fndecl->function->body.get();
-                        }
-                    }
+                    resolvedTree.emplace_back(std::move(resolvedDecl));
                     continue;
                 }
 
@@ -599,10 +516,6 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
                 error |= resolve_in_module_body(st->declarations);
                 continue;
             }
-            // if (auto *importDecl = dynamic_cast<ResolvedImportDecl *>(currentDecl)) {
-            //     if (!resolve_import_check(*importDecl)) error = true;
-            //     continue;
-            // }
             if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
                 if (!resolve_struct_members(*st)) error = true;
                 continue;
@@ -612,18 +525,12 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
             }
             if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
                 if (fn->genericTypes) continue;
-                if (auto body = m_functionsToResolveMap[fn]) {
-                    if (!resolve_func_body(*fn, *body)) {
-                        debug_msg("error resolve_func_body");
-                        error = true;
-                    }
-                    m_functionsToResolveMap.erase(fn);
-                    continue;
-                } else {
-                    continue;
-                }
 
-                error = true;
+                if (!resolve_func_body(*fn, *fn->functionDecl->body)) {
+                    debug_msg("error resolve_func_body");
+                    error = true;
+                }
+                continue;
             }
         }
     }
@@ -657,35 +564,5 @@ std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &
         return report(importExpr.location, "module '" + std::string(importExpr.identifier) + "' not found");
 
     return std::make_unique<ResolvedImportExpr>(importExpr.location, *lookupModule);
-    // ModuleID currentModuleID = prevModuleID;
-    // currentModuleID.modules.emplace_back(importDecl.identifier);
-    // std::unique_ptr<ResolvedImportDecl> resolvedImportDecl;
-    // // if (importDecl.nestedImport) {
-    // //     varOrReturn(nestedImport, resolve_import_decl(*importDecl.nestedImport, currentModuleID));
-    // //     resolvedImportDecl = std::make_unique<ResolvedImportDecl>(
-    // //         importDecl.location, importDecl.identifier, prevModuleID, std::move(nestedImport), importDecl.alias);
-    // // } else {
-    // resolvedImportDecl = std::make_unique<ResolvedImportDecl>(importDecl.location, importDecl.identifier,
-    // prevModuleID,
-    //                                                           nullptr, importDecl.identifier);
-    // // }
-    // return resolvedImportDecl;
-}
-
-bool Sema::resolve_import_check(ResolvedImportExpr &importExpr) {
-    debug_func(importExpr.location);
-    (void)importExpr;
-    dmz_unreachable("TODO");
-    // const auto moduleDecl = lookup_in_modules(importDecl.moduleID, importDecl.identifier, ResolvedDeclType::Module);
-    // if (!moduleDecl) {
-    //     report(importDecl.location, "module '" + std::string(importDecl.identifier) + "' not found");
-    //     return false;
-    // }
-    // if (importDecl.nestedImport) {
-    //     return resolve_import_check(*importDecl.nestedImport);
-    // }
-
-    // return insert_decl_to_modules(importExpr);
-    return true;
 }
 }  // namespace DMZ

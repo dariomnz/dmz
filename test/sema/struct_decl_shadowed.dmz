@@ -2,20 +2,9 @@
 struct S {}
 extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
 fn main() -> void {
-  const S = 1;
-  let x: S;
+    const S = 1;
+    // CHECK: [[# @LINE - 1 ]]:11: error: redeclaration of 'S'
+    let x: S;
 
-  println(S);
+    println(S);
 }
-// CHECK: ResolvedFunctionDecl main -> void
-// CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:const i32 S
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
-// CHECK-NEXT:         | value: 1
-// CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:S x
-// CHECK-NEXT:     ResolvedCallExpr:void
-// CHECK-NEXT:       ResolvedFunctionDecl println -> void
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 S
-// CHECK-NEXT:       | value: 1

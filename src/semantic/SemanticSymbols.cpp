@@ -1,19 +1,6 @@
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
-// std::ostream &operator<<(std::ostream &os, const ModuleID &moduleID) {
-//     for (auto &&mod : moduleID.modules) {
-//         os << mod << "::";
-//     }
-//     return os;
-// }
-
-// void ModuleID::dump() const { std::cerr << *this; }
-// std::string ModuleID::to_string() const {
-//     std::stringstream out;
-//     out << *this;
-//     return out.str();
-// }
 
 std::ostream &operator<<(std::ostream &os, const ResolvedDeclType &type) {
     if (type == ResolvedDeclType::Module) {
@@ -288,7 +275,7 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedMemberExpr:" << type << " " << field.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedMemberExpr:" << type << " " << member.identifier << '\n';
 
     if (onlySelf) return;
     base->dump(level + 1, onlySelf);

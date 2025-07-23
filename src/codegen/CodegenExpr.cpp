@@ -335,9 +335,11 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 
 llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer) {
     llvm::Value *base = generate_expr(*memberExpr.base, true);
-    llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, memberExpr.field.index);
+    dmz_unreachable("TODO");
+    // llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, memberExpr.field.index);
 
-    return keepPointer ? field : load_value(field, memberExpr.field.type);
+    // return keepPointer ? field : load_value(field, memberExpr.field.type);
+    return nullptr;
 }
 
 llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer) {
