@@ -1,4 +1,3 @@
-// REQUIRES: include
 // RUN: diff <(compiler %s -I %S/../../std -run 2>&1) <(echo -n -e 'Hello\n')
 
 const std = import("std");

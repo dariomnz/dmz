@@ -1,4 +1,3 @@
-// REQUIRES: include
 // RUN: compiler %s -I %S/../../std -run | filecheck %s
 
 // CHECK: 3.1415858269

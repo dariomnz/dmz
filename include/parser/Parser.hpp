@@ -90,7 +90,7 @@ class Parser {
     bool is_top_stmt_level_token(TokenType tok);
 
    public:
-    std::pair<std::vector<std::unique_ptr<Decl>>, bool> parse_source_file(bool expectMain = false);
+    std::pair<std::unique_ptr<ModuleDecl>, bool> parse_source_file(bool expectMain = false);
 
    public:
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }

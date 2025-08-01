@@ -1,14 +1,10 @@
-import std::io::file;
-fn main() -> void {
-    std::io::file::open(&"asdf", 0);
-    std::io::file::print_errno();
+
+module std {
+    module file {
+        extern fn open(buffer:*u8[], flags:i32, ...) -> i32;
+        extern fn printf(fmt:*u8[], ...) -> i32;
+    }
 }
-
-module std::io::file;
-
-// extern fn write(fd:int, buffer:&char[], size:int) -> int;
-extern fn open(buffer:&char[], flags:int, ...) -> int;
-extern fn printf(fmt:&char[], ...) -> int;
 
 // struct File {
 //     fd: int,

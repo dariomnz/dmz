@@ -11,10 +11,12 @@ namespace DMZ {
 class Sema {
    private:
     ConstantExpressionEvaluator cee;
-    std::vector<std::unique_ptr<Decl>> m_ast;
+    std::vector<std::unique_ptr<ModuleDecl>> m_ast;
     std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
+    std::unordered_map<std::string, ResolvedModuleDecl*> m_modules_for_import;
 
     void dump_scopes() const;
+    void dump_modules_for_import() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction;
@@ -35,7 +37,7 @@ class Sema {
     std::unique_ptr<ScopeRAII> m_globalScope;
 
    public:
-    explicit Sema(std::vector<std::unique_ptr<Decl>> ast)
+    explicit Sema(std::vector<std::unique_ptr<ModuleDecl>> ast)
         : m_ast(std::move(ast)), m_globalScope(std::make_unique<ScopeRAII>(*this)) {}
     // std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast_decl();
@@ -81,7 +83,11 @@ class Sema {
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
+    // std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt_without_init(const DeclStmt &declStmt);
+    // bool resolve_decl_stmt_init(const ResolvedDeclStmt &declStmt);
     std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
+    // std::unique_ptr<ResolvedVarDecl> resolve_var_decl_without_init(const VarDecl &varDecl);
+    // bool resolve_var_decl_init(const ResolvedVarDecl &varDecl);
     std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
     std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
@@ -101,9 +107,12 @@ class Sema {
     std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
     std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
     std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
-    std::unique_ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
+    std::unique_ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl, int level);
+    bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
-    std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<std::unique_ptr<Decl>> &decls);
+    std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(
+        const std::vector<std::unique_ptr<Decl>> &decls,
+        std::vector<std::unique_ptr<ResolvedDecl>> alreadyResolved = {});
     bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     std::unique_ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);

@@ -17,6 +17,7 @@ struct CompilerOptions {
     bool displayHelp = false;
     bool lexerDump = false;
     bool astDump = false;
+    bool importDump = false;
     bool resDump = false;
     bool llvmDump = false;
     bool cfgDump = false;
@@ -34,6 +35,7 @@ class Driver {
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
     CompilerOptions m_options;
+    std::unordered_map<std::string, ModuleDecl*> imported_modules;
 
    public:
     Driver(CompilerOptions options) : m_options(options) {}
@@ -44,21 +46,43 @@ class Driver {
 
     using Type_Sources = std::vector<std::filesystem::path>;
     using Type_Lexers = std::vector<std::unique_ptr<Lexer>>;
-    using Type_Asts = std::vector<std::vector<std::unique_ptr<Decl>>>;
-    using Type_ResolvedTrees = std::vector<std::vector<std::unique_ptr<ResolvedDecl>>>;
-    using Type_Modules = std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>>;
+    using Type_Ast = std::vector<std::unique_ptr<ModuleDecl>>;
+    using Type_ResolvedTree = std::vector<std::unique_ptr<ResolvedDecl>>;
     using Type_Module = std::unique_ptr<llvm::orc::ThreadSafeModule>;
 
     void check_sources_pass(Type_Sources& sources);
     Type_Lexers lexer_pass(Type_Sources& sources);
-    Type_Asts parser_pass(Type_Lexers& lexers, bool expectMain = true);
+    Type_Ast parser_pass(Type_Lexers& lexers, bool expectMain = true);
     Type_Sources find_modules(const Type_Sources& includeDirs,
                               const std::unordered_set<std::string_view>& importedModuleIDs);
-    void include_pass(Type_Lexers& lexers, Type_Asts& asts);
-    Type_ResolvedTrees semantic_pass(Type_Asts& asts);
-    Type_Modules codegen_pass(Type_ResolvedTrees& resolvedTrees);
-    Type_Module linker_pass(Type_Modules& modules);
+    void include_pass(Type_Ast& asts);
+    std::unique_ptr<ModuleDecl> merge_modules(std::vector<std::unique_ptr<ModuleDecl>> modules);
+    static void register_import(std::string_view imported);
+    static ModuleDecl* get_import(std::string_view imported);
+    bool all_imported();
+    ModuleDecl* find_module(std::string_view name, std::unique_ptr<ModuleDecl>& find_ast);
+
+    Type_ResolvedTree semantic_pass(Type_Ast& asts);
+    Type_Module codegen_pass(Type_ResolvedTree& resolvedTrees);
+    // Type_Module linker_pass(Type_Module& modules);
     int jit_pass(Type_Module& module);
     int generate_exec_pass(Type_Module& module);
+
+   private:
+    static std::unique_ptr<Driver> driver_instance;
+
+   public:
+    static Driver& create_instance(CompilerOptions options) {
+        if (driver_instance) dmz_unreachable("Driver instance already created");
+
+        driver_instance = std::make_unique<Driver>(options);
+        if (!driver_instance) dmz_unreachable("Driver instance not created");
+        return *driver_instance;
+    }
+
+    static Driver& instance() {
+        if (!driver_instance) dmz_unreachable("Driver instance not created");
+        return *driver_instance;
+    }
 };
 }  // namespace DMZ

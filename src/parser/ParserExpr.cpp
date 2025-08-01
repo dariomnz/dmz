@@ -1,5 +1,5 @@
 #include "parser/Parser.hpp"
-
+#include "driver/Driver.hpp"
 namespace DMZ {
 
 std::unique_ptr<Expr> Parser::parse_primary() {
@@ -317,6 +317,7 @@ std::unique_ptr<ImportExpr> Parser::parse_import_expr() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )
 
+    Driver::register_import(identifier);
     return std::make_unique<ImportExpr>(location, identifier);
 }
 }  // namespace DMZ

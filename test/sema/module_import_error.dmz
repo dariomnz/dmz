@@ -1,18 +1,15 @@
-// RUN: compiler %s %S/module_ops.dmz -res-dump
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
-import ops;
-import ops::integer;
-// CHECK: [[# @LINE + 1 ]]:13: error: module 'ops::float::' not found
-import ops::float;
-
+// CHECK: [[# @LINE + 1 ]]:13: error: module 'ops' not found
+const ops = import("ops");
 
 fn main() -> void {
     let x = 1;
     let y = 2;
 
-    ops::print(x);
+    ops.print(x);
 
-    let result = ops::integer::add(x, y);
+    let result = ops.integer.add(x, y);
     
-    ops::print(result);
+    ops.print(result);
 }

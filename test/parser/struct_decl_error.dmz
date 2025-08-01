@@ -5,4 +5,5 @@ struct Error {
     // CHECK: [[# @LINE -1 ]]:5: error: expected identifier or fn in struct
     b: i32,
 }
+// CHECK: ModuleDecl struct_decl_error.dmz
 // CHECK-NOT: {{.*}}

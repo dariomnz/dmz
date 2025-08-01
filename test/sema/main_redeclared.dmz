@@ -3,4 +3,5 @@ fn main() -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:1: error: redeclaration of 'main'
 fn main() -> void {}
+// CHECK: ResolvedModuleDecl main_redeclared.dmz
 // CHECK-NOT: {{.*}}

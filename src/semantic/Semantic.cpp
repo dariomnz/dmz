@@ -11,25 +11,32 @@ void Sema::dump_scopes() const {
     for (auto &&scope : m_scopes) {
         debug_msg("m_scopes[" << level << "].size " << scope.size());
         for (auto &&[id, decl] : scope) {
-            println("Identifier: " << id);
+            println(indent(level) << "Identifier: " << id);
             decl->dump(level, true);
         }
         level++;
+    }
+}
+void Sema::dump_modules_for_import() const {
+    println("Modules for import:");
+    for (auto &&[k, v] : m_modules_for_import) {
+        println(indent(2) << "Module: " << k);
     }
 }
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     debug_func(decl.identifier << " " << decl.location);
     std::string identifier(decl.identifier);
-    if (dynamic_cast<ResolvedModuleDecl *>(&decl)) {
-        identifier = "module " + identifier;
-    }
+    // if (dynamic_cast<ResolvedModuleDecl *>(&decl)) {
+    //     identifier = "module " + identifier;
+    // }
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << identifier << " ======================");
 #endif
     const auto &[foundDecl, scopeIdx] = lookup(identifier, ResolvedDeclType::ResolvedDecl);
 
     if (foundDecl) {
+        dump_scopes();
         report(decl.location, "redeclaration of '" + identifier + '\'');
         return false;
     }
@@ -74,9 +81,9 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 
 std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedDeclType type) {
     std::string identifier(id);
-    if (type == ResolvedDeclType::ResolvedModuleDecl) {
-        identifier = "module " + identifier;
-    }
+    // if (type == ResolvedDeclType::ResolvedModuleDecl) {
+    //     identifier = "module " + identifier;
+    // }
     debug_func(identifier << " " << type);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
@@ -101,12 +108,13 @@ std::pair<ResolvedDecl *, int> Sema::lookup(const std::string_view id, ResolvedD
 ResolvedDecl *Sema::lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
                                      ResolvedDeclType type) {
     std::string identifier(id);
-    if (type == ResolvedDeclType::ResolvedModuleDecl) {
-        identifier = "module " + identifier;
-    }
-    debug_func("Module " << moduleDecl.identifier << " " << identifier << " " << type);
+    // if (type == ResolvedDeclType::ResolvedModuleDecl) {
+    //     identifier = "module " + identifier;
+    // }
+    debug_func("Module: " << moduleDecl.identifier << " id: " << identifier << " type: " << type);
 
     for (auto &&decl : moduleDecl.declarations) {
+        debug_msg("Seach: " << decl->identifier);
         auto declPtr = decl.get();
         switch_resolved_decl_type(type, declPtr, !, continue);
 
@@ -164,7 +172,20 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer st(Stats::type::semanticTime);
-    auto declarations = resolve_in_module_decl(m_ast);
+    std::vector<std::unique_ptr<Decl>> decls;
+    decls.reserve(m_ast.size());
+
+    for (auto &moduleDeclPtr : m_ast) {
+        decls.emplace_back(std::move(moduleDeclPtr));
+    }
+    m_ast.clear();
+
+    auto declarations = resolve_in_module_decl(decls);
+
+    for (auto &moduleDeclPtr : decls) {
+        m_ast.emplace_back(static_cast<ModuleDecl *>(moduleDeclPtr.release()));
+    }
+    decls.clear();
     resolve_symbol_names(declarations);
     return declarations;
 }
@@ -343,13 +364,17 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
     std::stack<elem> stack;
     for (auto &&decl : declarations) {
         decl->symbolName = decl->identifier;
-        if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
-            stack.push(elem{decl.get(), 0, ""});
-        } else if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
-                   dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
-                   dynamic_cast<const ResolvedErrGroupDecl *>(decl.get())) {
-        } else {
+        stack.push(elem{decl.get(), 0, ""});
+        // println("Symbol name: " << e.decl->symbolName);
+        // if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
+        //     dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
+        //     stack.push(elem{decl.get(), 0, ""});
+        // } else if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
+        //            dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
+        //            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get())) {
+        // } else {
+        if (!dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+            decl->dump();
             dmz_unreachable("unexpected declaration");
         }
     }
@@ -368,16 +393,27 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
         // e.decl->dump();
         // std::cout << indent(e.level) << e.decl->symbolName << std::endl;
 
+        std::string new_symbol_name = "";
+        if (e.decl->symbolName.find(".dmz") == std::string::npos) {
+            new_symbol_name = e.decl->symbolName + ".";
+        }
+
         if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(e.decl)) {
             for (auto &&decl : modDecl->declarations) {
-                stack.push(elem{decl.get(), e.level + 1, e.decl->symbolName + "."});
+                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
         } else if (const auto *strDecl = dynamic_cast<const ResolvedStructDecl *>(e.decl)) {
             for (auto &&decl : strDecl->functions) {
-                stack.push(elem{decl.get(), e.level + 1, e.decl->symbolName + "."});
+                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
-        } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl)) {
+        } else if (const auto *errGroupDecl = dynamic_cast<const ResolvedErrGroupDecl *>(e.decl)) {
+            for (auto &&decl : errGroupDecl->errs) {
+                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
+            }
+        } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl) ||
+                   dynamic_cast<const ResolvedErrDecl *>(e.decl)) {
         } else {
+            e.decl->dump(0, true);
             dmz_unreachable("unexpected declaration");
         }
     }

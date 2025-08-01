@@ -1,10 +1,9 @@
-// REQUIRES: include
 // RUN: compiler %s -I %S/../../std -run | filecheck %s
 
 // CHECK: 123456789123456789123456789123456789123456789123456789123456789123456789
 
 // CHECK-NOT: {{.*}}
-import std::io as io;
+const io = import("std").io;
 
 fn main() -> void {
     let num:i512 = 123456789;
@@ -23,7 +22,7 @@ fn main() -> void {
     num = num * 1000000000;
     num = num + 123456789;
     if (num == 0) {
-        io::printf(&"0\n");
+        io.printf(&"0\n");
         return;
     }
 
@@ -31,7 +30,7 @@ fn main() -> void {
     if (num < 0) {
         is_negative = true;
         num = -num;
-        io::printf(&"-");
+        io.printf(&"-");
     }
 
     let buffer:i4[512] = {};
@@ -45,8 +44,8 @@ fn main() -> void {
 
     let j = i - 1;
     while (j >= 0) {
-        io::printf(&"%d", buffer[j]);
+        io.printf(&"%d", buffer[j]);
         j = j - 1;
     }
-    io::printf(&"\n");
+    io.printf(&"\n");
 }

@@ -22,7 +22,7 @@ namespace DMZ {
 }
 
 struct SourceLocation {
-    std::string_view file_name = {};
+    std::string file_name = {};
     size_t line = 0, col = 0;
 
     std::string to_string() const {

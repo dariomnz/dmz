@@ -1,10 +1,9 @@
-// REQUIRES: include
 // RUN: compiler %s -I %S/../../std -run | filecheck %s
 
 // CHECK: Hello world!
 // CHECK-NOT: {{.*}}
-import std::io as io;
+const std = import("std");
 
 fn main() -> void {
-    io::printf(&"Hello world!\n");
+    std.io.printf(&"Hello world!\n");
 }

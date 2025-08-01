@@ -84,7 +84,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     if (call_args_num != func_args_num) {
         if (!isVararg || (isVararg && call_args_num < funcDeclArgs)) {
             resolvedFuncDecl->dump();
-            println("call_args_num " << call_args_num << " func_args_num " << func_args_num);
+            // println("call_args_num " << call_args_num << " func_args_num " << func_args_num);
             return report(call.location, "argument count mismatch in function call");
         }
     }
@@ -312,7 +312,10 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
 
         return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
     } else if (resolvedBase->type.kind == Type::Kind::Module) {
-        varOrReturn(moduleDecl, resolve_module_from_ref(*resolvedBase));
+        auto md = resolvedBase->type.decl;
+        if (!md) return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
+        auto moduleDecl = dynamic_cast<ResolvedModuleDecl*>(md);
+        if (!moduleDecl) return report(resolvedBase->location, "expected the decl in type to be a module decl"); 
 
         const ResolvedDecl *decl = cast_lookup_in_module(*moduleDecl, memberExpr.field, ResolvedDecl);
         if (!decl)
@@ -497,6 +500,17 @@ std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr 
     }
 }
 
+std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) {
+    debug_func(importExpr.location);
+
+    auto it = m_modules_for_import.find(importExpr.identifier);
+    if (it == m_modules_for_import.end()){
+        return report(importExpr.location, "module '" + std::string(importExpr.identifier) + "' not found");
+    }
+
+    return std::make_unique<ResolvedImportExpr>(importExpr.location, *(*it).second);
+}
+
 ResolvedModuleDecl *Sema::resolve_module_from_ref(const ResolvedExpr &expr) {
     if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         auto varDecl = dynamic_cast<const ResolvedVarDecl *>(&declRef->decl);
@@ -507,16 +521,33 @@ ResolvedModuleDecl *Sema::resolve_module_from_ref(const ResolvedExpr &expr) {
         auto inicializerImport = dynamic_cast<const ResolvedImportExpr *>(varDecl->initializer.get());
         if (!inicializerImport) {
             varDecl->initializer->dump();
-            return report(varDecl->location, "expected Importin inicializer of VarDecl of a module");
+            return report(varDecl->location, "expected Import in inicializer of VarDecl of a module");
         }
         return &inicializerImport->moduleDecl;
     } else if (auto member = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
-        auto memberModule = dynamic_cast<const ResolvedModuleDecl *>(&member->member);
-        if (!memberModule) {
-            member->member.dump();
-            return report(member->location, "expected module in member");
+        if (auto memberModule = dynamic_cast<const ResolvedModuleDecl *>(&member->member)) {
+            if (!memberModule) {
+                member->dump();
+                member->member.dump();
+                return report(member->location, "expected module in member");
+            }
+            return const_cast<ResolvedModuleDecl *>(memberModule);
+        } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&member->member)) {
+            auto inicializerImport = dynamic_cast<const ResolvedImportExpr *>(declStmt->varDecl->initializer.get());
+            if (!inicializerImport) {
+                declStmt->varDecl->initializer->dump();
+                return report(declStmt->varDecl->location, "expected Import in inicializer of VarDecl of a module");
+            }
+            return &inicializerImport->moduleDecl;
+        } else {
+            return report(member->member.location, "unexpected member type of a module");
         }
-        return const_cast<ResolvedModuleDecl *>(memberModule);
+    } else if (auto importExpr = dynamic_cast<const ResolvedImportExpr *>(&expr)) {
+        if (!importExpr) {
+            expr.dump();
+            return report(expr.location, "expected Import in inicializer of VarDecl of a module");
+        }
+        return &importExpr->moduleDecl;
     }
 
     expr.dump();

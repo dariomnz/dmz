@@ -334,10 +334,6 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
         }
     }
 
-    if (isGlobal) {
-        generate_main_wrapper();
-    }
-
     generate_err_no_err();
     for (auto &&decl : declarations) {
         if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))

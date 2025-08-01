@@ -51,7 +51,7 @@ struct Type {
     enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err, Module };
 
     Kind kind = Kind::Void;
-    std::string_view name = "";
+    std::string name = "";
     int size = 0;
     std::optional<int> isArray = std::nullopt;
     std::optional<int> isPointer = std::nullopt;
@@ -69,7 +69,7 @@ struct Type {
         if (result == 0 || res.ec != std::errc()) {
             dmz_unreachable("unexpected size of 0 in i type");
         }
-        return {Kind::Int, name, result};
+        return {Kind::Int, std::string(name), result};
     }
     static Type builtinUN(const std::string_view& name) {
         auto num = name.substr(1);
@@ -78,18 +78,18 @@ struct Type {
         if (result == 0 || res.ec != std::errc()) {
             dmz_unreachable("unexpected size of 0 in u type");
         }
-        return {Kind::UInt, name, result};
+        return {Kind::UInt, std::string(name), result};
     }
     static Type builtinF16() { return {Kind::Float, "f16", 16}; }
     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
     static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
     static Type moduleType(const std::string_view& name, ResolvedDecl* decl) {
-        return Type{.kind = Kind::Module, .name = name, .decl = decl};
+        return Type{.kind = Kind::Module, .name = std::string(name), .decl = decl};
     }
-    static Type customType(const std::string_view& name) { return {Kind::Custom, name}; }
+    static Type customType(const std::string_view& name) { return {Kind::Custom, std::string(name)}; }
     static Type structType(const std::string_view& name, ResolvedDecl* decl) {
-        return Type{.kind = Kind::Struct, .name = name, .decl = decl};
+        return Type{.kind = Kind::Struct, .name = std::string(name), .decl = decl};
     }
     static Type structType(Type t, ResolvedDecl* decl) {
         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
@@ -102,7 +102,7 @@ struct Type {
         t.kind = Kind::Generic;
         return t;
     }
-    static Type builtinErr(const std::string_view& name) { return {Kind::Err, name}; }
+    static Type builtinErr(const std::string_view& name) { return {Kind::Err, std::string(name)}; }
 
     bool operator==(const Type& otro) const {
         return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isRef == otro.isRef &&
@@ -198,7 +198,7 @@ class ConstantValueContainer {
 
 struct Decl {
     SourceLocation location;
-    std::string_view identifier;
+    std::string identifier;
 
     Decl(SourceLocation location, std::string_view identifier)
         : location(location), identifier(std::move(identifier)) {}
@@ -299,7 +299,7 @@ struct ReturnStmt : public Stmt {
 };
 
 struct FieldInitStmt : public Stmt {
-    std::string_view identifier;
+    std::string identifier;
     std::unique_ptr<Expr> initializer;
 
     FieldInitStmt(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> initializer)
@@ -329,7 +329,7 @@ struct ArrayInstantiationExpr : public Expr {
 };
 
 struct IntLiteral : public Expr {
-    std::string_view value;
+    std::string value;
 
     IntLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
@@ -337,7 +337,7 @@ struct IntLiteral : public Expr {
 };
 
 struct FloatLiteral : public Expr {
-    std::string_view value;
+    std::string value;
 
     FloatLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
@@ -345,7 +345,7 @@ struct FloatLiteral : public Expr {
 };
 
 struct CharLiteral : public Expr {
-    std::string_view value;
+    std::string value;
 
     CharLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
@@ -353,7 +353,7 @@ struct CharLiteral : public Expr {
 };
 
 struct BoolLiteral : public Expr {
-    std::string_view value;
+    std::string value;
 
     BoolLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
@@ -361,7 +361,7 @@ struct BoolLiteral : public Expr {
 };
 
 struct StringLiteral : public Expr {
-    std::string_view value;
+    std::string value;
 
     StringLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
 
@@ -388,7 +388,7 @@ struct AssignableExpr : public Expr {
 };
 
 struct DeclRefExpr : public AssignableExpr {
-    std::string_view identifier;
+    std::string identifier;
 
     DeclRefExpr(SourceLocation location, std::string_view identifier)
         : AssignableExpr(location), identifier(identifier) {}
@@ -398,7 +398,7 @@ struct DeclRefExpr : public AssignableExpr {
 
 struct MemberExpr : public AssignableExpr {
     std::unique_ptr<Expr> base;
-    std::string_view field;
+    std::string field;
 
     MemberExpr(SourceLocation location, std::unique_ptr<Expr> base, std::string_view field)
         : AssignableExpr(location), base(std::move(base)), field(std::move(field)) {}
@@ -593,7 +593,7 @@ struct ErrDecl : public Decl {
 };
 
 struct ErrDeclRefExpr : public Expr {
-    std::string_view identifier;
+    std::string identifier;
     ErrDeclRefExpr(SourceLocation location, std::string_view identifier)
         : Expr(location), identifier(std::move(identifier)) {}
 
@@ -649,7 +649,7 @@ struct ModuleDecl : public Decl {
 };
 
 struct ImportExpr : public Expr {
-    std::string_view identifier;
+    std::string identifier;
     ImportExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
 
     void dump(size_t level = 0) const override;

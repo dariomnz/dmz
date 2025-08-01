@@ -145,6 +145,19 @@ std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declSt
     return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
 }
 
+// std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt_without_init(const DeclStmt &declStmt) {
+//     debug_func(declStmt.location);
+//     varOrReturn(resolvedVarDecl, resolve_var_decl_without_init(*declStmt.varDecl));
+
+//     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
+
+//     return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
+// }
+
+// bool Sema::resolve_decl_stmt_init(const ResolvedDeclStmt &declStmt) {
+//     return resolve_var_decl_init(*declStmt.varDecl);
+// }
+
 std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     debug_func(assignment.location);
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));

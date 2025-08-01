@@ -39,7 +39,7 @@ struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
 
 struct ResolvedDecl {
     SourceLocation location;
-    std::string_view identifier;
+    std::string identifier;
     std::string symbolName;
     Type type;
     bool isMutable;

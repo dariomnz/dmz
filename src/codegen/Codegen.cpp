@@ -19,6 +19,8 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
 
     generate_in_module_decl(m_resolvedTree, true);
 
+    generate_main_wrapper();
+
     return std::make_unique<llvm::orc::ThreadSafeModule>(std::move(m_module), get_shared_context());
 }
 

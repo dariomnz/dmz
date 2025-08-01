@@ -8,7 +8,7 @@ bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_toke
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
-std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bool expectMain) {
+std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
     debug_func("");
     ScopedTimer st(Stats::type::parseTime);
 
@@ -18,8 +18,10 @@ std::pair<std::vector<std::unique_ptr<Decl>>, bool> Parser::parse_source_file(bo
     for (auto &&fn : declarations) hasMainFunction |= fn->identifier == "main";
 
     if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found in global module");
-
-    return {std::move(declarations), !m_incompleteAST && hasMainFunction};
+    SourceLocation location = {.file_name = m_lexer.get_file_name(), .line = 0, .col = 0};
+    auto mod = std::make_unique<ModuleDecl>(location, m_lexer.get_file_name(), std::move(declarations));
+    debug_msg("Incomplete AST " << (m_incompleteAST ? "true" : "false"));
+    return {std::move(mod), !m_incompleteAST && hasMainFunction};
 }
 
 // <type>

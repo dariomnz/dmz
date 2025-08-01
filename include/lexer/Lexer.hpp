@@ -115,6 +115,11 @@ class Lexer {
     Lexer(const char* file_name);
     std::vector<Token> tokenize_file();
     Token next_token();
+    std::string get_file_name() { 
+        std::filesystem::path p(m_file_name);
+        return p.filename().string();
+        // return m_file_name; 
+    }
 
    private:
     std::string read_file();
