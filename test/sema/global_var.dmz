@@ -5,12 +5,12 @@ extern fn printf(fmt:*u8, ...) -> i32;
 let num = 24;
 const cnum = 100;
 // CHECK: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:i32 num
-// CHECK-NEXT:     ResolvedIntLiteral:i32 '24'
+// CHECK-NEXT:   ResolvedVarDecl:Int i32 num
+// CHECK-NEXT:     ResolvedIntLiteral:Int i32 '24'
 // CHECK-NEXT:     | value: 24
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:const i32 cnum
-// CHECK-NEXT:     ResolvedIntLiteral:i32 '100'
+// CHECK-NEXT:   ResolvedVarDecl:const Int i32 cnum
+// CHECK-NEXT:     ResolvedIntLiteral:Int i32 '100'
 // CHECK-NEXT:     | value: 100
 
 fn main() -> void {
@@ -18,21 +18,21 @@ fn main() -> void {
     num = num + cnum;
     printf("Num %d cnum %d\n", num, cnum);
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
-// CHECK-NEXT:       ResolvedIntLiteral:i32 '320'
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 num
+// CHECK-NEXT:       ResolvedIntLiteral:Int i32 '320'
 // CHECK-NEXT:       | value: 320
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
-// CHECK-NEXT:       ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32 num
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32 cnum
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 num
+// CHECK-NEXT:       ResolvedBinaryOperator:Int i32 '+'
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 num
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 cnum
 // CHECK-NEXT:         | value: 100
-// CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:       ResolvedStringLiteral:u8[16] 'Num %d cnum %d\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 cnum
+// CHECK-NEXT:     ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:       ResolvedStringLiteral:UInt u8[16] 'Num %d cnum %d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 num
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 cnum
 // CHECK-NEXT:       | value: 100

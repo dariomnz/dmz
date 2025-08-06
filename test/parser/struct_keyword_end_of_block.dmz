@@ -1,5 +1,5 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
-fn error() -> void {
+fn error1() -> void {
 
 struct S {
 // CHECK: [[# @LINE -1 ]]:1: error: expected '}' at the end of a block
@@ -16,7 +16,7 @@ struct S2 {
 }
 
 // CHECK: StructDecl S
-// CHECK-NEXT:   FieldDecl:i32 x
+// CHECK-NEXT:   FieldDecl:Int i32 x
 // CHECK-NEXT: StructDecl S2
-// CHECK-NEXT:   FieldDecl:i32 x
+// CHECK-NEXT:   FieldDecl:Int i32 x
 // CHECK-NOT: {{.*}}

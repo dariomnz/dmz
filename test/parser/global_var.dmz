@@ -16,7 +16,7 @@ fn main() -> void {
     num = num + cnum;
     printf("Num %d cnum %d\n", num, cnum);
 }
-// CHECK: FunctionDecl main -> void
+// CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     Assignment
 // CHECK-NEXT:       DeclRefExpr num

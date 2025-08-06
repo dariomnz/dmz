@@ -160,9 +160,6 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
             return report(str->location, "malformed string");
         }
     }
-    if (const auto *errRef = dynamic_cast<const ErrDeclRefExpr *>(&expr)) {
-        return resolve_err_decl_ref_expr(*errRef);
-    }
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
         return resolve_decl_ref_expr(*declRefExpr);
     }
@@ -193,17 +190,20 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
     }
-    if (const auto *errUnwrapExpr = dynamic_cast<const ErrUnwrapExpr *>(&expr)) {
-        return resolve_err_unwrap_expr(*errUnwrapExpr);
+    if (const auto *errorUnwrapExpr = dynamic_cast<const ErrorUnwrapExpr *>(&expr)) {
+        return resolve_error_unwrap_expr(*errorUnwrapExpr);
     }
-    if (const auto *catchErrExpr = dynamic_cast<const CatchErrExpr *>(&expr)) {
-        return resolve_catch_err_expr(*catchErrExpr);
+    if (const auto *catchErrorExpr = dynamic_cast<const CatchErrorExpr *>(&expr)) {
+        return resolve_catch_error_expr(*catchErrorExpr);
     }
-    if (const auto *tryErrExpr = dynamic_cast<const TryErrExpr *>(&expr)) {
-        return resolve_try_err_expr(*tryErrExpr);
+    if (const auto *tryErrorExpr = dynamic_cast<const TryErrorExpr *>(&expr)) {
+        return resolve_try_error_expr(*tryErrorExpr);
     }
     if (const auto *importExpr = dynamic_cast<const ImportExpr *>(&expr)) {
         return resolve_import_expr(*importExpr);
+    }
+    if (const auto *errorGroupExprDecl = dynamic_cast<const ErrorGroupExprDecl *>(&expr)) {
+        return resolve_error_group_expr_decl(*errorGroupExprDecl);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -292,9 +292,13 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
 
 std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
     debug_func(memberExpr.location);
+    const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
     if (!resolvedBase) return nullptr;
-
+    // resolvedBase->dump();
+    // println("Type " << resolvedBase->type.to_str() << " type");
+    // println("Type " << resolvedBase->type.decl << " type");
+    // println("Type " << resolvedBase->type.decl->location << " type");
     if (resolvedBase->type.kind == Type::Kind::Struct) {
         const auto *st = cast_lookup(resolvedBase->type.name, ResolvedStructDecl);
 
@@ -305,27 +309,43 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
             if (!st) return report(memberExpr.location, "failed to specialize generic struct");
         }
 
-        const ResolvedDecl *decl = cast_lookup_in_struct(*st, memberExpr.field, ResolvedDecl);
+        decl = cast_lookup_in_struct(*st, memberExpr.field, ResolvedDecl);
         if (!decl)
             return report(memberExpr.location, "struct \'" + resolvedBase->type.to_str() + "' has no member called '" +
                                                    std::string(memberExpr.field) + '\'');
 
-        return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
     } else if (resolvedBase->type.kind == Type::Kind::Module) {
         auto md = resolvedBase->type.decl;
         if (!md) return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
-        auto moduleDecl = dynamic_cast<ResolvedModuleDecl*>(md);
-        if (!moduleDecl) return report(resolvedBase->location, "expected the decl in type to be a module decl"); 
+        auto moduleDecl = dynamic_cast<ResolvedModuleDecl *>(md);
+        if (!moduleDecl) return report(resolvedBase->location, "expected the decl in type to be a module decl");
 
-        const ResolvedDecl *decl = cast_lookup_in_module(*moduleDecl, memberExpr.field, ResolvedDecl);
+        decl = cast_lookup_in_module(*moduleDecl, memberExpr.field, ResolvedDecl);
         if (!decl)
             return report(memberExpr.location, "module \'" + resolvedBase->type.to_str() + "' has no member called '" +
                                                    std::string(memberExpr.field) + '\'');
 
-        return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
+    } else if (resolvedBase->type.kind == Type::Kind::ErrorGroup) {
+        auto egd = resolvedBase->type.decl;
+        if (!egd) return report(resolvedBase->location, "expected not null the decl in type to be a error group decl");
+        auto errorGroupDecl = dynamic_cast<ResolvedErrorGroupExprDecl *>(egd);
+        if (!errorGroupDecl)
+            return report(resolvedBase->location, "expected the decl in type to be a error group decl");
+        // println("Error group declaration size " << errorGroupDecl->errors.size());
+        for (auto &&err : errorGroupDecl->errors) {
+            // println("Err " << err->identifier << " field " << memberExpr.field);
+            if (err->identifier == memberExpr.field) {
+                decl = err.get();
+                break;
+            }
+        }
+        if (!decl)
+            return report(memberExpr.location,
+                          "error group has no member called '" + std::string(memberExpr.field) + '\'');
     } else {
         return report(memberExpr.base->location, "cannot access member of '" + resolvedBase->type.to_str() + '\'');
     }
+    return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
 }
 
 std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
@@ -445,58 +465,43 @@ std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiatio
                                                             std::move(resolvedinitializers));
 }
 
-std::unique_ptr<ResolvedErrDeclRefExpr> Sema::resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef) {
-    debug_func(errDeclRef.location);
-    // Search in the module scope
-    ResolvedErrDecl *lookupErr =
-        static_cast<ResolvedErrDecl *>(lookup(errDeclRef.identifier, ResolvedDeclType::ResolvedErrDecl).first);
-
-    if (!lookupErr) {
-        return report(errDeclRef.location, "err '" + std::string(errDeclRef.identifier) + "' not found");
-    }
-
-    return std::make_unique<ResolvedErrDeclRefExpr>(errDeclRef.location, *lookupErr);
-}
-
-std::unique_ptr<ResolvedErrUnwrapExpr> Sema::resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr) {
-    debug_func(errUnwrapExpr.location);
-    varOrReturn(resolvedToUnwrap, resolve_expr(*errUnwrapExpr.errToUnwrap));
+std::unique_ptr<ResolvedErrorUnwrapExpr> Sema::resolve_error_unwrap_expr(const ErrorUnwrapExpr &ErrorUnwrapExpr) {
+    debug_func(ErrorUnwrapExpr.location);
+    varOrReturn(resolvedToUnwrap, resolve_expr(*ErrorUnwrapExpr.errorToUnwrap));
     if (!resolvedToUnwrap->type.isOptional)
-        return report(errUnwrapExpr.location,
+        return report(ErrorUnwrapExpr.location,
                       "unexpected type to unwrap that is not optional '" + resolvedToUnwrap->type.to_str() + "'");
 
     Type unwrapType = resolvedToUnwrap->type;
     unwrapType.isOptional = false;
 
     auto defers = resolve_defer_ref_stmt(false);
-    return std::make_unique<ResolvedErrUnwrapExpr>(errUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap),
-                                                   std::move(defers));
+    return std::make_unique<ResolvedErrorUnwrapExpr>(ErrorUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap),
+                                                     std::move(defers));
 }
 
-std::unique_ptr<ResolvedCatchErrExpr> Sema::resolve_catch_err_expr(const CatchErrExpr &catchErrExpr) {
-    debug_func(catchErrExpr.location);
-    if (catchErrExpr.errTocatch) {
-        auto resolvedErr = resolve_expr(*catchErrExpr.errTocatch);
-        return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, std::move(resolvedErr), nullptr);
-    } else if (catchErrExpr.declaration) {
-        auto declaration = resolve_decl_stmt(*catchErrExpr.declaration);
-        return std::make_unique<ResolvedCatchErrExpr>(catchErrExpr.location, nullptr, std::move(declaration));
+std::unique_ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr) {
+    debug_func(catchErrorExpr.location);
+    if (catchErrorExpr.errorToCatch) {
+        auto resolvedErr = resolve_expr(*catchErrorExpr.errorToCatch);
+        return std::make_unique<ResolvedCatchErrorExpr>(catchErrorExpr.location, std::move(resolvedErr), nullptr);
+    } else if (catchErrorExpr.declaration) {
+        auto declaration = resolve_decl_stmt(*catchErrorExpr.declaration);
+        return std::make_unique<ResolvedCatchErrorExpr>(catchErrorExpr.location, nullptr, std::move(declaration));
     } else {
-        dmz_unreachable("malformed CatchErrExpr");
+        dmz_unreachable("malformed CatchErrorExpr");
     }
 }
 
-std::unique_ptr<ResolvedTryErrExpr> Sema::resolve_try_err_expr(const TryErrExpr &tryErrExpr) {
-    debug_func(tryErrExpr.location);
-    if (tryErrExpr.errTotry) {
-        auto resolvedErr = resolve_expr(*tryErrExpr.errTotry);
-        return std::make_unique<ResolvedTryErrExpr>(tryErrExpr.location, std::move(resolvedErr), nullptr);
-    } else if (tryErrExpr.declaration) {
-        auto declaration = resolve_decl_stmt(*tryErrExpr.declaration);
-        declaration->varDecl->type.isOptional = false;
-        return std::make_unique<ResolvedTryErrExpr>(tryErrExpr.location, nullptr, std::move(declaration));
+std::unique_ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryErrorExpr) {
+    debug_func(tryErrorExpr.location);
+    if (tryErrorExpr.errorToTry) {
+        varOrReturn(resolvedErr, resolve_expr(*tryErrorExpr.errorToTry));
+        if (!resolvedErr->type.isOptional) return report(resolvedErr->location, "expect error union when using try");
+        auto defers = resolve_defer_ref_stmt(false);
+        return std::make_unique<ResolvedTryErrorExpr>(tryErrorExpr.location, std::move(resolvedErr), std::move(defers));
     } else {
-        dmz_unreachable("malformed TryErrExpr");
+        dmz_unreachable("malformed TryErrorExpr");
     }
 }
 
@@ -504,53 +509,10 @@ std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &
     debug_func(importExpr.location);
 
     auto it = m_modules_for_import.find(importExpr.identifier);
-    if (it == m_modules_for_import.end()){
+    if (it == m_modules_for_import.end()) {
         return report(importExpr.location, "module '" + std::string(importExpr.identifier) + "' not found");
     }
 
     return std::make_unique<ResolvedImportExpr>(importExpr.location, *(*it).second);
-}
-
-ResolvedModuleDecl *Sema::resolve_module_from_ref(const ResolvedExpr &expr) {
-    if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
-        auto varDecl = dynamic_cast<const ResolvedVarDecl *>(&declRef->decl);
-        if (!varDecl) {
-            declRef->dump();
-            return report(declRef->location, "expected VarDecl of a module");
-        }
-        auto inicializerImport = dynamic_cast<const ResolvedImportExpr *>(varDecl->initializer.get());
-        if (!inicializerImport) {
-            varDecl->initializer->dump();
-            return report(varDecl->location, "expected Import in inicializer of VarDecl of a module");
-        }
-        return &inicializerImport->moduleDecl;
-    } else if (auto member = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
-        if (auto memberModule = dynamic_cast<const ResolvedModuleDecl *>(&member->member)) {
-            if (!memberModule) {
-                member->dump();
-                member->member.dump();
-                return report(member->location, "expected module in member");
-            }
-            return const_cast<ResolvedModuleDecl *>(memberModule);
-        } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&member->member)) {
-            auto inicializerImport = dynamic_cast<const ResolvedImportExpr *>(declStmt->varDecl->initializer.get());
-            if (!inicializerImport) {
-                declStmt->varDecl->initializer->dump();
-                return report(declStmt->varDecl->location, "expected Import in inicializer of VarDecl of a module");
-            }
-            return &inicializerImport->moduleDecl;
-        } else {
-            return report(member->member.location, "unexpected member type of a module");
-        }
-    } else if (auto importExpr = dynamic_cast<const ResolvedImportExpr *>(&expr)) {
-        if (!importExpr) {
-            expr.dump();
-            return report(expr.location, "expected Import in inicializer of VarDecl of a module");
-        }
-        return &importExpr->moduleDecl;
-    }
-
-    expr.dump();
-    return report(expr.location, "expected DeclRefExpr or MemberExpr of a module");
 }
 }  // namespace DMZ

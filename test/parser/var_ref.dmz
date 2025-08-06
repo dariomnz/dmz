@@ -3,8 +3,8 @@
 fn foo(x: &i32) -> void {
     x = 20;
 }
-// CHECK: FunctionDecl foo -> void
-// CHECK-NEXT:   ParamDecl:&i32 x
+// CHECK: FunctionDecl foo -> Void void
+// CHECK-NEXT:   ParamDecl:Int &i32 x
 // CHECK-NEXT:   Block
 
 fn main() -> void {

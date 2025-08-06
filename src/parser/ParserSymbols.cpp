@@ -7,10 +7,13 @@ void Type::dump() const { std::cerr << *this; }
 std::string Type::to_str() const {
     std::stringstream out;
     out << *this;
-    return out.str();
+    auto str = out.str();
+    const auto to_rem = Type::KindString(kind).size() + 1;
+    return str.substr(to_rem, str.size() - to_rem);
 }
 
 std::ostream &operator<<(std::ostream &os, const Type &t) {
+    os << Type::KindString(t.kind) << " ";
     if (t.isRef) os << "&";
     if (t.isPointer)
         for (int i = 0; i < *t.isPointer; i++) os << "*";
@@ -25,7 +28,7 @@ std::ostream &operator<<(std::ostream &os, const Type &t) {
         }
         os << "]";
     }
-    if (t.isOptional) os << "?";
+    if (t.isOptional) os << "!";
     return os;
 }
 
@@ -305,34 +308,31 @@ void DeferStmt::dump(size_t level) const {
     block->dump(level + 1);
 }
 
-void ErrDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrDecl " << identifier << '\n'; }
+void ErrorDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrorDecl " << identifier << '\n'; }
 
-void ErrDeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "ErrDeclRefExpr " << identifier << '\n'; }
-
-void ErrGroupDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ErrGroupDecl " << '\n';
+void ErrorGroupExprDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrorGroupExprDecl " << '\n';
 
     for (auto &&err : errs) err->dump(level + 1);
 }
 
-void ErrUnwrapExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ErrUnwrapExpr " << '\n';
+void ErrorUnwrapExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrorUnwrapExpr " << '\n';
 
-    errToUnwrap->dump(level + 1);
+    errorToUnwrap->dump(level + 1);
 }
 
-void CatchErrExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "CatchErrExpr " << '\n';
+void CatchErrorExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "CatchErrorExpr " << '\n';
 
     if (declaration) declaration->dump(level + 1);
-    if (errTocatch) errTocatch->dump(level + 1);
+    if (errorToCatch) errorToCatch->dump(level + 1);
 }
 
-void TryErrExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "TryErrExpr " << '\n';
+void TryErrorExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "TryErrorExpr " << '\n';
 
-    if (declaration) declaration->dump(level + 1);
-    if (errTotry) errTotry->dump(level + 1);
+    if (errorToTry) errorToTry->dump(level + 1);
 }
 
 void ModuleDecl::dump(size_t level) const {

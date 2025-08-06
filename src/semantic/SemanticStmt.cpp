@@ -44,7 +44,7 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
     }
 
     if (m_currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
-        if (!(dynamic_cast<ErrDeclRefExpr *>(returnStmt.expr.get()) && m_currentFunction->type.isOptional))
+        if (!m_currentFunction->type.isOptional)
             return report(returnStmt.location, "unexpected return value in void function");
 
     if (m_currentFunction->type.kind != Type::Kind::Void && !returnStmt.expr)
@@ -144,19 +144,6 @@ std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declSt
 
     return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
 }
-
-// std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt_without_init(const DeclStmt &declStmt) {
-//     debug_func(declStmt.location);
-//     varOrReturn(resolvedVarDecl, resolve_var_decl_without_init(*declStmt.varDecl));
-
-//     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
-
-//     return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
-// }
-
-// bool Sema::resolve_decl_stmt_init(const ResolvedDeclStmt &declStmt) {
-//     return resolve_var_decl_init(*declStmt.varDecl);
-// }
 
 std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     debug_func(assignment.location);

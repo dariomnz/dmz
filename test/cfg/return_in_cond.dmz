@@ -14,13 +14,13 @@ fn foo() -> i32 {
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 3 
 // CHECK-NEXT:   succs: 0(U) 1 
-// CHECK-NEXT:   ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '0'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
 // CHECK-NEXT:   ResolvedReturnStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

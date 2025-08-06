@@ -7,8 +7,8 @@ struct Point<T> {
     y:T,
 }
 // CHECK: StructDecl Point<T>
-// CHECK-NEXT:   FieldDecl:T x
-// CHECK-NEXT:   FieldDecl:T y
+// CHECK-NEXT:   FieldDecl:Custom T x
+// CHECK-NEXT:   FieldDecl:Custom T y
 
 fn main() -> void {
     let p1 = Point<i32>{x:1, y:2};
@@ -17,17 +17,17 @@ fn main() -> void {
     p.y = 2;
     printf(&"Point %d %d\n", p.x, p.y);
 }
-// CHECK: FunctionDecl main -> void
+// CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: p1
-// CHECK-NEXT:         StructInstantiationExpr:Point<i32>
+// CHECK-NEXT:         StructInstantiationExpr:Custom Point<Int i32>
 // CHECK-NEXT:           FieldInitStmt x
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:           FieldInitStmt y
 // CHECK-NEXT:             IntLiteral '2'
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Point<i32> p
+// CHECK-NEXT:       VarDecl:Custom Point<Int i32> p
 // CHECK-NEXT:     Assignment
 // CHECK-NEXT:       MemberExpr .x
 // CHECK-NEXT:         DeclRefExpr p

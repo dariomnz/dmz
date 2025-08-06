@@ -11,17 +11,17 @@ fn main() -> void {
     *i_ptr = 12;
     printf("%d\n", i);
 }
-// CHECK: FunctionDecl main -> void
+// CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:i32 i
+// CHECK-NEXT:       VarDecl:Int i32 i
 // CHECK-NEXT:         IntLiteral '10'
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:*i32 i_ptr
+// CHECK-NEXT:       VarDecl:Int *i32 i_ptr
 // CHECK-NEXT:         RefPtrExpr
 // CHECK-NEXT:           DeclRefExpr i
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:*i32 i_ptr2
+// CHECK-NEXT:       VarDecl:Int *i32 i_ptr2
 // CHECK-NEXT:         DeclRefExpr i_ptr
 // CHECK-NEXT:     CallExpr
 // CHECK-NEXT:       DeclRefExpr printf

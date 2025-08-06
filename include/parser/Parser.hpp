@@ -125,10 +125,10 @@ class Parser {
     std::unique_ptr<FieldDecl> parse_field_decl();
     std::unique_ptr<FieldInitStmt> parse_field_init_stmt();
     std::unique_ptr<DeferStmt> parse_defer_stmt();
-    std::unique_ptr<ErrGroupDecl> parse_err_group_decl();
-    std::unique_ptr<ErrDecl> parse_err_decl();
-    std::unique_ptr<CatchErrExpr> parse_catch_err_expr();
-    std::unique_ptr<TryErrExpr> parse_try_err_expr();
+    std::unique_ptr<ErrorGroupExprDecl> parse_error_group_expr_decl();
+    std::unique_ptr<ErrorDecl> parse_error_decl();
+    std::unique_ptr<CatchErrorExpr> parse_catch_error_expr();
+    std::unique_ptr<TryErrorExpr> parse_try_error_expr();
     std::unique_ptr<ModuleDecl> parse_module_decl();
     std::vector<std::unique_ptr<Decl>> parse_in_module_decl();
     std::unique_ptr<ImportExpr> parse_import_expr();

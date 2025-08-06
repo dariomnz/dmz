@@ -1,5 +1,5 @@
-#include "parser/Parser.hpp"
 #include "driver/Driver.hpp"
+#include "parser/Parser.hpp"
 namespace DMZ {
 
 std::unique_ptr<Expr> Parser::parse_primary() {
@@ -80,23 +80,26 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         return std::make_unique<ArrayInstantiationExpr>(location, std::move(*initList));
     }
     if (m_nextToken.type == TokenType::kw_catch) {
-        return parse_catch_err_expr();
+        return parse_catch_error_expr();
     }
     if (m_nextToken.type == TokenType::kw_try) {
-        return parse_try_err_expr();
+        return parse_try_error_expr();
     }
     if (m_nextToken.type == TokenType::kw_import) {
         return parse_import_expr();
+    }
+    if (m_nextToken.type == TokenType::kw_error) {
+        return parse_error_group_expr_decl();
     }
 
     return report(location, "expected expression");
 }
 
 // <postfixExpression>
-//  ::= <primaryExpression> <argumentList>? <memberExpr>*
+//  ::= <primaryExpression> <argumentList> <memberExpr>*
 //
 // <argumentList>
-//  ::= '(' (<expr> (',' <expr>)* ','?)? ')'
+//  ::= '(' (<expr> (',' <expr>)* ',') ')'
 //
 // <memberExpr>
 //  ::= '.' <identifier>
@@ -148,20 +151,10 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         }
     }
 
-    if (m_nextToken.type == TokenType::op_quest_mark) {
-        SourceLocation location = m_nextToken.loc;
-        if (auto declref = dynamic_cast<DeclRefExpr *>(expr.get())) {
-            eat_next_token();  // eat '?'
-            expr = std::make_unique<ErrDeclRefExpr>(location, declref->identifier);
-        } else {
-            return report(location, "expected identifier");
-        }
-    }
-
     if (m_nextToken.type == TokenType::op_excla_mark) {
         SourceLocation location = m_nextToken.loc;
         eat_next_token();  // eat '!'
-        expr = std::make_unique<ErrUnwrapExpr>(location, std::move(expr));
+        expr = std::make_unique<ErrorUnwrapExpr>(location, std::move(expr));
     }
 
     return expr;
@@ -247,7 +240,7 @@ std::unique_ptr<Expr> Parser::parse_expr_rhs(std::unique_ptr<Expr> lhs, int prec
     }
 }
 
-std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
+std::unique_ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_catch, "expected 'catch'");
     auto location = m_nextToken.loc;
@@ -257,48 +250,33 @@ std::unique_ptr<CatchErrExpr> Parser::parse_catch_err_expr() {
     auto idLocation = m_nextToken.loc;
     varOrReturn(first_expr, parse_expr());
 
-    Type type = Type::builtinErr("err");
+    Type type = Type::builtinError("err");
     std::unique_ptr<Expr> initializer;
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return std::make_unique<CatchErrExpr>(location, std::move(first_expr), nullptr);
+        return std::make_unique<CatchErrorExpr>(location, std::move(first_expr), nullptr);
     }
 
     matchOrReturn(TokenType::op_assign, "expected '='");
     eat_next_token();  // eat '='
 
-    varOrReturn(errToCatch, parse_expr());
+    varOrReturn(errorToCatch, parse_expr());
 
     auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::make_unique<Type>(std::move(type)), false,
-                                             std::move(errToCatch));
+                                             std::move(errorToCatch));
     auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
-    return std::make_unique<CatchErrExpr>(location, nullptr, std::move(declaration));
+    return std::make_unique<CatchErrorExpr>(location, nullptr, std::move(declaration));
 }
 
-std::unique_ptr<TryErrExpr> Parser::parse_try_err_expr() {
+std::unique_ptr<TryErrorExpr> Parser::parse_try_error_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_try, "expected 'try'");
     auto location = m_nextToken.loc;
     eat_next_token();  // eat try
 
-    std::string_view identifier = m_nextToken.str;
-    auto idLocation = m_nextToken.loc;
     varOrReturn(first_expr, parse_expr());
 
-    std::unique_ptr<Expr> initializer;
-
-    if (m_nextToken.type != TokenType::op_assign) {
-        return std::make_unique<TryErrExpr>(location, std::move(first_expr), nullptr);
-    }
-
-    matchOrReturn(TokenType::op_assign, "expected '='");
-    eat_next_token();  // eat '='
-
-    varOrReturn(errToCatch, parse_expr());
-
-    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, nullptr, false, std::move(errToCatch));
-    auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
-    return std::make_unique<TryErrExpr>(location, nullptr, std::move(declaration));
+    return std::make_unique<TryErrorExpr>(location, std::move(first_expr));
 }
 
 std::unique_ptr<ImportExpr> Parser::parse_import_expr() {

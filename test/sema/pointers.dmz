@@ -11,29 +11,29 @@ fn main() -> void {
     *i_ptr = 12;
     printf("%d\n", i);
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:i32 i
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:       ResolvedVarDecl:Int i32 i
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '10'
 // CHECK-NEXT:         | value: 10
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr
-// CHECK-NEXT:         ResolvedRefPtrExpr:*i32
-// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:       ResolvedVarDecl:Int *i32 i_ptr
+// CHECK-NEXT:         ResolvedRefPtrExpr:Int *i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:Int i32 i
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr2
-// CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
-// CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:       ResolvedVarDecl:Int *i32 i_ptr2
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int *i32 i_ptr
+// CHECK-NEXT:     ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:       ResolvedStringLiteral:UInt u8[4] '%d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 i
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDerefPtrExpr:i32
-// CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
-// CHECK-NEXT:       ResolvedIntLiteral:i32 '12'
+// CHECK-NEXT:       ResolvedDerefPtrExpr:Int i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int *i32 i_ptr
+// CHECK-NEXT:       ResolvedIntLiteral:Int i32 '12'
 // CHECK-NEXT:       | value: 12
-// CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:       ResolvedStringLiteral:u8[4] '%d\n'
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:     ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:       ResolvedStringLiteral:UInt u8[4] '%d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 i

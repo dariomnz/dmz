@@ -9,8 +9,8 @@ std::ostream &operator<<(std::ostream &os, const ResolvedDeclType &type) {
         os << "ResolvedDecl";
     } else if (type == ResolvedDeclType::ResolvedStructDecl) {
         os << "ResolvedStructDecl";
-    } else if (type == ResolvedDeclType::ResolvedErrDecl) {
-        os << "ResolvedErrDecl";
+    } else if (type == ResolvedDeclType::ResolvedErrorDecl) {
+        os << "ResolvedErrorDecl";
     } else if (type == ResolvedDeclType::ResolvedImportExpr) {
         os << "ResolvedImportExpr";
     } else if (type == ResolvedDeclType::ResolvedModuleDecl) {
@@ -322,45 +322,39 @@ void ResolvedDeferRefStmt::dump(size_t level, bool onlySelf) const {
     resolvedDefer.block->dump(level + 1, onlySelf);
 }
 
-void ResolvedErrDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDecl " << identifier << '\n';
+void ResolvedErrorDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedErrorDecl " << identifier << '\n';
     if (onlySelf) return;
 }
 
-void ResolvedErrDeclRefExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrDeclRefExpr " << decl.identifier << '\n';
+void ResolvedErrorGroupExprDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedErrorGroupExprDecl" << '\n';
+
     if (onlySelf) return;
+    for (auto &&error : errors) error->dump(level + 1, onlySelf);
 }
 
-void ResolvedErrGroupDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrGroupDecl" << '\n';
+void ResolvedErrorUnwrapExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedErrorUnwrapExpr:" << type << '\n';
 
     if (onlySelf) return;
-    for (auto &&err : errs) err->dump(level + 1, onlySelf);
-}
-
-void ResolvedErrUnwrapExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrUnwrapExpr:" << type << '\n';
-
-    if (onlySelf) return;
-    errToUnwrap->dump(level + 1, onlySelf);
+    errorToUnwrap->dump(level + 1, onlySelf);
     for (auto &&d : defers) d->dump(level + 1, onlySelf);
 }
 
-void ResolvedCatchErrExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedCatchErrExpr:" << type << '\n';
+void ResolvedCatchErrorExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedCatchErrorExpr:" << type << '\n';
 
     if (onlySelf) return;
     if (declaration) declaration->dump(level + 1, onlySelf);
-    if (errToCatch) errToCatch->dump(level + 1, onlySelf);
+    if (errorToCatch) errorToCatch->dump(level + 1, onlySelf);
 }
 
-void ResolvedTryErrExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedTryErrExpr:" << type << '\n';
+void ResolvedTryErrorExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTryErrorExpr:" << type << '\n';
 
     if (onlySelf) return;
-    if (declaration) declaration->dump(level + 1, onlySelf);
-    if (errToTry) errToTry->dump(level + 1, onlySelf);
+    if (errorToTry) errorToTry->dump(level + 1, onlySelf);
 }
 
 void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {

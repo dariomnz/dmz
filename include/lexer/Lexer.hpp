@@ -62,7 +62,7 @@ enum class TokenType {
     kw_struct,
     kw_extern,
     kw_defer,
-    kw_err,
+    kw_error,
     kw_catch,
     kw_try,
     kw_module,
@@ -85,7 +85,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"struct", TokenType::kw_struct},
     {"extern", TokenType::kw_extern},
     {"defer", TokenType::kw_defer},
-    {"err", TokenType::kw_err},
+    {"error", TokenType::kw_error},
     {"catch", TokenType::kw_catch},
     {"try", TokenType::kw_try},
     {"module", TokenType::kw_module},
@@ -115,10 +115,10 @@ class Lexer {
     Lexer(const char* file_name);
     std::vector<Token> tokenize_file();
     Token next_token();
-    std::string get_file_name() { 
+    std::string get_file_name() {
         std::filesystem::path p(m_file_name);
         return p.filename().string();
-        // return m_file_name; 
+        // return m_file_name;
     }
 
    private:

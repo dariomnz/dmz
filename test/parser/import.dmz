@@ -12,7 +12,7 @@ const modnest4 = import("modnest1.modnest2.modnest3.modnest4");
 fn main() -> void {
     std.printf("asdf");
 }
-// CHECK: FunctionDecl main -> void
+// CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     CallExpr
 // CHECK-NEXT:       MemberExpr .printf

@@ -27,41 +27,41 @@ module ops {
     }
 }
 // CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedStructDecl str_ops
-// CHECK-NEXT:     ResolvedFieldDecl:i32 x
-// CHECK-NEXT:     ResolvedFieldDecl:i32 y
-// CHECK-NEXT:     ResolvedFieldDecl:i32 z
+// CHECK-NEXT:   ResolvedStructDecl Struct str_ops
+// CHECK-NEXT:     ResolvedFieldDecl:Int i32 x
+// CHECK-NEXT:     ResolvedFieldDecl:Int i32 y
+// CHECK-NEXT:     ResolvedFieldDecl:Int i32 z
 // CHECK-NEXT:   ResolvedModuleDecl integer
-// CHECK-NEXT:     ResolvedFunctionDecl add -> i32
-// CHECK-NEXT:       ResolvedParamDecl:i32 x
-// CHECK-NEXT:       ResolvedParamDecl:i32 y
+// CHECK-NEXT:     ResolvedFunctionDecl add -> Int i32
+// CHECK-NEXT:       ResolvedParamDecl:Int i32 x
+// CHECK-NEXT:       ResolvedParamDecl:Int i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:     ResolvedFunctionDecl sub -> i32
-// CHECK-NEXT:       ResolvedParamDecl:i32 x
-// CHECK-NEXT:       ResolvedParamDecl:i32 y
+// CHECK-NEXT:           ResolvedBinaryOperator:Int i32 '+'
+// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 y
+// CHECK-NEXT:     ResolvedFunctionDecl sub -> Int i32
+// CHECK-NEXT:       ResolvedParamDecl:Int i32 x
+// CHECK-NEXT:       ResolvedParamDecl:Int i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:i32 '-'
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:   ResolvedFunctionDecl print -> void
-// CHECK-NEXT:     ResolvedParamDecl:i32 x
+// CHECK-NEXT:           ResolvedBinaryOperator:Int i32 '-'
+// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 y
+// CHECK-NEXT:   ResolvedFunctionDecl print -> Void void
+// CHECK-NEXT:     ResolvedParamDecl:Int i32 x
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println -> void
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
+// CHECK-NEXT:       ResolvedCallExpr:Void void
+// CHECK-NEXT:         ResolvedFunctionDecl println -> Void void
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 x
+// CHECK-NEXT:   ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:     ResolvedParamDecl:UInt *u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
-// CHECK-NEXT:   ResolvedFunctionDecl println -> void
-// CHECK-NEXT:     ResolvedParamDecl:i32 n
+// CHECK-NEXT:   ResolvedFunctionDecl println -> Void void
+// CHECK-NEXT:     ResolvedParamDecl:Int i32 n
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:         ResolvedRefPtrExpr:*u8[4]
-// CHECK-NEXT:           ResolvedStringLiteral:u8[4] '%d\n'
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32 n
+// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:         ResolvedRefPtrExpr:UInt *u8[4]
+// CHECK-NEXT:           ResolvedStringLiteral:UInt u8[4] '%d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 n

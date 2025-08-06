@@ -25,13 +25,13 @@ extern fn f() -> void
 extern fn f() -> void {}
 
 extern fn puts(str: u8[]) -> i32;
-// CHECK: ExternFunctionDecl puts -> i32
-// CHECK-NEXT:  ParamDecl:u8[] str
+// CHECK: ExternFunctionDecl puts -> Int i32
+// CHECK-NEXT:  ParamDecl:UInt u8[] str
 
 extern fn dprintf(fd:i32, format: u8[], ...) -> i32;
-// CHECK: ExternFunctionDecl dprintf -> i32
-// CHECK-NEXT:  ParamDecl:i32 fd
-// CHECK-NEXT:  ParamDecl:u8[] format
+// CHECK: ExternFunctionDecl dprintf -> Int i32
+// CHECK-NEXT:  ParamDecl:Int i32 fd
+// CHECK-NEXT:  ParamDecl:UInt u8[] format
 // CHECK-NEXT:  ParamDecl:vararg ...
 
 fn main() -> void {

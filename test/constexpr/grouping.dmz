@@ -6,7 +6,7 @@ fn foo() -> i32 {
     return (10 * (x + 4)) && (!(y == x) || x < y);
 }
 // CHECK:    ResolvedReturnStmt
-// CHECK-NEXT:      ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:      ResolvedBinaryOperator:Int i1 '&&'
 // CHECK-NEXT:      | value: 1
 
 fn bar() -> i32 {
@@ -17,6 +17,6 @@ fn bar() -> i32 {
 // CHECK: ResolvedReturnStmt
 // CHECK-NEXT:   ResolvedGroupingExpr:
 // CHECK-NEXT:   | value: 2
-// CHECK-NEXT:     ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:     ResolvedDeclRefExpr:Int i32 x
 
 fn main() -> void {}

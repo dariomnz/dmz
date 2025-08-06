@@ -18,10 +18,10 @@ fn main() -> void {
 
     let x: i32;
     // CHECK: DeclStmt
-    // CHECK-NEXT:   VarDecl:i32 x
+    // CHECK-NEXT:   VarDecl:Int i32 x
     
     let x: i32 = 1;
     // CHECK: DeclStmt
-    // CHECK-NEXT:   VarDecl:i32 x
+    // CHECK-NEXT:   VarDecl:Int i32 x
     // CHECK-NEXT:     IntLiteral '1'
 }

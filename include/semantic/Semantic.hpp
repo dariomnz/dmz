@@ -83,11 +83,7 @@ class Sema {
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
-    // std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt_without_init(const DeclStmt &declStmt);
-    // bool resolve_decl_stmt_init(const ResolvedDeclStmt &declStmt);
     std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
-    // std::unique_ptr<ResolvedVarDecl> resolve_var_decl_without_init(const VarDecl &varDecl);
-    // bool resolve_var_decl_init(const ResolvedVarDecl &varDecl);
     std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
     std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
@@ -102,11 +98,10 @@ class Sema {
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope);
-    std::unique_ptr<ResolvedErrGroupDecl> resolve_err_group_decl(const ErrGroupDecl &errGroupDecl);
-    std::unique_ptr<ResolvedErrDeclRefExpr> resolve_err_decl_ref_expr(const ErrDeclRefExpr &errDeclRef);
-    std::unique_ptr<ResolvedErrUnwrapExpr> resolve_err_unwrap_expr(const ErrUnwrapExpr &errUnwrapExpr);
-    std::unique_ptr<ResolvedCatchErrExpr> resolve_catch_err_expr(const CatchErrExpr &catchErrExpr);
-    std::unique_ptr<ResolvedTryErrExpr> resolve_try_err_expr(const TryErrExpr &tryErrExpr);
+    std::unique_ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
+    std::unique_ptr<ResolvedErrorUnwrapExpr> resolve_error_unwrap_expr(const ErrorUnwrapExpr &errorUnwrapExpr);
+    std::unique_ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
+    std::unique_ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     std::unique_ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl, int level);
     bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
@@ -118,7 +113,6 @@ class Sema {
     std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
-    ResolvedModuleDecl *resolve_module_from_ref(const ResolvedExpr &expr);
     void resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
 };
 }  // namespace DMZ

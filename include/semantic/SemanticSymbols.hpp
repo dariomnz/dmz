@@ -55,7 +55,7 @@ enum struct ResolvedDeclType {
     Module,
     ResolvedDecl,
     ResolvedStructDecl,
-    ResolvedErrDecl,
+    ResolvedErrorDecl,
     ResolvedImportExpr,
     ResolvedModuleDecl,
     ResolvedMemberFunctionDecl,
@@ -269,7 +269,7 @@ struct ResolvedStructDecl : public ResolvedDecl {
     GenericTypes specGenericTypes = GenericTypes{{}};
     std::vector<std::unique_ptr<ResolvedStructDecl>> specializations = {};
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl, 
+    ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
                        std::unique_ptr<ResolvedGenericTypesDecl> genericTypes,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                        std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions)
@@ -492,64 +492,59 @@ struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedErrDecl : public ResolvedDecl {
-    ResolvedErrDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, std::move(identifier), Type::builtinErr(identifier), false) {}
+struct ResolvedErrorDecl : public ResolvedDecl {
+    ResolvedErrorDecl(SourceLocation location, std::string_view identifier)
+        : ResolvedDecl(location, std::move(identifier), Type::builtinError(identifier), false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedErrDeclRefExpr : public ResolvedExpr {
-    const ResolvedErrDecl &decl;
-    ResolvedErrDeclRefExpr(SourceLocation location, const ResolvedErrDecl &decl)
-        : ResolvedExpr(location, decl.type), decl(decl) {}
+struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDecl {
+    SourceLocation location;
+    std::vector<std::unique_ptr<ResolvedErrorDecl>> errors;
+
+    ResolvedErrorGroupExprDecl(SourceLocation location, std::vector<std::unique_ptr<ResolvedErrorDecl>> errors)
+        : ResolvedExpr(location, Type::errorGroupType(this)),
+          ResolvedDecl(location, "", Type::errorGroupType(this), false),
+          location(location),
+          errors(std::move(errors)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedErrGroupDecl : public ResolvedDecl {
-    std::vector<std::unique_ptr<ResolvedErrDecl>> errs;
-
-    ResolvedErrGroupDecl(SourceLocation location, std::string_view identifier,
-                         std::vector<std::unique_ptr<ResolvedErrDecl>> errs)
-        : ResolvedDecl(location, std::move(identifier), Type::builtinErr("errGroup"), false), errs(std::move(errs)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
-struct ResolvedErrUnwrapExpr : public ResolvedExpr {
-    std::unique_ptr<ResolvedExpr> errToUnwrap;
+struct ResolvedErrorUnwrapExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errorToUnwrap;
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
 
-    ResolvedErrUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errToUnwrap,
-                          std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
-        : ResolvedExpr(location, unwrapType), errToUnwrap(std::move(errToUnwrap)), defers(std::move(defers)) {}
+    ResolvedErrorUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errorToUnwrap,
+                            std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedExpr(location, unwrapType), errorToUnwrap(std::move(errorToUnwrap)), defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedCatchErrExpr : public ResolvedExpr {
-    std::unique_ptr<ResolvedExpr> errToCatch;
+struct ResolvedCatchErrorExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errorToCatch;
     std::unique_ptr<ResolvedDeclStmt> declaration;
 
-    ResolvedCatchErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToCatch,
-                         std::unique_ptr<ResolvedDeclStmt> declaration)
+    ResolvedCatchErrorExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errorToCatch,
+                           std::unique_ptr<ResolvedDeclStmt> declaration)
         : ResolvedExpr(location, Type::builtinBool()),
-          errToCatch(std::move(errToCatch)),
+          errorToCatch(std::move(errorToCatch)),
           declaration(std::move(declaration)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedTryErrExpr : public ResolvedExpr {
-    std::unique_ptr<ResolvedExpr> errToTry;
-    std::unique_ptr<ResolvedDeclStmt> declaration;
+struct ResolvedTryErrorExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errorToTry;
+    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
 
-    ResolvedTryErrExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errToTry,
-                       std::unique_ptr<ResolvedDeclStmt> declaration)
-        : ResolvedExpr(location, Type::builtinBool()),
-          errToTry(std::move(errToTry)),
-          declaration(std::move(declaration)) {}
+    ResolvedTryErrorExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errorToTry,
+                         std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedExpr(location, errorToTry->type.withoutOptional()),
+          errorToTry(std::move(errorToTry)),
+          defers(std::move(defers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

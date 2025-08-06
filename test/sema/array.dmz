@@ -9,42 +9,42 @@ fn main() -> void {
     array2[0] = '9';
     array2[4] = array2[0];
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:u8[5] array
+// CHECK-NEXT:       ResolvedVarDecl:UInt u8[5] array
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
-// CHECK-NEXT:       ResolvedCharLiteral:u8 '9'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:       ResolvedCharLiteral:UInt u8 '9'
 // CHECK-NEXT:       | value: 57
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '4'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '0'
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:u8[5] array2
-// CHECK-NEXT:         ResolvedArrayInstantiationExpr:u8[3]
-// CHECK-NEXT:           ResolvedCharLiteral:u8 '1'
+// CHECK-NEXT:       ResolvedVarDecl:UInt u8[5] array2
+// CHECK-NEXT:         ResolvedArrayInstantiationExpr:UInt u8[3]
+// CHECK-NEXT:           ResolvedCharLiteral:UInt u8 '1'
 // CHECK-NEXT:           | value: 49
-// CHECK-NEXT:           ResolvedCharLiteral:u8 '2'
+// CHECK-NEXT:           ResolvedCharLiteral:UInt u8 '2'
 // CHECK-NEXT:           | value: 50
-// CHECK-NEXT:           ResolvedCharLiteral:u8 '3'
+// CHECK-NEXT:           ResolvedCharLiteral:UInt u8 '3'
 // CHECK-NEXT:           | value: 51
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array2
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
-// CHECK-NEXT:       ResolvedCharLiteral:u8 '9'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array2
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:       ResolvedCharLiteral:UInt u8 '9'
 // CHECK-NEXT:       | value: 57
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array2
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:       ResolvedArrayAtExpr:u8
-// CHECK-NEXT:         ResolvedDeclRefExpr:u8[5] array2
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array2
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '4'
+// CHECK-NEXT:       ResolvedArrayAtExpr:UInt u8
+// CHECK-NEXT:         ResolvedDeclRefExpr:UInt u8[5] array2
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '0'

@@ -17,7 +17,7 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
     // TODO: rethink lock to not lock all threads
     auto lock = get_shared_context().getLock();
 
-    generate_in_module_decl(m_resolvedTree, true);
+    generate_in_module_decl(m_resolvedTree);
 
     generate_main_wrapper();
 
@@ -27,7 +27,7 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
 llvm::Type *Codegen::generate_type(const Type &type) {
     debug_func(type);
     llvm::Type *ret = nullptr;
-    if (type.kind == Type::Kind::Err || type.isPointer) {
+    if (type.kind == Type::Kind::Error || type.isPointer) {
         ret = llvm::PointerType::get(*m_context, 0);
         return ret;
     }
@@ -111,7 +111,7 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
     debug_func("");
     // println("type: " << type.to_str());
     // v->dump();
-    if (type.isPointer || type.kind == Type::Kind::Err) {
+    if (type.isPointer || type.kind == Type::Kind::Error) {
         v = m_builder.CreatePtrToInt(v, m_builder.getInt64Ty());
         return m_builder.CreateICmpNE(v, m_builder.getInt64(0), "ptr.to.bool");
     } else if (type.kind == Type::Kind::Int) {
@@ -177,8 +177,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) 
         } else {
             dmz_unreachable("unsuported type from UInt");
         }
-    } else if (from.kind == Type::Kind::Err) {
-        if (to.kind == Type::Kind::Err) {
+    } else if (from.kind == Type::Kind::Error) {
+        if (to.kind == Type::Kind::Error) {
             return v;
         } else {
             dmz_unreachable("unsuported type from Err");
@@ -225,7 +225,7 @@ llvm::Value *Codegen::load_value(llvm::Value *v, Type type) {
 
 llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmType) {
     debug_func("");
-    std::string structName("err.struct." + type.withoutOptional().to_str());
+    std::string structName("error.struct." + type.withoutOptional().to_str());
     auto ret = llvm::StructType::getTypeByName(*m_context, structName);
     if (!ret) {
         ret = llvm::StructType::create(*m_context, structName);
@@ -236,7 +236,7 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
         } else {
             fieldTypes.emplace_back(llvmType);
         }
-        fieldTypes.emplace_back(generate_type(Type::builtinErr("err")));
+        fieldTypes.emplace_back(generate_type(Type::builtinError("error")));
         ret->setBody(fieldTypes);
     }
     return ret;

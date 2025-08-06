@@ -13,27 +13,27 @@ fn main() -> void {
 
   let x = s.n.x;
 }
-// CHECK: ResolvedStructDecl S
-// CHECK-NEXT:   ResolvedFieldDecl:i32 x
-// CHECK-NEXT:   ResolvedFieldDecl:S2 n
-// CHECK-NEXT: ResolvedStructDecl S2
-// CHECK-NEXT:   ResolvedFieldDecl:i32 x
+// CHECK: ResolvedStructDecl Struct S
+// CHECK-NEXT:   ResolvedFieldDecl:Int i32 x
+// CHECK-NEXT:   ResolvedFieldDecl:Struct S2 n
+// CHECK-NEXT: ResolvedStructDecl Struct S2
+// CHECK-NEXT:   ResolvedFieldDecl:Int i32 x
 
-// CHECK-NEXT: ResolvedFunctionDecl main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:S s
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:S
-// CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
-// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:       ResolvedVarDecl:Struct S s
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Struct S
+// CHECK-NEXT:           ResolvedFieldInitStmt:Int i32 x
+// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '0'
 // CHECK-NEXT:             | value: 0
-// CHECK-NEXT:           ResolvedFieldInitStmt:S2 n
-// CHECK-NEXT:             ResolvedStructInstantiationExpr:S2
-// CHECK-NEXT:               ResolvedFieldInitStmt:i32 x
-// CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:           ResolvedFieldInitStmt:Struct S2 n
+// CHECK-NEXT:             ResolvedStructInstantiationExpr:Struct S2
+// CHECK-NEXT:               ResolvedFieldInitStmt:Int i32 x
+// CHECK-NEXT:                 ResolvedIntLiteral:Int i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:i32 x
-// CHECK-NEXT:         ResolvedMemberExpr:i32 x
-// CHECK-NEXT:           ResolvedMemberExpr:S2 n
-// CHECK-NEXT:             ResolvedDeclRefExpr:S s
+// CHECK-NEXT:       ResolvedVarDecl:Int i32 x
+// CHECK-NEXT:         ResolvedMemberExpr:Int i32 x
+// CHECK-NEXT:           ResolvedMemberExpr:Struct S2 n
+// CHECK-NEXT:             ResolvedDeclRefExpr:Struct S s

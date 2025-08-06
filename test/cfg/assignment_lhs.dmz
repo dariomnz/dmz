@@ -17,13 +17,13 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
-// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
-// CHECK-NEXT:   ResolvedStructInstantiationExpr:S
+// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedStructInstantiationExpr:Struct S
 // CHECK-NEXT:   ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedIntLiteral:i32 '0'
-// CHECK-NEXT:   ResolvedDeclRefExpr:S s
-// CHECK-NEXT:   ResolvedMemberExpr:i32 x
+// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:   ResolvedDeclRefExpr:Struct S s
+// CHECK-NEXT:   ResolvedMemberExpr:Int i32 x
 // CHECK-NEXT:   ResolvedAssignment
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]

@@ -281,25 +281,25 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
     }
 }
 
-void Codegen::generate_err_no_err() {
+void Codegen::generate_error_no_err() {
     debug_func("");
     if (m_success) return;
     std::string str("SUCCESS");
     llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, str, true);
     m_success =
         new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
-                                 llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, "err.str." + str);
+                                 llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, "error.str." + str);
 }
 
-void Codegen::generate_err_group_decl(const ResolvedErrGroupDecl &errGroupDecl) {
+void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl) {
     debug_func("");
-    for (auto &err : errGroupDecl.errs) {
-        auto name = std::string(err->identifier);
+    for (auto &error : ErrorGroupExprDecl.errors) {
+        auto name = std::string(error->identifier);
         // auto symbol_name = generate_symbol_name(name);
         llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, name, true);
-        m_declarations[err.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
-                                                             llvm::GlobalVariable::LinkageTypes::PrivateLinkage,
-                                                             stringConst, "err.str." + name);
+        m_declarations[error.get()] = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                                               llvm::GlobalVariable::LinkageTypes::PrivateLinkage,
+                                                               stringConst, "error.str." + name);
     }
 }
 
@@ -312,8 +312,9 @@ void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
     // }
 }
 
-void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations, bool isGlobal) {
+void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
     debug_func("");
+    generate_error_no_err();
     for (auto &&decl : declarations) {
         if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             if (fn->identifier == "get_errno") {
@@ -325,8 +326,7 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             generate_struct_decl(*sd);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             generate_global_var_decl(*ds);
-        } else if (dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
-                   dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+        } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
         } else {
             decl->dump();
@@ -334,15 +334,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
         }
     }
 
-    generate_err_no_err();
-    for (auto &&decl : declarations) {
-        if (const auto *errGroup = dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()))
-            generate_err_group_decl(*errGroup);
-    }
-
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedErrGroupDecl *>(decl.get()) ||
             dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             continue;
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
@@ -361,6 +354,17 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
     if (stmt.type.kind == Type::Kind::Module) return;
+
+    if (stmt.type.kind == Type::Kind::ErrorGroup) {
+        if (auto errorGroup = dynamic_cast<ResolvedErrorGroupExprDecl *>(stmt.varDecl->initializer.get())) {
+            generate_error_group_expr_decl(*errorGroup);
+        } else {
+            stmt.varDecl->initializer->dump();
+            dmz_unreachable("unexpected declaration instead of error group");
+        }
+        return;
+    }
+
     llvm::Constant *initializer = nullptr;
     if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
         initializer = m_builder.getInt32(*constVal);

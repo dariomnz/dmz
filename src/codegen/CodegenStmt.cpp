@@ -53,9 +53,9 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
     debug_func("");
     if (stmt.expr) {
-        if (stmt.expr->type.kind == Type::Kind::Err) {
+        if (stmt.expr->type.kind == Type::Kind::Error) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-            store_value(generate_expr(*stmt.expr), dst, Type::builtinErr("err"), Type::builtinErr("err"));
+            store_value(generate_expr(*stmt.expr), dst, Type::builtinError("err"), Type::builtinError("err"));
         } else {
             store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional(),
                         m_currentFunction->type.withoutOptional());

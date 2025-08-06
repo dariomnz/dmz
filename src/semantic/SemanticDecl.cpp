@@ -217,39 +217,6 @@ ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl
     return retStruct.get();
 }
 
-// std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl_without_init(const VarDecl &varDecl) {
-//     debug_func(varDecl.location);
-//     if (!varDecl.type && !varDecl.initializer)
-//         return report(varDecl.location, "an uninitialized variable is expected to have a type specifier");
-
-//     std::unique_ptr<ResolvedExpr> resolvedInitializer = nullptr;
-//     if (varDecl.initializer) {
-//         resolvedInitializer = resolve_expr(*varDecl.initializer);
-//         if (!resolvedInitializer) return nullptr;
-//     }
-
-//     Type *resolvableType = varDecl.type.get() != nullptr ? varDecl.type.get() : &resolvedInitializer->type;
-//     std::optional<Type> type = resolve_type(*resolvableType);
-
-//     if (!type || type->kind == Type::Kind::Void)
-//         return report(varDecl.location, "variable '" + std::string(varDecl.identifier) + "' has invalid '" +
-//                                             std::string(resolvableType->name) + "' type");
-
-//     if (resolvedInitializer) {
-//         if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get()) &&
-//             resolvedInitializer->type.kind == Type::Kind::Void && resolvedInitializer->type.isArray) {
-//             resolvedInitializer->type = *type;
-//             resolvedInitializer->type.isArray = 0;
-//         }
-//         if (!Type::compare(*type, resolvedInitializer->type))
-//             return report(resolvedInitializer->location, "initializer type mismatch");
-
-//         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
-//     }
-//     return std::make_unique<ResolvedVarDecl>(varDecl.location, varDecl.identifier, *type, varDecl.isMutable,
-//                                              std::move(resolvedInitializer));
-// }
-
 std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     debug_func(varDecl.location);
     if (!varDecl.type && !varDecl.initializer)
@@ -388,18 +355,19 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     return true;
 }
 
-std::unique_ptr<ResolvedErrGroupDecl> Sema::resolve_err_group_decl(const ErrGroupDecl &errGroupDecl) {
-    debug_func(errGroupDecl.location);
-    std::vector<std::unique_ptr<ResolvedErrDecl>> resolvedErrors;
+std::unique_ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(
+    const ErrorGroupExprDecl &ErrorGroupExprDecl) {
+    debug_func(ErrorGroupExprDecl.location);
+    std::vector<std::unique_ptr<ResolvedErrorDecl>> resolvedErrors;
 
-    for (auto &&err : errGroupDecl.errs) {
-        auto &errDecl = resolvedErrors.emplace_back(std::make_unique<ResolvedErrDecl>(err->location, err->identifier));
-        if (!insert_decl_to_current_scope(*errDecl)) return nullptr;
-        // if (!insert_decl_to_modules(*errDecl)) return nullptr;
+    for (auto &&err : ErrorGroupExprDecl.errs) {
+        resolvedErrors.emplace_back(std::make_unique<ResolvedErrorDecl>(err->location, err->identifier));
+        // if (!insert_decl_to_current_scope(*ErrorDecl)) return nullptr;
+        // if (!insert_decl_to_modules(*ErrorDecl)) return nullptr;
     }
 
-    return std::make_unique<ResolvedErrGroupDecl>(errGroupDecl.location, errGroupDecl.identifier,
-                                                  std::move(resolvedErrors));
+    // println("Resolve error group with size " << resolvedErrors.size());
+    return std::make_unique<ResolvedErrorGroupExprDecl>(ErrorGroupExprDecl.location, std::move(resolvedErrors));
 }
 
 std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl, int level) {
@@ -498,15 +466,6 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                 resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
-            if (const auto *err = dynamic_cast<const ErrGroupDecl *>(decl.get())) {
-                std::unique_ptr<ResolvedDecl> resolvedDecl = resolve_err_group_decl(*err);
-                if (!resolvedDecl) {
-                    error = true;
-                    continue;
-                }
-                resolvedTree.emplace_back(std::move(resolvedDecl));
-                continue;
-            }
         }
     }
 
@@ -583,14 +542,6 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
         if (auto *fn = dynamic_cast<ResolvedDeclStmt *>(currentDecl)) {
             if (!insert_decl_to_current_scope(*fn->varDecl)) {
                 error = true;
-            }
-            continue;
-        }
-        if (auto *eg = dynamic_cast<ResolvedErrGroupDecl *>(currentDecl)) {
-            for (auto &&e : eg->errs) {
-                if (!insert_decl_to_current_scope(*e)) {
-                    error = true;
-                }
             }
             continue;
         }

@@ -10,23 +10,23 @@ fn main() -> void {
     println(x);
 }
 
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:i32 x
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:       ResolvedVarDecl:Int i32 x
+// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '1'
 // CHECK-NEXT:         | value: 1
-// CHECK-NEXT:     ResolvedCallExpr:void
-// CHECK-NEXT:       ResolvedFunctionDecl println -> void
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:     ResolvedCallExpr:Void void
+// CHECK-NEXT:       ResolvedFunctionDecl println -> Void void
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:i32 y
-// CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:         ResolvedVarDecl:Int i32 y
+// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '2'
 // CHECK-NEXT:           | value: 2
-// CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println -> void
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:     ResolvedCallExpr:void
-// CHECK-NEXT:       ResolvedFunctionDecl println -> void
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:       ResolvedCallExpr:Void void
+// CHECK-NEXT:         ResolvedFunctionDecl println -> Void void
+// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 y
+// CHECK-NEXT:     ResolvedCallExpr:Void void
+// CHECK-NEXT:       ResolvedFunctionDecl println -> Void void
+// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 x

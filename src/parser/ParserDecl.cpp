@@ -196,28 +196,27 @@ std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
     return std::make_unique<FieldDecl>(location, std::move(identifier), std::move(*type));
 };
 
-std::unique_ptr<ErrGroupDecl> Parser::parse_err_group_decl() {
+std::unique_ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
     debug_func("");
-    matchOrReturn(TokenType::kw_err, "expected 'err'");
+    matchOrReturn(TokenType::kw_error, "expected 'error'");
     auto location = m_nextToken.loc;
-    auto id = m_nextToken.str;
 
-    eat_next_token();  // eat err
+    eat_next_token();  // eat error
 
-    varOrReturn(errs,
-                parse_list_with_trailing_comma<ErrDecl>({TokenType::block_l, "expected '{'"}, &Parser::parse_err_decl,
-                                                        {TokenType::block_r, "expected '}'"}));
-    return std::make_unique<ErrGroupDecl>(location, id, std::move(*errs));
+    varOrReturn(errors, parse_list_with_trailing_comma<ErrorDecl>({TokenType::block_l, "expected '{'"},
+                                                                  &Parser::parse_error_decl,
+                                                                  {TokenType::block_r, "expected '}'"}));
+    return std::make_unique<ErrorGroupExprDecl>(location, std::move(*errors));
 }
 
-std::unique_ptr<ErrDecl> Parser::parse_err_decl() {
+std::unique_ptr<ErrorDecl> Parser::parse_error_decl() {
     debug_func("");
     matchOrReturn(TokenType::id, "expected identifier");
     auto location = m_nextToken.loc;
     auto id = m_nextToken.str;
 
     eat_next_token();  // eat id
-    return std::make_unique<ErrDecl>(location, id);
+    return std::make_unique<ErrorDecl>(location, id);
 }
 
 std::unique_ptr<ModuleDecl> Parser::parse_module_decl() {
@@ -258,11 +257,6 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
             }
         } else if (m_nextToken.type == TokenType::kw_struct) {
             if (auto st = parse_struct_decl()) {
-                declarations.emplace_back(std::move(st));
-                continue;
-            }
-        } else if (m_nextToken.type == TokenType::kw_err) {
-            if (auto st = parse_err_group_decl()) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }

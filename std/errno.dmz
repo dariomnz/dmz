@@ -1,278 +1,278 @@
 module std {
     module errno {
-        err {
-            ERRNO_UNKNOWN,
-            ERRNO_SUCCESS,
-            ERRNO_OPERATION_NOT_PERMITTED,
-            ERRNO_NO_SUCH_FILE_OR_DIRECTORY,
-            ERRNO_NO_SUCH_PROCESS,
-            ERRNO_INTERRUPTED_SYSTEM_CALL,
-            ERRNO_INPUT_OUTPUT,
-            ERRNO_NO_SUCH_DEVICE_OR_ADDRESS,
-            ERRNO_ARG_LIST_TOO_LONG,
-            ERRNO_EXEC_FORMAT_ERROR,
-            ERRNO_BAD_FILE_NUMBER,
-            ERRNO_NO_CHILD_PROCESSES,
-            ERRNO_RESOURCE_TEMPORARILY_UNAVAILABLE,
-            ERRNO_OUT_OF_MEMORY,
-            ERRNO_PERMISSION_DENIED,
-            ERRNO_BAD_ADDRESS,
-            ERRNO_BLOCK_DEVICE_REQUIRED,
-            ERRNO_DEVICE_OR_RESOURCE_BUSY,
-            ERRNO_FILE_EXISTS,
-            ERRNO_CROSS_DEVICE_LINK,
-            ERRNO_NO_SUCH_DEVICE,
-            ERRNO_NOT_A_DIRECTORY,
-            ERRNO_IS_A_DIRECTORY,
-            ERRNO_INVALID_ARGUMENT,
-            ERRNO_TOO_MANY_OPEN_FILES_IN_SYSTEM,
-            ERRNO_TOO_MANY_OPEN_FILES,
-            ERRNO_NOT_A_TTY,
-            ERRNO_TEXT_FILE_BUSY,
-            ERRNO_FILE_TOO_LARGE,
-            ERRNO_NO_SPACE_LEFT_ON_DEVICE,
-            ERRNO_ILLEGAL_SEEK,
-            ERRNO_READ_ONLY_FILE_SYSTEM,
-            ERRNO_TOO_MANY_LINKS,
-            ERRNO_BROKEN_PIPE,
-            ERRNO_MATH_ARGUMENT_OUT_OF_DOMAIN,
-            ERRNO_RESULT_TOO_LARGE,
-            ERRNO_RESOURCE_DEADLOCK_WOULD_OCCUR,
-            ERRNO_FILE_NAME_TOO_LONG,
-            ERRNO_NO_RECORD_LOCKS_AVAILABLE,
-            ERRNO_FUNCTION_NOT_IMPLEMENTED,
-            ERRNO_DIRECTORY_NOT_EMPTY,
-            ERRNO_TOO_MANY_SYMBOLIC_LINKS,
-            ERRNO_NO_MESSAGE_OF_DESIRED_TYPE,
-            ERRNO_IDENTIFIER_REMOVED,
-            ERRNO_CHANNEL_NUMBER_OUT_OF_RANGE,
-            ERRNO_LEVEL_2_NOT_SYNCHRONIZED,
-            ERRNO_LEVEL_3_HALTED,
-            ERRNO_LEVEL_3_RESET,
-            ERRNO_LINK_NUMBER_OUT_OF_RANGE,
-            ERRNO_PROTOCOL_DRIVER_NOT_ATTACHED,
-            ERRNO_NO_CSI_STRUCTURE_AVAILABLE,
-            ERRNO_LEVEL_2_HALTED,
-            ERRNO_INVALID_EXCHANGE,
-            ERRNO_INVALID_REQUEST_DESCRIPTOR,
-            ERRNO_FULL_EXCHANGE,
-            ERRNO_NO_ANODE,
-            ERRNO_INVALID_REQUEST_CODE,
-            ERRNO_INVALID_SLOT,
-            ERRNO_BAD_FONT_FILE_FORMAT,
-            ERRNO_DEVICE_NOT_A_STREAM,
-            ERRNO_NO_DATA_AVAILABLE,
-            ERRNO_TIMER_EXPIRED,
-            ERRNO_OUT_OF_STREAMS_RESOURCES,
-            ERRNO_MACHINE_IS_NOT_ON_THE_NETWORK,
-            ERRNO_PACKAGE_NOT_INSTALLED,
-            ERRNO_OBJECT_IS_REMOTE,
-            ERRNO_LINK_HAS_BEEN_SEVERED,
-            ERRNO_ADVERTISING_ERROR,
-            ERRNO_S_RM_MOUNT_ERROR,
-            ERRNO_COMMUNICATION_ERROR_ON_SEND,
-            ERRNO_PROTOCOL_ERROR,
-            ERRNO_MULTIHOP_ATTEMPTED,
-            ERRNO_RFS_SPECIFIC_ERROR,
-            ERRNO_BAD_MESSAGE,
-            ERRNO_VALUE_TOO_LARGE_FOR_DEFINED_DATA_TYPE,
-            ERRNO_NAME_NOT_UNIQUE_ON_NETWORK,
-            ERRNO_FILE_DESCRIPTOR_IN_BAD_STATE,
-            ERRNO_REMOTE_ADDRESS_CHANGED,
-            ERRNO_CANNOT_ACCESS_A_NEEDED_SHARED_LIBRARY,
-            ERRNO_ACCESSING_A_CORRUPTED_SHARED_LIBRARY,
-            ERRNO_DOT_LIB_SECTION_IN_A_OUT_SHARED_LIBRARY,
-            ERRNO_ATTEMPTING_TO_LINK_TOO_MANY_SHARED_LIBRARIES,
-            ERRNO_CANNOT_EXEC_A_SHARED_LIBRARY_DIRECTLY,
-            ERRNO_ILLEGAL_BYTE_SEQUENCE,
-            ERRNO_INTERRUPTABLE_SYSTEM_CALL_SHOULD_BE_RESTARTED,
-            ERRNO_STREAM_PIPE_ERROR,
-            ERRNO_TOO_MANY_USERS,
-            ERRNO_SOCKET_OPERATION_ON_NON_SOCKET,
-            ERRNO_DESTINATION_ADDRESS_REQUIRED,
-            ERRNO_MESSAGE_TOO_LONG,
-            ERRNO_PROTOCOL_WRONG_TYPE_FOR_SOCKET,
-            ERRNO_PROTOCOL_NOT_AVAILABLE,
-            ERRNO_PROTOCOL_NOT_SUPPORTED,
-            ERRNO_SOCKET_TYPE_NOT_SUPPORTED,
-            ERRNO_OPERATION_NOT_SUPPORTED_ON_TRANSPORT_ENDPOINT,
-            ERRNO_PROTOCOL_FAMILY_NOT_SUPPORTED,
-            ERRNO_ADDRESS_FAMILY_NOT_SUPPORTED_BY_PROTOCOL,
-            ERRNO_ADDRESS_ALREADY_IN_USE,
-            ERRNO_CANNOT_ASSIGN_REQUESTED_ADDRESS,
-            ERRNO_NETWORK_IS_DOWN,
-            ERRNO_NETWORK_IS_UNREACHABLE,
-            ERRNO_NETWORK_DROPPED_CONNECTION_ON_RESET,
-            ERRNO_SOFTWARE_CAUSED_CONNECTION_ABORT,
-            ERRNO_CONNECTION_RESET_BY_PEER,
-            ERRNO_NO_BUFFER_SPACE_AVAILABLE,
-            ERRNO_TRANSPORT_ENDPOINT_IS_ALREADY_CONNECTED,
-            ERRNO_TRANSPORT_ENDPOINT_IS_NOT_CONNECTED,
-            ERRNO_CANNOT_SEND_AFTER_TRANSPORT_ENDPOINT_SHUTDOWN,
-            ERRNO_TOO_MANY_REFERENCES_CANNOT_SPLICE,
-            ERRNO_CONNECTION_TIMED_OUT,
-            ERRNO_CONNECTION_REFUSED,
-            ERRNO_HOST_IS_DOWN,
-            ERRNO_NO_ROUTE_TO_HOST,
-            ERRNO_OPERATION_ALREADY_IN_PROGRESS,
-            ERRNO_OPERATION_NOW_IN_PROGRESS,
-            ERRNO_STALE_NFS_FILE_HANDLE,
-            ERRNO_STRUCTURE_NEEDS_CLEANING,
-            ERRNO_NOT_A_XENIX_NAMED_TYPE_FILE,
-            ERRNO_NO_XENIX_SEMAPHORES_AVAILABLE,
-            ERRNO_IS_A_NAMED_TYPE_FILE,
-            ERRNO_REMOTE_I_O_ERROR,
-            ERRNO_DISK_QUOTA_EXCEEDED,
-            ERRNO_NO_MEDIUM_FOUND,
-            ERRNO_WRONG_MEDIUM_TYPE,
-            ERRNO_OPERATION_CANCELED,
-            ERRNO_REQUIRED_KEY_NOT_AVAILABLE,
-            ERRNO_KEY_HAS_EXPIRED,
-            ERRNO_KEY_HAS_BEEN_REVOKED,
-            ERRNO_KEY_WAS_REJECTED_BY_SERVICE,
-            ERRNO_OWNER_DIED,
-            ERRNO_STATE_NOT_RECOVERABLE,
-            ERRNO_OPERATION_NOT_POSSIBLE_DUE_TO_RFKILL,
-            ERRNO_MEMORY_PAGE_POISONED,
-        }
+        const POSIX_errs = error {
+            UNKNOWN,
+            SUCCESS,
+            OPERATION_NOT_PERMITTED,
+            NO_SUCH_FILE_OR_DIRECTORY,
+            NO_SUCH_PROCESS,
+            INTERRUPTED_SYSTEM_CALL,
+            INPUT_OUTPUT,
+            NO_SUCH_DEVICE_OR_ADDRESS,
+            ARG_LIST_TOO_LONG,
+            EXEC_FORMAT_ERROR,
+            BAD_FILE_NUMBER,
+            NO_CHILD_PROCESSES,
+            RESOURCE_TEMPORARILY_UNAVAILABLE,
+            OUT_OF_MEMORY,
+            PERMISSION_DENIED,
+            BAD_ADDRESS,
+            BLOCK_DEVICE_REQUIRED,
+            DEVICE_OR_RESOURCE_BUSY,
+            FILE_EXISTS,
+            CROSS_DEVICE_LINK,
+            NO_SUCH_DEVICE,
+            NOT_A_DIRECTORY,
+            IS_A_DIRECTORY,
+            INVALID_ARGUMENT,
+            TOO_MANY_OPEN_FILES_IN_SYSTEM,
+            TOO_MANY_OPEN_FILES,
+            NOT_A_TTY,
+            TEXT_FILE_BUSY,
+            FILE_TOO_LARGE,
+            NO_SPACE_LEFT_ON_DEVICE,
+            ILLEGAL_SEEK,
+            READ_ONLY_FILE_SYSTEM,
+            TOO_MANY_LINKS,
+            BROKEN_PIPE,
+            MATH_ARGUMENT_OUT_OF_DOMAIN,
+            RESULT_TOO_LARGE,
+            RESOURCE_DEADLOCK_WOULD_OCCUR,
+            FILE_NAME_TOO_LONG,
+            NO_RECORD_LOCKS_AVAILABLE,
+            FUNCTION_NOT_IMPLEMENTED,
+            DIRECTORY_NOT_EMPTY,
+            TOO_MANY_SYMBOLIC_LINKS,
+            NO_MESSAGE_OF_DESIRED_TYPE,
+            IDENTIFIER_REMOVED,
+            CHANNEL_NUMBER_OUT_OF_RANGE,
+            LEVEL_2_NOT_SYNCHRONIZED,
+            LEVEL_3_HALTED,
+            LEVEL_3_RESET,
+            LINK_NUMBER_OUT_OF_RANGE,
+            PROTOCOL_DRIVER_NOT_ATTACHED,
+            NO_CSI_STRUCTURE_AVAILABLE,
+            LEVEL_2_HALTED,
+            INVALID_EXCHANGE,
+            INVALID_REQUEST_DESCRIPTOR,
+            FULL_EXCHANGE,
+            NO_ANODE,
+            INVALID_REQUEST_CODE,
+            INVALID_SLOT,
+            BAD_FONT_FILE_FORMAT,
+            DEVICE_NOT_A_STREAM,
+            NO_DATA_AVAILABLE,
+            TIMER_EXPIRED,
+            OUT_OF_STREAMS_RESOURCES,
+            MACHINE_IS_NOT_ON_THE_NETWORK,
+            PACKAGE_NOT_INSTALLED,
+            OBJECT_IS_REMOTE,
+            LINK_HAS_BEEN_SEVERED,
+            ADVERTISING_ERROR,
+            S_RM_MOUNT_ERROR,
+            COMMUNICATION_ERROR_ON_SEND,
+            PROTOCOL_ERROR,
+            MULTIHOP_ATTEMPTED,
+            RFS_SPECIFIC_ERROR,
+            BAD_MESSAGE,
+            VALUE_TOO_LARGE_FOR_DEFINED_DATA_TYPE,
+            NAME_NOT_UNIQUE_ON_NETWORK,
+            FILE_DESCRIPTOR_IN_BAD_STATE,
+            REMOTE_ADDRESS_CHANGED,
+            CANNOT_ACCESS_A_NEEDED_SHARED_LIBRARY,
+            ACCESSING_A_CORRUPTED_SHARED_LIBRARY,
+            DOT_LIB_SECTION_IN_A_OUT_SHARED_LIBRARY,
+            ATTEMPTING_TO_LINK_TOO_MANY_SHARED_LIBRARIES,
+            CANNOT_EXEC_A_SHARED_LIBRARY_DIRECTLY,
+            ILLEGAL_BYTE_SEQUENCE,
+            INTERRUPTABLE_SYSTEM_CALL_SHOULD_BE_RESTARTED,
+            STREAM_PIPE_ERROR,
+            TOO_MANY_USERS,
+            SOCKET_OPERATION_ON_NON_SOCKET,
+            DESTINATION_ADDRESS_REQUIRED,
+            MESSAGE_TOO_LONG,
+            PROTOCOL_WRONG_TYPE_FOR_SOCKET,
+            PROTOCOL_NOT_AVAILABLE,
+            PROTOCOL_NOT_SUPPORTED,
+            SOCKET_TYPE_NOT_SUPPORTED,
+            OPERATION_NOT_SUPPORTED_ON_TRANSPORT_ENDPOINT,
+            PROTOCOL_FAMILY_NOT_SUPPORTED,
+            ADDRESS_FAMILY_NOT_SUPPORTED_BY_PROTOCOL,
+            ADDRESS_ALREADY_IN_USE,
+            CANNOT_ASSIGN_REQUESTED_ADDRESS,
+            NETWORK_IS_DOWN,
+            NETWORK_IS_UNREACHABLE,
+            NETWORK_DROPPED_CONNECTION_ON_RESET,
+            SOFTWARE_CAUSED_CONNECTION_ABORT,
+            CONNECTION_RESET_BY_PEER,
+            NO_BUFFER_SPACE_AVAILABLE,
+            TRANSPORT_ENDPOINT_IS_ALREADY_CONNECTED,
+            TRANSPORT_ENDPOINT_IS_NOT_CONNECTED,
+            CANNOT_SEND_AFTER_TRANSPORT_ENDPOINT_SHUTDOWN,
+            TOO_MANY_REFERENCES_CANNOT_SPLICE,
+            CONNECTION_TIMED_OUT,
+            CONNECTION_REFUSED,
+            HOST_IS_DOWN,
+            NO_ROUTE_TO_HOST,
+            OPERATION_ALREADY_IN_PROGRESS,
+            OPERATION_NOW_IN_PROGRESS,
+            STALE_NFS_FILE_HANDLE,
+            STRUCTURE_NEEDS_CLEANING,
+            NOT_A_XENIX_NAMED_TYPE_FILE,
+            NO_XENIX_SEMAPHORES_AVAILABLE,
+            IS_A_NAMED_TYPE_FILE,
+            REMOTE_I_O_ERROR,
+            DISK_QUOTA_EXCEEDED,
+            NO_MEDIUM_FOUND,
+            WRONG_MEDIUM_TYPE,
+            OPERATION_CANCELED,
+            REQUIRED_KEY_NOT_AVAILABLE,
+            KEY_HAS_EXPIRED,
+            KEY_HAS_BEEN_REVOKED,
+            KEY_WAS_REJECTED_BY_SERVICE,
+            OWNER_DIED,
+            STATE_NOT_RECOVERABLE,
+            OPERATION_NOT_POSSIBLE_DUE_TO_RFKILL,
+            MEMORY_PAGE_POISONED,
+        };
 
         extern fn get_errno() -> i32;
 
-        fn err_errno() -> i32? {
+        fn error_errno() -> i32! {
             switch (get_errno()) {
-                case 0 => return ERRNO_SUCCESS?;
-                case 1 => return ERRNO_OPERATION_NOT_PERMITTED?;
-                case 2 => return ERRNO_NO_SUCH_FILE_OR_DIRECTORY?;
-                case 3 => return ERRNO_NO_SUCH_PROCESS?;
-                case 4 => return ERRNO_INTERRUPTED_SYSTEM_CALL?;
-                case 5 => return ERRNO_INPUT_OUTPUT?;
-                case 6 => return ERRNO_NO_SUCH_DEVICE_OR_ADDRESS?;
-                case 7 => return ERRNO_ARG_LIST_TOO_LONG?;
-                case 8 => return ERRNO_EXEC_FORMAT_ERROR?;
-                case 9 => return ERRNO_BAD_FILE_NUMBER?;
-                case 10 => return ERRNO_NO_CHILD_PROCESSES?;
-                case 11 => return ERRNO_RESOURCE_TEMPORARILY_UNAVAILABLE?;
-                case 12 => return ERRNO_OUT_OF_MEMORY?;
-                case 13 => return ERRNO_PERMISSION_DENIED?;
-                case 14 => return ERRNO_BAD_ADDRESS?;
-                case 15 => return ERRNO_BLOCK_DEVICE_REQUIRED?;
-                case 16 => return ERRNO_DEVICE_OR_RESOURCE_BUSY?;
-                case 17 => return ERRNO_FILE_EXISTS?;
-                case 18 => return ERRNO_CROSS_DEVICE_LINK?;
-                case 19 => return ERRNO_NO_SUCH_DEVICE?;
-                case 20 => return ERRNO_NOT_A_DIRECTORY?;
-                case 21 => return ERRNO_IS_A_DIRECTORY?;
-                case 22 => return ERRNO_INVALID_ARGUMENT?;
-                case 23 => return ERRNO_TOO_MANY_OPEN_FILES_IN_SYSTEM?;
-                case 24 => return ERRNO_TOO_MANY_OPEN_FILES?;
-                case 25 => return ERRNO_NOT_A_TTY?;
-                case 26 => return ERRNO_TEXT_FILE_BUSY?;
-                case 27 => return ERRNO_FILE_TOO_LARGE?;
-                case 28 => return ERRNO_NO_SPACE_LEFT_ON_DEVICE?;
-                case 29 => return ERRNO_ILLEGAL_SEEK?;
-                case 30 => return ERRNO_READ_ONLY_FILE_SYSTEM?;
-                case 31 => return ERRNO_TOO_MANY_LINKS?;
-                case 32 => return ERRNO_BROKEN_PIPE?;
-                case 33 => return ERRNO_MATH_ARGUMENT_OUT_OF_DOMAIN?;
-                case 34 => return ERRNO_RESULT_TOO_LARGE?;
-                case 35 => return ERRNO_RESOURCE_DEADLOCK_WOULD_OCCUR?;
-                case 36 => return ERRNO_FILE_NAME_TOO_LONG?;
-                case 37 => return ERRNO_NO_RECORD_LOCKS_AVAILABLE?;
-                case 38 => return ERRNO_FUNCTION_NOT_IMPLEMENTED?;
-                case 39 => return ERRNO_DIRECTORY_NOT_EMPTY?;
-                case 40 => return ERRNO_TOO_MANY_SYMBOLIC_LINKS?;
-                case 42 => return ERRNO_NO_MESSAGE_OF_DESIRED_TYPE?;
-                case 43 => return ERRNO_IDENTIFIER_REMOVED?;
-                case 44 => return ERRNO_CHANNEL_NUMBER_OUT_OF_RANGE?;
-                case 45 => return ERRNO_LEVEL_2_NOT_SYNCHRONIZED?;
-                case 46 => return ERRNO_LEVEL_3_HALTED?;
-                case 47 => return ERRNO_LEVEL_3_RESET?;
-                case 48 => return ERRNO_LINK_NUMBER_OUT_OF_RANGE?;
-                case 49 => return ERRNO_PROTOCOL_DRIVER_NOT_ATTACHED?;
-                case 50 => return ERRNO_NO_CSI_STRUCTURE_AVAILABLE?;
-                case 51 => return ERRNO_LEVEL_2_HALTED?;
-                case 52 => return ERRNO_INVALID_EXCHANGE?;
-                case 53 => return ERRNO_INVALID_REQUEST_DESCRIPTOR?;
-                case 54 => return ERRNO_FULL_EXCHANGE?;
-                case 55 => return ERRNO_NO_ANODE?;
-                case 56 => return ERRNO_INVALID_REQUEST_CODE?;
-                case 57 => return ERRNO_INVALID_SLOT?;
-                case 58 => return ERRNO_BAD_FONT_FILE_FORMAT?;
-                case 60 => return ERRNO_DEVICE_NOT_A_STREAM?;
-                case 61 => return ERRNO_NO_DATA_AVAILABLE?;
-                case 62 => return ERRNO_TIMER_EXPIRED?;
-                case 63 => return ERRNO_OUT_OF_STREAMS_RESOURCES?;
-                case 64 => return ERRNO_MACHINE_IS_NOT_ON_THE_NETWORK?;
-                case 65 => return ERRNO_PACKAGE_NOT_INSTALLED?;
-                case 66 => return ERRNO_OBJECT_IS_REMOTE?;
-                case 67 => return ERRNO_LINK_HAS_BEEN_SEVERED?;
-                case 68 => return ERRNO_ADVERTISING_ERROR?;
-                case 69 => return ERRNO_S_RM_MOUNT_ERROR?;
-                case 70 => return ERRNO_COMMUNICATION_ERROR_ON_SEND?;
-                case 71 => return ERRNO_PROTOCOL_ERROR?;
-                case 72 => return ERRNO_MULTIHOP_ATTEMPTED?;
-                case 73 => return ERRNO_RFS_SPECIFIC_ERROR?;
-                case 74 => return ERRNO_BAD_MESSAGE?;
-                case 75 => return ERRNO_VALUE_TOO_LARGE_FOR_DEFINED_DATA_TYPE?;
-                case 76 => return ERRNO_NAME_NOT_UNIQUE_ON_NETWORK?;
-                case 77 => return ERRNO_FILE_DESCRIPTOR_IN_BAD_STATE?;
-                case 78 => return ERRNO_REMOTE_ADDRESS_CHANGED?;
-                case 79 => return ERRNO_CANNOT_ACCESS_A_NEEDED_SHARED_LIBRARY?;
-                case 80 => return ERRNO_ACCESSING_A_CORRUPTED_SHARED_LIBRARY?;
-                case 81 => return ERRNO_DOT_LIB_SECTION_IN_A_OUT_SHARED_LIBRARY?;
-                case 82 => return ERRNO_ATTEMPTING_TO_LINK_TOO_MANY_SHARED_LIBRARIES?;
-                case 83 => return ERRNO_CANNOT_EXEC_A_SHARED_LIBRARY_DIRECTLY?;
-                case 84 => return ERRNO_ILLEGAL_BYTE_SEQUENCE?;
-                case 85 => return ERRNO_INTERRUPTABLE_SYSTEM_CALL_SHOULD_BE_RESTARTED?;
-                case 86 => return ERRNO_STREAM_PIPE_ERROR?;
-                case 87 => return ERRNO_TOO_MANY_USERS?;
-                case 88 => return ERRNO_SOCKET_OPERATION_ON_NON_SOCKET?;
-                case 89 => return ERRNO_DESTINATION_ADDRESS_REQUIRED?;
-                case 90 => return ERRNO_MESSAGE_TOO_LONG?;
-                case 91 => return ERRNO_PROTOCOL_WRONG_TYPE_FOR_SOCKET?;
-                case 92 => return ERRNO_PROTOCOL_NOT_AVAILABLE?;
-                case 93 => return ERRNO_PROTOCOL_NOT_SUPPORTED?;
-                case 94 => return ERRNO_SOCKET_TYPE_NOT_SUPPORTED?;
-                case 95 => return ERRNO_OPERATION_NOT_SUPPORTED_ON_TRANSPORT_ENDPOINT?;
-                case 96 => return ERRNO_PROTOCOL_FAMILY_NOT_SUPPORTED?;
-                case 97 => return ERRNO_ADDRESS_FAMILY_NOT_SUPPORTED_BY_PROTOCOL?;
-                case 98 => return ERRNO_ADDRESS_ALREADY_IN_USE?;
-                case 99 => return ERRNO_CANNOT_ASSIGN_REQUESTED_ADDRESS?;
-                case 100 => return ERRNO_NETWORK_IS_DOWN?;
-                case 101 => return ERRNO_NETWORK_IS_UNREACHABLE?;
-                case 102 => return ERRNO_NETWORK_DROPPED_CONNECTION_ON_RESET?;
-                case 103 => return ERRNO_SOFTWARE_CAUSED_CONNECTION_ABORT?;
-                case 104 => return ERRNO_CONNECTION_RESET_BY_PEER?;
-                case 105 => return ERRNO_NO_BUFFER_SPACE_AVAILABLE?;
-                case 106 => return ERRNO_TRANSPORT_ENDPOINT_IS_ALREADY_CONNECTED?;
-                case 107 => return ERRNO_TRANSPORT_ENDPOINT_IS_NOT_CONNECTED?;
-                case 108 => return ERRNO_CANNOT_SEND_AFTER_TRANSPORT_ENDPOINT_SHUTDOWN?;
-                case 109 => return ERRNO_TOO_MANY_REFERENCES_CANNOT_SPLICE?;
-                case 110 => return ERRNO_CONNECTION_TIMED_OUT?;
-                case 111 => return ERRNO_CONNECTION_REFUSED?;
-                case 112 => return ERRNO_HOST_IS_DOWN?;
-                case 113 => return ERRNO_NO_ROUTE_TO_HOST?;
-                case 114 => return ERRNO_OPERATION_ALREADY_IN_PROGRESS?;
-                case 115 => return ERRNO_OPERATION_NOW_IN_PROGRESS?;
-                case 116 => return ERRNO_STALE_NFS_FILE_HANDLE?;
-                case 117 => return ERRNO_STRUCTURE_NEEDS_CLEANING?;
-                case 118 => return ERRNO_NOT_A_XENIX_NAMED_TYPE_FILE?;
-                case 119 => return ERRNO_NO_XENIX_SEMAPHORES_AVAILABLE?;
-                case 120 => return ERRNO_IS_A_NAMED_TYPE_FILE?;
-                case 121 => return ERRNO_REMOTE_I_O_ERROR?;
-                case 122 => return ERRNO_DISK_QUOTA_EXCEEDED?;
-                case 123 => return ERRNO_NO_MEDIUM_FOUND?;
-                case 124 => return ERRNO_WRONG_MEDIUM_TYPE?;
-                case 125 => return ERRNO_OPERATION_CANCELED?;
-                case 126 => return ERRNO_REQUIRED_KEY_NOT_AVAILABLE?;
-                case 127 => return ERRNO_KEY_HAS_EXPIRED?;
-                case 128 => return ERRNO_KEY_HAS_BEEN_REVOKED?;
-                case 129 => return ERRNO_KEY_WAS_REJECTED_BY_SERVICE?;
-                case 130 => return ERRNO_OWNER_DIED?;
-                case 131 => return ERRNO_STATE_NOT_RECOVERABLE?;
-                case 132 => return ERRNO_OPERATION_NOT_POSSIBLE_DUE_TO_RFKILL?;
-                case 133 => return ERRNO_MEMORY_PAGE_POISONED?;
-                else     => return ERRNO_UNKNOWN?;
+                case 0 => return POSIX_errs.SUCCESS;
+                case 1 => return POSIX_errs.OPERATION_NOT_PERMITTED;
+                case 2 => return POSIX_errs.NO_SUCH_FILE_OR_DIRECTORY;
+                case 3 => return POSIX_errs.NO_SUCH_PROCESS;
+                case 4 => return POSIX_errs.INTERRUPTED_SYSTEM_CALL;
+                case 5 => return POSIX_errs.INPUT_OUTPUT;
+                case 6 => return POSIX_errs.NO_SUCH_DEVICE_OR_ADDRESS;
+                case 7 => return POSIX_errs.ARG_LIST_TOO_LONG;
+                case 8 => return POSIX_errs.EXEC_FORMAT_ERROR;
+                case 9 => return POSIX_errs.BAD_FILE_NUMBER;
+                case 10 => return POSIX_errs.NO_CHILD_PROCESSES;
+                case 11 => return POSIX_errs.RESOURCE_TEMPORARILY_UNAVAILABLE;
+                case 12 => return POSIX_errs.OUT_OF_MEMORY;
+                case 13 => return POSIX_errs.PERMISSION_DENIED;
+                case 14 => return POSIX_errs.BAD_ADDRESS;
+                case 15 => return POSIX_errs.BLOCK_DEVICE_REQUIRED;
+                case 16 => return POSIX_errs.DEVICE_OR_RESOURCE_BUSY;
+                case 17 => return POSIX_errs.FILE_EXISTS;
+                case 18 => return POSIX_errs.CROSS_DEVICE_LINK;
+                case 19 => return POSIX_errs.NO_SUCH_DEVICE;
+                case 20 => return POSIX_errs.NOT_A_DIRECTORY;
+                case 21 => return POSIX_errs.IS_A_DIRECTORY;
+                case 22 => return POSIX_errs.INVALID_ARGUMENT;
+                case 23 => return POSIX_errs.TOO_MANY_OPEN_FILES_IN_SYSTEM;
+                case 24 => return POSIX_errs.TOO_MANY_OPEN_FILES;
+                case 25 => return POSIX_errs.NOT_A_TTY;
+                case 26 => return POSIX_errs.TEXT_FILE_BUSY;
+                case 27 => return POSIX_errs.FILE_TOO_LARGE;
+                case 28 => return POSIX_errs.NO_SPACE_LEFT_ON_DEVICE;
+                case 29 => return POSIX_errs.ILLEGAL_SEEK;
+                case 30 => return POSIX_errs.READ_ONLY_FILE_SYSTEM;
+                case 31 => return POSIX_errs.TOO_MANY_LINKS;
+                case 32 => return POSIX_errs.BROKEN_PIPE;
+                case 33 => return POSIX_errs.MATH_ARGUMENT_OUT_OF_DOMAIN;
+                case 34 => return POSIX_errs.RESULT_TOO_LARGE;
+                case 35 => return POSIX_errs.RESOURCE_DEADLOCK_WOULD_OCCUR;
+                case 36 => return POSIX_errs.FILE_NAME_TOO_LONG;
+                case 37 => return POSIX_errs.NO_RECORD_LOCKS_AVAILABLE;
+                case 38 => return POSIX_errs.FUNCTION_NOT_IMPLEMENTED;
+                case 39 => return POSIX_errs.DIRECTORY_NOT_EMPTY;
+                case 40 => return POSIX_errs.TOO_MANY_SYMBOLIC_LINKS;
+                case 42 => return POSIX_errs.NO_MESSAGE_OF_DESIRED_TYPE;
+                case 43 => return POSIX_errs.IDENTIFIER_REMOVED;
+                case 44 => return POSIX_errs.CHANNEL_NUMBER_OUT_OF_RANGE;
+                case 45 => return POSIX_errs.LEVEL_2_NOT_SYNCHRONIZED;
+                case 46 => return POSIX_errs.LEVEL_3_HALTED;
+                case 47 => return POSIX_errs.LEVEL_3_RESET;
+                case 48 => return POSIX_errs.LINK_NUMBER_OUT_OF_RANGE;
+                case 49 => return POSIX_errs.PROTOCOL_DRIVER_NOT_ATTACHED;
+                case 50 => return POSIX_errs.NO_CSI_STRUCTURE_AVAILABLE;
+                case 51 => return POSIX_errs.LEVEL_2_HALTED;
+                case 52 => return POSIX_errs.INVALID_EXCHANGE;
+                case 53 => return POSIX_errs.INVALID_REQUEST_DESCRIPTOR;
+                case 54 => return POSIX_errs.FULL_EXCHANGE;
+                case 55 => return POSIX_errs.NO_ANODE;
+                case 56 => return POSIX_errs.INVALID_REQUEST_CODE;
+                case 57 => return POSIX_errs.INVALID_SLOT;
+                case 58 => return POSIX_errs.BAD_FONT_FILE_FORMAT;
+                case 60 => return POSIX_errs.DEVICE_NOT_A_STREAM;
+                case 61 => return POSIX_errs.NO_DATA_AVAILABLE;
+                case 62 => return POSIX_errs.TIMER_EXPIRED;
+                case 63 => return POSIX_errs.OUT_OF_STREAMS_RESOURCES;
+                case 64 => return POSIX_errs.MACHINE_IS_NOT_ON_THE_NETWORK;
+                case 65 => return POSIX_errs.PACKAGE_NOT_INSTALLED;
+                case 66 => return POSIX_errs.OBJECT_IS_REMOTE;
+                case 67 => return POSIX_errs.LINK_HAS_BEEN_SEVERED;
+                case 68 => return POSIX_errs.ADVERTISING_ERROR;
+                case 69 => return POSIX_errs.S_RM_MOUNT_ERROR;
+                case 70 => return POSIX_errs.COMMUNICATION_ERROR_ON_SEND;
+                case 71 => return POSIX_errs.PROTOCOL_ERROR;
+                case 72 => return POSIX_errs.MULTIHOP_ATTEMPTED;
+                case 73 => return POSIX_errs.RFS_SPECIFIC_ERROR;
+                case 74 => return POSIX_errs.BAD_MESSAGE;
+                case 75 => return POSIX_errs.VALUE_TOO_LARGE_FOR_DEFINED_DATA_TYPE;
+                case 76 => return POSIX_errs.NAME_NOT_UNIQUE_ON_NETWORK;
+                case 77 => return POSIX_errs.FILE_DESCRIPTOR_IN_BAD_STATE;
+                case 78 => return POSIX_errs.REMOTE_ADDRESS_CHANGED;
+                case 79 => return POSIX_errs.CANNOT_ACCESS_A_NEEDED_SHARED_LIBRARY;
+                case 80 => return POSIX_errs.ACCESSING_A_CORRUPTED_SHARED_LIBRARY;
+                case 81 => return POSIX_errs.DOT_LIB_SECTION_IN_A_OUT_SHARED_LIBRARY;
+                case 82 => return POSIX_errs.ATTEMPTING_TO_LINK_TOO_MANY_SHARED_LIBRARIES;
+                case 83 => return POSIX_errs.CANNOT_EXEC_A_SHARED_LIBRARY_DIRECTLY;
+                case 84 => return POSIX_errs.ILLEGAL_BYTE_SEQUENCE;
+                case 85 => return POSIX_errs.INTERRUPTABLE_SYSTEM_CALL_SHOULD_BE_RESTARTED;
+                case 86 => return POSIX_errs.STREAM_PIPE_ERROR;
+                case 87 => return POSIX_errs.TOO_MANY_USERS;
+                case 88 => return POSIX_errs.SOCKET_OPERATION_ON_NON_SOCKET;
+                case 89 => return POSIX_errs.DESTINATION_ADDRESS_REQUIRED;
+                case 90 => return POSIX_errs.MESSAGE_TOO_LONG;
+                case 91 => return POSIX_errs.PROTOCOL_WRONG_TYPE_FOR_SOCKET;
+                case 92 => return POSIX_errs.PROTOCOL_NOT_AVAILABLE;
+                case 93 => return POSIX_errs.PROTOCOL_NOT_SUPPORTED;
+                case 94 => return POSIX_errs.SOCKET_TYPE_NOT_SUPPORTED;
+                case 95 => return POSIX_errs.OPERATION_NOT_SUPPORTED_ON_TRANSPORT_ENDPOINT;
+                case 96 => return POSIX_errs.PROTOCOL_FAMILY_NOT_SUPPORTED;
+                case 97 => return POSIX_errs.ADDRESS_FAMILY_NOT_SUPPORTED_BY_PROTOCOL;
+                case 98 => return POSIX_errs.ADDRESS_ALREADY_IN_USE;
+                case 99 => return POSIX_errs.CANNOT_ASSIGN_REQUESTED_ADDRESS;
+                case 100 => return POSIX_errs.NETWORK_IS_DOWN;
+                case 101 => return POSIX_errs.NETWORK_IS_UNREACHABLE;
+                case 102 => return POSIX_errs.NETWORK_DROPPED_CONNECTION_ON_RESET;
+                case 103 => return POSIX_errs.SOFTWARE_CAUSED_CONNECTION_ABORT;
+                case 104 => return POSIX_errs.CONNECTION_RESET_BY_PEER;
+                case 105 => return POSIX_errs.NO_BUFFER_SPACE_AVAILABLE;
+                case 106 => return POSIX_errs.TRANSPORT_ENDPOINT_IS_ALREADY_CONNECTED;
+                case 107 => return POSIX_errs.TRANSPORT_ENDPOINT_IS_NOT_CONNECTED;
+                case 108 => return POSIX_errs.CANNOT_SEND_AFTER_TRANSPORT_ENDPOINT_SHUTDOWN;
+                case 109 => return POSIX_errs.TOO_MANY_REFERENCES_CANNOT_SPLICE;
+                case 110 => return POSIX_errs.CONNECTION_TIMED_OUT;
+                case 111 => return POSIX_errs.CONNECTION_REFUSED;
+                case 112 => return POSIX_errs.HOST_IS_DOWN;
+                case 113 => return POSIX_errs.NO_ROUTE_TO_HOST;
+                case 114 => return POSIX_errs.OPERATION_ALREADY_IN_PROGRESS;
+                case 115 => return POSIX_errs.OPERATION_NOW_IN_PROGRESS;
+                case 116 => return POSIX_errs.STALE_NFS_FILE_HANDLE;
+                case 117 => return POSIX_errs.STRUCTURE_NEEDS_CLEANING;
+                case 118 => return POSIX_errs.NOT_A_XENIX_NAMED_TYPE_FILE;
+                case 119 => return POSIX_errs.NO_XENIX_SEMAPHORES_AVAILABLE;
+                case 120 => return POSIX_errs.IS_A_NAMED_TYPE_FILE;
+                case 121 => return POSIX_errs.REMOTE_I_O_ERROR;
+                case 122 => return POSIX_errs.DISK_QUOTA_EXCEEDED;
+                case 123 => return POSIX_errs.NO_MEDIUM_FOUND;
+                case 124 => return POSIX_errs.WRONG_MEDIUM_TYPE;
+                case 125 => return POSIX_errs.OPERATION_CANCELED;
+                case 126 => return POSIX_errs.REQUIRED_KEY_NOT_AVAILABLE;
+                case 127 => return POSIX_errs.KEY_HAS_EXPIRED;
+                case 128 => return POSIX_errs.KEY_HAS_BEEN_REVOKED;
+                case 129 => return POSIX_errs.KEY_WAS_REJECTED_BY_SERVICE;
+                case 130 => return POSIX_errs.OWNER_DIED;
+                case 131 => return POSIX_errs.STATE_NOT_RECOVERABLE;
+                case 132 => return POSIX_errs.OPERATION_NOT_POSSIBLE_DUE_TO_RFKILL;
+                case 133 => return POSIX_errs.MEMORY_PAGE_POISONED;
+                else     => return POSIX_errs.UNKNOWN;
             }
         }
     }

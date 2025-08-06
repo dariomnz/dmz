@@ -9,10 +9,10 @@ fn main() -> void {
     array[0] = '9';
     array[4] = array[0];
 }
-// CHECK: FunctionDecl main -> void
+// CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:u8[5] array
+// CHECK-NEXT:       VarDecl:UInt u8[5] array
 // CHECK-NEXT:     Assignment
 // CHECK-NEXT:       ArrayAtExpr
 // CHECK-NEXT:         DeclRefExpr array
@@ -26,7 +26,7 @@ fn main() -> void {
 // CHECK-NEXT:         DeclRefExpr array
 // CHECK-NEXT:         IntLiteral '0'
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:u8[5] array
+// CHECK-NEXT:       VarDecl:UInt u8[5] array
 // CHECK-NEXT:         ArrayInstantiationExpr 
 // CHECK-NEXT:           CharLiteral ''1''
 // CHECK-NEXT:           CharLiteral ''2''

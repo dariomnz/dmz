@@ -116,29 +116,27 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
             insert_stmt(**it, block);
         return block;
     }
-    if (const auto *catchErrExpr = dynamic_cast<const ResolvedCatchErrExpr *>(&expr)) {
-        if (catchErrExpr->errToCatch) {
-            return insert_expr(*catchErrExpr->errToCatch, block);
-        } else if (catchErrExpr->declaration) {
-            return insert_stmt(*catchErrExpr->declaration, block);
+    if (const auto *catchErrorExpr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
+        if (catchErrorExpr->errorToCatch) {
+            return insert_expr(*catchErrorExpr->errorToCatch, block);
+        } else if (catchErrorExpr->declaration) {
+            return insert_stmt(*catchErrorExpr->declaration, block);
         } else {
-            dmz_unreachable("malformed CatchErrExpr");
+            dmz_unreachable("malformed CatchErrorExpr");
         }
     }
-    if (const auto *tryErrExpr = dynamic_cast<const ResolvedTryErrExpr *>(&expr)) {
-        if (tryErrExpr->errToTry) {
-            return insert_expr(*tryErrExpr->errToTry, block);
-        } else if (tryErrExpr->declaration) {
-            return insert_stmt(*tryErrExpr->declaration, block);
+    if (const auto *tryErrorExpr = dynamic_cast<const ResolvedTryErrorExpr *>(&expr)) {
+        if (tryErrorExpr->errorToTry) {
+            return insert_expr(*tryErrorExpr->errorToTry, block);
         } else {
-            dmz_unreachable("malformed TryErrExpr");
+            dmz_unreachable("malformed TryErrorExpr");
         }
     }
-    if (const auto *unwrapExpr = dynamic_cast<const ResolvedErrUnwrapExpr *>(&expr)) {
+    if (const auto *unwrapExpr = dynamic_cast<const ResolvedErrorUnwrapExpr *>(&expr)) {
         for (auto &&d : unwrapExpr->defers) {
             block = insert_block(*d->resolvedDefer.block, block);
         }
-        return insert_expr(*unwrapExpr->errToUnwrap, block);
+        return insert_expr(*unwrapExpr->errorToUnwrap, block);
     }
 
     return block;

@@ -48,7 +48,33 @@ struct GenericTypes {
 // Forward declaration
 struct ResolvedDecl;
 struct Type {
-    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Err, Module };
+    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Error, Module, ErrorGroup };
+
+    static std::string KindString(Kind k) {
+        switch (k) {
+            case Kind::Void:
+                return "Void";
+            case Kind::Int:
+                return "Int";
+            case Kind::UInt:
+                return "UInt";
+            case Kind::Float:
+                return "Float";
+            case Kind::Struct:
+                return "Struct";
+            case Kind::Custom:
+                return "Custom";
+            case Kind::Generic:
+                return "Generic";
+            case Kind::Error:
+                return "Error";
+            case Kind::Module:
+                return "Module";
+            case Kind::ErrorGroup:
+                return "ErrorGroup";
+        }
+        dmz_unreachable("unexpected kind");
+    }
 
     Kind kind = Kind::Void;
     std::string name = "";
@@ -87,6 +113,7 @@ struct Type {
     static Type moduleType(const std::string_view& name, ResolvedDecl* decl) {
         return Type{.kind = Kind::Module, .name = std::string(name), .decl = decl};
     }
+    static Type errorGroupType(ResolvedDecl* decl) { return Type{.kind = Kind::ErrorGroup, .decl = decl}; }
     static Type customType(const std::string_view& name) { return {Kind::Custom, std::string(name)}; }
     static Type structType(const std::string_view& name, ResolvedDecl* decl) {
         return Type{.kind = Kind::Struct, .name = std::string(name), .decl = decl};
@@ -102,7 +129,7 @@ struct Type {
         t.kind = Kind::Generic;
         return t;
     }
-    static Type builtinErr(const std::string_view& name) { return {Kind::Err, std::string(name)}; }
+    static Type builtinError(const std::string_view& name) { return {Kind::Error, std::string(name)}; }
 
     bool operator==(const Type& otro) const {
         return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isRef == otro.isRef &&
@@ -128,8 +155,8 @@ struct Type {
             return true;
         }
 
-        if (lhs.isOptional && rhs.kind == Kind::Err) return true;
-        if (rhs.isOptional && lhs.kind == Kind::Err) return true;
+        if (lhs.isOptional && rhs.kind == Kind::Error) return true;
+        if (rhs.isOptional && lhs.kind == Kind::Error) return true;
 
         equalArray |= (lhs.isArray && *lhs.isArray == 0);
         equalArray |= (rhs.isArray && *rhs.isArray == 0);
@@ -586,54 +613,46 @@ struct DeferStmt : public Stmt {
     void dump(size_t level = 0) const override;
 };
 
-struct ErrDecl : public Decl {
-    ErrDecl(SourceLocation location, std::string_view identifier) : Decl(location, std::move(identifier)) {}
+struct ErrorDecl : public Decl {
+    ErrorDecl(SourceLocation location, std::string_view identifier) : Decl(location, std::move(identifier)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct ErrDeclRefExpr : public Expr {
-    std::string identifier;
-    ErrDeclRefExpr(SourceLocation location, std::string_view identifier)
-        : Expr(location), identifier(std::move(identifier)) {}
+struct ErrorGroupExprDecl : public Expr, public Decl {
+    SourceLocation location;
+    std::vector<std::unique_ptr<ErrorDecl>> errs;
+
+    ErrorGroupExprDecl(SourceLocation location, std::vector<std::unique_ptr<ErrorDecl>> errs)
+        : Expr(location), Decl(location, ""), errs(std::move(errs)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct ErrGroupDecl : public Decl {
-    std::vector<std::unique_ptr<ErrDecl>> errs;
+struct ErrorUnwrapExpr : public Expr {
+    std::unique_ptr<Expr> errorToUnwrap;
 
-    ErrGroupDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<ErrDecl>> errs)
-        : Decl(location, std::move(identifier)), errs(std::move(errs)) {}
-
-    void dump(size_t level = 0) const override;
-};
-
-struct ErrUnwrapExpr : public Expr {
-    std::unique_ptr<Expr> errToUnwrap;
-
-    ErrUnwrapExpr(SourceLocation location, std::unique_ptr<Expr> errToUnwrap)
-        : Expr(location), errToUnwrap(std::move(errToUnwrap)) {}
+    ErrorUnwrapExpr(SourceLocation location, std::unique_ptr<Expr> errorToUnwrap)
+        : Expr(location), errorToUnwrap(std::move(errorToUnwrap)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct CatchErrExpr : public Expr {
-    std::unique_ptr<Expr> errTocatch;
+struct CatchErrorExpr : public Expr {
+    std::unique_ptr<Expr> errorToCatch;
     std::unique_ptr<DeclStmt> declaration;
 
-    CatchErrExpr(SourceLocation location, std::unique_ptr<Expr> errTocatch, std::unique_ptr<DeclStmt> declaration)
-        : Expr(location), errTocatch(std::move(errTocatch)), declaration(std::move(declaration)) {}
+    CatchErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToCatch, std::unique_ptr<DeclStmt> declaration)
+        : Expr(location), errorToCatch(std::move(errorToCatch)), declaration(std::move(declaration)) {}
 
     void dump(size_t level = 0) const override;
 };
 
-struct TryErrExpr : public Expr {
-    std::unique_ptr<Expr> errTotry;
-    std::unique_ptr<DeclStmt> declaration;
+struct TryErrorExpr : public Expr {
+    std::unique_ptr<Expr> errorToTry;
 
-    TryErrExpr(SourceLocation location, std::unique_ptr<Expr> errTotry, std::unique_ptr<DeclStmt> declaration)
-        : Expr(location), errTotry(std::move(errTotry)), declaration(std::move(declaration)) {}
+    TryErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToTry)
+        : Expr(location), errorToTry(std::move(errorToTry)) {}
 
     void dump(size_t level = 0) const override;
 };

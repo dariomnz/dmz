@@ -106,9 +106,9 @@ std::unique_ptr<Type> Parser::parse_type() {
     t.isRef = isRef;
     t.isPointer = isPointer;
 
-    if (m_nextToken.type == TokenType::op_quest_mark) {
+    if (m_nextToken.type == TokenType::op_excla_mark) {
         t.isOptional = true;
-        eat_next_token();  // eat '?'
+        eat_next_token();  // eat '!'
     }
     return std::make_unique<Type>(std::move(t));
 }
@@ -192,8 +192,8 @@ template std::unique_ptr<std::vector<std::unique_ptr<ParamDecl>>> Parser::parse_
     std::pair<TokenType, const char *>, std::unique_ptr<ParamDecl> (Parser::*)(), std::pair<TokenType, const char *>);
 template std::unique_ptr<std::vector<std::unique_ptr<FieldDecl>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, std::unique_ptr<FieldDecl> (Parser::*)(), std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<ErrDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<ErrDecl> (Parser::*)(), std::pair<TokenType, const char *>);
+template std::unique_ptr<std::vector<std::unique_ptr<ErrorDecl>>> Parser::parse_list_with_trailing_comma(
+    std::pair<TokenType, const char *>, std::unique_ptr<ErrorDecl> (Parser::*)(), std::pair<TokenType, const char *>);
 template std::unique_ptr<std::vector<std::unique_ptr<FieldInitStmt>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, std::unique_ptr<FieldInitStmt> (Parser::*)(),
     std::pair<TokenType, const char *>);
