@@ -1,0 +1,26 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const a = println(1) orelse 0;
+    const a = println(1) orelse println(3) orelse 0;
+}
+// CHECK:  FunctionDecl main -> Void void
+// CHECK-NEXT:    Block
+// CHECK-NEXT:      DeclStmt
+// CHECK-NEXT:        VarDecl:const  a
+// CHECK-NEXT:          OrElseErrorExpr 
+// CHECK-NEXT:            CallExpr
+// CHECK-NEXT:              DeclRefExpr println
+// CHECK-NEXT:              IntLiteral '1'
+// CHECK-NEXT:            IntLiteral '0'
+// CHECK-NEXT:      DeclStmt
+// CHECK-NEXT:        VarDecl:const  a
+// CHECK-NEXT:          OrElseErrorExpr 
+// CHECK-NEXT:            CallExpr
+// CHECK-NEXT:              DeclRefExpr println
+// CHECK-NEXT:              IntLiteral '1'
+// CHECK-NEXT:            OrElseErrorExpr 
+// CHECK-NEXT:              CallExpr
+// CHECK-NEXT:                DeclRefExpr println
+// CHECK-NEXT:                IntLiteral '3'
+// CHECK-NEXT:              IntLiteral '0'

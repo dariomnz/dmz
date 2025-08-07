@@ -1,0 +1,87 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e "Call foo false\nfoo normal defer\nCall foo true\nfoo err defer\nfoo normal defer\nmain normal defer\n")
+
+const e = error {
+    ERROR_ONE,
+};
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn foo(n: i1) -> void! {
+    defer printf("foo normal defer\n");
+    errdefer printf("foo err defer\n");
+    if (n == true) {
+        return e.ERROR_ONE;
+    }
+}
+// CHECK:   ResolvedFunctionDecl foo -> Void void!
+// CHECK-NEXT:     ResolvedParamDecl:Int i1 n
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeferStmt
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+// CHECK-NEXT:       ResolvedErrDeferStmt
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[15] 'foo err defer\n'
+// CHECK-NEXT:       ResolvedIfStmt
+// CHECK-NEXT:         ResolvedBinaryOperator:Int i1 '=='
+// CHECK-NEXT:           ResolvedDeclRefExpr:Int i1 n
+// CHECK-NEXT:           ResolvedBoolLiteral:Int i1 'true'
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedReturnStmt
+// CHECK-NEXT:             ResolvedMemberExpr:Error ERROR_ONE ERROR_ONE
+// CHECK-NEXT:               ResolvedDeclRefExpr:ErrorGroup  e
+// CHECK-NEXT:             ResolvedDeferRefStmt
+// CHECK-NEXT:               ResolvedBlock
+// CHECK-NEXT:                 ResolvedCallExpr:Int i32
+// CHECK-NEXT:                   ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:                   ResolvedStringLiteral:UInt u8[15] 'foo err defer\n'
+// CHECK-NEXT:             ResolvedDeferRefStmt
+// CHECK-NEXT:               ResolvedBlock
+// CHECK-NEXT:                 ResolvedCallExpr:Int i32
+// CHECK-NEXT:                   ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:                   ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+// CHECK-NEXT:       ResolvedDeferRefStmt
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+
+fn main() -> void {
+    defer printf("main normal defer\n");
+    printf("Call foo false\n");
+    try foo(false);
+    printf("Call foo true\n");
+    foo(true);
+}
+// CHECK:   ResolvedFunctionDecl main -> Void void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeferStmt
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[19] 'main normal defer\n'
+// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[16] 'Call foo false\n'
+// CHECK-NEXT:       ResolvedTryErrorExpr:Void void
+// CHECK-NEXT:         ResolvedCallExpr:Void void!
+// CHECK-NEXT:           ResolvedFunctionDecl foo -> Void void!
+// CHECK-NEXT:           ResolvedBoolLiteral:Int i1 'false'
+// CHECK-NEXT:           | value: 0
+// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[15] 'Call foo true\n'
+// CHECK-NEXT:       ResolvedCallExpr:Void void!
+// CHECK-NEXT:         ResolvedFunctionDecl foo -> Void void!
+// CHECK-NEXT:         ResolvedBoolLiteral:Int i1 'true'
+// CHECK-NEXT:         | value: 1
+// CHECK-NEXT:       ResolvedDeferRefStmt
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[19] 'main normal defer\n'

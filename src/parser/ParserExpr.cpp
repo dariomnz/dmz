@@ -150,13 +150,15 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
             eat_next_token();  // eat identifier
         }
     }
+    
+    
+    if (m_nextToken.type == TokenType::kw_orelse) {
+        eat_next_token();  // eat orelse
+        varOrReturn(orelse, parse_expr());
 
-    if (m_nextToken.type == TokenType::op_excla_mark) {
-        SourceLocation location = m_nextToken.loc;
-        eat_next_token();  // eat '!'
-        expr = std::make_unique<ErrorUnwrapExpr>(location, std::move(expr));
+        expr = std::make_unique<OrElseErrorExpr>(expr->location, std::move(expr), std::move(orelse));
     }
-
+    
     return expr;
 }
 

@@ -72,9 +72,9 @@ class Codegen {
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);
-    llvm::Value *generate_error_unwrap_expr(const ResolvedErrorUnwrapExpr &ErrorUnwrapExpr);
     llvm::Value *generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr);
     llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr);
+    llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
     // std::string generate_symbol_name(std::string modIdentifier);

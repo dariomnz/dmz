@@ -190,14 +190,14 @@ std::unique_ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
     }
-    if (const auto *errorUnwrapExpr = dynamic_cast<const ErrorUnwrapExpr *>(&expr)) {
-        return resolve_error_unwrap_expr(*errorUnwrapExpr);
-    }
     if (const auto *catchErrorExpr = dynamic_cast<const CatchErrorExpr *>(&expr)) {
         return resolve_catch_error_expr(*catchErrorExpr);
     }
     if (const auto *tryErrorExpr = dynamic_cast<const TryErrorExpr *>(&expr)) {
         return resolve_try_error_expr(*tryErrorExpr);
+    }
+    if (const auto *orelseExpr = dynamic_cast<const OrElseErrorExpr *>(&expr)) {
+        return resolve_orelse_error_expr(*orelseExpr);
     }
     if (const auto *importExpr = dynamic_cast<const ImportExpr *>(&expr)) {
         return resolve_import_expr(*importExpr);
@@ -465,21 +465,6 @@ std::unique_ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiatio
                                                             std::move(resolvedinitializers));
 }
 
-std::unique_ptr<ResolvedErrorUnwrapExpr> Sema::resolve_error_unwrap_expr(const ErrorUnwrapExpr &ErrorUnwrapExpr) {
-    debug_func(ErrorUnwrapExpr.location);
-    varOrReturn(resolvedToUnwrap, resolve_expr(*ErrorUnwrapExpr.errorToUnwrap));
-    if (!resolvedToUnwrap->type.isOptional)
-        return report(ErrorUnwrapExpr.location,
-                      "unexpected type to unwrap that is not optional '" + resolvedToUnwrap->type.to_str() + "'");
-
-    Type unwrapType = resolvedToUnwrap->type;
-    unwrapType.isOptional = false;
-
-    auto defers = resolve_defer_ref_stmt(false);
-    return std::make_unique<ResolvedErrorUnwrapExpr>(ErrorUnwrapExpr.location, unwrapType, std::move(resolvedToUnwrap),
-                                                     std::move(defers));
-}
-
 std::unique_ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr) {
     debug_func(catchErrorExpr.location);
     if (catchErrorExpr.errorToCatch) {
@@ -495,14 +480,25 @@ std::unique_ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const Cat
 
 std::unique_ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryErrorExpr) {
     debug_func(tryErrorExpr.location);
-    if (tryErrorExpr.errorToTry) {
-        varOrReturn(resolvedErr, resolve_expr(*tryErrorExpr.errorToTry));
-        if (!resolvedErr->type.isOptional) return report(resolvedErr->location, "expect error union when using try");
-        auto defers = resolve_defer_ref_stmt(false);
-        return std::make_unique<ResolvedTryErrorExpr>(tryErrorExpr.location, std::move(resolvedErr), std::move(defers));
-    } else {
-        dmz_unreachable("malformed TryErrorExpr");
+    varOrReturn(resolvedErr, resolve_expr(*tryErrorExpr.errorToTry));
+    if (!resolvedErr->type.isOptional) return report(resolvedErr->location, "expect error union when using try");
+    auto defers = resolve_defer_ref_stmt(false, true);
+    return std::make_unique<ResolvedTryErrorExpr>(tryErrorExpr.location, std::move(resolvedErr), std::move(defers));
+}
+
+std::unique_ptr<ResolvedOrElseErrorExpr> Sema::resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr) {
+    debug_func(orelseExpr.location);
+    varOrReturn(resolvedErr, resolve_expr(*orelseExpr.errorToOrElse));
+    if (!resolvedErr->type.isOptional) return report(resolvedErr->location, "expect error union when using try");
+    varOrReturn(resolvedOrelse, resolve_expr(*orelseExpr.orElseExpr));
+
+    if (!Type::compare(resolvedErr->type.withoutOptional(), resolvedOrelse->type)) {
+        return report(orelseExpr.location, "unexpected mismatch of types in orelse expresion '" +
+                                               resolvedErr->type.withoutOptional().to_str() + "' and '" +
+                                               resolvedOrelse->type.to_str() + "'");
     }
+    return std::make_unique<ResolvedOrElseErrorExpr>(orelseExpr.location, std::move(resolvedErr),
+                                                     std::move(resolvedOrelse));
 }
 
 std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) {

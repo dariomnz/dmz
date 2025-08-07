@@ -311,7 +311,12 @@ void ResolvedArrayInstantiationExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedDeferStmt\n";
+    std::cerr << indent(level);
+    if (isErrDefer) {
+        std::cerr << "ResolvedErrDeferStmt\n";
+    } else {
+        std::cerr << "ResolvedDeferStmt\n";
+    }
     if (onlySelf) return;
     block->dump(level + 1, onlySelf);
 }
@@ -334,14 +339,6 @@ void ResolvedErrorGroupExprDecl::dump(size_t level, bool onlySelf) const {
     for (auto &&error : errors) error->dump(level + 1, onlySelf);
 }
 
-void ResolvedErrorUnwrapExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedErrorUnwrapExpr:" << type << '\n';
-
-    if (onlySelf) return;
-    errorToUnwrap->dump(level + 1, onlySelf);
-    for (auto &&d : defers) d->dump(level + 1, onlySelf);
-}
-
 void ResolvedCatchErrorExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCatchErrorExpr:" << type << '\n';
 
@@ -355,6 +352,14 @@ void ResolvedTryErrorExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     if (errorToTry) errorToTry->dump(level + 1, onlySelf);
+}
+
+void ResolvedOrElseErrorExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedOrElseErrorExpr:" << type << '\n';
+
+    if (onlySelf) return;
+    if (errorToOrElse) errorToOrElse->dump(level + 1, onlySelf);
+    if (orElseExpr) orElseExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {

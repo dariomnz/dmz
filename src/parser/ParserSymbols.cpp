@@ -304,7 +304,12 @@ void FieldInitStmt::dump(size_t level) const {
 }
 
 void DeferStmt::dump(size_t level) const {
-    std::cerr << indent(level) << "DeferStmt " << '\n';
+    std::cerr << indent(level);
+    if (isErrDefer) {
+        std::cerr << "ErrDeferStmt\n";
+    } else {
+        std::cerr << "DeferStmt\n";
+    }
     block->dump(level + 1);
 }
 
@@ -314,12 +319,6 @@ void ErrorGroupExprDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ErrorGroupExprDecl " << '\n';
 
     for (auto &&err : errs) err->dump(level + 1);
-}
-
-void ErrorUnwrapExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "ErrorUnwrapExpr " << '\n';
-
-    errorToUnwrap->dump(level + 1);
 }
 
 void CatchErrorExpr::dump(size_t level) const {
@@ -333,6 +332,13 @@ void TryErrorExpr::dump(size_t level) const {
     std::cerr << indent(level) << "TryErrorExpr " << '\n';
 
     if (errorToTry) errorToTry->dump(level + 1);
+}
+
+void OrElseErrorExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "OrElseErrorExpr " << '\n';
+
+    if (errorToOrElse) errorToOrElse->dump(level + 1);
+    if (orElseExpr) orElseExpr->dump(level + 1);
 }
 
 void ModuleDecl::dump(size_t level) const {

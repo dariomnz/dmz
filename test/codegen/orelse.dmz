@@ -1,0 +1,104 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run) <(echo -n -e 'foo called\nbar called\na = 10\nfoo called\nfoo called\nb = 1\n')
+
+const e = error {
+    ERROR_ONE
+};
+
+fn foo(n:i32) -> i32! {
+    printf("foo called\n");
+    if (n == 0) {
+        return e.ERROR_ONE;
+    }
+    return n;
+}
+
+fn bar(n:i32) -> i32 {
+    printf("bar called\n");
+    return n;
+}
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    const a = foo(0) orelse bar(10);
+    printf("a = %d\n", a);
+    const b = foo(0) orelse foo(1) orelse bar(20);
+    printf("b = %d\n", b);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %a = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.i32, align 8
+// CHECK-NEXT:   %tmp.orelse = alloca i32, align 4
+// CHECK-NEXT:   %b = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp1 = alloca %error.struct.i32, align 8
+// CHECK-NEXT:   %tmp.orelse2 = alloca i32, align 4
+// CHECK-NEXT:   %struct.ret.tmp5 = alloca %error.struct.i32, align 8
+// CHECK-NEXT:   %tmp.orelse6 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %a, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %b, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse2, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp5, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse6, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 0)
+// CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
+// CHECK-NEXT:   %2 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   store i32 %3, ptr %tmp.orelse, align 4
+// CHECK-NEXT:   %4 = ptrtoint ptr %1 to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %4, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.orelse, label %if.exit.orelse
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.orelse:                                   ; preds = %entry
+// CHECK-NEXT:   %5 = call i32 @bar(i32 10)
+// CHECK-NEXT:   store i32 %5, ptr %tmp.orelse, align 4
+// CHECK-NEXT:   br label %if.exit.orelse
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.orelse:                                   ; preds = %if.true.orelse, %entry
+// CHECK-NEXT:   %6 = load i32, ptr %tmp.orelse, align 4
+// CHECK-NEXT:   store i32 %6, ptr %a, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %a, align 4
+// CHECK-NEXT:   %8 = call i32 (ptr, ...) @printf(ptr @global.str.2, i32 %7)
+// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 0)
+// CHECK-NEXT:   %9 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 1
+// CHECK-NEXT:   %10 = load ptr, ptr %9, align 8
+// CHECK-NEXT:   %11 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 0
+// CHECK-NEXT:   %12 = load i32, ptr %11, align 4
+// CHECK-NEXT:   store i32 %12, ptr %tmp.orelse2, align 4
+// CHECK-NEXT:   %13 = ptrtoint ptr %10 to i64
+// CHECK-NEXT:   %ptr.to.bool3 = icmp ne i64 %13, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool3, label %if.true.orelse4, label %if.exit.orelse10
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.orelse4:                                  ; preds = %if.exit.orelse
+// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp5, i32 1)
+// CHECK-NEXT:   %14 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 1
+// CHECK-NEXT:   %15 = load ptr, ptr %14, align 8
+// CHECK-NEXT:   %16 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 0
+// CHECK-NEXT:   %17 = load i32, ptr %16, align 4
+// CHECK-NEXT:   store i32 %17, ptr %tmp.orelse6, align 4
+// CHECK-NEXT:   %18 = ptrtoint ptr %15 to i64
+// CHECK-NEXT:   %ptr.to.bool7 = icmp ne i64 %18, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool7, label %if.true.orelse8, label %if.exit.orelse9
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true.orelse8:                                  ; preds = %if.true.orelse4
+// CHECK-NEXT:   %19 = call i32 @bar(i32 20)
+// CHECK-NEXT:   store i32 %19, ptr %tmp.orelse6, align 4
+// CHECK-NEXT:   br label %if.exit.orelse9
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.orelse9:                                  ; preds = %if.true.orelse8, %if.true.orelse4
+// CHECK-NEXT:   %20 = load i32, ptr %tmp.orelse6, align 4
+// CHECK-NEXT:   store i32 %20, ptr %tmp.orelse2, align 4
+// CHECK-NEXT:   br label %if.exit.orelse10
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit.orelse10:                                 ; preds = %if.exit.orelse9, %if.exit.orelse
+// CHECK-NEXT:   %21 = load i32, ptr %tmp.orelse2, align 4
+// CHECK-NEXT:   store i32 %21, ptr %b, align 4
+// CHECK-NEXT:   %22 = load i32, ptr %b, align 4
+// CHECK-NEXT:   %23 = call i32 (ptr, ...) @printf(ptr @global.str.3, i32 %22)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

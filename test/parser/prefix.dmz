@@ -4,7 +4,7 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:8: error: expected ';' at the end of expression
     !1 |;
 
-    // CHECK: [[# @LINE + 1 ]]:10: error: expected ';' at the end of expression
+    // CHECK: [[# @LINE + 1 ]]:9: error: expected ';' at the end of expression
     !!1 !0;
 
     !1;

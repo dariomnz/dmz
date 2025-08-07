@@ -148,7 +148,7 @@ struct Type {
     }
 
     static bool compare(const Type& lhs, const Type& rhs) {
-        // println("Types: '" << lhs.to_str() << "' '" << rhs.to_str() << "'");
+        // std::cout << "Types: '" << lhs << "' '" << rhs << "'" <<std::endl;
         bool equalArray = false;
         bool equalOptional = false;
         if (can_convert(lhs, rhs) || lhs == rhs) {
@@ -607,8 +607,10 @@ struct Assignment : public Stmt {
 
 struct DeferStmt : public Stmt {
     std::unique_ptr<Block> block;
+    bool isErrDefer = false;
 
-    DeferStmt(SourceLocation location, std::unique_ptr<Block> block) : Stmt(location), block(std::move(block)) {}
+    DeferStmt(SourceLocation location, std::unique_ptr<Block> block, bool isErrDefer)
+        : Stmt(location), block(std::move(block)), isErrDefer(isErrDefer) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -629,15 +631,6 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
     void dump(size_t level = 0) const override;
 };
 
-struct ErrorUnwrapExpr : public Expr {
-    std::unique_ptr<Expr> errorToUnwrap;
-
-    ErrorUnwrapExpr(SourceLocation location, std::unique_ptr<Expr> errorToUnwrap)
-        : Expr(location), errorToUnwrap(std::move(errorToUnwrap)) {}
-
-    void dump(size_t level = 0) const override;
-};
-
 struct CatchErrorExpr : public Expr {
     std::unique_ptr<Expr> errorToCatch;
     std::unique_ptr<DeclStmt> declaration;
@@ -653,6 +646,16 @@ struct TryErrorExpr : public Expr {
 
     TryErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToTry)
         : Expr(location), errorToTry(std::move(errorToTry)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct OrElseErrorExpr : public Expr {
+    std::unique_ptr<Expr> errorToOrElse;
+    std::unique_ptr<Expr> orElseExpr;
+
+    OrElseErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToOrElse, std::unique_ptr<Expr> orElseExpr)
+        : Expr(location), errorToOrElse(std::move(errorToOrElse)), orElseExpr(std::move(orElseExpr)) {}
 
     void dump(size_t level = 0) const override;
 };

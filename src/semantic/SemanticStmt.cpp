@@ -60,8 +60,8 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }
-
-    auto defers = resolve_defer_ref_stmt(false);
+    bool isError = resolvedExpr && resolvedExpr->type.kind == Type::Kind::Error;
+    auto defers = resolve_defer_ref_stmt(false, isError);
 
     return std::make_unique<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr), std::move(defers));
 }
@@ -94,7 +94,7 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
     // Only if not finish in return, return handle that part
     if (resolvedStatements.size() == 0 || !dynamic_cast<ResolvedReturnStmt *>(resolvedStatements.back().get())) {
-        defers = resolve_defer_ref_stmt(true);
+        defers = resolve_defer_ref_stmt(true, false);
     }
 
     return std::make_unique<ResolvedBlock>(block.location, std::move(resolvedStatements), std::move(defers));
@@ -166,18 +166,20 @@ std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &a
 std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
     debug_func(deferStmt.location);
     varOrReturn(block, resolve_block(*deferStmt.block));
-    auto resolvedDeferStmt = std::make_unique<ResolvedDeferStmt>(deferStmt.location, std::move(block));
+    auto resolvedDeferStmt =
+        std::make_unique<ResolvedDeferStmt>(deferStmt.location, std::move(block), deferStmt.isErrDefer);
     m_defers.back().emplace_back(resolvedDeferStmt.get());
     return resolvedDeferStmt;
 }
 
-std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope) {
+std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope, bool isError) {
     debug_func("");
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
     // Traversing in reverse the defers vector
     for (int i = m_defers.size() - 1; i >= 0; --i) {
         for (int j = m_defers[i].size() - 1; j >= 0; --j) {
             auto deferStmt = m_defers[i][j];
+            if (!isError && deferStmt->isErrDefer) continue;
             defers.emplace_back(std::make_unique<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
         }
         if (isScope) break;

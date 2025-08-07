@@ -66,9 +66,11 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_struct);
         CASE_TYPE(kw_extern);
         CASE_TYPE(kw_defer);
+        CASE_TYPE(kw_errdefer);
         CASE_TYPE(kw_error);
         CASE_TYPE(kw_catch);
         CASE_TYPE(kw_try);
+        CASE_TYPE(kw_orelse);
         CASE_TYPE(kw_module);
         CASE_TYPE(kw_import);
         CASE_TYPE(kw_switch);

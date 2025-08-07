@@ -30,7 +30,7 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
-    if (m_nextToken.type == TokenType::kw_defer) return parse_defer_stmt();
+    if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer) return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
     if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
     return parse_assignment_or_expr();
@@ -202,14 +202,17 @@ std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
 
 std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
     debug_func("");
-    matchOrReturn(TokenType::kw_defer, "expected defer");
+    if (m_nextToken.type != TokenType::kw_errdefer && m_nextToken.type != TokenType::kw_defer){
+        return report(m_nextToken.loc, "expected defer");
+    } 
+    bool isErrDefer = m_nextToken.type == TokenType::kw_errdefer;
     SourceLocation location = m_nextToken.loc;
-    eat_next_token();  // eat defer
+    eat_next_token();  // eat defer or errdefer
 
     varOrReturn(block, with_restrictions<std::unique_ptr<Block>>(
                            ReturnNotAllowed, [&]() { return parse_block(m_nextToken.type != TokenType::block_l); }));
 
-    return std::make_unique<DeferStmt>(location, std::move(block));
+    return std::make_unique<DeferStmt>(location, std::move(block), isErrDefer);
 }
 
 std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {

@@ -38,7 +38,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.dmz",
-					"match": "\\b(if|else|switch|case|while|for|return|fn|extern|defer|catch|try|orelse|error|module|test)\\b"
+					"match": "\\b(if|else|switch|case|while|for|return|fn|extern|defer|errdefer|catch|try|orelse|error|module|test)\\b"
 				},
 				{
 					"name": "keyword.other.dmz",

@@ -58,14 +58,14 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *aie = dynamic_cast<const ResolvedArrayInstantiationExpr *>(&expr)) {
         return generate_temporary_array(*aie);
     }
-    if (auto *ErrorUnwrap = dynamic_cast<const ResolvedErrorUnwrapExpr *>(&expr)) {
-        return generate_error_unwrap_expr(*ErrorUnwrap);
-    }
     if (auto *catchErr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
         return generate_catch_error_expr(*catchErr);
     }
     if (auto *tryErr = dynamic_cast<const ResolvedTryErrorExpr *>(&expr)) {
         return generate_try_error_expr(*tryErr);
+    }
+    if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
+        return generate_orelse_error_expr(*orelseErr);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -408,54 +408,6 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
     return tmp;
 }
 
-llvm::Value *Codegen::generate_error_unwrap_expr(const ResolvedErrorUnwrapExpr &ErrorUnwrapExpr) {
-    debug_func("");
-    llvm::Function *function = get_current_function();
-
-    auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.unwrap");
-    auto *exitBB = llvm::BasicBlock::Create(*m_context, "if.exit.unwrap");
-
-    llvm::BasicBlock *elseBB = exitBB;
-
-    llvm::Value *error_struct = generate_expr(*ErrorUnwrapExpr.errorToUnwrap, true);
-
-    llvm::Value *error_value_ptr =
-        m_builder.CreateStructGEP(generate_type(ErrorUnwrapExpr.errorToUnwrap->type), error_struct, 1);
-    llvm::Value *error_value = load_value(error_value_ptr, Type::builtinError("err"));
-
-    m_builder.CreateCondBr(to_bool(error_value, Type::builtinError("err")), trueBB, elseBB);
-
-    trueBB->insertInto(function);
-    m_builder.SetInsertPoint(trueBB);
-    for (auto &&d : ErrorUnwrapExpr.defers) {
-        generate_block(*d->resolvedDefer.block);
-    }
-
-    if (m_currentFunction->type.isOptional) {
-        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-        store_value(error_value, dst, Type::builtinError("err"), Type::builtinError("err"));
-
-        assert(retBB && "function with return stmt doesn't have a return block");
-        break_into_bb(retBB);
-    } else {
-        auto fmt = m_builder.CreateGlobalString(
-            ErrorUnwrapExpr.location.to_string() + ": Aborted: Unwrap an error value of '%s' in the function '" +
-            std::string(m_currentFunction->identifier) + "' that not return an optional\n");
-        auto printf_func = m_module->getOrInsertFunction(
-            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getInt8Ty()->getPointerTo(), true));
-        m_builder.CreateCall(printf_func, {fmt, error_value});
-        llvm::Function *trapIntrinsic = llvm::Intrinsic::getDeclaration(m_module.get(), llvm::Intrinsic::trap);
-        m_builder.CreateCall(trapIntrinsic, {});
-    }
-    break_into_bb(exitBB);
-
-    exitBB->insertInto(function);
-    m_builder.SetInsertPoint(exitBB);
-
-    auto unwrapedValue = m_builder.CreateStructGEP(generate_type(ErrorUnwrapExpr.errorToUnwrap->type), error_struct, 0);
-    return load_value(unwrapedValue, ErrorUnwrapExpr.type);
-}
-
 llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr) {
     debug_func("");
     llvm::Value *error_struct = nullptr;
@@ -531,7 +483,48 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
 
-    auto unwrapedValue = m_builder.CreateStructGEP(generate_type(tryErrorExpr.errorToTry->type), error_struct, 0);
-    return load_value(unwrapedValue, tryErrorExpr.type);
+    if (tryErrorExpr.type == Type::builtinVoid()) return nullptr;
+
+    auto tryValue = m_builder.CreateStructGEP(generate_type(tryErrorExpr.errorToTry->type), error_struct, 0);
+    return load_value(tryValue, tryErrorExpr.type);
+}
+
+llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr) {
+    debug_func("");
+    llvm::Function *function = get_current_function();
+
+    auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.orelse");
+    auto *exitBB = llvm::BasicBlock::Create(*m_context, "if.exit.orelse");
+
+    llvm::BasicBlock *elseBB = exitBB;
+
+    llvm::Value *error_struct = generate_expr(*orelseErrorExpr.errorToOrElse, true);
+
+    llvm::Value *error_value_ptr =
+        m_builder.CreateStructGEP(generate_type(orelseErrorExpr.errorToOrElse->type), error_struct, 1);
+    llvm::Value *error_value = load_value(error_value_ptr, Type::builtinError("err"));
+
+    llvm::Value *return_value = allocate_stack_variable("tmp.orelse", orelseErrorExpr.type);
+
+    auto error_expr_value_ptr =
+        m_builder.CreateStructGEP(generate_type(orelseErrorExpr.errorToOrElse->type), error_struct, 0);
+    auto error_expr_value = load_value(error_expr_value_ptr, orelseErrorExpr.errorToOrElse->type.withoutOptional());
+    store_value(error_expr_value, return_value, orelseErrorExpr.errorToOrElse->type.withoutOptional(),
+                orelseErrorExpr.type);
+
+    llvm::Value *error_value_bool = to_bool(error_value, Type::builtinError("err"));
+    m_builder.CreateCondBr(error_value_bool, trueBB, elseBB);
+
+    trueBB->insertInto(function);
+    m_builder.SetInsertPoint(trueBB);
+
+    llvm::Value *orelse_value = generate_expr(*orelseErrorExpr.orElseExpr, false);
+
+    store_value(orelse_value, return_value, orelseErrorExpr.orElseExpr->type, orelseErrorExpr.type);
+    break_into_bb(exitBB);
+
+    exitBB->insertInto(function);
+    m_builder.SetInsertPoint(exitBB);
+    return load_value(return_value, orelseErrorExpr.type);
 }
 }  // namespace DMZ

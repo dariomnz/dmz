@@ -126,17 +126,14 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         }
     }
     if (const auto *tryErrorExpr = dynamic_cast<const ResolvedTryErrorExpr *>(&expr)) {
+        for (auto &&d : tryErrorExpr->defers) {
+            block = insert_block(*d->resolvedDefer.block, block);
+        }
         if (tryErrorExpr->errorToTry) {
             return insert_expr(*tryErrorExpr->errorToTry, block);
         } else {
             dmz_unreachable("malformed TryErrorExpr");
         }
-    }
-    if (const auto *unwrapExpr = dynamic_cast<const ResolvedErrorUnwrapExpr *>(&expr)) {
-        for (auto &&d : unwrapExpr->defers) {
-            block = insert_block(*d->resolvedDefer.block, block);
-        }
-        return insert_expr(*unwrapExpr->errorToUnwrap, block);
     }
 
     return block;

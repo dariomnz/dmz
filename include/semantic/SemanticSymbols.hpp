@@ -107,9 +107,10 @@ struct ResolvedBlock : public ResolvedStmt {
 
 struct ResolvedDeferStmt : public ResolvedStmt {
     std::unique_ptr<ResolvedBlock> block;
+    bool isErrDefer;
 
-    ResolvedDeferStmt(SourceLocation location, std::unique_ptr<ResolvedBlock> block)
-        : ResolvedStmt(location), block(std::move(block)) {}
+    ResolvedDeferStmt(SourceLocation location, std::unique_ptr<ResolvedBlock> block, bool isErrDefer)
+        : ResolvedStmt(location), block(std::move(block)), isErrDefer(isErrDefer) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -512,17 +513,6 @@ struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedErrorUnwrapExpr : public ResolvedExpr {
-    std::unique_ptr<ResolvedExpr> errorToUnwrap;
-    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
-
-    ResolvedErrorUnwrapExpr(SourceLocation location, Type unwrapType, std::unique_ptr<ResolvedExpr> errorToUnwrap,
-                            std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
-        : ResolvedExpr(location, unwrapType), errorToUnwrap(std::move(errorToUnwrap)), defers(std::move(defers)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
 struct ResolvedCatchErrorExpr : public ResolvedExpr {
     std::unique_ptr<ResolvedExpr> errorToCatch;
     std::unique_ptr<ResolvedDeclStmt> declaration;
@@ -545,6 +535,18 @@ struct ResolvedTryErrorExpr : public ResolvedExpr {
         : ResolvedExpr(location, errorToTry->type.withoutOptional()),
           errorToTry(std::move(errorToTry)),
           defers(std::move(defers)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedOrElseErrorExpr : public ResolvedExpr {
+    std::unique_ptr<ResolvedExpr> errorToOrElse;
+    std::unique_ptr<ResolvedExpr> orElseExpr;
+
+    ResolvedOrElseErrorExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errorToOrElse,std::unique_ptr<ResolvedExpr> orElseExpr)
+        : ResolvedExpr(location, errorToOrElse->type.withoutOptional()),
+          errorToOrElse(std::move(errorToOrElse)),
+          orElseExpr(std::move(orElseExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
