@@ -349,4 +349,8 @@ void ModuleDecl::dump(size_t level) const {
 
 void ImportExpr::dump(size_t level) const { std::cerr << indent(level) << "ImportExpr " << identifier << '\n'; }
 
+void TestDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "TestDecl " << identifier << '\n';
+    if (testFunction) testFunction->dump(level + 1);
+}
 }  // namespace DMZ

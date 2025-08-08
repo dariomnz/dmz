@@ -543,7 +543,8 @@ struct ResolvedOrElseErrorExpr : public ResolvedExpr {
     std::unique_ptr<ResolvedExpr> errorToOrElse;
     std::unique_ptr<ResolvedExpr> orElseExpr;
 
-    ResolvedOrElseErrorExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errorToOrElse,std::unique_ptr<ResolvedExpr> orElseExpr)
+    ResolvedOrElseErrorExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> errorToOrElse,
+                            std::unique_ptr<ResolvedExpr> orElseExpr)
         : ResolvedExpr(location, errorToOrElse->type.withoutOptional()),
           errorToOrElse(std::move(errorToOrElse)),
           orElseExpr(std::move(orElseExpr)) {}
@@ -567,6 +568,15 @@ struct ResolvedImportExpr : public ResolvedExpr {
 
     ResolvedImportExpr(SourceLocation location, ResolvedModuleDecl &moduleDecl)
         : ResolvedExpr(location, Type::moduleType(moduleDecl.identifier, &moduleDecl)), moduleDecl(moduleDecl) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTestDecl : public ResolvedDecl {
+    std::unique_ptr<ResolvedFunctionDecl> testFunction;
+
+    ResolvedTestDecl(std::unique_ptr<ResolvedFunctionDecl> testFunction)
+        : ResolvedDecl(testFunction->location, testFunction->identifier, testFunction->type, false), testFunction(std::move(testFunction)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

@@ -6,10 +6,10 @@ fn main() -> void {
     let x = 10;
 
     switch(x) {
-        case 1 => printf(&"1\n");
-        case 2 => printf(&"2\n");
-        case 3 => printf(&"3\n");
-        else   => printf(&"else %d\n", x);
+        case 1 => printf("1\n");
+        case 2 => printf("2\n");
+        case 3 => printf("3\n");
+        else   => printf("else %d\n", x);
     }
 }
 // CHECK: ResolvedSwitchStmt
@@ -20,28 +20,24 @@ fn main() -> void {
 // CHECK-NEXT:        ResolvedBlock
 // CHECK-NEXT:          ResolvedCallExpr:Int i32 
 // CHECK-NEXT:            ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:            ResolvedRefPtrExpr:UInt *u8[3]
-// CHECK-NEXT:              ResolvedStringLiteral:UInt u8[3] '1\n'
+// CHECK-NEXT:            ResolvedStringLiteral:UInt *u8 '1\n'
 // CHECK-NEXT:      ResolvedCaseStmt
 // CHECK-NEXT:        ResolvedIntLiteral:Int i32 '2'
 // CHECK-NEXT:        | value: 2
 // CHECK-NEXT:        ResolvedBlock
 // CHECK-NEXT:          ResolvedCallExpr:Int i32 
 // CHECK-NEXT:            ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:            ResolvedRefPtrExpr:UInt *u8[3]
-// CHECK-NEXT:              ResolvedStringLiteral:UInt u8[3] '2\n'
+// CHECK-NEXT:            ResolvedStringLiteral:UInt *u8 '2\n'
 // CHECK-NEXT:      ResolvedCaseStmt
 // CHECK-NEXT:        ResolvedIntLiteral:Int i32 '3'
 // CHECK-NEXT:        | value: 3
 // CHECK-NEXT:        ResolvedBlock
 // CHECK-NEXT:          ResolvedCallExpr:Int i32 
 // CHECK-NEXT:            ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:            ResolvedRefPtrExpr:UInt *u8[3]
-// CHECK-NEXT:              ResolvedStringLiteral:UInt u8[3] '3\n'
+// CHECK-NEXT:            ResolvedStringLiteral:UInt *u8 '3\n'
 // CHECK-NEXT:      ElseBlock
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedCallExpr:Int i32 
 // CHECK-NEXT:          ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:          ResolvedRefPtrExpr:UInt *u8[9]
-// CHECK-NEXT:            ResolvedStringLiteral:UInt u8[9] 'else %d\n'
+// CHECK-NEXT:          ResolvedStringLiteral:UInt *u8 'else %d\n'
 // CHECK-NEXT:          ResolvedDeclRefExpr:Int i32 x

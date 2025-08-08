@@ -109,7 +109,7 @@ struct Type {
     static Type builtinF16() { return {Kind::Float, "f16", 16}; }
     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
-    static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isArray = size}; }
+    static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isPointer = 1}; }
     static Type moduleType(const std::string_view& name, ResolvedDecl* decl) {
         return Type{.kind = Kind::Module, .name = std::string(name), .decl = decl};
     }
@@ -673,6 +673,15 @@ struct ModuleDecl : public Decl {
 struct ImportExpr : public Expr {
     std::string identifier;
     ImportExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct TestDecl : public Decl {
+    std::unique_ptr<FunctionDecl> testFunction;
+
+    TestDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<FunctionDecl> testFunction)
+        : Decl(location, identifier), testFunction(std::move(testFunction)) {}
 
     void dump(size_t level = 0) const override;
 };

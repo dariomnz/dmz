@@ -41,7 +41,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return generate_ref_ptr_expr(*ptrExpr);
     }
     if (auto *ptrExpr = dynamic_cast<const ResolvedDerefPtrExpr *>(&expr)) {
-        return generate_deref_ptr_expr(*ptrExpr);
+        return generate_deref_ptr_expr(*ptrExpr, keepPointer);
     }
     if (auto *grouping = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
         return generate_expr(*grouping->expr);
@@ -139,10 +139,10 @@ llvm::Value *Codegen::generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr) {
     return v;
 }
 
-llvm::Value *Codegen::generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr) {
+llvm::Value *Codegen::generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr, bool keepPointer) {
     debug_func("");
     auto v = generate_expr(*expr.expr);
-    return v;
+    return keepPointer ? v : load_value(v, expr.type);
 }
 
 llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &binop) {

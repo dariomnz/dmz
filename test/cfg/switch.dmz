@@ -7,16 +7,16 @@ fn main() -> void {
     let y = 10;
 
     switch(x) {
-        case 1 => printf(&"1\n");
-        else   => printf(&"else %d\n", x);
+        case 1 => printf("1\n");
+        else   => printf("else %d\n", x);
     }
     switch(x) {
-        case 10 => printf(&"10\n");
-        else   => printf(&"else %d\n", x);
+        case 10 => printf("10\n");
+        else   => printf("else %d\n", x);
     }
     switch(y) {
-        case 10 => printf(&"10\n");
-        else   => printf(&"else %d\n", x);
+        case 10 => printf("10\n");
+        else   => printf("else %d\n", x);
     }
 }
 // CHECK-NEXT: main:
@@ -37,8 +37,7 @@ fn main() -> void {
 // CHECK-NEXT: [9]
 // CHECK-NEXT:   preds: 10 
 // CHECK-NEXT:   succs: 7 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[9]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 x
 // CHECK-NEXT:   ResolvedCallExpr:Int i32
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
@@ -46,8 +45,7 @@ fn main() -> void {
 // CHECK-NEXT: [8]
 // CHECK-NEXT:   preds: 10(U) 
 // CHECK-NEXT:   succs: 7 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[3] '1\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[3]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 '1\n'
 // CHECK-NEXT:   ResolvedCallExpr:Int i32
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
 // CHECK-NEXT: 
@@ -60,8 +58,7 @@ fn main() -> void {
 // CHECK-NEXT: [6]
 // CHECK-NEXT:   preds: 7(U) 
 // CHECK-NEXT:   succs: 4 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[9]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 x
 // CHECK-NEXT:   ResolvedCallExpr:Int i32 
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
@@ -69,8 +66,7 @@ fn main() -> void {
 // CHECK-NEXT: [5]
 // CHECK-NEXT:   preds: 7 
 // CHECK-NEXT:   succs: 4 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[4] '10\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[4]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 '10\n'
 // CHECK-NEXT:   ResolvedCallExpr:Int i32 
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
 // CHECK-NEXT: 
@@ -83,8 +79,7 @@ fn main() -> void {
 // CHECK-NEXT: [3]
 // CHECK-NEXT:   preds: 4 
 // CHECK-NEXT:   succs: 1 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[9] 'else %d\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[9]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 x
 // CHECK-NEXT:   ResolvedCallExpr:Int i32 
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
@@ -92,8 +87,7 @@ fn main() -> void {
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 4 
 // CHECK-NEXT:   succs: 1 
-// CHECK-NEXT:   ResolvedStringLiteral:UInt u8[4] '10\n'
-// CHECK-NEXT:   ResolvedRefPtrExpr:UInt *u8[4]
+// CHECK-NEXT:   ResolvedStringLiteral:UInt *u8 '10\n'
 // CHECK-NEXT:   ResolvedCallExpr:Int i32 
 // CHECK-NEXT:     ResolvedExternFunctionDecl printf -> Int i32
 // CHECK-NEXT: 

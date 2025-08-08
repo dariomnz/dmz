@@ -35,6 +35,8 @@ class Sema {
         }
     };
     std::unique_ptr<ScopeRAII> m_globalScope;
+    
+    std::vector<const ResolvedTestDecl*> m_tests;
 
    public:
     explicit Sema(std::vector<std::unique_ptr<ModuleDecl>> ast)
@@ -114,5 +116,9 @@ class Sema {
     std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     void resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
+    bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);
+    void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
+    void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
+    void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
 };
 }  // namespace DMZ

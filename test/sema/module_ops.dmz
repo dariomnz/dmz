@@ -13,7 +13,7 @@ module ops {
     extern fn printf(fmt:*u8, ...) -> i32;
 
     fn println(n:i32) -> void {
-        printf(&"%d\n", n);
+        printf("%d\n", n);
     }
 
     module integer {
@@ -62,6 +62,5 @@ module ops {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:         ResolvedRefPtrExpr:UInt *u8[4]
-// CHECK-NEXT:           ResolvedStringLiteral:UInt u8[4] '%d\n'
+// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 '%d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 n

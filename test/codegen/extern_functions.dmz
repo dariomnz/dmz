@@ -4,24 +4,25 @@ fn main() -> void {
     putchar(10); // \n
     let fmt = "Test %d\n";
     let fd = 1;
-    dprintf(fd, &fmt, 10);
-    dprintf(fd, &"Hello\n");
+    dprintf(fd, fmt, 10);
+    dprintf(fd, "Hello\n");
 }
 
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %fmt = alloca [9 x i8], align 1
+// CHECK-NEXT:   %fmt = alloca ptr, align 8
 // CHECK-NEXT:   %fd = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fmt, i8 0, i64 9, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fmt, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fd, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
 // CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %fmt, ptr align 1 @global.str, i64 9, i1 false)
+// CHECK-NEXT:   store ptr @global.str, ptr %fmt, align 8
 // CHECK-NEXT:   store i32 1, ptr %fd, align 4
 // CHECK-NEXT:   %2 = load i32, ptr %fd, align 4
-// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr %fmt, i32 10)
-// CHECK-NEXT:   %4 = load i32, ptr %fd, align 4
-// CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 %4, ptr @global.str.1)
+// CHECK-NEXT:   %3 = load ptr, ptr %fmt, align 8
+// CHECK-NEXT:   %4 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr %3, i32 10)
+// CHECK-NEXT:   %5 = load i32, ptr %fd, align 4
+// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 %5, ptr @global.str.1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

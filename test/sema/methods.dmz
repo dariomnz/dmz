@@ -20,7 +20,7 @@ struct Color {
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedCallExpr:Int i32
 // CHECK-NEXT:           ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:           ResolvedStringLiteral:UInt u8[19] 'Color{%d, %d, %d}\n'
+// CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:           ResolvedMemberExpr:Int i32 r
 // CHECK-NEXT:             ResolvedDeclRefExpr:Struct &Color self
 // CHECK-NEXT:           ResolvedMemberExpr:Int i32 g

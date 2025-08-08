@@ -22,6 +22,7 @@ struct CompilerOptions {
     bool llvmDump = false;
     bool cfgDump = false;
     bool run = false;
+    bool test = false;
     bool isModule = false;
     bool printStats = false;
 

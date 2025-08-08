@@ -466,6 +466,12 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                 resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
+            if (dynamic_cast<DeclStmt *>(decl.get()) || dynamic_cast<FuncDecl *>(decl.get()) ||
+                dynamic_cast<TestDecl *>(decl.get())) {
+                continue;
+            }
+            decl->dump();
+            dmz_unreachable("TODO: unexpected declaration");
         }
     }
 
@@ -492,10 +498,25 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                     resolvedTree.emplace_back(std::move(resolvedDecl));
                     continue;
                 }
-
                 error = true;
+                continue;
             }
-
+            if (const auto *test = dynamic_cast<const TestDecl *>(decl.get())) {
+                if (auto resolvedDecl = resolve_function_decl(*test->testFunction)) {
+                    if (auto resolvedFunctionDecl_ptr = dynamic_cast<ResolvedFunctionDecl *>(resolvedDecl.get())) {
+                        resolvedDecl.release();
+                        std::unique_ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunctionDecl_ptr);
+                        auto testDecl = std::make_unique<ResolvedTestDecl>(std::move(resolvedFunctionDecl));
+                        if (testDecl && insert_decl_to_current_scope(*testDecl)) {
+                            m_tests.emplace_back(testDecl.get());
+                            resolvedTree.emplace_back(std::move(testDecl));
+                            continue;
+                        }
+                    }
+                }
+                error = true;
+                continue;
+            }
             if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
                 if (auto declStmt = resolve_decl_stmt(*ds)) {
                     resolvedTree.emplace_back(std::move(declStmt));
@@ -504,6 +525,11 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                 }
                 continue;
             }
+            if (dynamic_cast<ModuleDecl *>(decl.get()) || dynamic_cast<StructDecl *>(decl.get())) {
+                continue;
+            }
+            decl->dump();
+            dmz_unreachable("TODO: unexpected declaration");
         }
     }
 
@@ -545,6 +571,11 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
             }
             continue;
         }
+        if (dynamic_cast<ResolvedModuleDecl *>(currentDecl) || dynamic_cast<ResolvedTestDecl *>(currentDecl)) {
+            continue;
+        }
+        currentDecl->dump();
+        dmz_unreachable("TODO: unexpected declaration");
     }
     {
         ScopedTimer st(Stats::type::semanticResolveBodysTime);
@@ -569,6 +600,7 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
                 currentDecl = fn->function.get();
             }
             if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
+                if (resolve_builtin_function(*fn)) continue;
                 if (fn->genericTypes) continue;
 
                 if (!resolve_func_body(*fn, *fn->functionDecl->body)) {
@@ -577,6 +609,19 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
                 }
                 continue;
             }
+            if (auto *testDecl = dynamic_cast<ResolvedTestDecl *>(currentDecl)) {
+                if (!resolve_func_body(*testDecl->testFunction, *testDecl->testFunction->functionDecl->body)) {
+                    debug_msg("error test resolve_func_body");
+                    error = true;
+                }
+                continue;
+            }
+            if (dynamic_cast<ResolvedDeclStmt *>(currentDecl) ||
+                dynamic_cast<ResolvedExternFunctionDecl *>(currentDecl)) {
+                continue;
+            }
+            currentDecl->dump();
+            dmz_unreachable("TODO: unexpected declaration");
         }
     }
     debug_msg("error " << error);
@@ -599,5 +644,113 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
     }
     debug_msg("false");
     return false;
+}
+
+
+bool Sema::resolve_builtin_function(const ResolvedFunctionDecl &fnDecl) {
+    if (fnDecl.identifier == "@builtin_test_num") {
+        resolve_builtin_test_num(fnDecl);
+        return true;
+    }
+    if (fnDecl.identifier == "@builtin_test_name") {
+        resolve_builtin_test_name(fnDecl);
+        return true;
+    }
+    if (fnDecl.identifier == "@builtin_test_run") {
+        resolve_builtin_test_run(fnDecl);
+        return true;
+    }
+    return false;
+}
+
+void Sema::resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl) {
+    SourceLocation loc{.file_name = "builtin"};
+    auto test_num = std::make_unique<ResolvedIntLiteral>(loc, m_tests.size());
+    auto retStmt = std::make_unique<ResolvedReturnStmt>(loc, std::move(test_num),
+                                                        std::vector<std::unique_ptr<DMZ::ResolvedDeferRefStmt>>{});
+    std::vector<std::unique_ptr<ResolvedStmt>> blockStmts;
+    blockStmts.emplace_back(std::move(retStmt));
+
+    auto body = std::make_unique<ResolvedBlock>(loc, std::move(blockStmts),
+                                                std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+
+    auto mutfnDecl = const_cast<ResolvedFunctionDecl *>(&fnDecl);
+    mutfnDecl->body = std::move(body);
+}
+
+void Sema::resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl) {
+    // Begin Body
+    SourceLocation loc{.file_name = "builtin"};
+    auto cond = std::make_unique<ResolvedDeclRefExpr>(loc, *fnDecl.params[0], fnDecl.params[0]->type);
+
+    auto elseName = std::make_unique<ResolvedStringLiteral>(loc, "Error in builtin_test_name");
+    auto retStmt = std::make_unique<ResolvedReturnStmt>(loc, std::move(elseName),
+                                                        std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+    std::vector<std::unique_ptr<ResolvedStmt>> retBlockStmts;
+    retBlockStmts.emplace_back(std::move(retStmt));
+
+    auto elseBlock = std::make_unique<ResolvedBlock>(loc, std::move(retBlockStmts),
+                                                     std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+    std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
+    for (size_t i = 0; i < m_tests.size(); i++) {
+        auto test_name = std::make_unique<ResolvedStringLiteral>(loc, m_tests[i]->identifier);
+        auto retStmt = std::make_unique<ResolvedReturnStmt>(loc, std::move(test_name),
+                                                            std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+        std::vector<std::unique_ptr<ResolvedStmt>> retBlockStmts;
+        retBlockStmts.emplace_back(std::move(retStmt));
+        auto retBlock = std::make_unique<ResolvedBlock>(loc, std::move(retBlockStmts),
+                                                        std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+        auto caseCondition = std::make_unique<ResolvedIntLiteral>(loc, i);
+        auto caseStmt = std::make_unique<ResolvedCaseStmt>(loc, std::move(caseCondition), std::move(retBlock));
+        cases.emplace_back(std::move(caseStmt));
+    }
+
+    auto switchStmt =
+        std::make_unique<ResolvedSwitchStmt>(loc, std::move(cond), std::move(cases), std::move(elseBlock));
+    std::vector<std::unique_ptr<ResolvedStmt>> blockStmts;
+    blockStmts.emplace_back(std::move(switchStmt));
+
+    auto body = std::make_unique<ResolvedBlock>(loc, std::move(blockStmts),
+                                                std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+
+    // End body
+    auto mutfnDecl = const_cast<ResolvedFunctionDecl *>(&fnDecl);
+    mutfnDecl->body = std::move(body);
+}
+
+void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
+    // Begin Body
+    SourceLocation loc{.file_name = "builtin"};
+    auto cond = std::make_unique<ResolvedDeclRefExpr>(loc, *fnDecl.params[0], fnDecl.params[0]->type);
+
+    auto elseBlock = std::make_unique<ResolvedBlock>(loc, std::vector<std::unique_ptr<ResolvedStmt>>{},
+                                                     std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+    std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
+    for (size_t i = 0; i < m_tests.size(); i++) {
+        auto test_call = std::make_unique<ResolvedCallExpr>(loc, *m_tests[i]->testFunction,
+                                                            std::vector<std::unique_ptr<ResolvedExpr>>{});
+        auto tryExpr = std::make_unique<ResolvedTryErrorExpr>(loc, std::move(test_call),
+                                                              std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+
+        std::vector<std::unique_ptr<ResolvedStmt>> caseBlockStmts;
+        caseBlockStmts.emplace_back(std::move(tryExpr));
+        auto caseBlock = std::make_unique<ResolvedBlock>(loc, std::move(caseBlockStmts),
+                                                         std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+        auto caseCondition = std::make_unique<ResolvedIntLiteral>(loc, i);
+        auto caseStmt = std::make_unique<ResolvedCaseStmt>(loc, std::move(caseCondition), std::move(caseBlock));
+        cases.emplace_back(std::move(caseStmt));
+    }
+
+    auto switchStmt =
+        std::make_unique<ResolvedSwitchStmt>(loc, std::move(cond), std::move(cases), std::move(elseBlock));
+    std::vector<std::unique_ptr<ResolvedStmt>> blockStmts;
+    blockStmts.emplace_back(std::move(switchStmt));
+
+    auto body = std::make_unique<ResolvedBlock>(loc, std::move(blockStmts),
+                                                std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
+
+    // End body
+    auto mutfnDecl = const_cast<ResolvedFunctionDecl *>(&fnDecl);
+    mutfnDecl->body = std::move(body);
 }
 }  // namespace DMZ

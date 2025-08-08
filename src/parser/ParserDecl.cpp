@@ -265,6 +265,11 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
+        } else if (m_nextToken.type == TokenType::kw_test) {
+            if (auto test = parse_test_decl()) {
+                declarations.emplace_back(std::move(test));
+                continue;
+            }
         } else {
             report(m_nextToken.loc, "expected declaration");
         }
@@ -274,5 +279,26 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
     }
 
     return declarations;
+}
+
+std::unique_ptr<TestDecl> Parser::parse_test_decl() {
+    auto location = m_nextToken.loc;
+    matchOrReturn(TokenType::kw_test, "expected 'test'");
+    eat_next_token();  // eat test
+
+    matchOrReturn(TokenType::lit_string, "expected string literal");
+    std::string_view name = m_nextToken.str;
+    name = name.substr(1, name.size() - 2);
+    eat_next_token();  // eat name
+
+    matchOrReturn(TokenType::block_l, "expected function body");
+    varOrReturn(block, parse_block());
+
+    auto type = Type::builtinVoid();
+    type.isOptional = true;
+
+    auto func = std::make_unique<FunctionDecl>(location, name, type, std::vector<std::unique_ptr<ParamDecl>>{}, std::move(block));
+
+    return std::make_unique<TestDecl>(location, name, std::move(func));
 }
 }  // namespace DMZ

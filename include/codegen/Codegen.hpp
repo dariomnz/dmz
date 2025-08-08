@@ -29,12 +29,10 @@ class Codegen {
    public:
     Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
 
-    std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir();
+    std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
     llvm::Type *generate_type(const Type &type);
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
     std::string generate_decl_name(const ResolvedDecl &decl);
-    // std::string generate_struct_name(const ResolvedStructDecl &structDecl);
-    // std::string generate_function_name(const ResolvedFuncDecl &functionDecl);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
@@ -43,13 +41,11 @@ class Codegen {
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
-    void generate_builtin_get_errno();
-    // void generate_builtin_println_body(const ResolvedFunctionDecl &println);
-    void generate_main_wrapper();
+    void generate_main_wrapper(bool runTest);
     llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
     llvm::Value *generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr);
-    llvm::Value *generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr);
+    llvm::Value *generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr, bool keepPointer = false);
     llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
     llvm::Value *cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs);
     llvm::Value *to_bool(llvm::Value *v, const Type &type);
@@ -77,8 +73,8 @@ class Codegen {
     llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
-    // std::string generate_symbol_name(std::string modIdentifier);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
+    void generate_test_decl(const ResolvedTestDecl &testDecl);
 };
 }  // namespace DMZ

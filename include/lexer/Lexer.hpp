@@ -71,6 +71,7 @@ enum class TokenType {
     kw_import,
     kw_switch,
     kw_case,
+    kw_test,
     unknown,
     eof,
 };
@@ -96,6 +97,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"import", TokenType::kw_import},
     {"switch", TokenType::kw_switch},
     {"case", TokenType::kw_case},
+    {"test", TokenType::kw_test},
     // Types
     {"void", TokenType::ty_void},
     {"f16", TokenType::ty_f16},

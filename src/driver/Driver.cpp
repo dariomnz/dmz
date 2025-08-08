@@ -21,6 +21,7 @@ void Driver::display_help() {
     println("  -print-stats     print the time stats");
     println("  -module          compile a module to .o file");
     println("  -run             runs the program with lli (Just In Time)");
+    println("  -test            runs the test with lli (Just In Time)");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -52,6 +53,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.cfgDump = true;
             } else if (arg == "-run") {
                 options.run = true;
+            } else if (arg == "-test") {
+                options.test = true;
             } else if (arg == "-module") {
                 options.isModule = true;
             } else if (arg == "-print-stats") {
@@ -122,7 +125,7 @@ Driver::Type_Ast Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
     for (size_t index = 0; index < lexers.size(); index++) {
         // m_workers.submit([&, index]() {
         Parser parser(*lexers[index]);
-        bool needMain = expectMain && !m_options.isModule && index == 0;
+        bool needMain = expectMain && !m_options.isModule && !m_options.test && index == 0;
         auto [ast, success] = parser.parse_source_file(needMain);
         if (!success) m_haveError = true;
 
@@ -436,7 +439,7 @@ Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree &resolvedTree) {
     debug_func("");
     std::unique_ptr<llvm::orc::ThreadSafeModule> module;
     Codegen codegen(resolvedTree, m_options.sources[0].c_str());
-    module = codegen.generate_ir();
+    module = codegen.generate_ir(m_options.test);
 
     if (m_options.llvmDump) {
         module->withModuleDo([](auto &m) { m.dump(); });

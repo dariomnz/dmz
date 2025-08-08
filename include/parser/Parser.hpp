@@ -134,5 +134,6 @@ class Parser {
     std::unique_ptr<ImportExpr> parse_import_expr();
     std::unique_ptr<SwitchStmt> parse_switch_stmt();
     std::unique_ptr<CaseStmt> parse_case_stmt();
+    std::unique_ptr<TestDecl> parse_test_decl();
 };
 }  // namespace DMZ

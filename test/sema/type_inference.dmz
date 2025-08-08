@@ -7,7 +7,7 @@ fn bar() -> u8 {
     return '\n';
 }
 
-fn str() -> u8[] {
+fn str() -> *u8 {
     return "hello\n";
 }
 
@@ -44,12 +44,12 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedFunctionDecl foo -> Int i32
 // CHECK-NEXT:       ResolvedIntLiteral:Int i32 '1'
 
-// CHECK:      ResolvedVarDecl:UInt u8[11] str1
-// CHECK-NEXT:        ResolvedStringLiteral:UInt u8[11] 'something\n'
+// CHECK:      ResolvedVarDecl:UInt *u8 str1
+// CHECK-NEXT:        ResolvedStringLiteral:UInt *u8 'something\n'
 // CHECK-NEXT:    ResolvedDeclStmt
-// CHECK-NEXT:      ResolvedVarDecl:UInt u8[] str2
-// CHECK-NEXT:        ResolvedCallExpr:UInt u8[]
-// CHECK-NEXT:          ResolvedFunctionDecl str -> UInt u8[]
+// CHECK-NEXT:      ResolvedVarDecl:UInt *u8 str2
+// CHECK-NEXT:        ResolvedCallExpr:UInt *u8
+// CHECK-NEXT:          ResolvedFunctionDecl str -> UInt *u8
 
 // CHECK:   ResolvedVarDecl:Int i1 bool1
 // CHECK-NEXT:     ResolvedBoolLiteral:Int i1 'true'

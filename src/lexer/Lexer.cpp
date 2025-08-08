@@ -75,6 +75,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_import);
         CASE_TYPE(kw_switch);
         CASE_TYPE(kw_case);
+        CASE_TYPE(kw_test);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -163,7 +164,7 @@ Token Lexer::next_token() {
         t.str = file_content.substr(0, digit_count);
         advance(digit_count);
 
-    } else if (std::isalpha(file_content[0]) || file_content[0] == '_') {
+    } else if (std::isalpha(file_content[0]) || file_content[0] == '_' || file_content[0] == '@') {
         size_t alpha_count = 1;
         while (std::isalnum(file_content[alpha_count]) || file_content[alpha_count] == '_') {
             alpha_count++;

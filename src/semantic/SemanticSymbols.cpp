@@ -237,7 +237,7 @@ void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {
         c->dump(level + 1, onlySelf);
     }
     std::cerr << indent(level + 1) << "ElseBlock\n";
-    elseBlock->dump(level + 1, onlySelf);
+    elseBlock->dump(level + 2, onlySelf);
 }
 
 void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
@@ -372,5 +372,11 @@ void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
 void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedImportExpr " << moduleDecl.identifier << '\n';
     if (onlySelf) return;
+}
+
+void ResolvedTestDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTestDecl " << identifier << '\n';
+    if (onlySelf) return;
+    if (testFunction) testFunction->dump(level + 1);
 }
 }  // namespace DMZ

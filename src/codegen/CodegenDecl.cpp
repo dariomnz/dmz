@@ -9,6 +9,9 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
         if (decl.identifier == "main") {
             return "__builtin_main";
         }
+        if (decl.identifier == "__builtin_main_test") {
+            return decl.identifier;
+        }
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(&decl)) {
             return std::string(decl.identifier);
         }
@@ -317,15 +320,13 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
     generate_error_no_err();
     for (auto &&decl : declarations) {
         if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
-            if (fn->identifier == "get_errno") {
-                generate_builtin_get_errno();
-            } else {
-                generate_function_decl(*fn);
-            }
+            generate_function_decl(*fn);
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             generate_global_var_decl(*ds);
+        } else if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(decl.get())) {
+            generate_test_decl(*test);
         } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
         } else {
@@ -340,6 +341,8 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             continue;
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);
+        } else if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(decl.get())) {
+            generate_function_body(*test->testFunction);
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_definition(*sd);
         } else if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
@@ -374,5 +377,9 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
                                  llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.identifier);
     m_module->insertGlobalVariable(globalVar);
     m_declarations[stmt.varDecl.get()] = globalVar;
+}
+
+void Codegen::generate_test_decl(const ResolvedTestDecl &testDecl) {
+    generate_function_decl(*testDecl.testFunction);
 }
 }  // namespace DMZ

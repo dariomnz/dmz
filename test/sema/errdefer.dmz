@@ -21,12 +21,12 @@ fn foo(n: i1) -> void! {
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32
 // CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+// CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 'foo normal defer\n'
 // CHECK-NEXT:       ResolvedErrDeferStmt
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32
 // CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[15] 'foo err defer\n'
+// CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 'foo err defer\n'
 // CHECK-NEXT:       ResolvedIfStmt
 // CHECK-NEXT:         ResolvedBinaryOperator:Int i1 '=='
 // CHECK-NEXT:           ResolvedDeclRefExpr:Int i1 n
@@ -39,17 +39,17 @@ fn foo(n: i1) -> void! {
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedCallExpr:Int i32
 // CHECK-NEXT:                   ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:                   ResolvedStringLiteral:UInt u8[15] 'foo err defer\n'
+// CHECK-NEXT:                   ResolvedStringLiteral:UInt *u8 'foo err defer\n'
 // CHECK-NEXT:             ResolvedDeferRefStmt
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedCallExpr:Int i32
 // CHECK-NEXT:                   ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:                   ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+// CHECK-NEXT:                   ResolvedStringLiteral:UInt *u8 'foo normal defer\n'
 // CHECK-NEXT:       ResolvedDeferRefStmt
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32
 // CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[18] 'foo normal defer\n'
+// CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 'foo normal defer\n'
 
 fn main() -> void {
     defer printf("main normal defer\n");
@@ -64,10 +64,10 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32
 // CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[19] 'main normal defer\n'
+// CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 'main normal defer\n'
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[16] 'Call foo false\n'
+// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Call foo false\n'
 // CHECK-NEXT:       ResolvedTryErrorExpr:Void void
 // CHECK-NEXT:         ResolvedCallExpr:Void void!
 // CHECK-NEXT:           ResolvedFunctionDecl foo -> Void void!
@@ -75,7 +75,7 @@ fn main() -> void {
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[15] 'Call foo true\n'
+// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Call foo true\n'
 // CHECK-NEXT:       ResolvedCallExpr:Void void!
 // CHECK-NEXT:         ResolvedFunctionDecl foo -> Void void!
 // CHECK-NEXT:         ResolvedBoolLiteral:Int i1 'true'
@@ -84,4 +84,4 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32
 // CHECK-NEXT:             ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:             ResolvedStringLiteral:UInt u8[19] 'main normal defer\n'
+// CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 'main normal defer\n'

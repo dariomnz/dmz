@@ -56,8 +56,8 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
         case ResolvedDeclType::ResolvedDecl:                                      \
             if (bool dynamic_cast<ResolvedDecl *>(decl)) expresion;               \
             break;                                                                \
-        case ResolvedDeclType::ResolvedErrorDecl:                                   \
-            if (bool dynamic_cast<ResolvedErrorDecl *>(decl)) expresion;            \
+        case ResolvedDeclType::ResolvedErrorDecl:                                 \
+            if (bool dynamic_cast<ResolvedErrorDecl *>(decl)) expresion;          \
             break;                                                                \
         case ResolvedDeclType::ResolvedImportExpr:                                \
             if (bool dynamic_cast<ResolvedImportExpr *>(decl)) expresion;         \
@@ -411,10 +411,10 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
                 stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
         } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl) ||
-                   dynamic_cast<const ResolvedErrorDecl *>(e.decl)) {
+                   dynamic_cast<const ResolvedErrorDecl *>(e.decl) || dynamic_cast<const ResolvedTestDecl *>(e.decl)) {
         } else {
             e.decl->dump(0, true);
-            dmz_unreachable("unexpected declaration");
+            dmz_unreachable("TODO: unexpected declaration");
         }
     }
 }

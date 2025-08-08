@@ -14,14 +14,14 @@ fn print<T>(param:T) -> void! {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[20] 'Pointer of type %d\n'
+// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Pointer of type %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 param
 // CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<Int i64> -> Void void!
 // CHECK-NEXT:     ResolvedParamDecl:Int i64 param
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt u8[20] 'Pointer of type %d\n'
+// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Pointer of type %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i64 param
 
 fn main() -> void {

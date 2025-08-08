@@ -11,7 +11,7 @@ Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree,
     m_module->setTargetTriple(llvm::sys::getDefaultTargetTriple());
 }
 
-std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
+std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) {
     debug_func("");
     ScopedTimer st(Stats::type::codegenTime);
     // TODO: rethink lock to not lock all threads
@@ -19,7 +19,7 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir() {
 
     generate_in_module_decl(m_resolvedTree);
 
-    generate_main_wrapper();
+    generate_main_wrapper(runTest);
 
     return std::make_unique<llvm::orc::ThreadSafeModule>(std::move(m_module), get_shared_context());
 }
@@ -91,9 +91,13 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
     return value;
 }
 
-void Codegen::generate_main_wrapper() {
+void Codegen::generate_main_wrapper(bool runTest) {
     debug_func("");
-    auto *builtinMain = m_module->getFunction("__builtin_main");
+    std::string mainToCall = "__builtin_main";
+    if (runTest) {
+        mainToCall = "__builtin_main_test";
+    }
+    auto *builtinMain = m_module->getFunction(mainToCall);
     if (!builtinMain) return;
 
     auto *main = llvm::Function::Create(llvm::FunctionType::get(m_builder.getInt32Ty(), {}, false),
@@ -242,25 +246,4 @@ llvm::Type *Codegen::generate_optional_type(const Type &type, llvm::Type *llvmTy
     return ret;
 }
 
-void Codegen::generate_builtin_get_errno() {
-    debug_func("");
-    llvm::Type *i32PtrTy = llvm::PointerType::get(m_builder.getInt32Ty(), 0);
-
-    llvm::FunctionType *errnoLocationFTy = llvm::FunctionType::get(i32PtrTy, false);
-    llvm::Function *errnoLocationFunc =
-        llvm::Function::Create(errnoLocationFTy, llvm::Function::ExternalLinkage, "__errno_location", *m_module);
-
-    llvm::FunctionType *getErrnoValueFTy = llvm::FunctionType::get(m_builder.getInt32Ty(), false);
-    llvm::Function *getErrnoFunc =
-        llvm::Function::Create(getErrnoValueFTy, llvm::Function::ExternalLinkage, "get_errno", *m_module);
-
-    llvm::BasicBlock *entryBB = llvm::BasicBlock::Create(*m_context, "entry", getErrnoFunc);
-    m_builder.SetInsertPoint(entryBB);
-
-    llvm::Value *errnoPtr = m_builder.CreateCall(errnoLocationFunc);
-
-    llvm::Value *errnoVal = m_builder.CreateLoad(m_builder.getInt32Ty(), errnoPtr, "errno_val");
-
-    m_builder.CreateRet(errnoVal);
-}
 }  // namespace DMZ
