@@ -1,4 +1,4 @@
-// RUN: compiler %s -I %S/../../std -llvm-dump -module 2>&1 | filecheck %s
+// RUN: compiler %s -I %S/../../std -llvm-dump -test -module 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -I %S/../../std -run -test -module 2>&1) <(echo -n -e 'All 2 tests passed.\n')
 const std = import("std");
 

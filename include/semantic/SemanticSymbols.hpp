@@ -49,6 +49,19 @@ struct ResolvedDecl {
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
+    virtual void dump_dependencies(size_t level = 0) const {};
+};
+
+struct ResolvedDependencies : public ResolvedDecl {
+    std::unordered_set<ResolvedDependencies *> dependsOn;
+    std::unordered_set<ResolvedDependencies *> isUsedBy;
+
+    ResolvedDependencies(SourceLocation location, std::string_view identifier, Type type, bool isMutable)
+        : ResolvedDecl(location, identifier, type, isMutable) {}
+    virtual ~ResolvedDependencies() = default;
+
+    virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
+    void dump_dependencies(size_t level = 0) const override;
 };
 
 enum struct ResolvedDeclType {
@@ -102,7 +115,7 @@ struct ResolvedBlock : public ResolvedStmt {
                   std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers)
         : ResolvedStmt(location), statements(std::move(statements)), defers(std::move(defers)) {}
 
-    void dump(size_t level = 0, bool onlySelf = false) const;
+    void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
 struct ResolvedDeferStmt : public ResolvedStmt {
@@ -196,13 +209,15 @@ struct ResolvedVarDecl : public ResolvedDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedFuncDecl : public ResolvedDecl {
+struct ResolvedFuncDecl : public ResolvedDependencies {
     const ResolvedFuncDecl *parent;
     std::vector<std::unique_ptr<ResolvedParamDecl>> params;
 
     ResolvedFuncDecl(SourceLocation location, std::string_view identifier, const ResolvedFuncDecl *parent, Type type,
                      std::vector<std::unique_ptr<ResolvedParamDecl>> params)
-        : ResolvedDecl(location, std::move(identifier), type, false), parent(parent), params(std::move(params)) {}
+        : ResolvedDependencies(location, std::move(identifier), type, false),
+          parent(parent),
+          params(std::move(params)) {}
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
@@ -248,19 +263,21 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 };
 // Forward declaration
 struct ResolvedStructDecl;
-struct ResolvedMemberFunctionDecl : public ResolvedFuncDecl {
+struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
     const ResolvedStructDecl *structDecl;
-    std::unique_ptr<ResolvedFunctionDecl> function;
 
-    ResolvedMemberFunctionDecl(const ResolvedStructDecl *structDecl, std::unique_ptr<ResolvedFunctionDecl> function)
-        : ResolvedFuncDecl(function->location, function->identifier, nullptr, function->type, {}),
-          structDecl(structDecl),
-          function(std::move(function)) {}
+    ResolvedMemberFunctionDecl(SourceLocation location, std::string_view identifier, const ResolvedFuncDecl *parent,
+                               Type type, std::vector<std::unique_ptr<ResolvedParamDecl>> params,
+                               std::unique_ptr<ResolvedGenericTypesDecl> genericTypes, const FunctionDecl *functionDecl,
+                               std::unique_ptr<ResolvedBlock> body, const ResolvedStructDecl *structDecl)
+        : ResolvedFunctionDecl(location, identifier, parent, type, std::move(params), std::move(genericTypes),
+                               functionDecl, std::move(body)),
+          structDecl(structDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedStructDecl : public ResolvedDecl {
+struct ResolvedStructDecl : public ResolvedDependencies {
     std::unique_ptr<ResolvedGenericTypesDecl> genericTypes;
     std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
     std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions;
@@ -274,13 +291,14 @@ struct ResolvedStructDecl : public ResolvedDecl {
                        std::unique_ptr<ResolvedGenericTypesDecl> genericTypes,
                        std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                        std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions)
-        : ResolvedDecl(location, std::move(identifier), Type::structType(identifier, this), false),
+        : ResolvedDependencies(location, std::move(identifier), Type::structType(identifier, this), false),
           genericTypes(std::move(genericTypes)),
           fields(std::move(fields)),
           functions(std::move(functions)),
           structDecl(structDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    void dump_dependencies(size_t level = 0) const override;
 };
 
 struct ResolvedIntLiteral : public ResolvedExpr {
@@ -552,15 +570,16 @@ struct ResolvedOrElseErrorExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedModuleDecl : public ResolvedDecl {
+struct ResolvedModuleDecl : public ResolvedDependencies {
     std::vector<std::unique_ptr<ResolvedDecl>> declarations;
 
     ResolvedModuleDecl(SourceLocation location, std::string_view identifier,
                        std::vector<std::unique_ptr<ResolvedDecl>> declarations)
-        : ResolvedDecl(location, identifier, Type::moduleType(identifier, this), false),
+        : ResolvedDependencies(location, identifier, Type::moduleType(identifier, this), false),
           declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    void dump_dependencies(size_t level = 0) const override;
 };
 
 struct ResolvedImportExpr : public ResolvedExpr {
@@ -572,11 +591,12 @@ struct ResolvedImportExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedTestDecl : public ResolvedDecl {
+struct ResolvedTestDecl : public ResolvedDependencies {
     std::unique_ptr<ResolvedFunctionDecl> testFunction;
 
     ResolvedTestDecl(std::unique_ptr<ResolvedFunctionDecl> testFunction)
-        : ResolvedDecl(testFunction->location, testFunction->identifier, testFunction->type, false), testFunction(std::move(testFunction)) {}
+        : ResolvedDependencies(testFunction->location, testFunction->identifier, testFunction->type, false),
+          testFunction(std::move(testFunction)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

@@ -1,4 +1,4 @@
-// RUN: compiler %s -module -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
 module ops {
     struct str_ops {
         x:i32,

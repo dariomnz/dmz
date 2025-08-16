@@ -1,5 +1,8 @@
 #pragma once
 
+#include <execinfo.h>  // Para backtrace() y backtrace_symbols()
+
+#include <cstdlib>     // Para free()
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -17,6 +20,17 @@ namespace DMZ {
 #define dmz_unreachable(msg) ::DMZ::__internal_unreachable(msg, __FILE__, __LINE__)
 
 [[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(const char* msg, const char* source, int line) {
+    void* callstack[128];
+    int frames = backtrace(callstack, 128);
+
+    char** symbols = backtrace_symbols(callstack, frames);
+
+    std::cout << "--- Stack Trace ---" << std::endl;
+    for (int i = 0; i < frames; ++i) {
+        std::cout << symbols[i] << std::endl;
+    }
+    free(symbols);
+
     std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
     std::abort();
 }
@@ -46,7 +60,41 @@ struct SourceLocation {
     return nullptr;
 }
 
-[[maybe_unused]] static inline std::string indent(size_t level) { return std::string(level * 2, ' '); }
+struct indent {
+    size_t level;
+
+    indent(size_t level) : level(level) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const indent& di) {
+        for (size_t i = 0; i < di.level; i++) {
+            os << "  ";
+        }
+        return os;
+    }
+};
+
+struct indent_line {
+    size_t level = 0;
+    size_t extra_level = 0;
+    bool horizontal = false;
+
+    indent_line(size_t level, size_t extra_level, bool horizontal)
+        : level(level), extra_level(extra_level), horizontal(horizontal) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const indent_line& di) {
+        for (size_t i = 0; i < di.level; i++) {
+            if (di.horizontal && i == di.level - 1) {
+                os << " ├─";
+            } else {
+                os << " │ ";
+            }
+        }
+        for (size_t j = 0; j < di.extra_level; j++) {
+            os << "  ";
+        }
+        return os;
+    }
+};
 
 [[maybe_unused]] [[noreturn]] static inline void error(std::string_view msg) {
     std::cerr << "error: " << msg << '\n';

@@ -13,13 +13,13 @@ class Sema {
     ConstantExpressionEvaluator cee;
     std::vector<std::unique_ptr<ModuleDecl>> m_ast;
     std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
-    std::unordered_map<std::string, ResolvedModuleDecl*> m_modules_for_import;
+    std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
     void dump_scopes() const;
     void dump_modules_for_import() const;
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
-    ResolvedFuncDecl *m_currentFunction;
+    ResolvedFuncDecl *m_currentFunction = nullptr;
 
     class ScopeRAII {
         Sema &m_sema;
@@ -35,8 +35,11 @@ class Sema {
         }
     };
     std::unique_ptr<ScopeRAII> m_globalScope;
-    
-    std::vector<const ResolvedTestDecl*> m_tests;
+    ResolvedModuleDecl *m_actualModule = nullptr;
+
+    std::vector<const ResolvedTestDecl *> m_tests;
+
+    std::unordered_set<ResolvedDecl *> m_removed_decls;
 
    public:
     explicit Sema(std::vector<std::unique_ptr<ModuleDecl>> ast)
@@ -44,9 +47,12 @@ class Sema {
     // std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
     std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast_decl();
     bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
+    void fill_depends(ResolvedDependencies *parent, std::vector<std::unique_ptr<ResolvedDecl>> &decls);
+    void remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest);
+    bool recurse_needed(ResolvedDependencies &deps, bool buildTest);
 
    private:
-    std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type);
+    std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps = true);
     ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
                                    ResolvedDeclType type);
     ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
@@ -100,7 +106,8 @@ class Sema {
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<std::unique_ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
-    std::unique_ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
+    std::unique_ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(
+        const ErrorGroupExprDecl &ErrorGroupExprDecl);
     std::unique_ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
     std::unique_ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     std::unique_ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
@@ -120,5 +127,6 @@ class Sema {
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
+    void add_dependency(ResolvedDecl *decl);
 };
 }  // namespace DMZ

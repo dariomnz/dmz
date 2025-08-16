@@ -9,19 +9,21 @@ void Driver::display_help() {
     println("Usage:");
     println("  compiler [options] <source_files...>\n");
     println("Options:");
-    println("  -h, -help        display this message");
-    println("  -I <dir path>    include <dir path> to search for modules");
-    println("  -o <file>        write executable to <file>");
-    println("  -lexer-dump      print the lexer dump");
-    println("  -ast-dump        print the abstract syntax tree");
-    println("  -import-dump     print the abstract syntax tree after import");
-    println("  -res-dump        print the resolved syntax tree");
-    println("  -cfg-dump        print the control flow graph");
-    println("  -llvm-dump       print the llvm module");
-    println("  -print-stats     print the time stats");
-    println("  -module          compile a module to .o file");
-    println("  -run             runs the program with lli (Just In Time)");
-    println("  -test            runs the test with lli (Just In Time)");
+    println("  -h, -help          display this message");
+    println("  -I <dir path>      include <dir path> to search for modules");
+    println("  -o <file>          write executable to <file>");
+    println("  -lexer-dump        print the lexer dump");
+    println("  -ast-dump          print the abstract syntax tree");
+    println("  -import-dump       print the abstract syntax tree after import");
+    println("  -no-remove-unused  disable the removal of unused code");
+    println("  -res-dump          print the resolved syntax tree");
+    println("  -deps-dump         print the resolved syntax tree with dependencies");
+    println("  -cfg-dump          print the control flow graph");
+    println("  -llvm-dump         print the llvm module");
+    println("  -print-stats       print the time stats");
+    println("  -module            compile a module to .o file");
+    println("  -run               runs the program with lli (Just In Time)");
+    println("  -test              runs the test with lli (Just In Time)");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -45,8 +47,12 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.astDump = true;
             } else if (arg == "-import-dump") {
                 options.importDump = true;
+            } else if (arg == "-no-remove-unused") {
+                options.noRemoveUnused = true;
             } else if (arg == "-res-dump") {
                 options.resDump = true;
+            } else if (arg == "-deps-dump") {
+                options.depsDump = true;
             } else if (arg == "-llvm-dump") {
                 options.llvmDump = true;
             } else if (arg == "-cfg-dump") {
@@ -403,6 +409,17 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     if (resolvedTree.empty()) m_haveError = true;
 
     if (!sema.resolve_ast_body(resolvedTree)) m_haveError = true;
+    if (!m_options.noRemoveUnused) sema.remove_unused(resolvedTree, m_options.test);
+
+    if (m_options.depsDump) {
+        if (!m_haveError) {
+            for (auto &&fn : resolvedTree) {
+                fn->dump_dependencies();
+            }
+        }
+        m_haveNormalExit = true;
+        return {};
+    }
 
     if (m_options.resDump) {
         if (!m_haveError) {

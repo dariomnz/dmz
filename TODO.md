@@ -11,11 +11,11 @@
 - [x] Modules and import
 - [x] Pointers
 - [x] Change modules and import
-- [ ] Error defer
+- [x] Error defer
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits
 - [ ] Generics
-- [ ] std
-- [ ] @test
-- [ ] @benckmark
+- [-] std (in progress)
+- [x] test
+- [ ] benckmark

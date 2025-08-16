@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s --match-full-lines
+// RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s --match-full-lines
 fn pass() -> i32 {
     const x: i32 = 2;
     return x * 10;

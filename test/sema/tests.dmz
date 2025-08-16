@@ -1,4 +1,4 @@
-// RUN: compiler %s -I %S/../../std -res-dump -module 2>&1 | filecheck %s
+// RUN: compiler %s -I %S/../../std -res-dump -module -test 2>&1 | filecheck %s
 const std = import("std");
 
 fn add(x:i32, y:i32) -> i32 {

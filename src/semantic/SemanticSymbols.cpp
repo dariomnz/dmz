@@ -29,6 +29,24 @@ void ResolvedExpr::dump_constant_value(size_t level) const {
     }
 }
 
+void ResolvedDependencies::dump_dependencies(size_t level) const {
+    // dump(level, true);
+    std::cerr << indent_line(level, 0, true) << symbolName << '\n';
+    std::cerr << indent_line(level + 1, 1, false) << "Depends on " << dependsOn.size() << ": [ ";
+    for (auto &&dep : dependsOn) {
+        // dep->dump(level + 2, true);
+
+        std::cerr << dep->symbolName << ' ';
+    }
+    std::cerr << "]\n";
+    std::cerr << indent_line(level + 1, 1, false) << "Is used by " << isUsedBy.size() << ": [ ";
+    for (auto &&dep : isUsedBy) {
+        // dep->dump(level + 2, true);
+        std::cerr << dep->symbolName << ' ';
+    }
+    std::cerr << "]\n";
+}
+
 void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericTypeDecl " << identifier << '\n';
     if (specializedType) {
@@ -138,7 +156,7 @@ void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberFunctionDecl\n";
     structDecl->dump(level + 1, true);
 
-    function->dump(level + 1, onlySelf);
+    ResolvedFunctionDecl::dump(level + 1, onlySelf);
     if (onlySelf) return;
 }
 
@@ -274,6 +292,11 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
     for (auto &&spec : specializations) spec->dump(level + 1, onlySelf);
 }
 
+void ResolvedStructDecl::dump_dependencies(size_t level) const {
+    ResolvedDependencies::dump_dependencies(level);
+    for (auto &&function : functions) function->dump_dependencies(level + 1);
+}
+
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type << " " << member.identifier << '\n';
 
@@ -364,9 +387,13 @@ void ResolvedOrElseErrorExpr::dump(size_t level, bool onlySelf) const {
 
 void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedModuleDecl " << identifier << '\n';
-
-    for (auto &&decl : declarations) decl->dump(level + 1, onlySelf);
     if (onlySelf) return;
+    for (auto &&decl : declarations) decl->dump(level + 1, onlySelf);
+}
+
+void ResolvedModuleDecl::dump_dependencies(size_t level) const {
+    ResolvedDependencies::dump_dependencies(level);
+    for (auto &&decl : declarations) decl->dump_dependencies(level + 1);
 }
 
 void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {

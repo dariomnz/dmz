@@ -12,7 +12,6 @@ module std {
             return "";
         }
 
-        const std = import("std");
         fn __builtin_main_test() -> void {
             const num_test = @builtin_test_num();
             let result = 0;

@@ -86,6 +86,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
     });
 #else
 #define debug_msg(out_format)
+#define debug_msg_func(func, out_format)
 #define debug_func(out_format)
 #endif
 

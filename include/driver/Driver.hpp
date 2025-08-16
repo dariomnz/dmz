@@ -18,7 +18,9 @@ struct CompilerOptions {
     bool lexerDump = false;
     bool astDump = false;
     bool importDump = false;
+    bool noRemoveUnused = false;
     bool resDump = false;
+    bool depsDump = false;
     bool llvmDump = false;
     bool cfgDump = false;
     bool run = false;

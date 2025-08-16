@@ -1,4 +1,4 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: compiler %s -llvm-dump -no-remove-unused 2>&1 | filecheck %s
 fn foo(x: i32) -> void {
     if (x == 1 || x == 2 && x > 3) {
 

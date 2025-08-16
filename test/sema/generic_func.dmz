@@ -1,3 +1,4 @@
+// REQUIRES: generics
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
 extern fn printf(fmt:*u8, ...) -> i32;

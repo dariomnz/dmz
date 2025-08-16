@@ -50,7 +50,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         parentFunc = resolvedFuncDecl;
 
         if (auto resolvedMemberFuncDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
-            resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
+            // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
             isMemberCall = true;
         }
     } else {
@@ -509,6 +509,10 @@ std::unique_ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &
         return report(importExpr.location, "module '" + std::string(importExpr.identifier) + "' not found");
     }
 
-    return std::make_unique<ResolvedImportExpr>(importExpr.location, *(*it).second);
+    auto im = (*it).second;
+
+    add_dependency(im);
+
+    return std::make_unique<ResolvedImportExpr>(importExpr.location, *im);
 }
 }  // namespace DMZ

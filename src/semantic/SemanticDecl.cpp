@@ -46,10 +46,12 @@ std::unique_ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(c
     resolvedFunc.release();
     std::unique_ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunction);
 
-    auto ret = std::make_unique<ResolvedMemberFunctionDecl>(&structDecl, std::move(resolvedFunctionDecl));
-    resolvedFunction->parent = ret.get();
-    return ret;
+    return std::make_unique<ResolvedMemberFunctionDecl>(
+        resolvedFunctionDecl->location, resolvedFunctionDecl->identifier, nullptr, resolvedFunctionDecl->type,
+        std::move(resolvedFunctionDecl->params), std::move(resolvedFunctionDecl->genericTypes),
+        resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &structDecl);
 }
+
 std::unique_ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     debug_func(function.location);
 
@@ -333,7 +335,7 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
     for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
         auto &func = resolvedStructDecl.structDecl->functions[i];
         auto &resfunc = resolvedStructDecl.functions[i];
-        if (!resolve_func_body(*resfunc->function, *func->function->body)) return false;
+        if (!resolve_func_body(*resfunc, *func->function->body)) return false;
     }
 
     return true;
@@ -372,20 +374,22 @@ std::unique_ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(
 
 std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl, int level) {
     debug_func(moduleDecl.location);
-    ScopeRAII moduleScope(*this);
-    bool error = false;
     std::vector<std::unique_ptr<DMZ::ResolvedDecl>> declarations;
-    for (auto &&decl : moduleDecl.declarations) {
-        if (auto *md = dynamic_cast<ModuleDecl *>(decl.get())) {
-            int next_level = moduleDecl.identifier.find(".dmz") == std::string::npos ? level + 1 : level;
-            auto resolvedDecl = resolve_module(*md, next_level);
+    bool error = false;
+    {
+        ScopeRAII moduleScope(*this);
+        for (auto &&decl : moduleDecl.declarations) {
+            if (auto *md = dynamic_cast<ModuleDecl *>(decl.get())) {
+                int next_level = moduleDecl.identifier.find(".dmz") == std::string::npos ? level + 1 : level;
+                auto resolvedDecl = resolve_module(*md, next_level);
 
-            if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
-                error = true;
+                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                    error = true;
+                    continue;
+                }
+                declarations.emplace_back(std::move(resolvedDecl));
                 continue;
             }
-            declarations.emplace_back(std::move(resolvedDecl));
-            continue;
         }
     }
     if (error) return nullptr;
@@ -399,6 +403,8 @@ std::unique_ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &modul
 }
 
 bool Sema::resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl) {
+    m_actualModule = &resolvedModuleDecl;
+    // println("resolve_module_decl New actual module: "<<m_actualModule->identifier);
     auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations, std::move(resolvedModuleDecl.declarations));
     resolvedModuleDecl.declarations = std::move(resolvedDecls);
 
@@ -407,6 +413,8 @@ bool Sema::resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl 
 
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_func(moduleDecl.location);
+    m_actualModule = &moduleDecl;
+    // println("resolve_module_body New actual module: "<<m_actualModule->identifier);
     return resolve_in_module_body(moduleDecl.declarations);
 }
 
@@ -455,11 +463,10 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
                     }
                 } else {
                     resolvedDecl = resolve_module(*st, 0);
-
-                    if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
-                        error = true;
-                        continue;
-                    }
+                }
+                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                    error = true;
+                    continue;
                 }
                 map_modules.emplace(st, resolvedDecl.get());
 
@@ -571,7 +578,13 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
             }
             continue;
         }
-        if (dynamic_cast<ResolvedModuleDecl *>(currentDecl) || dynamic_cast<ResolvedTestDecl *>(currentDecl)) {
+        if (auto *md = dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
+            if (!insert_decl_to_current_scope(*md)) {
+                error = true;
+            }
+            continue;
+        }
+        if (dynamic_cast<ResolvedTestDecl *>(currentDecl)) {
             continue;
         }
         currentDecl->dump();
@@ -582,8 +595,8 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
         for (auto &&currentDeclRef : decls) {
             auto currentDecl = currentDeclRef.get();
 
-            if (auto *st = dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
-                if (!resolve_in_module_body(st->declarations)) {
+            if (auto *md = dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
+                if (!resolve_module_body(*md)) {
                     debug_msg("error resolve_in_module_body");
                     error = true;
                 }
@@ -595,9 +608,6 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
                     error = true;
                 }
                 continue;
-            }
-            if (auto *fn = dynamic_cast<ResolvedMemberFunctionDecl *>(currentDecl)) {
-                currentDecl = fn->function.get();
             }
             if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
                 if (resolve_builtin_function(*fn)) continue;
@@ -646,8 +656,9 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
     return false;
 }
 
-
 bool Sema::resolve_builtin_function(const ResolvedFunctionDecl &fnDecl) {
+    m_currentFunction = const_cast<ResolvedFunctionDecl *>(&fnDecl);
+    defer([this]() { m_currentFunction = nullptr; });
     if (fnDecl.identifier == "@builtin_test_num") {
         resolve_builtin_test_num(fnDecl);
         return true;
@@ -727,6 +738,7 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
                                                      std::vector<std::unique_ptr<ResolvedDeferRefStmt>>{});
     std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
     for (size_t i = 0; i < m_tests.size(); i++) {
+        add_dependency(m_tests[i]->testFunction.get());
         auto test_call = std::make_unique<ResolvedCallExpr>(loc, *m_tests[i]->testFunction,
                                                             std::vector<std::unique_ptr<ResolvedExpr>>{});
         auto tryExpr = std::make_unique<ResolvedTryErrorExpr>(loc, std::move(test_call),

@@ -85,9 +85,9 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             return;
         }
     }
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        return generate_function_decl(*resolvedFunctionDecl->function.get());
-    }
+    // if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
+    //     return generate_function_decl(*resolvedFunctionDecl->function.get());
+    // }
 
     llvm::Type *retType = generate_type(functionDecl.type);
     std::vector<llvm::Type *> paramTypes;
@@ -118,12 +118,12 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDecl) {
     debug_func(funcDecl.identifier);
-    const ResolvedFuncDecl *fn;
-    if (auto resFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&funcDecl)) {
-        fn = resFunctionDecl->function.get();
-    } else {
-        fn = &funcDecl;
-    }
+    const ResolvedFuncDecl *fn = &funcDecl;
+    // if (auto resFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&funcDecl)) {
+    //     fn = resFunctionDecl->function.get();
+    // } else {
+    //     fn = &funcDecl;
+    // }
     bool isReturningStruct = fn->type.kind == Type::Kind::Struct || fn->type.isOptional;
     std::vector<llvm::AttributeSet> argsAttrSets;
 
@@ -167,9 +167,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
             return;
         }
     }
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-        return generate_function_body(*resolvedFunctionDecl->function.get());
-    }
+    // if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
+    //     return generate_function_body(*resolvedFunctionDecl->function.get());
+    // }
 
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
@@ -243,6 +243,8 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     }
 
     m_builder.CreateRet(load_value(retVal, functionDecl.type));
+    
+    m_currentFunction = nullptr;
 }
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
