@@ -12,6 +12,7 @@
 // CHECK-NEXT:   -import-dump       print the abstract syntax tree after import
 // CHECK-NEXT:   -no-remove-unused  disable the removal of unused code
 // CHECK-NEXT:   -res-dump          print the resolved syntax tree
+// CHECK-NEXT:   -deps-dump         print the resolved syntax tree with dependencies
 // CHECK-NEXT:   -cfg-dump          print the control flow graph
 // CHECK-NEXT:   -llvm-dump         print the llvm module
 // CHECK-NEXT:   -print-stats       print the time stats

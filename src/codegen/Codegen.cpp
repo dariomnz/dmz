@@ -1,5 +1,6 @@
 // #define DEBUG
 #include "codegen/Codegen.hpp"
+#include "Stats.hpp"
 
 namespace DMZ {
 Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath)
@@ -13,7 +14,7 @@ Codegen::Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree,
 
 std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) {
     debug_func("");
-    ScopedTimer st(Stats::type::codegenTime);
+    ScopedTimer(StatType::Codegen);
     // TODO: rethink lock to not lock all threads
     auto lock = get_shared_context().getLock();
 

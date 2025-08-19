@@ -1,4 +1,5 @@
 #include "parser/Parser.hpp"
+#include "Stats.hpp"
 
 namespace DMZ {
 
@@ -10,7 +11,7 @@ bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_toke
 //   ::= (<structDecl> | <functionDecl>)* EOF
 std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
     debug_func("");
-    ScopedTimer st(Stats::type::parseTime);
+    ScopedTimer(StatType::Parse);
 
     auto declarations = parse_in_module_decl();
 

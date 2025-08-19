@@ -1,6 +1,8 @@
 // #define DEBUG
 #include "semantic/Semantic.hpp"
 
+#include "Stats.hpp"
+
 // #define DEBUG_SCOPES
 
 namespace DMZ {
@@ -166,7 +168,7 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
-    ScopedTimer st(Stats::type::semanticTime);
+    ScopedTimer(StatType::Semantic_Declarations);
     std::vector<std::unique_ptr<Decl>> decls;
     decls.reserve(m_ast.size());
 
@@ -187,6 +189,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
 
 bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
     debug_func("");
+    ScopedTimer(StatType::Semantic_Body);
     auto ret = resolve_in_module_body(decls);
 
     fill_depends(nullptr, decls);

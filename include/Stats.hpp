@@ -5,81 +5,107 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <unordered_map>
+
+#include "Utils.hpp"
+#include "driver/Driver.hpp"
 
 namespace DMZ {
+enum class StatType : int {
+    Parse,
+    Semantic,
+    Semantic_Declarations,
+    Semantic_Body,
+    CFG,
+    Codegen,
+    Compile,
+    Run,
+    Total,
+    size,
+};
+static std::unordered_map<StatType, std::string> StatType_to_str = {
+    {StatType::Parse, "Parse"},
+    {StatType::Semantic, "Semantic"},
+    {StatType::Semantic_Declarations, "Declarations"},
+    {StatType::Semantic_Body, "Body"},
+    {StatType::CFG, "CFG"},
+    {StatType::Codegen, "Codegen"},
+    {StatType::Compile, "Compile"},
+    {StatType::Run, "Run"},
+    {StatType::Total, "Total"},
+};
 class Stats {
    public:
-    enum type : int {
-        parseTime = 0,
-        semanticTime,
-        semanticResolveStructsTime,
-        semanticResolveFunctionsTime,
-        semanticResolveBodysTime,
-        CFGTime,
-        codegenTime,
-        compileTime,
-        runTime,
-        total,
-        size,
-    };
+    struct Stat {
+        StatType type;
+        std::vector<Stat> subStats = {};
 
-   private:
-    struct dump_value {
-        type t;
-        dump_value(type t) : t(t) {}
+        void dump(size_t level, double parentTime) const {
+            auto stats = Stats::instance();
+            double time = stats.get_time(type);
+            double percentage = time / parentTime * 100;
+            std::cerr << indent_line(level, 0, true) << std::left << std::setw(20 ) << StatType_to_str[type];
 
-        friend std::ostream& operator<<(std::ostream& os, const dump_value& val) {
-            int64_t time = Stats::instance().times[val.t];
-            int64_t total_time = Stats::instance().times[type::total];
-            double percentage = (double)time / (double)total_time * 100.0;
-            os << std::fixed << std::setprecision(2) << std::setw(6) << percentage << " % ";
-            os << std::fixed << std::setprecision(6) << std::setw(10) << (time * 0.000000001) << " s";
+            std::cerr << std::fixed << std::setprecision(2) << indent(2) << std::setw(5) << percentage << "%";
+            std::cerr << std::fixed << std::setprecision(4) << indent(2) << std::setw(10) << time << "ms";
 
-            return os;
+            std::cerr << "\n";
+            for (auto&& v : subStats) {
+                v.dump(level + 1, time);
+            }
         }
     };
+
+    std::vector<Stat> stat_map = {
+        Stat{.type = StatType::Parse},
+        Stat{.type = StatType::Semantic,
+             .subStats =
+                 {
+                     Stat{.type = StatType::Semantic_Declarations},
+                     Stat{.type = StatType::Semantic_Body},
+                 }},
+        Stat{.type = StatType::CFG},
+        Stat{.type = StatType::Codegen},
+        Stat{.type = StatType::Compile},
+        Stat{.type = StatType::Run},
+    };
+    std::array<double, static_cast<size_t>(StatType::size)> stat_array = {};
 
    public:
-    std::array<std::atomic_int64_t, static_cast<size_t>(type::size)> times;
     void dump() {
-        times[type::total] = 0;
-        for (int i = 0; i < type::total; i++) {
-            times[type::total] += times[i];
+        for (auto&& v : stat_map) {
+            v.dump(0, get_time(StatType::Total));
         }
-        std::stringstream out;
-        out << "Parse time    " << dump_value(type::parseTime) << std::endl;
-        out << "Semantic time " << dump_value(type::semanticTime) << std::endl;
-        out << "  Struct decl " << dump_value(type::semanticResolveStructsTime) << std::endl;
-        out << "  Func decl   " << dump_value(type::semanticResolveFunctionsTime) << std::endl;
-        out << "  Bodys decl  " << dump_value(type::semanticResolveBodysTime) << std::endl;
-        out << "CFG  time     " << dump_value(type::CFGTime) << std::endl;
-        out << "Codegen time  " << dump_value(type::codegenTime) << std::endl;
-        out << "Compile time  " << dump_value(type::compileTime) << std::endl;
-        out << "Run time      " << dump_value(type::runTime) << std::endl;
-        out << "Total         " << dump_value(type::total) << std::endl;
-
-        std::cerr << out.str();
     }
 
-    void add_time(type t, int64_t time) { times[t] += time; }
+    void add_time(StatType t, double time) { stat_array[static_cast<size_t>(t)] += time; }
+
+    double get_time(StatType t) { return stat_array[static_cast<size_t>(t)]; }
 
     static Stats& instance() {
         static Stats s;
         return s;
     }
 };
+#define __line2_ScopedTimer(type, line)                   \
+    std::unique_ptr<__ScopedTimer> st##line;              \
+    if (Driver::instance().m_options.printStats) {        \
+        st##line = std::make_unique<__ScopedTimer>(type); \
+    }
+#define __line1_ScopedTimer(type, line) __line2_ScopedTimer(type, line)
+#define ScopedTimer(type)               __line1_ScopedTimer(type, __LINE__)
 
-class ScopedTimer {
+class __ScopedTimer {
    private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start;
-    Stats::type type;
+    StatType type;
 
    public:
-    ScopedTimer(Stats::type t) : type(t) { start = std::chrono::high_resolution_clock::now(); }
-    ~ScopedTimer() {
+    __ScopedTimer(StatType t) : type(t) { start = std::chrono::high_resolution_clock::now(); }
+    ~__ScopedTimer() {
         auto now = std::chrono::high_resolution_clock::now();
-        auto to_add = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
-        Stats::instance().add_time(type, to_add);
+        std::chrono::duration<double, std::milli> to_add = now - start;
+        Stats::instance().add_time(type, to_add.count());
     }
 };
 }  // namespace DMZ

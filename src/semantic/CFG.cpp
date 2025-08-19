@@ -1,8 +1,9 @@
 #include "semantic/CFG.hpp"
+#include "Stats.hpp"
 
 namespace DMZ {
 CFG CFGBuilder::build(const ResolvedBlock &block) {
-    ScopedTimer st(Stats::type::CFGTime);
+    ScopedTimer(StatType::CFG);
     cfg = {};
     cfg.exit = cfg.insert_new_block();
 

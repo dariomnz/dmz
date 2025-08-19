@@ -1,6 +1,7 @@
 // #define DEBUG
 #include "driver/Driver.hpp"
 
+#include "Stats.hpp"
 namespace DMZ {
 
 std::unique_ptr<Driver> Driver::driver_instance = nullptr;
@@ -76,8 +77,9 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
     return options;
 }
 
-void Driver::check_exit() {
-    if (m_haveError || m_haveNormalExit) exit(EXIT_SUCCESS);
+bool Driver::need_exit() {
+    if (m_haveError || m_haveNormalExit) return true;
+    return false;
 }
 
 void Driver::check_sources_pass(Type_Sources &sources) {
@@ -403,6 +405,7 @@ std::unique_ptr<ModuleDecl> Driver::merge_modules(std::vector<std::unique_ptr<Mo
 
 Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     debug_func("");
+    ScopedTimer(StatType::Semantic);
     std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
     Sema sema(std::move(asts));
     resolvedTree = sema.resolve_ast_decl();
@@ -487,7 +490,7 @@ int Driver::jit_pass(Type_Module &module) {
         return 1;
     }
 
-    ScopedTimer timer(Stats::type::runTime);
+    ScopedTimer(StatType::Run);
 
     pid_t pid = fork();
 
@@ -534,7 +537,7 @@ int Driver::generate_exec_pass(Type_Module &module) {
         return 1;
     }
 
-    ScopedTimer timer(Stats::type::compileTime);
+    ScopedTimer(StatType::Compile);
 
     pid_t pid = fork();
 
@@ -593,6 +596,7 @@ int Driver::main() {
     defer([&] {
         if (m_options.printStats) Stats::instance().dump();
     });
+    ScopedTimer(StatType::Total);
 
     if (m_options.displayHelp) {
         display_help();
@@ -600,24 +604,24 @@ int Driver::main() {
     }
 
     check_sources_pass(m_options.sources);
-    check_exit();
+    if (need_exit()) return 0;
 
     auto lexers = lexer_pass(m_options.sources);
-    check_exit();
+    if (need_exit()) return 0;
     auto asts = parser_pass(lexers);
     lexers.clear();
-    check_exit();
+    if (need_exit()) return 0;
     include_pass(asts);
-    check_exit();
+    if (need_exit()) return 0;
 
     auto resolvedTrees = semantic_pass(asts);
-    check_exit();
+    if (need_exit()) return 0;
 
     auto module = codegen_pass(resolvedTrees);
-    check_exit();
+    if (need_exit()) return 0;
 
     // auto module = linker_pass(modules);
-    // check_exit();
+    // need_exit();
 
     if (m_options.run) {
         return jit_pass(module);

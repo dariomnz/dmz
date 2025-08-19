@@ -37,15 +37,15 @@ class Driver {
     std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
-    CompilerOptions m_options;
     std::unordered_map<std::string, ModuleDecl*> imported_modules;
-
-   public:
+    
+    public:
+    CompilerOptions m_options;
     Driver(CompilerOptions options) : m_options(options) {}
     int main();
     void display_help();
 
-    void check_exit();
+    bool need_exit();
 
     using Type_Sources = std::vector<std::filesystem::path>;
     using Type_Lexers = std::vector<std::unique_ptr<Lexer>>;

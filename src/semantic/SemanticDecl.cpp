@@ -1,5 +1,6 @@
 
 // #define DEBUG
+#include "Stats.hpp"
 #include "semantic/Semantic.hpp"
 
 namespace DMZ {
@@ -427,7 +428,6 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
     ScopeRAII moduleScope(*this);
     // Resolve every struct first so that functions have access to them in their signature.
     {
-        ScopedTimer st(Stats::type::semanticResolveStructsTime);
         for (auto &&decl : decls) {
             debug_msg(decl->identifier << " " << decl->location);
             if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
@@ -497,7 +497,6 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_in_module_decl(
     if (error) return {};
 
     {
-        ScopedTimer st(Stats::type::semanticResolveFunctionsTime);
         for (auto &&decl : decls) {
             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
                 if (auto resolvedDecl = resolve_function_decl(*fn);
@@ -591,7 +590,6 @@ bool Sema::resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl
         dmz_unreachable("TODO: unexpected declaration");
     }
     {
-        ScopedTimer st(Stats::type::semanticResolveBodysTime);
         for (auto &&currentDeclRef : decls) {
             auto currentDecl = currentDeclRef.get();
 

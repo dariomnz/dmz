@@ -18,6 +18,5 @@
 #include <variant>
 #include <vector>
 
-#include "Stats.hpp"
 #include "ThreadPool.hpp"
 #include "Utils.hpp"
