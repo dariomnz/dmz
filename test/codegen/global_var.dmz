@@ -20,6 +20,6 @@ fn main() -> void {
 // CHECK-NEXT:  %1 = add i32 %0, 100
 // CHECK-NEXT:  store i32 %1, ptr @num, align 4
 // CHECK-NEXT:  %2 = load i32, ptr @num, align 4
-// CHECK-NEXT:  %3 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %2, i32 100)
+// CHECK-NEXT:  %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %2, i32 100)
 // CHECK-NEXT:  ret void
 // CHECK-NEXT:}

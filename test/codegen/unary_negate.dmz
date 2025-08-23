@@ -21,7 +21,7 @@ fn timesNeg3(x: i32) -> i32 {
     // CHECK-NEXT:  %3 = sub i32 %1, %2
     // CHECK-NEXT:  %4 = sub i32 0, %3
 }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
 
 fn main() -> void {
     println(negate(234));

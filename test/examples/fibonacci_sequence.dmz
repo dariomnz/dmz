@@ -22,7 +22,7 @@
 // CHECK-NEXT: 4181
 
 // CHECK-NOT: {{.*}}
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
 fn fib(n: i32) -> i32 {
     if (n == 0 || n == 1) {
         return n;

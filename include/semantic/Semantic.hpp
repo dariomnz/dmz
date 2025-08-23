@@ -20,6 +20,7 @@ class Sema {
 
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction = nullptr;
+    ResolvedStructDecl *m_currentStruct = nullptr;
 
     class ScopeRAII {
         Sema &m_sema;
@@ -52,12 +53,12 @@ class Sema {
     bool recurse_needed(ResolvedDependencies &deps, bool buildTest);
 
    private:
-    std::pair<ResolvedDecl *, int> lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps = true);
+    ResolvedDecl *lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps = true);
     ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
                                    ResolvedDeclType type);
     ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
                                    ResolvedDeclType type);
-#define cast_lookup(id, type)                 static_cast<type *>(lookup(id, ResolvedDeclType::type).first)
+#define cast_lookup(id, type)                 static_cast<type *>(lookup(id, ResolvedDeclType::type))
 #define cast_lookup_in_module(decl, id, type) static_cast<type *>(lookup_in_module(decl, id, ResolvedDeclType::type))
 #define cast_lookup_in_struct(decl, id, type) static_cast<type *>(lookup_in_struct(decl, id, ResolvedDeclType::type))
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
@@ -96,6 +97,7 @@ class Sema {
     bool check_variable_initialization(const CFG &cfg);
     std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     std::unique_ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
+    std::unique_ptr<ResolvedSelfMemberExpr> resolve_self_member_expr(const SelfMemberExpr &memberExpr);
     std::unique_ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
     std::unique_ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);

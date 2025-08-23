@@ -49,6 +49,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *me = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
         return generate_member_expr(*me, keepPointer);
     }
+    if (auto *me = dynamic_cast<const ResolvedSelfMemberExpr *>(&expr)) {
+        return generate_self_member_expr(*me, keepPointer);
+    }
     if (auto *arrayAtExpr = dynamic_cast<const ResolvedArrayAtExpr *>(&expr)) {
         return generate_array_at_expr(*arrayAtExpr, keepPointer);
     }
@@ -97,7 +100,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     for (auto &&arg : call.arguments) {
         llvm::Value *val = generate_expr(*arg);
 
-        if (arg->type.kind == Type::Kind::Struct && !arg->type.isRef && calleeDecl.params[argIdx]->isMutable) {
+        if (arg->type.kind == Type::Kind::Struct && !arg->type.isPointer && calleeDecl.params[argIdx]->isMutable) {
             llvm::Value *tmpVar = allocate_stack_variable("struct.arg.tmp", arg->type);
             store_value(val, tmpVar, arg->type, arg->type);
             val = tmpVar;
@@ -332,7 +335,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     const ResolvedDecl &decl = dre.decl;
     llvm::Value *val = m_declarations[&decl];
 
-    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable && !decl.type.isRef;
+    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
     keepPointer |= dre.type.kind == Type::Kind::Struct;
     keepPointer |= dre.type.isArray.has_value();
 
@@ -343,7 +346,22 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
     debug_func("");
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
-        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type), base, member->index);
+        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
+        return keepPointer ? field : load_value(field, member->type);
+    } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
+        return m_declarations[errDecl];
+    } else {
+        memberExpr.member.dump();
+        dmz_unreachable("Unexpected member expresion");
+    }
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &memberExpr, bool keepPointer) {
+    debug_func("");
+    if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
+        llvm::Value *base = generate_expr(*memberExpr.base, true);
+        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
         return keepPointer ? field : load_value(field, member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];

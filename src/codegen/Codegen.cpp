@@ -1,5 +1,6 @@
 // #define DEBUG
 #include "codegen/Codegen.hpp"
+
 #include "Stats.hpp"
 
 namespace DMZ {
@@ -26,8 +27,13 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) 
 }
 
 llvm::Type *Codegen::generate_type(const Type &type) {
-    debug_func(type);
     llvm::Type *ret = nullptr;
+    debug_func(type << " " << Dumper([&ret]() {
+                   if (ret)
+                       ret->print(llvm::errs());
+                   else
+                       std::cerr << "null";
+               }));
     if (type.kind == Type::Kind::Error || type.isPointer) {
         ret = llvm::PointerType::get(*m_context, 0);
         return ret;
@@ -207,17 +213,20 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &from, const Type &to) {
     debug_func("");
-    if (from.kind == Type::Kind::Struct || from.isOptional) {
-        const llvm::DataLayout &dl = m_module->getDataLayout();
-        const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
+    if (!from.isPointer) {
+        if (from.kind == Type::Kind::Struct || from.isOptional) {
+            const llvm::DataLayout &dl = m_module->getDataLayout();
+            const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
 
-        return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
-    }
-    if (from.isArray) {
-        const llvm::DataLayout &dl = m_module->getDataLayout();
-        auto t = generate_type(from);
+            return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
+        }
+        if (from.isArray) {
+            const llvm::DataLayout &dl = m_module->getDataLayout();
+            auto t = generate_type(from);
 
-        return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t), dl.getTypeAllocSize(t));
+            return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t),
+                                          dl.getTypeAllocSize(t));
+        }
     }
 
     return m_builder.CreateStore(cast_to(val, from, to), ptr);

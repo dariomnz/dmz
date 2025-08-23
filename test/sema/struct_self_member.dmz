@@ -1,0 +1,40 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+struct Point {
+    x: i32,
+    y: i32,
+
+    fn addOne() -> void {
+        .x = .x + 1;
+        .y = .y + 1;
+    }
+// CHECK: ResolvedMemberFunctionDecl:Point
+// CHECK-NEXT:  ResolvedFunctionDecl addOne -> Void void
+// CHECK-NEXT:    ResolvedParamDecl:Struct *Point 
+// CHECK-NEXT:    ResolvedBlock
+// CHECK-NEXT:      ResolvedAssignment
+// CHECK-NEXT:        ResolvedSelfMemberExpr:Int i32 x
+// CHECK-NEXT:          ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:        ResolvedBinaryOperator:Int i32 '+'
+// CHECK-NEXT:          ResolvedSelfMemberExpr:Int i32 x
+// CHECK-NEXT:            ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:          ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:      ResolvedAssignment
+// CHECK-NEXT:        ResolvedSelfMemberExpr:Int i32 y
+// CHECK-NEXT:          ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:        ResolvedBinaryOperator:Int i32 '+'
+// CHECK-NEXT:          ResolvedSelfMemberExpr:Int i32 y
+// CHECK-NEXT:            ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:          ResolvedIntLiteral:Int i32 '1'
+}
+
+fn main() -> void {
+    let p = Point{x:1,y:1};
+    p.addOne();
+}
+
+// CHECK:       ResolvedCallExpr:Void void
+// CHECK-NEXT:         ResolvedMemberFunctionDecl:Point
+// CHECK-NEXT:           ResolvedFunctionDecl addOne -> Void void
+// CHECK-NEXT:         ResolvedRefPtrExpr:Struct *Point
+// CHECK-NEXT:           ResolvedDeclRefExpr:Struct Point p

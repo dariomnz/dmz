@@ -1,0 +1,47 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e 'Point 2 2\n')
+
+struct Point {
+    x: i32,
+    y: i32,
+
+    fn addOne() -> void {
+        .x = .x + 1;
+        .y = .y + 1;
+    }
+// CHECK: define void @Point.addOne(ptr byref(%Point) %0) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %1 = getelementptr inbounds %Point, ptr %0, i32 0, i32 0
+// CHECK-NEXT:   %2 = load i32, ptr %1, align 4
+// CHECK-NEXT:   %3 = add i32 %2, 1
+// CHECK-NEXT:   %4 = getelementptr inbounds %Point, ptr %0, i32 0, i32 0
+// CHECK-NEXT:   store i32 %3, ptr %4, align 4
+// CHECK-NEXT:   %5 = getelementptr inbounds %Point, ptr %0, i32 0, i32 1
+// CHECK-NEXT:   %6 = load i32, ptr %5, align 4
+// CHECK-NEXT:   %7 = add i32 %6, 1
+// CHECK-NEXT:   %8 = getelementptr inbounds %Point, ptr %0, i32 0, i32 1
+// CHECK-NEXT:   store i32 %7, ptr %8, align 4
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+}
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let p = Point{x:1,y:1};
+    p.addOne();
+
+    printf("Point %d %d\n", p.x, p.y);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %p = alloca %Point, align 8
+// CHECK-NEXT:   %Point.tmp = alloca %Point, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Point.tmp, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   %0 = getelementptr inbounds %Point, ptr %Point.tmp, i32 0, i32 0
+// CHECK-NEXT:   store i32 1, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds %Point, ptr %Point.tmp, i32 0, i32 1
+// CHECK-NEXT:   store i32 1, ptr %1, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %Point.tmp, i64 8, i1 false)
+// CHECK-NEXT:   call void @Point.addOne(ptr byref(%Point) %p)

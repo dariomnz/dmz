@@ -1,5 +1,5 @@
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '1\n-1\n-9\n')
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf(&"%d\n", n);}
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
 fn foo(x: i32) -> i32 {
     if (x < (0 - 5)) {
         return (0 - 1);

@@ -228,6 +228,16 @@ struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+// struct ResolvedGenericDecl : public ResolvedDecl {
+//     std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> resolvedGenericTypeDecls = {};
+//     std::vector<std::unique_ptr<ResolvedSpecializedDecl>> specializations = {};
+// };
+
+// struct ResolvedSpecializedDecl : public ResolvedDecl {
+//     GenericTypes genericTypes;  // The types used for specialization
+//     ResolvedSpecializedDecl(GenericTypes genericTypes)
+// };
+
 struct ResolvedSpecializedFunctionDecl : public ResolvedFuncDecl {
     GenericTypes genericTypes;
     std::unique_ptr<ResolvedBlock> body;
@@ -260,6 +270,7 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
           body(std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    void dump_dependencies(size_t level = 0) const override;
 };
 // Forward declaration
 struct ResolvedStructDecl;
@@ -375,6 +386,16 @@ struct ResolvedMemberExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &member;
 
     ResolvedMemberExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> base, const ResolvedDecl &member)
+        : ResolvedAssignableExpr(location, member.type), base(std::move(base)), member(member) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedSelfMemberExpr : public ResolvedAssignableExpr {
+    std::unique_ptr<ResolvedExpr> base;
+    const ResolvedDecl &member;
+
+    ResolvedSelfMemberExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> base, const ResolvedDecl &member)
         : ResolvedAssignableExpr(location, member.type), base(std::move(base)), member(member) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;

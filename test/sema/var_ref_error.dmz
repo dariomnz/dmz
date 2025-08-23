@@ -1,12 +1,12 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
-fn foo(x: &i32) -> void {
-    x = 20;
+fn foo(x: *i32) -> void {
+    *x = 20;
 }
 
 fn main() -> void {
     let i = 10;
-    // CHECK: [[# @LINE + 1 ]]:9: error: expected to reference the value with '&'
+    // CHECK: [[# @LINE + 1 ]]:9: error: unexpected type of argument 'i32' expected '*i32'
     foo(i);
 }
 

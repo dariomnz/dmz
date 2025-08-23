@@ -14,7 +14,6 @@ std::string Type::to_str() const {
 
 std::ostream &operator<<(std::ostream &os, const Type &t) {
     os << Type::KindString(t.kind) << " ";
-    if (t.isRef) os << "&";
     if (t.isPointer)
         for (int i = 0; i < *t.isPointer; i++) os << "*";
     os << t.name;
@@ -74,7 +73,7 @@ std::ostream &operator<<(std::ostream &os, const GenericTypes &t) {
     if (t.types.size() == 0) return os;
     os << "<";
     for (size_t i = 0; i < t.types.size(); i++) {
-        os << *t.types[i];
+        os << (*t.types[i]).to_str();
         if (i != t.types.size() - 1) os << ", ";
     }
     os << ">";
@@ -277,6 +276,10 @@ void MemberExpr::dump(size_t level) const {
     std::cerr << indent(level) << "MemberExpr ." << field << '\n';
 
     base->dump(level + 1);
+}
+
+void SelfMemberExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "SelfMemberExpr ." << field << '\n';
 }
 
 void ArrayAtExpr::dump(size_t level) const {

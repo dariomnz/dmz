@@ -1,4 +1,3 @@
-// REQUIRES: generics
 // RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(compiler %s -run 2>&1) <(echo -n -e 'One integer 1\nOne integer 2\nIntegers 123 1234 12345\n')
 
@@ -10,13 +9,13 @@ fn print<T>(param:T) -> void {
 
 // CHECK: define void @"print<i32>"(i32 %param) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %param)
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %param)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
 // CHECK: define void @"print<i64>"(i64 %param) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str.1, i64 %param)
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %param)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -26,7 +25,7 @@ fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
 
 // CHECK: define void @"foo<i16, i32, i64>"(i16 %param1, i32 %param2, i64 %param3) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str.2, i16 %param1, i32 %param2, i64 %param3)
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i16 %param1, i32 %param2, i64 %param3)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

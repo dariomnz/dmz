@@ -4,33 +4,36 @@
 namespace DMZ {
 
 std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
-    debug_func("");
+    std::string name;
+    debug_func(Dumper([&name]() { std::cerr << name; }));
     if (dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
         if (decl.identifier == "main") {
-            return "__builtin_main";
+            name = "__builtin_main";
+            return name;
         }
         if (decl.identifier == "__builtin_main_test") {
-            return decl.identifier;
+            name = decl.identifier;
+            return name;
         }
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(&decl)) {
-            return std::string(decl.identifier);
+            name = std::string(decl.identifier);
+            return name;
         }
     }
-    std::string name;
     if (!decl.symbolName.empty()) {
         name = decl.symbolName;
     } else {
         name = std::string(decl.identifier);
     }
 
-    if (auto structDecl = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
-        if (structDecl->type.genericTypes) {
-            std::stringstream out;
-            out << name << *structDecl->type.genericTypes;
-            name = out.str();
-        }
-    }
-    debug_msg(name);
+    // if (auto structDecl = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
+    //     if (structDecl->type.genericTypes) {
+    //         std::stringstream out;
+    //         out << name << *structDecl->type.genericTypes;
+    //         name = out.str();
+    //     }
+    // }
+    // debug_msg(name);
     // println(decl.symbolName << " " << name);
     // decl.dump();
     return name;
@@ -104,7 +107,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             continue;
         }
         llvm::Type *paramType = generate_type(param->type);
-        if (param->type.kind == Type::Kind::Struct || param->type.isRef) {
+        if (param->type.kind == Type::Kind::Struct) {
             paramType = llvm::PointerType::get(paramType, 0);
         }
         paramTypes.emplace_back(paramType);
@@ -119,11 +122,6 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDecl) {
     debug_func(funcDecl.identifier);
     const ResolvedFuncDecl *fn = &funcDecl;
-    // if (auto resFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&funcDecl)) {
-    //     fn = resFunctionDecl->function.get();
-    // } else {
-    //     fn = &funcDecl;
-    // }
     bool isReturningStruct = fn->type.kind == Type::Kind::Struct || fn->type.isOptional;
     std::vector<llvm::AttributeSet> argsAttrSets;
 
@@ -136,19 +134,13 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
     for ([[maybe_unused]] auto &&param : fn->params) {
         debug_msg("Param: " << param->type);
         llvm::AttrBuilder paramAttrs(*m_context);
-        if (param->type.kind == Type::Kind::Struct) {
-            if (param->type.isRef) {
-                paramAttrs.addByRefAttr(generate_type(param->type));
+        if (param->type.isPointer) {
+            paramAttrs.addByRefAttr(generate_type(param->type.remove_pointer()));
+        } else if (param->type.kind == Type::Kind::Struct) {
+            if (param->isMutable) {
+                paramAttrs.addByValAttr(generate_type(param->type));
             } else {
-                if (param->isMutable) {
-                    paramAttrs.addByValAttr(generate_type(param->type));
-                } else {
-                    paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
-                }
-            }
-        } else {
-            if (param->type.isRef) {
-                paramAttrs.addByRefAttr(generate_type(param->type));
+                paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
             }
         }
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, paramAttrs));
@@ -174,6 +166,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
+    if (!function) dmz_unreachable("internal error no function '" + funcName + "'");
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);
     m_builder.SetInsertPoint(entryBB);
@@ -202,7 +195,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (paramDecl->type.kind != Type::Kind::Struct && !paramDecl->type.isRef && paramDecl->isMutable) {
+        if (paramDecl->type.kind != Type::Kind::Struct && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, paramDecl->type);
             store_value(&arg, declVal, paramDecl->type, paramDecl->type);
         }
@@ -243,7 +236,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     }
 
     m_builder.CreateRet(load_value(retVal, functionDecl.type));
-    
+
     m_currentFunction = nullptr;
 }
 
@@ -381,7 +374,5 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     m_declarations[stmt.varDecl.get()] = globalVar;
 }
 
-void Codegen::generate_test_decl(const ResolvedTestDecl &testDecl) {
-    generate_function_decl(*testDecl.testFunction);
-}
+void Codegen::generate_test_decl(const ResolvedTestDecl &testDecl) { generate_function_decl(*testDecl.testFunction); }
 }  // namespace DMZ

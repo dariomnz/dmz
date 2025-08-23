@@ -47,6 +47,10 @@ std::unique_ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(c
     resolvedFunc.release();
     std::unique_ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunction);
 
+    SourceLocation loc{.file_name = "self param"};
+    auto selfParam = std::make_unique<ResolvedParamDecl>(loc, "", structDecl.type.pointer(), true);
+    resolvedFunctionDecl->params.insert(resolvedFunctionDecl->params.begin(), std::move(selfParam));
+
     return std::make_unique<ResolvedMemberFunctionDecl>(
         resolvedFunctionDecl->location, resolvedFunctionDecl->identifier, nullptr, resolvedFunctionDecl->type,
         std::move(resolvedFunctionDecl->params), std::move(resolvedFunctionDecl->genericTypes),
@@ -117,7 +121,10 @@ ResolvedFuncDecl *Sema::specialize_generic_function(const ResolvedFuncDecl &pare
     std::unique_lock lock(specialize_func_mutex);
     // Search if is specified
     for (auto &&func : funcDecl.specializations) {
-        if (genericTypes == func->genericTypes) return func.get();
+        if (genericTypes == func->genericTypes) {
+            add_dependency(func.get());
+            return func.get();
+        }
     }
 
     // If not found specialize the function
@@ -159,24 +166,32 @@ ResolvedFuncDecl *Sema::specialize_generic_function(const ResolvedFuncDecl &pare
 
     auto &retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc));
 
+    bool error = false;
     auto prevFunc = m_currentFunction;
     m_currentFunction = retFunc.get();
     auto body = funcDecl.functionDecl->body.get();
     if (auto resolvedBody = resolve_block(*body)) {
         retFunc->body = std::move(resolvedBody);
-        if (run_flow_sensitive_checks(*retFunc)) return nullptr;
+        if (run_flow_sensitive_checks(*retFunc)) error = true;
+    } else {
+        error = true;
     }
     m_currentFunction = prevFunc;
+    if (error) return nullptr;
+    add_dependency(retFunc.get());
     return retFunc.get();
 }
 
 ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl, const GenericTypes &genericTypes) {
     debug_func(struDecl.location);
-    static std::mutex specialize_stru_mutex;
-    std::unique_lock lock(specialize_stru_mutex);
+    // static std::mutex specialize_stru_mutex;
+    // std::unique_lock lock(specialize_stru_mutex);
     // Search if is specified
     for (auto &&stru : struDecl.specializations) {
-        if (genericTypes == stru->specGenericTypes) return stru.get();
+        if (genericTypes == stru->specGenericTypes) {
+            add_dependency(stru.get());
+            return stru.get();
+        }
     }
 
     // If not found specialize the function
@@ -193,6 +208,9 @@ ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl
         std::make_unique<ResolvedStructDecl>(struDecl.location, struDecl.identifier, struDecl.structDecl, nullptr,
                                              std::move(resolvedFields), std::move(resolvedFunctions));
 
+    m_currentStruct = resolvedStruct.get();
+    defer([&]() { m_currentStruct = nullptr; });
+
     unsigned idx = 0;
     for (auto &&field : struDecl.fields) {
         auto type = resolve_type(field->type);
@@ -202,11 +220,12 @@ ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl
     }
 
     for (auto &&function : struDecl.functions) {
-        dmz_unreachable("TODO");
-        (void)function;
-        // varOrReturn(func, resolve_function_decl(*function));
-        // auto memberFunc = std::make_unique<ResolvedMemberFunctionDecl>(resolvedStruct, std::move(func));
-        // resolvedFunctions.emplace_back(std::move(memberFunc));
+        varOrReturn(func, resolve_function_decl(*function->functionDecl));
+        auto f = dynamic_cast<ResolvedFunctionDecl *>(func.get());
+        auto memberFunc = std::make_unique<ResolvedMemberFunctionDecl>(
+            f->location, f->identifier, nullptr, f->type, std::move(f->params), std::move(f->genericTypes),
+            f->functionDecl, std::move(f->body), resolvedStruct.get());
+        resolvedFunctions.emplace_back(std::move(memberFunc));
     }
 
     resolvedStruct->fields = std::move(resolvedFields);
@@ -217,6 +236,7 @@ ResolvedStructDecl *Sema::specialize_generic_struct(ResolvedStructDecl &struDecl
     auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
     retStruct->type.genericTypes = genericTypes;
     retStruct->specGenericTypes = genericTypes;
+    add_dependency(retStruct.get());
     return retStruct.get();
 }
 
@@ -245,7 +265,8 @@ std::unique_ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) 
             resolvedInitializer->type.isArray = 0;
         }
         if (!Type::compare(*type, resolvedInitializer->type))
-            return report(resolvedInitializer->location, "initializer type mismatch");
+            return report(resolvedInitializer->location, "initializer type mismatch '" + (*type).to_str() + "' <- '" +
+                                                             resolvedInitializer->type.to_str() + "'");
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
     }
@@ -293,6 +314,10 @@ std::unique_ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &
 bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
     debug_func(resolvedStructDecl.location);
     if (resolvedStructDecl.genericTypes) return true;
+
+    m_currentStruct = &resolvedStructDecl;
+    defer([&]() { m_currentStruct = nullptr; });
+
     std::stack<std::pair<ResolvedStructDecl *, std::set<const ResolvedStructDecl *>>> worklist;
     worklist.push({&resolvedStructDecl, {}});
 
@@ -319,8 +344,7 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             }
 
             if (type->kind == Type::Kind::Struct) {
-                auto *nestedStruct =
-                    static_cast<ResolvedStructDecl *>(lookup(type->name, ResolvedDeclType::ResolvedStructDecl).first);
+                auto *nestedStruct = cast_lookup(type->name, ResolvedStructDecl);
                 if (!nestedStruct) {
                     report(field->location, "unexpected type");
                     return false;
@@ -344,6 +368,17 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
 
 bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     debug_func("");
+
+    m_currentStruct = &resolvedStructDecl;
+    defer([&]() { m_currentStruct = nullptr; });
+
+    ScopeRAII structScope(*this);
+    if (resolvedStructDecl.genericTypes) {
+        for (auto &&gen : resolvedStructDecl.genericTypes->types) {
+            if (!insert_decl_to_current_scope(*gen)) return false;
+        }
+    }
+
     std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
     for (auto &&function : resolvedStructDecl.structDecl->functions) {
         auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
@@ -352,8 +387,6 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     }
 
     resolvedStructDecl.functions = std::move(resolvedFunctions);
-
-    // resolvedStructDecl.dump();
 
     return true;
 }
@@ -642,7 +675,7 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
     debug_func("");
     ScopeRAII paramScope(*this);
     for (auto &&param : function.params) insert_decl_to_current_scope(*param);
-
+    auto prevFunc = m_currentFunction;
     m_currentFunction = &function;
     if (auto resolvedBody = resolve_block(body)) {
         function.body = std::move(resolvedBody);
@@ -650,6 +683,7 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
         debug_msg("true");
         return true;
     }
+    m_currentFunction = prevFunc;
     debug_msg("false");
     return false;
 }

@@ -1,4 +1,3 @@
-// REQUIRES: generics
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
 extern fn printf(fmt:*u8, ...) -> i32;
@@ -10,14 +9,14 @@ fn print<T>(param:T) -> void! {
 // CHECK-NEXT:   ResolvedGenericTypesDecl
 // CHECK-NEXT:     ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedParamDecl:Generic T param
-// CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<Int i32> -> Void void!
+// CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i32> -> Void void!
 // CHECK-NEXT:     ResolvedParamDecl:Int i32 param
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> Int i32
 // CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Pointer of type %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 param
-// CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<Int i64> -> Void void!
+// CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i64> -> Void void!
 // CHECK-NEXT:     ResolvedParamDecl:Int i64 param
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
@@ -33,10 +32,10 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> Void void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:Void void!
-// CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<Int i32> -> Void void!
+// CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<i32> -> Void void!
 // CHECK-NEXT:       ResolvedIntLiteral:Int i32 '123'
 // CHECK-NEXT:       | value: 123
 // CHECK-NEXT:     ResolvedCallExpr:Void void!
-// CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<Int i64> -> Void void!
+// CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<i64> -> Void void!
 // CHECK-NEXT:       ResolvedIntLiteral:Int i32 '123'
 // CHECK-NEXT:       | value: 123

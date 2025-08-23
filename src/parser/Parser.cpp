@@ -34,13 +34,8 @@ std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expe
 std::unique_ptr<Type> Parser::parse_type() {
     debug_func("");
     int isArray = -1;
-    bool isRef = false;
     std::optional<int> isPointer = std::nullopt;
-
-    if (m_nextToken.type == TokenType::amp) {
-        isRef = true;
-        eat_next_token();  // eat '&'
-    }
+    SourceLocation loc = m_nextToken.loc;
 
     while (m_nextToken.type == TokenType::asterisk) {
         isPointer = isPointer.has_value() ? *isPointer + 1 : 1;
@@ -104,13 +99,13 @@ std::unique_ptr<Type> Parser::parse_type() {
 
     if (genericTypes) t.genericTypes = std::move(*genericTypes);
     if (isArray != -1) t.isArray = isArray;
-    t.isRef = isRef;
     t.isPointer = isPointer;
 
     if (m_nextToken.type == TokenType::op_excla_mark) {
         t.isOptional = true;
         eat_next_token();  // eat '!'
     }
+    t.location = loc;
     return std::make_unique<Type>(std::move(t));
 }
 

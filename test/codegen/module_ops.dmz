@@ -10,12 +10,12 @@ module ops {
     // CHECK-NEXT: }
 
     extern fn printf(fmt:*u8, ...) -> i32;
-    // CHECK: declare i32 @printf(ptr %0, ...)
+    // CHECK: declare i32 @printf(ptr byref(i8) %0, ...)
 
-    fn println(n:i32) -> void {printf(&"%d\n", n);}
+    fn println(n:i32) -> void {printf("%d\n", n);}
     // CHECK: define void @ops.println(i32 %n) {
     // CHECK-NEXT: entry:
-    // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %n)
+    // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %n)
     // CHECK-NEXT:   ret void
     // CHECK-NEXT: }
 

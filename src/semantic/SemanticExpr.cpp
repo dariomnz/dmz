@@ -15,7 +15,7 @@ bool op_generate_bool(TokenType op) {
 std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee) {
     debug_func(declRefExpr.location);
     // Search in the module scope
-    ResolvedDecl *decl = lookup(declRefExpr.identifier, ResolvedDeclType::ResolvedDecl).first;
+    ResolvedDecl *decl = lookup(declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
     if (!decl) {
         // dump_scopes();
         return report(declRefExpr.location, "symbol '" + std::string(declRefExpr.identifier) + "' not found");
@@ -40,10 +40,19 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     debug_func(call.location);
     const ResolvedFuncDecl *parentFunc = nullptr;
     const ResolvedFuncDecl *resolvedFuncDecl = nullptr;
-    std::unique_ptr<DMZ::ResolvedMemberExpr> resolvedMemberExpr = nullptr;
     bool isMemberCall = false;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
-        resolvedMemberExpr = resolve_member_expr(*memberExpr);
+        auto resolvedMemberExpr = resolve_member_expr(*memberExpr);
+        if (!resolvedMemberExpr) return nullptr;
+
+        resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
+        parentFunc = resolvedFuncDecl;
+        if (auto resolvedMemberFuncDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
+            // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
+            isMemberCall = true;
+        }
+    } else if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(call.callee.get())) {
+        auto resolvedMemberExpr = resolve_self_member_expr(*memberExpr);
         if (!resolvedMemberExpr) return nullptr;
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
@@ -85,7 +94,9 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (!isVararg || (isVararg && call_args_num < funcDeclArgs)) {
             resolvedFuncDecl->dump();
             // println("call_args_num " << call_args_num << " func_args_num " << func_args_num);
-            return report(call.location, "argument count mismatch in function call");
+            return report(call.location, "argument count mismatch in function call, expected " +
+                                             std::to_string(func_args_num) + " actual " +
+                                             std::to_string(call_args_num));
         }
     }
 
@@ -96,8 +107,6 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (resolvedBase->type.kind == Type::Kind::Struct) {
             auto resolvedRefPtrExpr =
                 std::make_unique<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
-            resolvedRefPtrExpr->type = resolvedRefPtrExpr->type.remove_pointer();
-            resolvedRefPtrExpr->type.isRef = true;
             resolvedArguments.emplace_back(std::move(resolvedRefPtrExpr));
         }
     }
@@ -109,21 +118,21 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         // Only check until vararg
         if (idx < funcDeclArgs) {
             // Modifi ptr to reference
-            if (resolvedFuncDecl->params[idx]->type.isRef && resolvedArg->type.isPointer) {
-                resolvedArg->type = resolvedArg->type.remove_pointer();
-                resolvedArg->type.isRef = true;
-            }
+            // if (resolvedFuncDecl->params[idx]->type.isRef && resolvedArg->type.isPointer) {
+            //     resolvedArg->type = resolvedArg->type.remove_pointer();
+            //     resolvedArg->type.isRef = true;
+            // }
 
             if (!Type::compare(resolvedFuncDecl->params[idx]->type, resolvedArg->type)) {
                 return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type.to_str() +
                                                          "' expected '" + resolvedFuncDecl->params[idx]->type.to_str() +
                                                          "'");
             }
-            if (resolvedFuncDecl->params[idx]->type.isRef) {
-                if (!dynamic_cast<const ResolvedRefPtrExpr *>(resolvedArg.get())) {
-                    return report(resolvedArg->location, "expected to reference the value with '&'");
-                }
-            }
+            // if (resolvedFuncDecl->params[idx]->type.isRef) {
+            //     if (!dynamic_cast<const ResolvedRefPtrExpr *>(resolvedArg.get())) {
+            //         return report(resolvedArg->location, "expected to reference the value with '&'");
+            //     }
+            // }
         }
         resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
 
@@ -213,7 +222,8 @@ std::unique_ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryO
     debug_func(unary.location);
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    if (resolvedRHS->type.kind == Type::Kind::Void || !Type::compare(Type::builtinBool(), resolvedRHS->type))
+    if (resolvedRHS->type.kind == Type::Kind::Void ||
+        (unary.op == TokenType::op_excla_mark && !Type::compare(Type::builtinBool(), resolvedRHS->type)))
         return report(resolvedRHS->location, '\'' + std::string(resolvedRHS->type.name) +
                                                  "' cannot be used as an operand to unary operator '" +
                                                  std::string(get_op_str(unary.op)) + "'");
@@ -280,6 +290,9 @@ std::unique_ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const Assi
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
         return resolve_member_expr(*memberExpr);
 
+    if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(&assignableExpr))
+        return resolve_self_member_expr(*memberExpr);
+
     if (const auto *arrayAtExpr = dynamic_cast<const ArrayAtExpr *>(&assignableExpr))
         return resolve_array_at_expr(*arrayAtExpr);
 
@@ -300,14 +313,19 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     // println("Type " << resolvedBase->type.decl << " type");
     // println("Type " << resolvedBase->type.decl->location << " type");
     if (resolvedBase->type.kind == Type::Kind::Struct) {
-        const auto *st = cast_lookup(resolvedBase->type.name, ResolvedStructDecl);
-
-        if (!st) return report(memberExpr.location, "failed to lookup struct");
-
-        if (resolvedBase->type.genericTypes) {
-            st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st), *resolvedBase->type.genericTypes);
-            if (!st) return report(memberExpr.location, "failed to specialize generic struct");
+        const DMZ::ResolvedStructDecl *st = nullptr;
+        if (!resolvedBase->type.decl) {
+            st = cast_lookup(resolvedBase->type.name, ResolvedStructDecl);
+        } else {
+            st = dynamic_cast<ResolvedStructDecl *>(resolvedBase->type.decl);
         }
+
+        if (!st) return report(memberExpr.location, "failed to lookup struct " + resolvedBase->type.name);
+
+        // if (resolvedBase->type.genericTypes) {
+        //     st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st), *resolvedBase->type.genericTypes);
+        //     if (!st) return report(memberExpr.location, "failed to specialize generic struct");
+        // }
 
         decl = cast_lookup_in_struct(*st, memberExpr.field, ResolvedDecl);
         if (!decl)
@@ -348,6 +366,22 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
     return std::make_unique<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
 }
 
+std::unique_ptr<ResolvedSelfMemberExpr> Sema::resolve_self_member_expr(const SelfMemberExpr &memberExpr) {
+    if (!m_currentStruct) return report(memberExpr.location, "unexpected use of self member outside a struct");
+    auto decl = cast_lookup_in_struct(*m_currentStruct, memberExpr.field, ResolvedDecl);
+    if (!decl)
+        return report(memberExpr.location, "struct \'" + m_currentStruct->type.to_str() +
+                                               "' has no self member called '" + std::string(memberExpr.field) + '\'');
+    if (!m_currentFunction) return report(memberExpr.location, "internal error resolve_self_member_expr");
+
+    if (m_currentFunction->params.size() == 0)
+        return report(memberExpr.location, "internal error resolve_self_member_expr params");
+    auto &param = m_currentFunction->params[0];
+    auto baseRef = std::make_unique<ResolvedDeclRefExpr>(param->location, *param, param->type);
+
+    return std::make_unique<ResolvedSelfMemberExpr>(memberExpr.location, std::move(baseRef), *decl);
+}
+
 std::unique_ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
     debug_func(arrayAtExpr.location);
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
@@ -366,13 +400,15 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
     const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
     // TODO: fix
-    const auto *st = static_cast<const ResolvedStructDecl *>(
-        lookup(structInstantiation.structType.name, ResolvedDeclType::ResolvedStructDecl).first);
+    const auto *st = cast_lookup(structInstantiation.structType.name, ResolvedStructDecl);
     if (!st)
         return report(structInstantiation.location,
-                      "'" + std::string(structInstantiation.structType.name) + "' is not a struct type");
+                      "'" + structInstantiation.structType.name + "' is not a struct type");
 
     if (st->genericTypes) {
+        if (!structInstantiation.structType.genericTypes)
+            return report(structInstantiation.location,
+                          "'" + st->identifier + "' is a generic and need specialization");
         st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st),
                                        *structInstantiation.structType.genericTypes);
         if (!st) return nullptr;

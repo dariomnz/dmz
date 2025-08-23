@@ -7,8 +7,8 @@ struct Color {
     g: i32,
     b: i32,
     
-    fn print(self:&Color) -> i32 {
-        return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
+    fn print() -> i32 {
+        return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
 }
 // CHECK: StructDecl Color
@@ -17,18 +17,14 @@ struct Color {
 // CHECK-NEXT:   FieldDecl:Int i32 b
 // CHECK-NEXT:   MemberFunctionDecl:Color
 // CHECK-NEXT:     FunctionDecl print -> Int i32
-// CHECK-NEXT:       ParamDecl:Custom &Color self
 // CHECK-NEXT:       Block
 // CHECK-NEXT:         ReturnStmt
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf
 // CHECK-NEXT:             StringLiteral '"Color{%d, %d, %d}\n"'
-// CHECK-NEXT:             MemberExpr .r
-// CHECK-NEXT:               DeclRefExpr self
-// CHECK-NEXT:             MemberExpr .g
-// CHECK-NEXT:               DeclRefExpr self
-// CHECK-NEXT:             MemberExpr .b
-// CHECK-NEXT:               DeclRefExpr self
+// CHECK-NEXT:             SelfMemberExpr .r
+// CHECK-NEXT:             SelfMemberExpr .g
+// CHECK-NEXT:             SelfMemberExpr .b
 
 fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};

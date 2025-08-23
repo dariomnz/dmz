@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DMZPCH.hpp"
+#include "Debug.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -81,10 +82,10 @@ struct Type {
     int size = 0;
     std::optional<int> isArray = std::nullopt;
     std::optional<int> isPointer = std::nullopt;
-    bool isRef = false;
     bool isOptional = false;
     std::optional<GenericTypes> genericTypes = std::nullopt;
     ResolvedDecl* decl;  // For user defined types
+    SourceLocation location;
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinBool() { return {Kind::Int, "i1", 1}; }
@@ -132,8 +133,8 @@ struct Type {
     static Type builtinError(const std::string_view& name) { return {Kind::Error, std::string(name)}; }
 
     bool operator==(const Type& otro) const {
-        return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isRef == otro.isRef &&
-                isOptional == otro.isOptional);
+        return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isOptional == otro.isOptional &&
+                isPointer == otro.isPointer);
     }
 
     static bool can_convert(const Type& to, const Type& from) {
@@ -146,33 +147,53 @@ struct Type {
         canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::UInt;
         return canConvert;
     }
-
     static bool compare(const Type& lhs, const Type& rhs) {
-        // std::cout << "Types: '" << lhs << "' '" << rhs << "'" <<std::endl;
+        bool equal = false;
+
+#ifdef DEBUG
+        println("Types: '" << lhs << "' '" << rhs << "'");
+        defer([&equal]() { println(equal ? "true" : "false"); });
+#endif
         bool equalArray = false;
         bool equalOptional = false;
-        if (can_convert(lhs, rhs) || lhs == rhs) {
+        bool equalPointer = false;
+        if (lhs == rhs) {
+            equal = true;
             return true;
         }
 
-        if (lhs.isOptional && rhs.kind == Kind::Error) return true;
-        if (rhs.isOptional && lhs.kind == Kind::Error) return true;
+        if (lhs.isOptional && rhs.kind == Kind::Error) {
+            equal = true;
+            return equal;
+        }
+        if (rhs.isOptional && lhs.kind == Kind::Error) {
+            equal = true;
+            return equal;
+        }
 
         equalArray |= (lhs.isArray && *lhs.isArray == 0);
         equalArray |= (rhs.isArray && *rhs.isArray == 0);
         equalArray |= (lhs.isArray == rhs.isArray);
-        equalArray |= (lhs.isRef && rhs.isRef);
 
         equalOptional |= lhs.isOptional == rhs.isOptional;
         equalOptional |= lhs.isOptional == true && rhs.isOptional == false;
 
-        bool equal = equalArray && equalOptional;
+        equalPointer |= lhs.isPointer == rhs.isPointer;
+
+        equal = equalArray && equalOptional && equalPointer;
         equal &= lhs.kind == rhs.kind;
         if ((lhs.kind == Type::Kind::Struct || lhs.kind == Type::Kind::Custom) &&
             (rhs.kind == Type::Kind::Struct || rhs.kind == Type::Kind::Custom)) {
             equal &= lhs.name == rhs.name;
         }
 
+        if (equal) {
+            if (can_convert(lhs, rhs) || lhs == rhs) {
+                equal = true;
+            } else {
+                equal = false;
+            }
+        }
         return equal;
     }
 
@@ -181,11 +202,6 @@ struct Type {
     Type withoutOptional() const {
         Type t = *this;
         t.isOptional = false;
-        return t;
-    }
-    Type withoutRef() const {
-        Type t = *this;
-        t.isRef = false;
         return t;
     }
     Type withoutArray() const {
@@ -429,6 +445,15 @@ struct MemberExpr : public AssignableExpr {
 
     MemberExpr(SourceLocation location, std::unique_ptr<Expr> base, std::string_view field)
         : AssignableExpr(location), base(std::move(base)), field(std::move(field)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct SelfMemberExpr : public AssignableExpr {
+    std::string field;
+
+    SelfMemberExpr(SourceLocation location, std::string_view field)
+        : AssignableExpr(location), field(std::move(field)) {}
 
     void dump(size_t level = 0) const override;
 };

@@ -20,7 +20,7 @@ fn main() -> void {
 
 // CHECK: FunctionDecl main -> Void void
 // CHECK-NEXT:   Block
-// CHECK-NEXT:     CallExpr<Int i32>
+// CHECK-NEXT:     CallExpr<i32>
 // CHECK-NEXT:       DeclRefExpr print
 // CHECK-NEXT:       IntLiteral '123'
 // CHECK-NEXT:     CallExpr

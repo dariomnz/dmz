@@ -19,18 +19,7 @@ namespace DMZ {
 
 #define dmz_unreachable(msg) ::DMZ::__internal_unreachable(msg, __FILE__, __LINE__)
 
-[[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(const char* msg, const char* source, int line) {
-    void* callstack[128];
-    int frames = backtrace(callstack, 128);
-
-    char** symbols = backtrace_symbols(callstack, frames);
-
-    std::cout << "--- Stack Trace ---" << std::endl;
-    for (int i = 0; i < frames; ++i) {
-        std::cout << symbols[i] << std::endl;
-    }
-    free(symbols);
-
+[[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(std::string msg, const char* source, int line) {
     std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
     std::abort();
 }
@@ -92,6 +81,20 @@ struct indent_line {
         for (size_t j = 0; j < di.extra_level; j++) {
             os << "  ";
         }
+        return os;
+    }
+};
+
+class Dumper {
+   public:
+    Dumper(std::function<void()> action) : m_action(action) {}
+
+   private:
+    std::function<void()> m_action;
+
+   public:
+    friend std::ostream& operator<<(std::ostream& os, const Dumper& dumper) {
+        if (dumper.m_action) dumper.m_action();
         return os;
     }
 };

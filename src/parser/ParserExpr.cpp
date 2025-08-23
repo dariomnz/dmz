@@ -91,6 +91,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (m_nextToken.type == TokenType::kw_error) {
         return parse_error_group_expr_decl();
     }
+    if (m_nextToken.type == TokenType::dot) {
+        return parse_self_member_expr();
+    }
 
     return report(location, "expected expression");
 }
@@ -150,15 +153,14 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
             eat_next_token();  // eat identifier
         }
     }
-    
-    
+
     if (m_nextToken.type == TokenType::kw_orelse) {
         eat_next_token();  // eat orelse
         varOrReturn(orelse, parse_expr());
 
         expr = std::make_unique<OrElseErrorExpr>(expr->location, std::move(expr), std::move(orelse));
     }
-    
+
     return expr;
 }
 
@@ -299,5 +301,17 @@ std::unique_ptr<ImportExpr> Parser::parse_import_expr() {
 
     Driver::register_import(identifier);
     return std::make_unique<ImportExpr>(location, identifier);
+}
+
+std::unique_ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
+    debug_func("");
+    auto loc = m_nextToken.loc;
+    matchOrReturn(TokenType::dot, "expected '.'");
+    eat_next_token();  // eat .
+
+    auto identifier = m_nextToken.str;
+    eat_next_token();  // eat id
+
+    return std::make_unique<SelfMemberExpr>(loc, identifier);
 }
 }  // namespace DMZ

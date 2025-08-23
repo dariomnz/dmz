@@ -1,0 +1,29 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+struct Point {
+    x: i32,
+    y: i32,
+
+    fn addOne() -> void {
+        .x = .x + 1;
+        .y = .y + 1;
+    }
+// CHECK: MemberFunctionDecl:Point
+// CHECK-NEXT:   FunctionDecl addOne -> Void void
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       Assignment
+// CHECK-NEXT:         SelfMemberExpr .x
+// CHECK-NEXT:         BinaryOperator '+'
+// CHECK-NEXT:           SelfMemberExpr .x
+// CHECK-NEXT:           IntLiteral '1'
+// CHECK-NEXT:       Assignment
+// CHECK-NEXT:         SelfMemberExpr .y
+// CHECK-NEXT:         BinaryOperator '+'
+// CHECK-NEXT:           SelfMemberExpr .y
+// CHECK-NEXT:           IntLiteral '1'
+}
+
+fn main() -> void {
+    let p = Point{x:1,y:1};
+    p.addOne();
+}

@@ -87,27 +87,27 @@ fn voiderr(n:i32) -> void! {
 fn main() -> void {
     let result = foo(10);
     let result2 = bar(2);
-    dprintf(1, &"%d\n", try result);
+    dprintf(1, "%d\n", try result);
     catch result_e = result2;
-    dprintf(1, &"%s\n", result_e);
+    dprintf(1, "%s\n", result_e);
 
     if (catch err = result){
-        dprintf(1, &"%s\n", err);
+        dprintf(1, "%s\n", err);
     } else {
-        dprintf(1, &"There was no error\n");
+        dprintf(1, "There was no error\n");
     }
 
-    dprintf(1, &"%d\n", try result);
+    dprintf(1, "%d\n", try result);
 
     if (catch result){
-        dprintf(1, &"There are an error\n");
+        dprintf(1, "There are an error\n");
     }
     if (catch foo(1)){
-        dprintf(1, &"There are an error\n");
+        dprintf(1, "There are an error\n");
     }
 
-    dprintf(1, &"No error %d\n", try result);
-    dprintf(1, &"No safe error %d\n", try foo(10));
+    dprintf(1, "No error %d\n", try result);
+    dprintf(1, "No safe error %d\n", try foo(10));
 }
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
@@ -145,7 +145,7 @@ fn main() -> void {
 // CHECK-NEXT: if.exit.try:                                      ; preds = %if.true.try, %entry
 // CHECK-NEXT:   %4 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 0
 // CHECK-NEXT:   %5 = load i32, ptr %4, align 4
-// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str, i32 %5)
+// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str, i32 %5)
 // CHECK-NEXT:   %7 = getelementptr inbounds %error.struct.i32, ptr %result2, i32 0, i32 1
 // CHECK-NEXT:   %8 = load ptr, ptr %7, align 8
 // CHECK-NEXT:   %9 = ptrtoint ptr %8 to i64
@@ -154,7 +154,7 @@ fn main() -> void {
 // CHECK-NEXT:   store ptr %select.err, ptr %result_e, align 8
 // CHECK-NEXT:   %catch.result = select i1 %ptr.to.bool2, i1 true, i1 false
 // CHECK-NEXT:   %10 = load ptr, ptr %result_e, align 8
-// CHECK-NEXT:   %11 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.1, ptr %10)
+// CHECK-NEXT:   %11 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.1, ptr %10)
 // CHECK-NEXT:   %12 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 1
 // CHECK-NEXT:   %13 = load ptr, ptr %12, align 8
 // CHECK-NEXT:   %14 = ptrtoint ptr %13 to i64
@@ -166,11 +166,11 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %if.exit.try
 // CHECK-NEXT:   %15 = load ptr, ptr %err, align 8
-// CHECK-NEXT:   %16 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.2, ptr %15)
+// CHECK-NEXT:   %16 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.2, ptr %15)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %if.exit.try
-// CHECK-NEXT:   %17 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.3)
+// CHECK-NEXT:   %17 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.3)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true
@@ -188,7 +188,7 @@ fn main() -> void {
 // CHECK-NEXT: if.exit.try8:                                     ; preds = %if.true.try7, %if.exit
 // CHECK-NEXT:   %22 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 0
 // CHECK-NEXT:   %23 = load i32, ptr %22, align 4
-// CHECK-NEXT:   %24 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.4, i32 %23)
+// CHECK-NEXT:   %24 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.4, i32 %23)
 // CHECK-NEXT:   %25 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 1
 // CHECK-NEXT:   %26 = load ptr, ptr %25, align 8
 // CHECK-NEXT:   %27 = ptrtoint ptr %26 to i64
@@ -197,7 +197,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %catch.result10, label %if.true11, label %if.exit12
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true11:                                        ; preds = %if.exit.try8
-// CHECK-NEXT:   %28 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.5)
+// CHECK-NEXT:   %28 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.5)
 // CHECK-NEXT:   br label %if.exit12
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit12:                                        ; preds = %if.true11, %if.exit.try8
@@ -210,7 +210,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %catch.result15, label %if.true16, label %if.exit17
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true16:                                        ; preds = %if.exit12
-// CHECK-NEXT:   %32 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.6)
+// CHECK-NEXT:   %32 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.6)
 // CHECK-NEXT:   br label %if.exit17
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit17:                                        ; preds = %if.true16, %if.exit12
@@ -228,7 +228,7 @@ fn main() -> void {
 // CHECK-NEXT: if.exit.try20:                                    ; preds = %if.true.try19, %if.exit17
 // CHECK-NEXT:   %37 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 0
 // CHECK-NEXT:   %38 = load i32, ptr %37, align 4
-// CHECK-NEXT:   %39 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.7, i32 %38)
+// CHECK-NEXT:   %39 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.7, i32 %38)
 // CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp21, i32 10)
 // CHECK-NEXT:   %40 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp21, i32 0, i32 1
 // CHECK-NEXT:   %41 = load ptr, ptr %40, align 8
@@ -244,6 +244,6 @@ fn main() -> void {
 // CHECK-NEXT: if.exit.try24:                                    ; preds = %if.true.try23, %if.exit.try20
 // CHECK-NEXT:   %44 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp21, i32 0, i32 0
 // CHECK-NEXT:   %45 = load i32, ptr %44, align 4
-// CHECK-NEXT:   %46 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr @global.str.8, i32 %45)
+// CHECK-NEXT:   %46 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.8, i32 %45)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

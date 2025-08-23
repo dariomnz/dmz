@@ -5,5 +5,5 @@
 const std = import("std");
 
 fn main() -> void {
-    std.io.printf(&"Hello world!\n");
+    std.io.printf("Hello world!\n");
 }

@@ -152,9 +152,13 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     }
 }
 
+void ResolvedFunctionDecl::dump_dependencies(size_t level) const {
+    ResolvedDependencies::dump_dependencies(level);
+    for (auto &&function : specializations) function->dump_dependencies(level + 1);
+}
+
 void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedMemberFunctionDecl\n";
-    structDecl->dump(level + 1, true);
+    std::cerr << indent(level) << "ResolvedMemberFunctionDecl:"<<structDecl->symbolName<<"\n";
 
     ResolvedFunctionDecl::dump(level + 1, onlySelf);
     if (onlySelf) return;
@@ -295,10 +299,18 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
 void ResolvedStructDecl::dump_dependencies(size_t level) const {
     ResolvedDependencies::dump_dependencies(level);
     for (auto &&function : functions) function->dump_dependencies(level + 1);
+    for (auto &&spec : specializations) spec->dump_dependencies(level + 1);
 }
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type << " " << member.identifier << '\n';
+
+    if (onlySelf) return;
+    base->dump(level + 1, onlySelf);
+}
+
+void ResolvedSelfMemberExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSelfMemberExpr:" << type << " " << member.identifier << '\n';
 
     if (onlySelf) return;
     base->dump(level + 1, onlySelf);

@@ -1,0 +1,20 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+struct Point<T> {
+    x:T,
+    y:T,
+
+    fn add(n: T) -> void {
+        .x = .x + n;
+        .y = .y + n;
+    }
+}
+
+fn main() -> void {
+    let p = Point<i32>{x:1, y:2};
+    // p.add(5);
+    printf("Point %d %d\n", p.x, p.y);
+    printf("Point %d %d\n");
+}

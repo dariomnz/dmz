@@ -510,7 +510,7 @@ int Driver::jit_pass(Type_Module &module) {
 
         cmd = "lli";
         args.emplace_back("lli");
-        args.emplace_back("-O3");
+        args.emplace_back("-O0");
         args.emplace_back(nullptr);
 
         execvp(cmd, const_cast<char *const *>(args.data()));

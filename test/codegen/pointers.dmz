@@ -26,10 +26,10 @@ fn main() -> void {
 // CHECK-NEXT:   %0 = load ptr, ptr %i_ptr, align 8
 // CHECK-NEXT:   store ptr %0, ptr %i_ptr2, align 8
 // CHECK-NEXT:   %1 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr @global.str, i32 %1)
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1)
 // CHECK-NEXT:   %3 = load ptr, ptr %i_ptr, align 8
 // CHECK-NEXT:   store i32 12, ptr %3, align 4
 // CHECK-NEXT:   %4 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr @global.str.1, i32 %4)
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %4)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

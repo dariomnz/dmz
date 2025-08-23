@@ -16,5 +16,5 @@ extern fn dprintf(fd:i32, format: *u8[], ...) -> i32;
 fn main() -> void {
     let i = 10;
     //let i_ref = &i;
-    dprintf(1, &"Hello %d %d %d\n", 1, 2, 3);
+    dprintf(1, "Hello %d %d %d\n", 1, 2, 3);
 }
