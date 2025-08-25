@@ -101,7 +101,7 @@ ResolvedDecl *Sema::lookup_in_module(const ResolvedModuleDecl &moduleDecl, const
                                      ResolvedDeclType type) {
     debug_func("Module: " << moduleDecl.identifier << " id: " << id << " type: " << type);
     add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
-    // println("m_actualModule '" << m_actualModule->identifier << "' Lookup in '" << moduleDecl.identifier
+    // println("m_currentModule '" << m_currentModule->identifier << "' Lookup in '" << moduleDecl.identifier
     //                            << "' look for '" << id << "' type: " << type);
 
     for (auto &&decl : moduleDecl.declarations) {
@@ -154,7 +154,9 @@ std::optional<Type> Sema::resolve_type(Type parsedType) {
         }
 
         if (auto structDecl = cast_lookup(parsedType.name, ResolvedStructDecl)) {
-            if (parsedType.genericTypes) structDecl = specialize_generic_struct(*structDecl, *parsedType.genericTypes);
+            if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
+                structDecl = specialize_generic_struct(*genStructDecl, *parsedType.genericTypes);
+            }
             return Type::structType(parsedType, structDecl);
         }
         if (auto decl = lookup((parsedType.name), ResolvedDeclType::ResolvedGenericTypeDecl)) {
@@ -236,14 +238,14 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_pt
             fill_depends(sd, aux_decls);
 
             for (auto &fnDecl : aux_decls) {
-                sd->functions.emplace_back(static_cast<ResolvedMemberFunctionDecl *>(fnDecl.release()));
+                sd->functions.emplace_back(dynamic_cast<ResolvedMemberFunctionDecl *>(fnDecl.release()));
             }
             aux_decls.clear();
 
             // add_deps(decl);
             continue;
         }
-        if (auto gen = dynamic_cast<ResolvedFunctionDecl *>(decl.get())) {
+        if (auto gen = dynamic_cast<ResolvedGenericFunctionDecl *>(decl.get())) {
             debug_msg("ResolvedFunctionDecl " << gen->identifier);
             std::vector<std::unique_ptr<ResolvedDecl>> aux_decls;
             decls.reserve(gen->specializations.size());
@@ -255,7 +257,7 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_pt
             fill_depends(gen, aux_decls);
 
             for (auto &fnDecl : aux_decls) {
-                gen->specializations.emplace_back(static_cast<ResolvedSpecializedFunctionDecl *>(fnDecl.release()));
+                gen->specializations.emplace_back(dynamic_cast<ResolvedSpecializedFunctionDecl *>(fnDecl.release()));
             }
             aux_decls.clear();
         }
@@ -269,8 +271,15 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_pt
     }
 }
 
-bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest) {
+bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
+                          std::unordered_set<ResolvedDependencies *> &recurse_check) {
     debug_func(resolvedDeps.identifier);
+    if (!recurse_check.emplace(&resolvedDeps).second) {
+        debug_msg(resolvedDeps.identifier << " is not needed recurse check");
+        return false;
+    }
+    defer([&]() { recurse_check.erase(&resolvedDeps); });
+
     if (m_removed_decls.find(&resolvedDeps) != m_removed_decls.end()) {
         debug_msg("ResolvedDecl is already removed");
         return false;
@@ -292,7 +301,7 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest) {
     }
 
     for (auto &&decl : resolvedDeps.isUsedBy) {
-        if (recurse_needed(*decl, buildTest)) {
+        if (recurse_needed(*decl, buildTest, recurse_check)) {
             debug_msg(decl->identifier << " is needed");
             return true;
         }
@@ -305,7 +314,7 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest) {
 void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest) {
     debug_func("");
 
-    // std::unordered_set<ResolvedDecl *> to_remove;
+    std::unordered_set<ResolvedDependencies *> recurse_check;
     auto add_to_remove = [this](ResolvedDependencies *d) {
         debug_msg_func("add_to_remove", d->identifier);
         // to_remove.emplace(d);
@@ -346,7 +355,7 @@ void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool
         if (auto md = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
             debug_msg("ModuleDecl " << md->identifier);
             remove_unused(md->declarations, buildTest);
-            if (!recurse_needed(*md, buildTest)) {
+            if (!recurse_needed(*md, buildTest, recurse_check)) {
                 add_to_remove_smart(decl);
             }
             continue;
@@ -363,26 +372,18 @@ void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool
             remove_unused(aux_decls, buildTest);
 
             for (auto &fnDecl : aux_decls) {
-                sd->functions.emplace_back(static_cast<ResolvedMemberFunctionDecl *>(fnDecl.release()));
+                sd->functions.emplace_back(dynamic_cast<ResolvedMemberFunctionDecl *>(fnDecl.release()));
             }
             aux_decls.clear();
 
-            if (!recurse_needed(*sd, buildTest)) {
+            if (!recurse_needed(*sd, buildTest, recurse_check)) {
                 add_to_remove_smart(decl);
             }
             continue;
         }
         if (auto fd = dynamic_cast<ResolvedFuncDecl *>(decl.get())) {
             debug_msg("FuncDecl " << fd->identifier);
-            if (!recurse_needed(*fd, buildTest)) {
-                add_to_remove_smart(decl);
-                continue;
-            }
-        }
-        if (auto td = dynamic_cast<ResolvedTestDecl *>(decl.get())) {
-            debug_msg("TestDecl " << td->identifier);
-            if (!recurse_needed(*td->testFunction, buildTest)) {
-                add_to_remove(td->testFunction.get());
+            if (!recurse_needed(*fd, buildTest, recurse_check)) {
                 add_to_remove_smart(decl);
                 continue;
             }
@@ -595,8 +596,8 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
         if (const auto *func = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(e.decl)) {
             e.decl->symbolName += func->genericTypes.to_str();
         }
-        if (const auto *struc = dynamic_cast<const ResolvedStructDecl *>(e.decl)) {
-            e.decl->symbolName += struc->specGenericTypes.to_str();
+        if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
+            e.decl->symbolName += struc->genericTypes.to_str();
         }
         // println(indent(e.level) << "Symbol identifier: " << e.decl->identifier);
         // println(indent(e.level) << "e Symbol: " << e.symbol);
@@ -617,15 +618,17 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
             for (auto &&decl : strDecl->functions) {
                 stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
-            for (auto &&decl : strDecl->specializations) {
-                stack.push(elem{decl.get(), e.level + 1, e.symbol});
+            if (const auto *genStrDecl = dynamic_cast<const ResolvedGenericStructDecl *>(e.decl)) {
+                for (auto &&decl : genStrDecl->specializations) {
+                    stack.push(elem{decl.get(), e.level + 1, e.symbol});
+                }
             }
         } else if (const auto *ErrorGroupExprDecl = dynamic_cast<const ResolvedErrorGroupExprDecl *>(e.decl)) {
             for (auto &&decl : ErrorGroupExprDecl->errors) {
                 stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
-        } else if (const auto *functionDecl = dynamic_cast<const ResolvedFunctionDecl *>(e.decl)) {
-            for (auto &&decl : functionDecl->specializations) {
+        } else if (const auto *genDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(e.decl)) {
+            for (auto &&decl : genDecl->specializations) {
                 stack.push(elem{decl.get(), e.level + 1, e.symbol});
             }
         } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl) ||
@@ -646,23 +649,16 @@ void Sema::add_dependency(ResolvedDecl *decl) {
         debug_msg("Adding " << decl->identifier << " to function " << m_currentFunction->identifier);
         m_currentFunction->dependsOn.emplace(dep);
         dep->isUsedBy.emplace(m_currentFunction);
-    } else if (m_actualModule) {
-        debug_msg("Adding " << decl->identifier << " to module " << m_actualModule->identifier);
-        // auto it_depends = m_actualModule->dependsOn.find(dep);
-        // if (it_depends != m_actualModule->dependsOn.end()) {
-        //     (*it_depends).second++;
-        // } else {
-        // }
-        m_actualModule->dependsOn.emplace(dep);
-        dep->isUsedBy.emplace(m_actualModule);
-
-        // auto it_dependencies = dep->isUsedBy.find(m_actualModule);
-        // if (it_dependencies != dep->isUsedBy.end()) {
-        //     (*it_dependencies).second++;
-        // } else {
-        // }
-    } else {
-        dmz_unreachable("internal error: unexpected add depencendy inside no module");
+    }
+    if (m_currentModule) {
+        debug_msg("Adding " << decl->identifier << " to module " << m_currentModule->identifier);
+        m_currentModule->dependsOn.emplace(dep);
+        dep->isUsedBy.emplace(m_currentModule);
+    }
+    if (m_currentStruct) {
+        debug_msg("Adding " << decl->identifier << " to struct " << m_currentModule->identifier);
+        m_currentStruct->dependsOn.emplace(dep);
+        dep->isUsedBy.emplace(m_currentStruct);
     }
 }
 }  // namespace DMZ

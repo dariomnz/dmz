@@ -151,8 +151,8 @@ struct Type {
         bool equal = false;
 
 #ifdef DEBUG
-        println("Types: '" << lhs << "' '" << rhs << "'");
-        defer([&equal]() { println(equal ? "true" : "false"); });
+        debug_msg("Types: '" << lhs << "' '" << rhs << "'");
+        defer([&equal]() { debug_msg_func("compare", (equal ? "true" : "false")); });
 #endif
         bool equalArray = false;
         bool equalOptional = false;
@@ -254,14 +254,6 @@ struct GenericTypeDecl : public Decl {
     GenericTypeDecl(SourceLocation location, std::string_view identifier) : Decl(location, identifier) {}
 
     void dump(size_t level = 0) const override;
-};
-
-struct GenericTypesDecl {
-    std::vector<std::unique_ptr<GenericTypeDecl>> types;
-
-    GenericTypesDecl(std::vector<std::unique_ptr<GenericTypeDecl>> types) : types(std::move(types)) {}
-
-    void dump() const;
 };
 
 struct Stmt {
@@ -559,13 +551,21 @@ struct ExternFunctionDecl : public FuncDecl {
 
 struct FunctionDecl : public FuncDecl {
     std::unique_ptr<Block> body;
-    std::unique_ptr<GenericTypesDecl> genericTypes;
 
     FunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                 std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
-        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)),
-          body(std::move(body)),
+                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body)
+        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)), body(std::move(body)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct GenericFunctionDecl : public FunctionDecl {
+    std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes;
+
+    GenericFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                        std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
+                        std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes)
+        : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
@@ -573,14 +573,27 @@ struct FunctionDecl : public FuncDecl {
 
 // Forware declaration
 struct StructDecl;
-struct MemberFunctionDecl : public FuncDecl {
+struct MemberFunctionDecl : public FunctionDecl {
     StructDecl* structBase;
-    std::unique_ptr<FunctionDecl> function;
 
-    MemberFunctionDecl(StructDecl* structBase, std::unique_ptr<FunctionDecl> function)
-        : FuncDecl(function->location, function->identifier, function->type, {}),
-          structBase(structBase),
-          function(std::move(function)) {}
+    MemberFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                       std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
+                       StructDecl* structBase)
+        : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
+          structBase(structBase) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct MemberGenericFunctionDecl : public GenericFunctionDecl {
+    StructDecl* structBase;
+
+    MemberGenericFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
+                              std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
+                              std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes, StructDecl* structBase)
+        : GenericFunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body),
+                              std::move(genericTypes)),
+          structBase(structBase) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -597,14 +610,22 @@ struct FieldDecl : public Decl {
 struct StructDecl : public Decl {
     std::vector<std::unique_ptr<FieldDecl>> fields;
     std::vector<std::unique_ptr<MemberFunctionDecl>> functions;
-    std::unique_ptr<GenericTypesDecl> genericTypes;
 
     StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields,
-               std::vector<std::unique_ptr<MemberFunctionDecl>> functions,
-               std::unique_ptr<GenericTypesDecl> genericTypes = nullptr)
-        : Decl(location, std::move(identifier)),
-          fields(std::move(fields)),
-          functions(std::move(functions)),
+               std::vector<std::unique_ptr<MemberFunctionDecl>> functions)
+        : Decl(location, std::move(identifier)), fields(std::move(fields)), functions(std::move(functions)) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct GenericStructDecl : public StructDecl {
+    std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes;
+
+    GenericStructDecl(SourceLocation location, std::string_view identifier,
+                      std::vector<std::unique_ptr<FieldDecl>> fields,
+                      std::vector<std::unique_ptr<MemberFunctionDecl>> functions,
+                      std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes)
+        : StructDecl(location, std::move(identifier), std::move(fields), std::move(functions)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
@@ -702,11 +723,11 @@ struct ImportExpr : public Expr {
     void dump(size_t level = 0) const override;
 };
 
-struct TestDecl : public Decl {
-    std::unique_ptr<FunctionDecl> testFunction;
-
-    TestDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<FunctionDecl> testFunction)
-        : Decl(location, identifier), testFunction(std::move(testFunction)) {}
+struct TestDecl : public FunctionDecl {
+    TestDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<Block> body)
+        : FunctionDecl(location, identifier, Type::builtinVoid(), {}, std::move(body)) {
+        type.isOptional = true;
+    }
 
     void dump(size_t level = 0) const override;
 };

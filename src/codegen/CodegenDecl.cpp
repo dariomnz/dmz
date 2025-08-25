@@ -80,17 +80,17 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
 
 void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     debug_func("");
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
-        if (resolvedFunctionDecl->genericTypes) {
-            for (auto &&func : resolvedFunctionDecl->specializations) {
-                generate_function_decl(*func.get());
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
+        for (auto &&func : resolvedFunctionDecl->specializations) {
+            auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
+            if (!cast_func) {
+                func->dump();
+                dmz_unreachable("internal error: unexpected declaration in specializations");
             }
-            return;
+            generate_function_decl(*cast_func);
         }
+        return;
     }
-    // if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-    //     return generate_function_decl(*resolvedFunctionDecl->function.get());
-    // }
 
     llvm::Type *retType = generate_type(functionDecl.type);
     std::vector<llvm::Type *> paramTypes;
@@ -151,13 +151,16 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     debug_func("");
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
-        if (resolvedFunctionDecl->genericTypes) {
-            for (auto &&func : resolvedFunctionDecl->specializations) {
-                generate_function_body(*func.get());
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
+        for (auto &&func : resolvedFunctionDecl->specializations) {
+            auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
+            if (!cast_func) {
+                func->dump();
+                dmz_unreachable("internal error: unexpected declaration in specializations");
             }
-            return;
+            generate_function_body(*cast_func);
         }
+        return;
     }
     // if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
     //     return generate_function_body(*resolvedFunctionDecl->function.get());
@@ -242,8 +245,8 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
 
 void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
     debug_func("");
-    if (structDecl.genericTypes) {
-        for (auto &&espec : structDecl.specializations) {
+    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
+        for (auto &&espec : genStruct->specializations) {
             generate_struct_decl(*espec);
         }
         return;
@@ -258,8 +261,8 @@ void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
 
 void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
     debug_func("");
-    if (structDecl.genericTypes) {
-        for (auto &&espec : structDecl.specializations) {
+    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
+        for (auto &&espec : genStruct->specializations) {
             generate_struct_definition(*espec);
         }
         return;
@@ -320,8 +323,6 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             generate_struct_decl(*sd);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             generate_global_var_decl(*ds);
-        } else if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(decl.get())) {
-            generate_test_decl(*test);
         } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
         } else {
@@ -336,8 +337,6 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
             continue;
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);
-        } else if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(decl.get())) {
-            generate_function_body(*test->testFunction);
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_definition(*sd);
         } else if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
@@ -373,6 +372,4 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     m_module->insertGlobalVariable(globalVar);
     m_declarations[stmt.varDecl.get()] = globalVar;
 }
-
-void Codegen::generate_test_decl(const ResolvedTestDecl &testDecl) { generate_function_decl(*testDecl.testFunction); }
 }  // namespace DMZ

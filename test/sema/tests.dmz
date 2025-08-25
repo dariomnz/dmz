@@ -14,7 +14,6 @@ test "add test 2" {
     try std.testing.expect(add(2, 1) == 3);
 }
 // CHECK:  ResolvedTestDecl add test
-// CHECK-NEXT:     ResolvedFunctionDecl add test -> Void void!
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedTryErrorExpr:Void void
 // CHECK-NEXT:           ResolvedCallExpr:Void void!
@@ -55,13 +54,13 @@ test "add test 2" {
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedTryErrorExpr:Void void
 // CHECK-NEXT:                   ResolvedCallExpr:Void void!
-// CHECK-NEXT:                     ResolvedFunctionDecl add test -> Void void!
+// CHECK-NEXT:                     ResolvedTestDecl add test
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedTryErrorExpr:Void void
 // CHECK-NEXT:                   ResolvedCallExpr:Void void!
-// CHECK-NEXT:                     ResolvedFunctionDecl add test 2 -> Void void!
+// CHECK-NEXT:                     ResolvedTestDecl add test 2
 // CHECK-NEXT:             ElseBlock
 // CHECK-NEXT:             ResolvedBlock
 

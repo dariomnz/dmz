@@ -101,7 +101,7 @@ class Parser {
     std::unique_ptr<Type> parse_type();
     std::unique_ptr<GenericTypes> parse_generic_types();
     std::unique_ptr<GenericTypeDecl> parse_generic_type_decl();
-    std::unique_ptr<GenericTypesDecl> parse_generic_types_decl();
+    std::vector<std::unique_ptr<GenericTypeDecl>> parse_generic_types_decl();
     std::unique_ptr<Block> parse_block(bool oneStmt = false);
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<Stmt> parse_statement();

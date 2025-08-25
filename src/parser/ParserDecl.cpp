@@ -11,16 +11,16 @@ std::unique_ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
     return std::make_unique<GenericTypeDecl>(location, identifier);
 }
 
-std::unique_ptr<GenericTypesDecl> Parser::parse_generic_types_decl() {
+std::vector<std::unique_ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
     debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
-        return nullptr;
+        return {};
     }
     auto typesDeclList = (parse_list_with_trailing_comma<GenericTypeDecl>(
         {TokenType::op_less, "expected '<'"}, &Parser::parse_generic_type_decl, {TokenType::op_more, "expected '>'"}));
-    if (!typesDeclList) return nullptr;
+    if (!typesDeclList) return {};
 
-    return std::make_unique<GenericTypesDecl>(std::move(*typesDeclList));
+    return std::move(*typesDeclList);
 }
 
 // <functionDecl>
@@ -67,8 +67,13 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block),
-                                          std::move(genericTypes));
+    if (genericTypes.size() != 0) {
+        return std::make_unique<GenericFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
+                                                     std::move(block), std::move(genericTypes));
+    } else {
+        return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
+                                              std::move(block));
+    }
 }
 
 // <paramDecl>
@@ -143,9 +148,14 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
 
     std::vector<std::unique_ptr<FieldDecl>> fieldList;
     std::vector<std::unique_ptr<MemberFunctionDecl>> funcList;
-
-    auto structDecl = std::make_unique<StructDecl>(location, structIdentifier, std::move(fieldList),
-                                                   std::move(funcList), std::move(genericTypes));
+    std::unique_ptr<StructDecl> structDecl;
+    if (genericTypes.size() != 0) {
+        structDecl = std::make_unique<GenericStructDecl>(location, structIdentifier, std::move(fieldList),
+                                                         std::move(funcList), std::move(genericTypes));
+    } else {
+        structDecl =
+            std::make_unique<StructDecl>(location, structIdentifier, std::move(fieldList), std::move(funcList));
+    }
 
     while (true) {
         if (m_nextToken.type == TokenType::block_r) break;
@@ -158,9 +168,9 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
         } else if (m_nextToken.type == TokenType::kw_fn) {
             varOrReturn(init, parse_function_decl());
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            init.release();
-            std::unique_ptr<FunctionDecl> uniqueFunc(func);
-            auto memberFunc = std::make_unique<MemberFunctionDecl>(structDecl.get(), std::move(uniqueFunc));
+            auto memberFunc =
+                std::make_unique<MemberFunctionDecl>(func->location, func->identifier, func->type,
+                                                     std::move(func->params), std::move(func->body), structDecl.get());
             funcList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");
@@ -294,11 +304,6 @@ std::unique_ptr<TestDecl> Parser::parse_test_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    auto type = Type::builtinVoid();
-    type.isOptional = true;
-
-    auto func = std::make_unique<FunctionDecl>(location, name, type, std::vector<std::unique_ptr<ParamDecl>>{}, std::move(block));
-
-    return std::make_unique<TestDecl>(location, name, std::move(func));
+    return std::make_unique<TestDecl>(location, name, std::move(block));
 }
 }  // namespace DMZ

@@ -38,7 +38,6 @@ std::unique_ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefEx
 
 std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     debug_func(call.location);
-    const ResolvedFuncDecl *parentFunc = nullptr;
     const ResolvedFuncDecl *resolvedFuncDecl = nullptr;
     bool isMemberCall = false;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
@@ -46,7 +45,6 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (!resolvedMemberExpr) return nullptr;
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
-        parentFunc = resolvedFuncDecl;
         if (auto resolvedMemberFuncDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
             // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
             isMemberCall = true;
@@ -56,7 +54,6 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
         if (!resolvedMemberExpr) return nullptr;
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
-        parentFunc = resolvedFuncDecl;
 
         if (auto resolvedMemberFuncDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
             // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
@@ -68,18 +65,17 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
 
         varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
-        parentFunc = resolvedFuncDecl;
     }
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
 
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedFunctionDecl *>(resolvedFuncDecl)) {
+    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
         if (call.genericTypes) {
             resolvedFuncDecl = specialize_generic_function(
-                *parentFunc, *const_cast<ResolvedFunctionDecl *>(resolvedFunctionDecl), *call.genericTypes);
+                *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl), *call.genericTypes);
             if (!resolvedFuncDecl) return nullptr;
         } else {
-            if (resolvedFunctionDecl->genericTypes) {
+            if (dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
                 return report(call.location, "try to call a generic function without specialization");
             }
         }
@@ -92,7 +88,7 @@ std::unique_ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) 
     size_t funcDeclArgs = isVararg ? (func_args_num - 1) : func_args_num;
     if (call_args_num != func_args_num) {
         if (!isVararg || (isVararg && call_args_num < funcDeclArgs)) {
-            resolvedFuncDecl->dump();
+            // resolvedFuncDecl->dump();
             // println("call_args_num " << call_args_num << " func_args_num " << func_args_num);
             return report(call.location, "argument count mismatch in function call, expected " +
                                              std::to_string(func_args_num) + " actual " +
@@ -323,8 +319,9 @@ std::unique_ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &
         if (!st) return report(memberExpr.location, "failed to lookup struct " + resolvedBase->type.name);
 
         // if (resolvedBase->type.genericTypes) {
-        //     st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st), *resolvedBase->type.genericTypes);
-        //     if (!st) return report(memberExpr.location, "failed to specialize generic struct");
+        //     st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st),
+        //     *resolvedBase->type.genericTypes); if (!st) return report(memberExpr.location, "failed to specialize
+        //     generic struct");
         // }
 
         decl = cast_lookup_in_struct(*st, memberExpr.field, ResolvedDecl);
@@ -405,13 +402,15 @@ std::unique_ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiat
         return report(structInstantiation.location,
                       "'" + structInstantiation.structType.name + "' is not a struct type");
 
-    if (st->genericTypes) {
-        if (!structInstantiation.structType.genericTypes)
-            return report(structInstantiation.location,
-                          "'" + st->identifier + "' is a generic and need specialization");
-        st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st),
-                                       *structInstantiation.structType.genericTypes);
-        if (!st) return nullptr;
+    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(st)) {
+        if (genStruct->genericTypeDecls.size() != 0) {
+            if (!structInstantiation.structType.genericTypes)
+                return report(structInstantiation.location,
+                              "'" + st->identifier + "' is a generic and need specialization");
+            st = specialize_generic_struct(*const_cast<ResolvedGenericStructDecl *>(genStruct),
+                                           *structInstantiation.structType.genericTypes);
+            if (!st) return nullptr;
+        }
     }
 
     std::vector<std::unique_ptr<ResolvedFieldInitStmt>> resolvedFieldInits;

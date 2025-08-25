@@ -11,8 +11,7 @@ struct Color {
         return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
 }
-// CHECK: ResolvedMemberFunctionDecl:Color
-// CHECK-NEXT:       ResolvedFunctionDecl print -> Int i32
+// CHECK:       ResolvedMemberFunctionDecl print -> Int i32
 // CHECK-NEXT:         ResolvedParamDecl:Struct *Color 
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
@@ -45,7 +44,6 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedIntLiteral:Int i32 '3'
 // CHECK-NEXT:             | value: 3
 // CHECK-NEXT:     ResolvedCallExpr:Int i32
-// CHECK-NEXT:       ResolvedMemberFunctionDecl:Color
-// CHECK-NEXT:         ResolvedFunctionDecl print -> Int i32
+// CHECK-NEXT:       ResolvedMemberFunctionDecl print -> Int i32
 // CHECK-NEXT:       ResolvedRefPtrExpr:Struct *Color
 // CHECK-NEXT:         ResolvedDeclRefExpr:Struct Color c

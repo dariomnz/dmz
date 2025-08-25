@@ -93,22 +93,22 @@ bool GenericTypes::operator==(const GenericTypes &other) const {
     return true;
 }
 
-void GenericTypeDecl::dump([[maybe_unused]] size_t level) const { std::cerr << identifier; }
-
-void GenericTypesDecl::dump() const {
-    if (types.size() == 0) return;
-    std::cerr << "<";
-    for (size_t i = 0; i < types.size(); i++) {
-        types[i]->dump();
-        if (i != types.size() - 1) std::cerr << ", ";
-    }
-    std::cerr << ">";
+void GenericTypeDecl::dump([[maybe_unused]] size_t level) const {
+    std::cerr << indent(level) << "GenericTypeDecl " << identifier << '\n';
 }
 
 void FunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FunctionDecl " << identifier;
-    if (genericTypes) (*genericTypes).dump();
     std::cerr << " -> " << type << "\n";
+
+    for (auto &&param : params) param->dump(level + 1);
+
+    body->dump(level + 1);
+}
+
+void GenericFunctionDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "GenericFunctionDecl " << identifier << " -> " << type << "\n";
+    for (auto &&genType : genericTypes) genType->dump(level + 1);
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -117,8 +117,12 @@ void FunctionDecl::dump(size_t level) const {
 
 void MemberFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "MemberFunctionDecl:" << structBase->identifier << "\n";
+    FunctionDecl::dump(level + 1);
+}
 
-    function->dump(level + 1);
+void MemberGenericFunctionDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << structBase->identifier << "\n";
+    GenericFunctionDecl::dump(level + 1);
 }
 
 void ExternFunctionDecl::dump(size_t level) const {
@@ -264,9 +268,15 @@ void FieldDecl::dump(size_t level) const {
 }
 
 void StructDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "StructDecl " << identifier;
-    if (genericTypes) (*genericTypes).dump();
-    std::cerr << '\n';
+    std::cerr << indent(level) << "StructDecl " << identifier << '\n';
+
+    for (auto &&field : fields) field->dump(level + 1);
+    for (auto &&function : functions) function->dump(level + 1);
+}
+
+void GenericStructDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "GenericStructDecl " << identifier << '\n';
+    for (auto &&genType : genericTypes) genType->dump(level + 1);
 
     for (auto &&field : fields) field->dump(level + 1);
     for (auto &&function : functions) function->dump(level + 1);
@@ -278,9 +288,7 @@ void MemberExpr::dump(size_t level) const {
     base->dump(level + 1);
 }
 
-void SelfMemberExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "SelfMemberExpr ." << field << '\n';
-}
+void SelfMemberExpr::dump(size_t level) const { std::cerr << indent(level) << "SelfMemberExpr ." << field << '\n'; }
 
 void ArrayAtExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ArrayAtExpr" << '\n';
@@ -354,6 +362,6 @@ void ImportExpr::dump(size_t level) const { std::cerr << indent(level) << "Impor
 
 void TestDecl::dump(size_t level) const {
     std::cerr << indent(level) << "TestDecl " << identifier << '\n';
-    if (testFunction) testFunction->dump(level + 1);
+    FunctionDecl::dump(level + 1);
 }
 }  // namespace DMZ

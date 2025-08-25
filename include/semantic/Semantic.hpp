@@ -36,7 +36,7 @@ class Sema {
         }
     };
     std::unique_ptr<ScopeRAII> m_globalScope;
-    ResolvedModuleDecl *m_actualModule = nullptr;
+    ResolvedModuleDecl *m_currentModule = nullptr;
 
     std::vector<const ResolvedTestDecl *> m_tests;
 
@@ -50,7 +50,7 @@ class Sema {
     bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     void remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest);
-    bool recurse_needed(ResolvedDependencies &deps, bool buildTest);
+    bool recurse_needed(ResolvedDependencies &deps, bool buildTest, std::unordered_set<ResolvedDependencies*>& recurse_check);
 
    private:
     ResolvedDecl *lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps = true);
@@ -67,11 +67,11 @@ class Sema {
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
-    std::unique_ptr<ResolvedGenericTypesDecl> resolve_generic_types_decl(
-        const GenericTypesDecl &genericTypesDecl, const GenericTypes &specifiedTypes = GenericTypes{{}});
-    ResolvedFuncDecl *specialize_generic_function(const ResolvedFuncDecl &parentFunc, ResolvedFunctionDecl &funcDecl,
+    std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
+        const std::vector<std::unique_ptr<GenericTypeDecl>> &genericTypesDecl, const GenericTypes &specifiedTypes = GenericTypes{{}});
+    ResolvedSpecializedFunctionDecl *specialize_generic_function(ResolvedGenericFunctionDecl &funcDecl,
                                                   const GenericTypes &genericTypes);
-    ResolvedStructDecl *specialize_generic_struct(ResolvedStructDecl &struDecl, const GenericTypes &genericTypes);
+    ResolvedSpecializedStructDecl *specialize_generic_struct(ResolvedGenericStructDecl &struDecl, const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
                                                                              const MemberFunctionDecl &function);

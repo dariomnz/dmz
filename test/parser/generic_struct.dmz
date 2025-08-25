@@ -6,7 +6,8 @@ struct Point<T> {
     x:T,
     y:T,
 }
-// CHECK: StructDecl Point<T>
+// CHECK: StructDecl Point
+// CHECK-NEXT:   GenericTypeDecl T
 // CHECK-NEXT:   FieldDecl:Custom T x
 // CHECK-NEXT:   FieldDecl:Custom T y
 
