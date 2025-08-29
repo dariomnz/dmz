@@ -25,6 +25,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
         return m_builder.CreateGlobalString(str->value, "global.str");
     }
+    if (auto *str = dynamic_cast<const ResolvedNullLiteral *>(&expr)) {
+        return llvm::Constant::getNullValue(m_builder.getPtrTy());
+    }
     if (auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return generate_decl_ref_expr(*dre, keepPointer);
     }
@@ -69,6 +72,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     }
     if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
         return generate_orelse_error_expr(*orelseErr);
+    }
+    if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
+        return generate_sizeof_expr(*sizeofExpr);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -346,7 +352,8 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
     debug_func("");
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
-        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
+        llvm::Value *field =
+            m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
         return keepPointer ? field : load_value(field, member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
@@ -361,7 +368,8 @@ llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &me
     debug_func("");
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
-        llvm::Value *field = m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
+        llvm::Value *field =
+            m_builder.CreateStructGEP(generate_type(memberExpr.base->type.remove_pointer()), base, member->index);
         return keepPointer ? field : load_value(field, member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
@@ -386,7 +394,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     }
     llvm::Value *field = m_builder.CreateGEP(type, base, idxs);
 
-    return keepPointer ? field : load_value(field, arrayAtExpr.array->type.withoutArray());
+    return keepPointer ? field : load_value(field, arrayAtExpr.type);
 }
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
@@ -544,5 +552,10 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
     return load_value(return_value, orelseErrorExpr.type);
+}
+
+llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr) {
+    auto size = m_module->getDataLayout().getTypeAllocSize(generate_type(sizeofExpr.sizeofType));
+    return m_builder.getInt64(size);
 }
 }  // namespace DMZ

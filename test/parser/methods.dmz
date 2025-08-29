@@ -15,16 +15,15 @@ struct Color {
 // CHECK-NEXT:   FieldDecl:Int i32 r
 // CHECK-NEXT:   FieldDecl:Int i32 g
 // CHECK-NEXT:   FieldDecl:Int i32 b
-// CHECK-NEXT:   MemberFunctionDecl:Color
-// CHECK-NEXT:     FunctionDecl print -> Int i32
-// CHECK-NEXT:       Block
-// CHECK-NEXT:         ReturnStmt
-// CHECK-NEXT:           CallExpr
-// CHECK-NEXT:             DeclRefExpr printf
-// CHECK-NEXT:             StringLiteral '"Color{%d, %d, %d}\n"'
-// CHECK-NEXT:             SelfMemberExpr .r
-// CHECK-NEXT:             SelfMemberExpr .g
-// CHECK-NEXT:             SelfMemberExpr .b
+// CHECK-NEXT:   MemberFunctionDecl print -> Int i32
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         CallExpr
+// CHECK-NEXT:           DeclRefExpr printf
+// CHECK-NEXT:           StringLiteral '"Color{%d, %d, %d}\n"'
+// CHECK-NEXT:           SelfMemberExpr .r
+// CHECK-NEXT:           SelfMemberExpr .g
+// CHECK-NEXT:           SelfMemberExpr .b
 
 fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};
@@ -34,7 +33,8 @@ fn main() -> void {
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl:Custom Color c
-// CHECK-NEXT:         StructInstantiationExpr:Custom Color
+// CHECK-NEXT:         StructInstantiationExpr
+// CHECK-NEXT:           DeclRefExpr Color
 // CHECK-NEXT:           FieldInitStmt r
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:           FieldInitStmt g

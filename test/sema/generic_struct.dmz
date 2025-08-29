@@ -7,6 +7,7 @@ struct Point<T> {
     y:T,
 }
 // CHECK: ResolvedGenericStructDecl Struct Point
+// CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedFieldDecl:Custom T x
 // CHECK-NEXT:   ResolvedFieldDecl:Custom T y
 // CHECK-NEXT:   ResolvedSpecializedStructDecl Struct Point<i32>

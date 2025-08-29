@@ -1,24 +1,5 @@
 // RUN: compiler %s -module -llvm-dump -no-remove-unused 2>&1 | filecheck %s
 module ops {
-    fn print(x:i32) -> void {
-        println(x);
-    }
-    // CHECK: define void @ops.print(i32 %x) {
-    // CHECK-NEXT: entry:
-    // CHECK-NEXT:   call void @ops.println(i32 %x)
-    // CHECK-NEXT:   ret void
-    // CHECK-NEXT: }
-
-    extern fn printf(fmt:*u8, ...) -> i32;
-    // CHECK: declare i32 @printf(ptr byref(i8) %0, ...)
-
-    fn println(n:i32) -> void {printf("%d\n", n);}
-    // CHECK: define void @ops.println(i32 %n) {
-    // CHECK-NEXT: entry:
-    // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %n)
-    // CHECK-NEXT:   ret void
-    // CHECK-NEXT: }
-
     module integer{
         fn add(x:i32, y:i32) -> i32 {
             return x + y;
@@ -52,4 +33,23 @@ module ops {
         // CHECK-NEXT:   ret i32 %1
         // CHECK-NEXT: }
     }
+
+    fn print(x:i32) -> void {
+        println(x);
+    }
+    // CHECK: define void @ops.print(i32 %x) {
+    // CHECK-NEXT: entry:
+    // CHECK-NEXT:   call void @ops.println(i32 %x)
+    // CHECK-NEXT:   ret void
+    // CHECK-NEXT: }
+
+    extern fn printf(fmt:*u8, ...) -> i32;
+    // CHECK: declare i32 @printf(ptr byref(i8) %0, ...)
+
+    fn println(n:i32) -> void {printf("%d\n", n);}
+    // CHECK: define void @ops.println(i32 %n) {
+    // CHECK-NEXT: entry:
+    // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %n)
+    // CHECK-NEXT:   ret void
+    // CHECK-NEXT: }
 }

@@ -136,5 +136,6 @@ class Parser {
     std::unique_ptr<CaseStmt> parse_case_stmt();
     std::unique_ptr<TestDecl> parse_test_decl();
     std::unique_ptr<SelfMemberExpr> parse_self_member_expr();
+    std::unique_ptr<SizeofExpr> parse_sizeof_expr();
 };
 }  // namespace DMZ

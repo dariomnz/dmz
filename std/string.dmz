@@ -1,0 +1,7 @@
+module std {
+    module str {
+        struct string {
+            
+        }
+    }
+}

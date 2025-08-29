@@ -56,7 +56,9 @@ std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &
         if (!resolvedExpr) return nullptr;
 
         if (!Type::compare(m_currentFunction->type, resolvedExpr->type))
-            return report(resolvedExpr->location, "unexpected return type");
+            return report(resolvedExpr->location, "unexpected return type, expected '" +
+                                                      m_currentFunction->type.to_str() + "' actual '" +
+                                                      resolvedExpr->type.to_str() + "'");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }

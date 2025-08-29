@@ -31,7 +31,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << decl.identifier << " ======================");
 #endif
-    const auto foundDecl = lookup(decl.identifier, ResolvedDeclType::ResolvedDecl, false);
+    const auto foundDecl = lookup(decl.location, decl.identifier, ResolvedDeclType::ResolvedDecl, false);
 
     if (foundDecl) {
         dump_scopes();
@@ -45,6 +45,23 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     println("======================<<insert_decl_to_current_scope " << decl.identifier << " ======================");
 #endif
     return true;
+}
+
+std::vector<ResolvedDecl *> Sema::collect_scope() {
+    std::vector<ResolvedDecl *> out;
+    size_t needSize = 0;
+    for (auto &&scope : m_scopes) {
+        needSize += scope.size();
+    }
+
+    out.reserve(needSize);
+
+    for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
+        for (auto &&[declID, decl] : *it) {
+            out.emplace_back(decl);
+        }
+    }
+    return out;
 }
 
 #define switch_resolved_decl_type(type, decl, bool, expresion)                    \
@@ -77,13 +94,26 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
             break;                                                                \
     }
 
-ResolvedDecl *Sema::lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps) {
+ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, ResolvedDeclType type,
+                           bool needAddDeps) {
     debug_func(id << " " << type);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
     dump_scopes();
     println("----------------------<<lookup " << std::quoted(std::string(id)) << " ----------------------");
 #endif
+
+    if (id == "@This") {
+        if (m_currentStruct) {
+            return m_currentStruct;
+        } else {
+            return report(loc, "unexpected use of @This outside a struct");
+        }
+    }
+    if (id == "@sizeof") {
+        
+    }
+
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         for (auto &&[declID, decl] : *it) {
             switch_resolved_decl_type(type, decl, !, continue);
@@ -143,35 +173,80 @@ ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const
 }
 
 std::optional<Type> Sema::resolve_type(Type parsedType) {
-    debug_func(parsedType);
+    std::optional<Type> ret = std::nullopt;
+    Type retCopy;
+    debug_func("'" << parsedType << "' -> '" << (ret.has_value() ? retCopy.to_str() : "nullopt") << "'");
     if (parsedType.kind == Type::Kind::Custom) {
         if (parsedType.name == "@This") {
             if (m_currentStruct == nullptr) {
                 report(parsedType.location, "unexpected use of @This outside a struct");
-                return std::nullopt;
+                ret = std::nullopt;
+                return retCopy;
             }
-            return Type::structType(parsedType, m_currentStruct);
+            retCopy = Type::structType(parsedType, m_currentStruct);
+            retCopy.name = m_currentStruct->identifier;
+            ret = retCopy;
+            return ret;
         }
 
-        if (auto structDecl = cast_lookup(parsedType.name, ResolvedStructDecl)) {
+        if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
             if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-                structDecl = specialize_generic_struct(*genStructDecl, *parsedType.genericTypes);
+                auto auxstructDecl =
+                    specialize_generic_struct(parsedType.location, *genStructDecl, *parsedType.genericTypes);
+                if (auxstructDecl) structDecl = auxstructDecl;
             }
-            return Type::structType(parsedType, structDecl);
+            retCopy = Type::structType(parsedType, structDecl);
+            ret = retCopy;
+            return ret;
         }
-        if (auto decl = lookup((parsedType.name), ResolvedDeclType::ResolvedGenericTypeDecl)) {
-            auto resolvedGenericTypeDecl = dynamic_cast<ResolvedGenericTypeDecl *>(decl);
-            if (resolvedGenericTypeDecl->specializedType) {
-                return resolvedGenericTypeDecl->specializedType;
+        if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+            if (decl->specializedType) {
+                if ((*decl->specializedType).kind == Type::Kind::Custom) {
+                    auto t = resolve_type(*decl->specializedType);
+                    if (!t) {
+                        report(decl->location, "cannot resolve type");
+                    }
+                    return t;
+                } else {
+                    retCopy = Type::specializeType(parsedType, *decl->specializedType);
+                    ret = retCopy;
+                    return ret;
+                }
             } else {
-                return Type::genericType(parsedType);
+                retCopy = Type::genericType(parsedType);
+                ret = retCopy;
+                return ret;
             }
         }
-
-        return std::nullopt;
+#ifdef DEBUG
+        dump_scopes();
+#endif
+        ret = std::nullopt;
+        return ret;
     }
 
-    return parsedType;
+    if (parsedType.kind == Type::Kind::Generic) {
+        if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+            if (decl->specializedType) {
+                if ((*decl->specializedType).kind == Type::Kind::Custom) {
+                    auto t = resolve_type(*decl->specializedType);
+                    if (!t) {
+                        report(decl->location, "cannot resolve type");
+                    }
+                    return t;
+                } else {
+                    retCopy = Type::specializeType(parsedType, *decl->specializedType);
+                    ret = retCopy;
+                    return ret;
+                }
+            }
+        }
+    }
+
+    retCopy = parsedType;
+    ret = retCopy;
+    debug_msg("same type");
+    return ret;
 }
 
 std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {

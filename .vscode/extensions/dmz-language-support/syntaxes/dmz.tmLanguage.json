@@ -47,7 +47,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.dmz",
-					"match": "\\b(if|else|switch|case|while|for|return|fn|extern|defer|errdefer|catch|try|orelse|error|module|test)\\b"
+					"match": "\\b(if|else|switch|case|while|for|return|fn|extern|defer|errdefer|catch|try|orelse|error|module|test|static)\\b"
 				},
 				{
 					"name": "keyword.other.dmz",
@@ -67,7 +67,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.types.dmz",
-					"match": "\\b(void|f16|f32|f64|true|false|[iu]\\d+)\\b"
+					"match": "\\b(void|f16|f32|f64|true|false|null|[iu]\\d+)\\b"
 				}
 			]
 		},
@@ -124,7 +124,7 @@
 		"members": {
 			"patterns": [
 				{
-					"match": "(?<![a-zA-Z0-9_])\\.([a-zA-Z_][a-zA-Z0-9_]*)",
+					"match": "(?<![a-zA-Z0-9_>])\\.([a-zA-Z_][a-zA-Z0-9_]*)",
 					"captures": {
 						"1": {
 							"name": "variable.other.member.dmz"

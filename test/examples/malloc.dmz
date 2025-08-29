@@ -9,10 +9,10 @@
 // CHECK-NEXT: Memory freed.
 // CHECK-NOT: {{.*}}
 
-extern fn printf(fmt:*u8, ...) -> i32;
-extern fn malloc(size:i32) -> *i32;
-extern fn free(ptr:*i32) -> void;
-extern fn exit(code:i32) -> void;
+extern fn printf(fmt: *u8, ...) -> i32;
+extern fn malloc(size: i32) -> *void;
+extern fn free(ptr: *void) -> void;
+extern fn exit(code: i32) -> void;
 
 fn main() -> void {
     let ptr:*i32;

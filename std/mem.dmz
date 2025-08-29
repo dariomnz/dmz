@@ -1,0 +1,7 @@
+module std {
+    module mem {
+        extern fn malloc(size: u64) -> *void;
+        extern fn realloc(ptr: *void, size: u64) -> *void;
+        extern fn free(ptr: *void) -> void;
+    }
+}

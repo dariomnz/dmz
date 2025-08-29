@@ -50,28 +50,32 @@ class Sema {
     bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<std::unique_ptr<ResolvedDecl>> &decls);
     void remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest);
-    bool recurse_needed(ResolvedDependencies &deps, bool buildTest, std::unordered_set<ResolvedDependencies*>& recurse_check);
+    bool recurse_needed(ResolvedDependencies &deps, bool buildTest,
+                        std::unordered_set<ResolvedDependencies *> &recurse_check);
 
    private:
-    ResolvedDecl *lookup(const std::string_view id, ResolvedDeclType type, bool needAddDeps = true);
+    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, ResolvedDeclType type,
+                         bool needAddDeps = true);
     ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
                                    ResolvedDeclType type);
     ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
                                    ResolvedDeclType type);
-#define cast_lookup(id, type)                 static_cast<type *>(lookup(id, ResolvedDeclType::type))
+#define cast_lookup(loc, id, type)            static_cast<type *>(lookup(loc, id, ResolvedDeclType::type))
 #define cast_lookup_in_module(decl, id, type) static_cast<type *>(lookup_in_module(decl, id, ResolvedDeclType::type))
 #define cast_lookup_in_struct(decl, id, type) static_cast<type *>(lookup_in_struct(decl, id, ResolvedDeclType::type))
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
+    std::vector<ResolvedDecl *> collect_scope();
     // bool insert_decl_to_modules(ResolvedDecl &decl);
     // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
     std::optional<Type> resolve_type(Type parsedType);
     std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
     std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
-        const std::vector<std::unique_ptr<GenericTypeDecl>> &genericTypesDecl, const GenericTypes &specifiedTypes = GenericTypes{{}});
-    ResolvedSpecializedFunctionDecl *specialize_generic_function(ResolvedGenericFunctionDecl &funcDecl,
-                                                  const GenericTypes &genericTypes);
-    ResolvedSpecializedStructDecl *specialize_generic_struct(ResolvedGenericStructDecl &struDecl, const GenericTypes &genericTypes);
+        const std::vector<std::unique_ptr<GenericTypeDecl>> &genericTypesDecl);
+    ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation& location, ResolvedGenericFunctionDecl &funcDecl,
+                                                                 const GenericTypes &genericTypes);
+    ResolvedSpecializedStructDecl *specialize_generic_struct(const SourceLocation& location, ResolvedGenericStructDecl &struDecl,
+                                                             const GenericTypes &genericTypes);
     std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     std::unique_ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
                                                                              const MemberFunctionDecl &function);
@@ -80,7 +84,8 @@ class Sema {
     std::unique_ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
     std::unique_ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     std::unique_ptr<ResolvedExpr> resolve_expr(const Expr &expr);
-    std::unique_ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false);
+    std::unique_ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false,
+                                                               bool isStructInst = false);
     std::unique_ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
     std::unique_ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
     std::unique_ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);
@@ -130,5 +135,6 @@ class Sema {
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
     void add_dependency(ResolvedDecl *decl);
+    std::unique_ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
 };
 }  // namespace DMZ

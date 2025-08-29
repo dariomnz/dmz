@@ -1,0 +1,28 @@
+// RUN: compiler %s -I %S/../../std -run | filecheck %s
+
+// CHECK: vector [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+// CHECK-NOT: {{.*}}
+
+const std = import("std");
+
+fn main() -> void {
+    let v = std.initVec<i32>();
+
+    let i = 10;
+    while (i > 0) {
+        try v.add(i);
+        i = i - 1;
+    }
+
+    i = 0;
+    std.io.printf("vector [");
+    while (i < v.size()) {
+        std.io.printf("%d", try v.get(i));
+        if (i != v.size() - 1) {
+            std.io.printf(", ");
+        }
+
+        i = i + 1;
+    }
+    std.io.printf("]\n");
+}

@@ -20,31 +20,36 @@ std::unique_ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) 
     auto lock = get_shared_context().getLock();
 
     generate_in_module_decl(m_resolvedTree);
+    generate_in_module_body(m_resolvedTree);
 
     generate_main_wrapper(runTest);
 
     return std::make_unique<llvm::orc::ThreadSafeModule>(std::move(m_module), get_shared_context());
 }
 
-llvm::Type *Codegen::generate_type(const Type &type) {
+llvm::Type *Codegen::generate_type(const Type &type, bool noOpaque) {
     llvm::Type *ret = nullptr;
-    debug_func(type << " " << Dumper([&ret]() {
+    debug_func("In type: '" << type << "' out type '" << Dumper([&ret]() {
                    if (ret)
                        ret->print(llvm::errs());
                    else
                        std::cerr << "null";
-               }));
+               }) << "'");
     if (type.kind == Type::Kind::Error || type.isPointer) {
+        debug_msg("isPointer or error");
         ret = llvm::PointerType::get(*m_context, 0);
         return ret;
     }
     if (type.kind == Type::Kind::Void) {
+        debug_msg("kind Void");
         ret = m_builder.getVoidTy();
     }
     if (type.kind == Type::Kind::Int || type.kind == Type::Kind::UInt) {
+        debug_msg("kind Int or UInt");
         ret = m_builder.getIntNTy(type.size);
     }
     if (type.kind == Type::Kind::Float) {
+        debug_msg("kind Int or UInt");
         switch (type.size) {
             case 16:
                 ret = m_builder.getHalfTy();
@@ -62,14 +67,29 @@ llvm::Type *Codegen::generate_type(const Type &type) {
     }
     if (type.kind == Type::Kind::Struct) {
         std::string name = generate_decl_name(*type.decl);
-        debug_msg(name);
-        ret = llvm::StructType::getTypeByName(*m_context, name);
-        // ret->dump();
-        // ret = llvm::StructType::getTypeByName(*m_context, "struct." + std::string(type.name));
+        debug_msg("struct '" << name << "'");
+        auto structType = llvm::StructType::getTypeByName(*m_context, name);
+        ret = structType;
+        if (!ret) {
+            dmz_unreachable("cannot get type '" + name + "'");
+        }
+        if (noOpaque && structType->isOpaque()) {
+            if (auto structDecl = dynamic_cast<ResolvedStructDecl *>(type.decl)) {
+                generate_struct_fields(*structDecl);
+                ret = llvm::StructType::getTypeByName(*m_context, name);
+                if (!ret) dmz_unreachable("unexpected error generating struct decl");
+            } else {
+                dmz_unreachable("expected resolved struct decl");
+            }
+        }
     }
-    if (ret == nullptr) return m_builder.getVoidTy();
+    if (ret == nullptr) {
+        debug_msg("null in ret VOID");
+        return m_builder.getVoidTy();
+    }
 
     if (ret != nullptr && type.isArray) {
+        debug_msg("is array");
         if (*type.isArray != 0) {
             ret = llvm::ArrayType::get(ret, *type.isArray);
         } else {
@@ -78,6 +98,7 @@ llvm::Type *Codegen::generate_type(const Type &type) {
     }
 
     if (type.isOptional) {
+        debug_msg("is optional");
         ret = generate_optional_type(type, ret);
     }
     return ret;
@@ -85,9 +106,13 @@ llvm::Type *Codegen::generate_type(const Type &type) {
 
 llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identifier, const Type &type) {
     debug_func("");
+    debug_msg("m_allocaInsertPoint " << (void *)m_allocaInsertPoint);
+    debug_msg("m_memsetInsertPoint " << (void *)m_memsetInsertPoint);
+    assert(m_allocaInsertPoint != nullptr);
+    assert(m_memsetInsertPoint != nullptr);
     llvm::IRBuilder<> tmpBuilder(*m_context);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
-    auto value = tmpBuilder.CreateAlloca(generate_type(type), nullptr, identifier);
+    auto value = tmpBuilder.CreateAlloca(generate_type(type, true), nullptr, identifier);
     // if (type.isOptional) {
     llvm::IRBuilder<> tmpBuilderMemset(*m_context);
     tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
@@ -142,8 +167,13 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const Type &type) {
 }
 
 llvm::Value *Codegen::cast_to(llvm::Value *v, const Type &from, const Type &to) {
-    debug_func("");
-    // println("From: " << from.to_str() << " to: " << to.to_str());
+    debug_func("From: '" << from.to_str() << "' to: '" << to.to_str() << "' of: '" << Dumper([&]() {
+                   if (v)
+                       v->print(llvm::errs());
+                   else
+                       std::cerr << "null";
+               }) << "'");
+    // m_module->dump();
     // v->dump();
     if (from.isPointer) {
         if (to.isPointer) {
@@ -212,7 +242,7 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Type &from, const Type &to) {
-    debug_func("");
+    debug_func("from " << from << " to " << to);
     if (!from.isPointer) {
         if (from.kind == Type::Kind::Struct || from.isOptional) {
             const llvm::DataLayout &dl = m_module->getDataLayout();

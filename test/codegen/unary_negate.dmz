@@ -6,7 +6,7 @@ fn negate(x: i32) -> i32 {
     // CHECK: %0 = sub i32 0, %x
 }
 
-fn null(x: i32) -> i32 {
+fn negate2(x: i32) -> i32 {
     return --x;
 
     // CHECK: %0 = sub i32 0, %x
@@ -25,6 +25,6 @@ extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n",
 
 fn main() -> void {
     println(negate(234));
-    println(null(456));
+    println(negate2(456));
     println(timesNeg3(4));
 }

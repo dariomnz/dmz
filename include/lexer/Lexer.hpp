@@ -52,6 +52,7 @@ enum class TokenType {
     ty_uN,
     kw_true,
     kw_false,
+    kw_null,
     kw_fn,
     kw_if,
     kw_else,
@@ -72,6 +73,8 @@ enum class TokenType {
     kw_switch,
     kw_case,
     kw_test,
+    kw_static,
+    kw_sizeof,
     unknown,
     eof,
 };
@@ -98,6 +101,8 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"switch", TokenType::kw_switch},
     {"case", TokenType::kw_case},
     {"test", TokenType::kw_test},
+    {"static", TokenType::kw_static},
+    {"@sizeof", TokenType::kw_sizeof},
     // Types
     {"void", TokenType::ty_void},
     {"f16", TokenType::ty_f16},
@@ -105,6 +110,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"f64", TokenType::ty_f64},
     {"true", TokenType::kw_true},
     {"false", TokenType::kw_false},
+    {"null", TokenType::kw_null},
 };
 
 struct Token {

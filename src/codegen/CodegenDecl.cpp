@@ -79,7 +79,7 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
 // }
 
 void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
-    debug_func("");
+    debug_func(functionDecl.symbolName);
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
@@ -120,7 +120,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 }
 
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDecl) {
-    debug_func(funcDecl.identifier);
+    debug_func(funcDecl.symbolName);
     const ResolvedFuncDecl *fn = &funcDecl;
     bool isReturningStruct = fn->type.kind == Type::Kind::Struct || fn->type.isOptional;
     std::vector<llvm::AttributeSet> argsAttrSets;
@@ -134,7 +134,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
     for ([[maybe_unused]] auto &&param : fn->params) {
         debug_msg("Param: " << param->type);
         llvm::AttrBuilder paramAttrs(*m_context);
-        if (param->type.isPointer) {
+        if (param->type.isPointer && param->type.kind != Type::Kind::Void) {
             paramAttrs.addByRefAttr(generate_type(param->type.remove_pointer()));
         } else if (param->type.kind == Type::Kind::Struct) {
             if (param->isMutable) {
@@ -150,7 +150,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDec
 }
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
-    debug_func("");
+    debug_func(functionDecl.symbolName);
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
@@ -162,10 +162,6 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         }
         return;
     }
-    // if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-    //     return generate_function_body(*resolvedFunctionDecl->function.get());
-    // }
-
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
@@ -243,31 +239,38 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_currentFunction = nullptr;
 }
 
-void Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    debug_func("");
+llvm::Type *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
+    debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
             generate_struct_decl(*espec);
         }
-        return;
+        return nullptr;
     }
-
-    llvm::StructType::create(*m_context, generate_decl_name(structDecl));
+    auto structType = llvm::StructType::create(*m_context, generate_decl_name(structDecl));
+    debug_msg(Dumper([&]() { structType->print(llvm::errs()); }));
 
     for (auto &&func : structDecl.functions) {
         generate_function_decl(*func);
     }
+
+    return structType;
 }
 
-void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
-    debug_func("");
+void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
+    debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
-            generate_struct_definition(*espec);
+            generate_struct_fields(*espec);
         }
         return;
     }
     auto *type = static_cast<llvm::StructType *>(generate_type(structDecl.type));
+
+    if (!type->isOpaque()) {
+        debug_msg("already generated " << structDecl.symbolName);
+        return;
+    }
 
     std::vector<llvm::Type *> fieldTypes;
     for (auto &&field : structDecl.fields) {
@@ -276,7 +279,16 @@ void Codegen::generate_struct_definition(const ResolvedStructDecl &structDecl) {
     }
 
     type->setBody(fieldTypes);
+}
 
+void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
+    debug_func(structDecl.symbolName);
+    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
+        for (auto &&espec : genStruct->specializations) {
+            generate_struct_functions(*espec);
+        }
+        return;
+    }
     for (auto &&func : structDecl.functions) {
         generate_function_body(*func);
     }
@@ -306,24 +318,24 @@ void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &E
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
-    // if (moduleDecl.nestedModule) {
-    //     generate_module_decl(*moduleDecl.nestedModule);
-    // } else {
     generate_in_module_decl(moduleDecl.declarations);
-    // }
+}
+
+void Codegen::generate_module_body(const ResolvedModuleDecl &moduleDecl) {
+    debug_func("");
+    generate_in_module_body(moduleDecl.declarations);
 }
 
 void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     generate_error_no_err();
     for (auto &&decl : declarations) {
-        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
-            generate_function_decl(*fn);
-        } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
+        if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             generate_global_var_decl(*ds);
-        } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+        } else if (dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
+                   dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
         } else {
             decl->dump();
@@ -332,15 +344,52 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
     }
 
     for (auto &&decl : declarations) {
-        if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
-            dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
+        if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+            generate_module_decl(*modDecl);
+        }
+    }
+    for (auto &&decl : declarations) {
+        if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
+            generate_function_decl(*fn);
+        } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
+                   dynamic_cast<const ResolvedStructDecl *>(decl.get()) ||
+                   dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             continue;
+        } else {
+            decl->dump();
+            dmz_unreachable("unexpected top level in module declaration");
+        }
+    }
+}
+
+void Codegen::generate_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
+    debug_func("");
+    for (auto &&decl : declarations) {
+        if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) || dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+            continue;
+        } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
+            generate_struct_fields(*sd);
+        } else {
+            decl->dump();
+            dmz_unreachable("unexpected top level in module declaration");
+        }
+    }
+    for (auto &&decl : declarations) {
+        if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+            generate_module_body(*modDecl);
+        }
+    }
+    debug_msg("Finish structs bodys");
+    for (auto &&decl : declarations) {
+        if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
+            dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
+            dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+            continue;
+        } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
+            generate_struct_functions(*sd);
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);
-        } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
-            generate_struct_definition(*sd);
-        } else if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
-            generate_module_decl(*modDecl);
         } else {
             decl->dump();
             dmz_unreachable("unexpected top level in module declaration");

@@ -57,6 +57,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_fn);
         CASE_TYPE(kw_true);
         CASE_TYPE(kw_false);
+        CASE_TYPE(kw_null);
         CASE_TYPE(kw_if);
         CASE_TYPE(kw_else);
         CASE_TYPE(kw_let);
@@ -76,6 +77,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_switch);
         CASE_TYPE(kw_case);
         CASE_TYPE(kw_test);
+        CASE_TYPE(kw_static);
+        CASE_TYPE(kw_sizeof);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }

@@ -18,9 +18,9 @@ class Codegen {
     std::unique_ptr<llvm::Module> m_module;
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
-    llvm::Instruction *m_allocaInsertPoint;
-    llvm::Instruction *m_memsetInsertPoint;
-    const ResolvedFuncDecl *m_currentFunction;
+    llvm::Instruction *m_allocaInsertPoint = nullptr;
+    llvm::Instruction *m_memsetInsertPoint = nullptr;
+    const ResolvedFuncDecl *m_currentFunction = nullptr;
     llvm::Value *m_success = nullptr;
 
     llvm::Value *retVal = nullptr;
@@ -30,7 +30,7 @@ class Codegen {
     Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
 
     std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
-    llvm::Type *generate_type(const Type &type);
+    llvm::Type *generate_type(const Type &type, bool noOpaque = false);
     llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
     std::string generate_decl_name(const ResolvedDecl &decl);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
@@ -64,8 +64,9 @@ class Codegen {
     llvm::Value *generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer);
     llvm::Value *generate_temporary_struct(const ResolvedStructInstantiationExpr &sie);
     llvm::Value *generate_temporary_array(const ResolvedArrayInstantiationExpr &aie);
-    void generate_struct_decl(const ResolvedStructDecl &structDecl);
-    void generate_struct_definition(const ResolvedStructDecl &structDecl);
+    llvm::Type *generate_struct_decl(const ResolvedStructDecl &structDecl);
+    void generate_struct_fields(const ResolvedStructDecl &structDecl);
+    void generate_struct_functions(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);
@@ -73,8 +74,11 @@ class Codegen {
     llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr);
     llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
+    void generate_module_body(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
+    void generate_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
+    llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);
 };
 }  // namespace DMZ

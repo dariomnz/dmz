@@ -22,7 +22,8 @@ fn main() -> void {
 
     let immediate = Color {r: 0, g: 1, b: 2}.r;
     // CHECK: MemberExpr .r
-    // CHECK-NEXT:   StructInstantiationExpr:Custom Color
+    // CHECK-NEXT:   StructInstantiationExpr
+    // CHECK-NEXT:     DeclRefExpr Color
     // CHECK-NEXT:     FieldInitStmt r
     // CHECK-NEXT:       IntLiteral '0'
     // CHECK-NEXT:     FieldInitStmt g

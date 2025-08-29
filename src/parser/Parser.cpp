@@ -1,4 +1,5 @@
 #include "parser/Parser.hpp"
+
 #include "Stats.hpp"
 
 namespace DMZ {
@@ -200,7 +201,8 @@ template std::unique_ptr<std::vector<std::unique_ptr<GenericTypeDecl>>> Parser::
     std::pair<TokenType, const char *>);
 
 bool Parser::nextToken_is_generic(TokenType nextToken) {
-    debug_func("");
+    bool ret = false;
+    debug_func(nextToken << " ret: " << (ret ? "true" : "false"));
     if (m_nextToken.type == TokenType::op_less) {
         int blocks = 0;
         int actual_jump = 0;
@@ -213,13 +215,16 @@ bool Parser::nextToken_is_generic(TokenType nextToken) {
                 if (blocks == 0) break;
                 --blocks;
             } else if (type == TokenType::eof || type == TokenType::block_l || type == TokenType::semicolon) {
-                return false;
+                ret = false;
+                return ret;
             }
             actual_jump++;
         }
-        return peek_token(actual_jump + 1).type == nextToken;
+        ret = peek_token(actual_jump + 1).type == nextToken;
+        return ret;
     }
-    return false;
+    ret = false;
+    return ret;
 
     // return (m_nextToken.type == TokenType::op_less &&
     //         (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more ||

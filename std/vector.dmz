@@ -1,0 +1,55 @@
+module std {
+    const vector_error = error {
+        IndexOutOfLenght,
+        OutOfMemory,
+    };
+    struct vec<T> {
+        buf: *T,
+        len: u64,
+        capacity: u64,
+
+        fn add(v: T) -> void! {
+            if (.len >= .capacity) {
+                if (.capacity == 0) {
+                    .capacity = 8;
+                    .buf = std.mem.malloc(.capacity * @sizeof(T));
+                } else {
+                    .capacity = .capacity * 2;
+                    .buf = std.mem.realloc(.buf, .capacity * @sizeof(T));
+                }
+                if (.buf == null) {
+                    return vector_error.OutOfMemory;
+                }
+            }
+            .buf[.len] = v;
+            .len = .len + 1;
+        }
+
+        fn get(index: u64) -> T! {
+            if (index > .len) { return vector_error.IndexOutOfLenght; }
+            let ret:T = .buf[index];
+            return ret;
+        }
+
+        fn remove(index: u64) -> u1 {
+            // TODO
+            return true;
+        }
+
+        fn size() -> u64 {
+            return .len;
+        }
+
+    }
+    // Tengo que hacer que cuando instancialize una funcion o algo
+    // se haga como si fuera en el momento que se ha hecho la funcion 
+    // inicial en los scopes igual guardando una copia, igual volviendo 
+    // ha reacer los scopes nose
+    fn initVec<vecType>() -> vec<vecType> {
+        return vec<vecType> {
+            buf: null,
+            len: 0,
+            capacity: 0,
+        };
+    }
+}

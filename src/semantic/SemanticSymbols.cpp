@@ -54,11 +54,11 @@ void ResolvedDependencies::dump_dependencies(size_t level) const {
 
 void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericTypeDecl " << identifier << '\n';
-    if (specializedType) {
-        std::cerr << indent(level) << "Specialized type ";
-        (*specializedType).dump();
-        std::cerr << '\n';
-    }
+    // if (specializedType) {
+    //     std::cerr << indent(level + 1) << "Specialized type ";
+    //     (*specializedType).dump();
+    //     std::cerr << '\n';
+    // }
 }
 
 void ResolvedIntLiteral::dump(size_t level, bool onlySelf) const {
@@ -88,6 +88,19 @@ void ResolvedBoolLiteral::dump(size_t level, bool onlySelf) const {
 
 void ResolvedStringLiteral::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedStringLiteral:" << type << " '" << str_to_source(value) << "'\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+}
+
+void ResolvedNullLiteral::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedNullLiteral:" << type << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+}
+
+void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSizeofExpr:" << type << "\n";
+    std::cerr << indent(level + 1) << sizeofType << "\n";
     if (onlySelf) return;
     dump_constant_value(level);
 }
@@ -136,9 +149,13 @@ void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
-    if (dynamic_cast<const ResolvedMemberFunctionDecl *>(this)) {
-        std::cerr << indent(level) << "ResolvedMemberFunctionDecl ";
-    }else if (dynamic_cast<const ResolvedTestDecl *>(this)) {
+    if (auto member = dynamic_cast<const ResolvedMemberFunctionDecl *>(this)) {
+        if (member->isStatic) {
+            std::cerr << indent(level) << "ResolvedStaticMemberFunctionDecl ";
+        } else {
+            std::cerr << indent(level) << "ResolvedMemberFunctionDecl ";
+        }
+    } else if (dynamic_cast<const ResolvedTestDecl *>(this)) {
         std::cerr << indent(level) << "ResolvedTestDecl ";
     } else {
         std::cerr << indent(level) << "ResolvedFunctionDecl ";
@@ -312,6 +329,7 @@ void ResolvedStructDecl::dump_dependencies(size_t level) const {
 
 void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericStructDecl " << type << '\n';
+    for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
@@ -444,7 +462,5 @@ void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
 }
 
-void ResolvedTestDecl::dump(size_t level, bool onlySelf) const {
-    ResolvedFunctionDecl::dump(level + 1, onlySelf);
-}
+void ResolvedTestDecl::dump(size_t level, bool onlySelf) const { ResolvedFunctionDecl::dump(level, onlySelf); }
 }  // namespace DMZ

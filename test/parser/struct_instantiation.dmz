@@ -11,7 +11,8 @@ fn main() -> void {
     let empty = Empty {};
     // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: empty
-    // CHECK-NEXT:     StructInstantiationExpr:Custom Empty
+    // CHECK-NEXT:     StructInstantiationExpr
+    // CHECK-NEXT:       DeclRefExpr Empty
 
     let withTrailingComma = Color {
         r: 0, 
@@ -20,7 +21,8 @@ fn main() -> void {
     };
     // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: withTrailingComma
-    // CHECK-NEXT:     StructInstantiationExpr:Custom Color
+    // CHECK-NEXT:     StructInstantiationExpr
+    // CHECK-NEXT:       DeclRefExpr Color
     // CHECK-NEXT:       FieldInitStmt r
     // CHECK-NEXT:         IntLiteral '0'
     // CHECK-NEXT:       FieldInitStmt g
@@ -31,7 +33,8 @@ fn main() -> void {
     let withoutTrailingComma = Color {r: 0, g: 1, b: 2};
     // CHECK: DeclStmt
     // CHECK-NEXT:   VarDecl: withoutTrailingComma
-    // CHECK-NEXT:     StructInstantiationExpr:Custom Color
+    // CHECK-NEXT:     StructInstantiationExpr
+    // CHECK-NEXT:       DeclRefExpr Color
     // CHECK-NEXT:       FieldInitStmt r
     // CHECK-NEXT:         IntLiteral '0'
     // CHECK-NEXT:       FieldInitStmt g

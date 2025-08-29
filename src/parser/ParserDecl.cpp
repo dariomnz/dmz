@@ -165,12 +165,16 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
             fieldList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
             eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn) {
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_static) {
+            bool isStatic = m_nextToken.type == TokenType::kw_static;
+            if (isStatic) {
+                eat_next_token();  // eat static
+            }
             varOrReturn(init, parse_function_decl());
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            auto memberFunc =
-                std::make_unique<MemberFunctionDecl>(func->location, func->identifier, func->type,
-                                                     std::move(func->params), std::move(func->body), structDecl.get());
+            auto memberFunc = std::make_unique<MemberFunctionDecl>(func->location, func->identifier, func->type,
+                                                                   std::move(func->params), std::move(func->body),
+                                                                   structDecl.get(), isStatic);
             funcList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");

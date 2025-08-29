@@ -2,14 +2,88 @@
 
 namespace DMZ {
 
+bool Type::can_convert(const Type &to, const Type &from) {
+    bool canConvert = false;
+    canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Int;
+    canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::UInt;
+    canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Float;
+    canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::UInt;
+    canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::Int;
+    canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::Float;
+    canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::Float;
+    canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::Int;
+    canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::UInt;
+    return canConvert;
+}
+
+bool Type::compare(const Type &lhs, const Type &rhs) {
+    bool equal = false;
+
+#ifdef DEBUG
+    debug_msg("Types: '" << lhs << "' '" << rhs << "'");
+    defer([&equal]() { debug_msg_func("compare", (equal ? "true" : "false")); });
+#endif
+    bool equalArray = false;
+    bool equalOptional = false;
+    bool equalPointer = false;
+    if (lhs == rhs) {
+        equal = true;
+        return true;
+    }
+
+    if (lhs.isOptional && rhs.kind == Kind::Error) {
+        equal = true;
+        return equal;
+    }
+    if (rhs.isOptional && lhs.kind == Kind::Error) {
+        equal = true;
+        return equal;
+    }
+
+    if ((lhs.isPointer && rhs == Type::builtinVoid().pointer()) ||
+        (rhs.isPointer && lhs == Type::builtinVoid().pointer())) {
+        equal = true;
+        return equal;
+    }
+
+    equalArray |= (lhs.isArray && *lhs.isArray == 0);
+    equalArray |= (rhs.isArray && *rhs.isArray == 0);
+    equalArray |= (lhs.isArray == rhs.isArray);
+
+    equalOptional |= lhs.isOptional == rhs.isOptional;
+    equalOptional |= lhs.isOptional == true && rhs.isOptional == false;
+
+    equalPointer |= lhs.isPointer == rhs.isPointer;
+
+    equal = equalArray && equalOptional && equalPointer;
+    if (equal) {
+        if (can_convert(lhs, rhs) || lhs == rhs) {
+            equal = true;
+            return equal;
+        } else {
+            equal = false;
+        }
+    }
+    equal &= lhs.kind == rhs.kind;
+    if ((lhs.kind == Type::Kind::Struct || lhs.kind == Type::Kind::Custom) &&
+        (rhs.kind == Type::Kind::Struct || rhs.kind == Type::Kind::Custom)) {
+        equal &= lhs.name == rhs.name;
+    }
+
+    return equal;
+}
+
 void Type::dump() const { std::cerr << *this; }
 
-std::string Type::to_str() const {
+std::string Type::to_str(bool removeKind) const {
     std::stringstream out;
     out << *this;
     auto str = out.str();
-    const auto to_rem = Type::KindString(kind).size() + 1;
-    return str.substr(to_rem, str.size() - to_rem);
+    if (removeKind) {
+        const auto to_rem = Type::KindString(kind).size() + 1;
+        return str.substr(to_rem, str.size() - to_rem);
+    }
+    return str;
 }
 
 std::ostream &operator<<(std::ostream &os, const Type &t) {
@@ -98,8 +172,18 @@ void GenericTypeDecl::dump([[maybe_unused]] size_t level) const {
 }
 
 void FunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FunctionDecl " << identifier;
-    std::cerr << " -> " << type << "\n";
+    if (auto member = dynamic_cast<const MemberFunctionDecl *>(this)) {
+        if (member->isStatic) {
+            std::cerr << indent(level) << "StaticMemberFunctionDecl ";
+        } else {
+            std::cerr << indent(level) << "MemberFunctionDecl ";
+        }
+    } else if (dynamic_cast<const TestDecl *>(this)) {
+        std::cerr << indent(level) << "TestDecl ";
+    } else {
+        std::cerr << indent(level) << "FunctionDecl ";
+    }
+    std::cerr << identifier << " -> " << type << "\n";
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -115,10 +199,7 @@ void GenericFunctionDecl::dump(size_t level) const {
     body->dump(level + 1);
 }
 
-void MemberFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "MemberFunctionDecl:" << structBase->identifier << "\n";
-    FunctionDecl::dump(level + 1);
-}
+void MemberFunctionDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
 void MemberGenericFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "MemberGenericFunctionDecl:" << structBase->identifier << "\n";
@@ -151,6 +232,10 @@ void CharLiteral::dump(size_t level) const { std::cerr << indent(level) << "Char
 void BoolLiteral::dump(size_t level) const { std::cerr << indent(level) << "BoolLiteral '" << value << "'\n"; }
 
 void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "StringLiteral '" << value << "'\n"; }
+
+void NullLiteral::dump(size_t level) const { std::cerr << indent(level) << "NullLiteral\n"; }
+
+void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType << "\n"; }
 
 void DeclRefExpr::dump(size_t level) const {
     std::cerr << indent(level) << "DeclRefExpr ";
@@ -298,8 +383,9 @@ void ArrayAtExpr::dump(size_t level) const {
 }
 
 void StructInstantiationExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "StructInstantiationExpr:" << structType << '\n';
+    std::cerr << indent(level) << "StructInstantiationExpr " << genericTypes << '\n';
 
+    if (base) base->dump(level + 1);
     for (auto &&field : fieldInitializers) field->dump(level + 1);
 }
 
@@ -360,8 +446,5 @@ void ModuleDecl::dump(size_t level) const {
 
 void ImportExpr::dump(size_t level) const { std::cerr << indent(level) << "ImportExpr " << identifier << '\n'; }
 
-void TestDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "TestDecl " << identifier << '\n';
-    FunctionDecl::dump(level + 1);
-}
+void TestDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 }  // namespace DMZ

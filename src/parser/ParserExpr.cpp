@@ -3,7 +3,7 @@
 namespace DMZ {
 
 std::unique_ptr<Expr> Parser::parse_primary() {
-    debug_func("");
+    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'");
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::par_l) {
@@ -36,6 +36,11 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         eat_next_token();  // eat bool
         return literal;
     }
+    if (m_nextToken.type == TokenType::kw_null) {
+        auto literal = std::make_unique<NullLiteral>(location);
+        eat_next_token();  // eat null
+        return literal;
+    }
     if (m_nextToken.type == TokenType::lit_string) {
         auto literal = std::make_unique<StringLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat string
@@ -44,6 +49,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     if (m_nextToken.type == TokenType::id) {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
+
+        std::unique_ptr<Expr> expr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
 
         if (!(restrictions & StructNotAllowed) &&
             (m_nextToken.type == TokenType::block_l || nextToken_is_generic(TokenType::block_l))) {
@@ -59,14 +66,11 @@ std::unique_ptr<Expr> Parser::parse_primary() {
                 return nullptr;
             }
 
-            Type t = Type::customType(identifier);
-            if (genericTypes) t.genericTypes = *genericTypes;
-
-            return std::make_unique<StructInstantiationExpr>(location, std::move(t), std::move(*fieldInitList));
+            GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
+            expr = std::make_unique<StructInstantiationExpr>(location, std::move(expr), std::move(genTypes),
+                                                             std::move(*fieldInitList));
         }
-
-        auto declRefExpr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
-        return declRefExpr;
+        return expr;
     }
     if (m_nextToken.type == TokenType::block_l) {
         auto initList = parse_list_with_trailing_comma<Expr>({TokenType::block_l, "expected '{'"}, &Parser::parse_expr,
@@ -93,6 +97,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     }
     if (m_nextToken.type == TokenType::dot) {
         return parse_self_member_expr();
+    }
+    if (m_nextToken.type == TokenType::kw_sizeof) {
+        return parse_sizeof_expr();
     }
 
     return report(location, "expected expression");
@@ -125,13 +132,11 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
     }
 
     while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l ||
-           nextToken_is_generic(TokenType::par_l)) {
-        if (nextToken_is_generic(TokenType::par_l)) {
+           nextToken_is_generic(TokenType::par_l) || m_nextToken.type == TokenType::block_l ||
+           nextToken_is_generic(TokenType::block_l)) {
+        debug_msg(m_nextToken);
+        if (nextToken_is_generic(TokenType::par_l) || nextToken_is_generic(TokenType::block_l)) {
             genericTypes = parse_generic_types();
-
-            // if (auto structIns = dynamic_cast<StructInstantiationExpr *>(expr.get())) {
-            //     if (genericTypes) structIns->structType.genericTypes = *genericTypes;
-            // }
         }
         if (m_nextToken.type == TokenType::par_l) {
             SourceLocation location = m_nextToken.loc;
@@ -141,6 +146,32 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
 
             expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList),
                                               std::move(genericTypes));
+        }
+        if (m_nextToken.type == TokenType::block_l) {
+            SourceLocation location = m_nextToken.loc;
+            auto fieldInitList = parse_list_with_trailing_comma<FieldInitStmt>({TokenType::block_l, "expected '{'"},
+                                                                               &Parser::parse_field_init_stmt,
+                                                                               {TokenType::block_r, "expected '}'"});
+
+            if (!fieldInitList) {
+                synchronize_on({TokenType::block_r});
+                eat_next_token();  // eat '}'
+                return nullptr;
+            }
+            // expr->dump();
+            // if (auto declRefExpr = dynamic_cast<DeclRefExpr*>(expr.get())) {
+            //     identifier = declRefExpr->identifier;
+            // } else if (auto memberExpr = dynamic_cast<MemberExpr*>(expr.get())) {
+            //     identifier = memberExpr->field;
+            // } else {
+            //     expr->dump();
+            //     return report(expr->location, "internal error struct instatiation");
+            // }
+            // Type t = Type::customType(identifier);
+            GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
+
+            expr = std::make_unique<StructInstantiationExpr>(expr->location, std::move(expr), std::move(genTypes),
+                                                             std::move(*fieldInitList));
         }
         if (m_nextToken.type == TokenType::dot) {
             SourceLocation location = m_nextToken.loc;
@@ -313,5 +344,22 @@ std::unique_ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
     eat_next_token();  // eat id
 
     return std::make_unique<SelfMemberExpr>(loc, identifier);
+}
+
+std::unique_ptr<SizeofExpr> Parser::parse_sizeof_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_sizeof, "expected @sizeof");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @sizeof
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    varOrReturn(type, parse_type());
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return std::make_unique<SizeofExpr>(location, *type);
 }
 }  // namespace DMZ

@@ -74,7 +74,7 @@ struct Type {
             case Kind::ErrorGroup:
                 return "ErrorGroup";
         }
-        dmz_unreachable("unexpected kind");
+        dmz_unreachable("unexpected kind " + std::to_string(static_cast<int>(k)));
     }
 
     Kind kind = Kind::Void;
@@ -84,8 +84,8 @@ struct Type {
     std::optional<int> isPointer = std::nullopt;
     bool isOptional = false;
     std::optional<GenericTypes> genericTypes = std::nullopt;
-    ResolvedDecl* decl;  // For user defined types
-    SourceLocation location;
+    ResolvedDecl* decl = nullptr;  // For user defined types
+    SourceLocation location = {};
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
     static Type builtinBool() { return {Kind::Int, "i1", 1}; }
@@ -130,6 +130,18 @@ struct Type {
         t.kind = Kind::Generic;
         return t;
     }
+    static Type specializeType(Type genType, Type t) {
+        if (genType.kind == Kind::Generic) dmz_unreachable("expected generic type to convert to specialized");
+        if (t.kind == Kind::Custom) {
+            dmz_unreachable("expected resolved type to convert to specialized");
+        }
+
+        genType.name = t.name;
+        genType.kind = t.kind;
+        genType.decl = t.decl;
+        genType.size = t.size;
+        return genType;
+    }
     static Type builtinError(const std::string_view& name) { return {Kind::Error, std::string(name)}; }
 
     bool operator==(const Type& otro) const {
@@ -137,68 +149,11 @@ struct Type {
                 isPointer == otro.isPointer);
     }
 
-    static bool can_convert(const Type& to, const Type& from) {
-        bool canConvert = false;
-        canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Int;
-        canConvert |= from.kind == Type::Kind::Int && to.kind == Type::Kind::Float;
-        canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::UInt;
-        canConvert |= from.kind == Type::Kind::UInt && to.kind == Type::Kind::Float;
-        canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::Int;
-        canConvert |= from.kind == Type::Kind::Float && to.kind == Type::Kind::UInt;
-        return canConvert;
-    }
-    static bool compare(const Type& lhs, const Type& rhs) {
-        bool equal = false;
-
-#ifdef DEBUG
-        debug_msg("Types: '" << lhs << "' '" << rhs << "'");
-        defer([&equal]() { debug_msg_func("compare", (equal ? "true" : "false")); });
-#endif
-        bool equalArray = false;
-        bool equalOptional = false;
-        bool equalPointer = false;
-        if (lhs == rhs) {
-            equal = true;
-            return true;
-        }
-
-        if (lhs.isOptional && rhs.kind == Kind::Error) {
-            equal = true;
-            return equal;
-        }
-        if (rhs.isOptional && lhs.kind == Kind::Error) {
-            equal = true;
-            return equal;
-        }
-
-        equalArray |= (lhs.isArray && *lhs.isArray == 0);
-        equalArray |= (rhs.isArray && *rhs.isArray == 0);
-        equalArray |= (lhs.isArray == rhs.isArray);
-
-        equalOptional |= lhs.isOptional == rhs.isOptional;
-        equalOptional |= lhs.isOptional == true && rhs.isOptional == false;
-
-        equalPointer |= lhs.isPointer == rhs.isPointer;
-
-        equal = equalArray && equalOptional && equalPointer;
-        equal &= lhs.kind == rhs.kind;
-        if ((lhs.kind == Type::Kind::Struct || lhs.kind == Type::Kind::Custom) &&
-            (rhs.kind == Type::Kind::Struct || rhs.kind == Type::Kind::Custom)) {
-            equal &= lhs.name == rhs.name;
-        }
-
-        if (equal) {
-            if (can_convert(lhs, rhs) || lhs == rhs) {
-                equal = true;
-            } else {
-                equal = false;
-            }
-        }
-        return equal;
-    }
+    static bool can_convert(const Type& to, const Type& from);
+    static bool compare(const Type& lhs, const Type& rhs);
 
     void dump() const;
-    std::string to_str() const;
+    std::string to_str(bool removeKind = true) const;
     Type withoutOptional() const {
         Type t = *this;
         t.isOptional = false;
@@ -344,12 +299,16 @@ struct FieldInitStmt : public Stmt {
 };
 
 struct StructInstantiationExpr : public Expr {
-    Type structType;
+    std::unique_ptr<Expr> base;
+    GenericTypes genericTypes;
     std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers;
 
-    StructInstantiationExpr(SourceLocation location, Type structType,
+    StructInstantiationExpr(SourceLocation location, std::unique_ptr<Expr> base, GenericTypes genericTypes,
                             std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers)
-        : Expr(location), structType(std::move(structType)), fieldInitializers(std::move(fieldInitializers)) {}
+        : Expr(location),
+          base(std::move(base)),
+          genericTypes(std::move(genericTypes)),
+          fieldInitializers(std::move(fieldInitializers)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -399,6 +358,19 @@ struct StringLiteral : public Expr {
     std::string value;
 
     StringLiteral(SourceLocation location, std::string_view value) : Expr(location), value(value) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct NullLiteral : public Expr {
+    NullLiteral(SourceLocation location) : Expr(location) {}
+
+    void dump(size_t level = 0) const override;
+};
+
+struct SizeofExpr : public Expr {
+    Type sizeofType;
+    SizeofExpr(SourceLocation location, Type sizeofType) : Expr(location), sizeofType(sizeofType) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -575,12 +547,14 @@ struct GenericFunctionDecl : public FunctionDecl {
 struct StructDecl;
 struct MemberFunctionDecl : public FunctionDecl {
     StructDecl* structBase;
+    bool isStatic;
 
     MemberFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
                        std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                       StructDecl* structBase)
+                       StructDecl* structBase, bool isStatic)
         : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
-          structBase(structBase) {}
+          structBase(structBase),
+          isStatic(isStatic) {}
 
     void dump(size_t level = 0) const override;
 };

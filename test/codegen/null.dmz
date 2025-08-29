@@ -1,0 +1,44 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run) <(echo -n -e 'is null\nis something 42\n')
+
+fn foo(n:*i32) -> void {
+    if (n == null) {
+        printf("is null\n");
+    }else{
+        printf("is something %d\n", *n);
+    }
+}
+// CHECK: define void @foo(ptr byref(i32) %n) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = icmp eq ptr %n, null
+// CHECK-NEXT:   br i1 %0, label %if.true, label %if.false
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %entry
+// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str)
+// CHECK-NEXT:   br label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.false:                                         ; preds = %entry
+// CHECK-NEXT:   %2 = load i32, ptr %n, align 4
+// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %2)
+// CHECK-NEXT:   br label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn main() -> void {
+    let i = 42;
+    foo(null);
+    foo(&i);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %i = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 42, ptr %i, align 4
+// CHECK-NEXT:   call void @foo(ptr byref(i32) null)
+// CHECK-NEXT:   call void @foo(ptr byref(i32) %i)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+extern fn printf(fmt:*u8, ...) -> i32;
