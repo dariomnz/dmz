@@ -353,14 +353,14 @@ void FieldDecl::dump(size_t level) const {
 }
 
 void StructDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "StructDecl " << identifier << '\n';
+    std::cerr << indent(level) << "StructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
 
     for (auto &&field : fields) field->dump(level + 1);
     for (auto &&function : functions) function->dump(level + 1);
 }
 
 void GenericStructDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericStructDecl " << identifier << '\n';
+    std::cerr << indent(level) << "GenericStructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
     for (auto &&genType : genericTypes) genType->dump(level + 1);
 
     for (auto &&field : fields) field->dump(level + 1);

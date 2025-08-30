@@ -278,7 +278,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
         fieldTypes.emplace_back(t);
     }
 
-    type->setBody(fieldTypes);
+    type->setBody(fieldTypes, structDecl.isPacked);
 }
 
 void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {

@@ -306,14 +306,16 @@ struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctio
 
 struct ResolvedStructDecl : public ResolvedDependencies {
     const StructDecl *structDecl;
+    bool isPacked;
     std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
     std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions;
 
     ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                       std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
+                       bool isPacked, std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                        std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions)
         : ResolvedDependencies(location, std::move(identifier), Type::structType(identifier, this), false),
           structDecl(structDecl),
+          isPacked(isPacked),
           fields(std::move(fields)),
           functions(std::move(functions)) {}
 
@@ -324,10 +326,10 @@ struct ResolvedStructDecl : public ResolvedDependencies {
 struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
     GenericTypes genericTypes;  // The types used for specialization
     ResolvedSpecializedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                                  std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
+                                  bool isPacked, std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                                   std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions,
                                   GenericTypes genericTypes)
-        : ResolvedStructDecl(location, identifier, structDecl, std::move(fields), std::move(functions)),
+        : ResolvedStructDecl(location, identifier, structDecl, isPacked, std::move(fields), std::move(functions)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -339,11 +341,11 @@ struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     std::vector<ResolvedDecl *> scopeToSpecialize;                                     // Scope use to specialize
 
     ResolvedGenericStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                              std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
+                              bool isPacked, std::vector<std::unique_ptr<ResolvedFieldDecl>> fields,
                               std::vector<std::unique_ptr<ResolvedMemberFunctionDecl>> functions,
                               std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                               std::vector<ResolvedDecl *> scopeToSpecialize)
-        : ResolvedStructDecl(location, identifier, structDecl, std::move(fields), std::move(functions)),
+        : ResolvedStructDecl(location, identifier, structDecl, isPacked, std::move(fields), std::move(functions)),
           genericTypeDecls(std::move(genericTypeDecls)),
           scopeToSpecialize(std::move(scopeToSpecialize)) {}
 

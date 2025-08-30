@@ -74,11 +74,12 @@ class Parser {
     void synchronize();
 
     const std::unordered_set<TokenType> top_level_tokens = {
-        TokenType::eof,       TokenType::kw_fn,    TokenType::kw_struct, TokenType::kw_extern,
-        TokenType::kw_module, TokenType::kw_const, TokenType::kw_let,
+        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct, TokenType::kw_packed,
+        TokenType::kw_extern, TokenType::kw_module, TokenType::kw_const,  TokenType::kw_let,
     };
     const std::unordered_set<TokenType> top_top_level_tokens = {
-        TokenType::eof, TokenType::kw_fn, TokenType::kw_struct, TokenType::kw_extern, TokenType::kw_module,
+        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct,
+        TokenType::kw_packed, TokenType::kw_extern, TokenType::kw_module,
     };
     const std::unordered_set<TokenType> top_stmt_level_tokens = {
         TokenType::kw_if,    TokenType::kw_while, TokenType::kw_return, TokenType::kw_let,

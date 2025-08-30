@@ -582,12 +582,17 @@ struct FieldDecl : public Decl {
 };
 
 struct StructDecl : public Decl {
+    bool isPacked;
     std::vector<std::unique_ptr<FieldDecl>> fields;
     std::vector<std::unique_ptr<MemberFunctionDecl>> functions;
 
-    StructDecl(SourceLocation location, std::string_view identifier, std::vector<std::unique_ptr<FieldDecl>> fields,
+    StructDecl(SourceLocation location, std::string_view identifier, bool isPacked,
+               std::vector<std::unique_ptr<FieldDecl>> fields,
                std::vector<std::unique_ptr<MemberFunctionDecl>> functions)
-        : Decl(location, std::move(identifier)), fields(std::move(fields)), functions(std::move(functions)) {}
+        : Decl(location, std::move(identifier)),
+          isPacked(isPacked),
+          fields(std::move(fields)),
+          functions(std::move(functions)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -595,11 +600,11 @@ struct StructDecl : public Decl {
 struct GenericStructDecl : public StructDecl {
     std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes;
 
-    GenericStructDecl(SourceLocation location, std::string_view identifier,
+    GenericStructDecl(SourceLocation location, std::string_view identifier, bool isPacked,
                       std::vector<std::unique_ptr<FieldDecl>> fields,
                       std::vector<std::unique_ptr<MemberFunctionDecl>> functions,
                       std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes)
-        : StructDecl(location, std::move(identifier), std::move(fields), std::move(functions)),
+        : StructDecl(location, std::move(identifier), isPacked, std::move(fields), std::move(functions)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;

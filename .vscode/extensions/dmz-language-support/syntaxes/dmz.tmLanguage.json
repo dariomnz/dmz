@@ -51,7 +51,7 @@
 				},
 				{
 					"name": "keyword.other.dmz",
-					"match": "\\b(const|let|struct|import)\\b"
+					"match": "\\b(const|let|struct|import|packed)\\b"
 				}
 			]
 		},

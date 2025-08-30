@@ -134,6 +134,13 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
 std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
+    bool isPacked = false;
+    if (m_nextToken.type == TokenType::kw_packed) {
+        eat_next_token();  // eat packet
+        isPacked = true;
+    }
+
+    matchOrReturn(TokenType::kw_struct, "expected 'struct'");
     eat_next_token();  // eat struct
 
     matchOrReturn(TokenType::id, "expected identifier");
@@ -150,11 +157,11 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
     std::vector<std::unique_ptr<MemberFunctionDecl>> funcList;
     std::unique_ptr<StructDecl> structDecl;
     if (genericTypes.size() != 0) {
-        structDecl = std::make_unique<GenericStructDecl>(location, structIdentifier, std::move(fieldList),
+        structDecl = std::make_unique<GenericStructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
                                                          std::move(funcList), std::move(genericTypes));
     } else {
-        structDecl =
-            std::make_unique<StructDecl>(location, structIdentifier, std::move(fieldList), std::move(funcList));
+        structDecl = std::make_unique<StructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
+                                                  std::move(funcList));
     }
 
     while (true) {
@@ -269,7 +276,7 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_struct) {
+        } else if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_packed) {
             if (auto st = parse_struct_decl()) {
                 declarations.emplace_back(std::move(st));
                 continue;

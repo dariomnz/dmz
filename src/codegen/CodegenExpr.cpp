@@ -555,7 +555,8 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
 }
 
 llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr) {
-    auto size = m_module->getDataLayout().getTypeAllocSize(generate_type(sizeofExpr.sizeofType));
-    return m_builder.getInt64(size);
+    auto type = generate_type(sizeofExpr.sizeofType);
+    auto size = llvm::ConstantExpr::getSizeOf(type);
+    return size;
 }
 }  // namespace DMZ

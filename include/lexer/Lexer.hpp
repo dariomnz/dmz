@@ -75,6 +75,7 @@ enum class TokenType {
     kw_test,
     kw_static,
     kw_sizeof,
+    kw_packed,
     unknown,
     eof,
 };
@@ -103,6 +104,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"test", TokenType::kw_test},
     {"static", TokenType::kw_static},
     {"@sizeof", TokenType::kw_sizeof},
+    {"packed", TokenType::kw_packed},
     // Types
     {"void", TokenType::ty_void},
     {"f16", TokenType::ty_f16},

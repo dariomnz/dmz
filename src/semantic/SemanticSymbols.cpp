@@ -315,7 +315,7 @@ void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedStructDecl " << type << '\n';
+    std::cerr << indent(level) << "ResolvedStructDecl " << (isPacked ? "packed " : "") << type << '\n';
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
@@ -328,7 +328,7 @@ void ResolvedStructDecl::dump_dependencies(size_t level) const {
 }
 
 void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedGenericStructDecl " << type << '\n';
+    std::cerr << indent(level) << "ResolvedGenericStructDecl " << (isPacked ? "packed " : "") << type << '\n';
     for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
 
     if (onlySelf) return;
@@ -344,7 +344,7 @@ void ResolvedGenericStructDecl::dump_dependencies(size_t level) const {
 }
 
 void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSpecializedStructDecl " << type << '\n';
+    std::cerr << indent(level) << "ResolvedSpecializedStructDecl " << (isPacked ? "packed " : "") << type << '\n';
 
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
