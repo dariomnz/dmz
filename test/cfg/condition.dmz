@@ -11,10 +11,10 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 
@@ -32,10 +32,10 @@ fn and() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 
@@ -53,12 +53,12 @@ fn multipleOr() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '4'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 
@@ -76,12 +76,12 @@ fn multipleAnd() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '4'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 
@@ -99,12 +99,12 @@ fn andOr() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '4'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 
@@ -122,12 +122,12 @@ fn orAnd() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '4'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '3'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
 // CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:   ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:   ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
 // CHECK-NEXT:   preds: 1 

@@ -4,7 +4,7 @@ namespace DMZ {
 
 // <returnStmt>
 //   ::= 'return' <expr>? ';'
-std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
+ptr<ReturnStmt> Parser::parse_return_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'return'
@@ -12,7 +12,7 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
         return report(location, "unexpected return statement");
     }
 
-    std::unique_ptr<Expr> expr;
+    ptr<Expr> expr;
     if (m_nextToken.type != TokenType::semicolon) {
         expr = parse_expr();
         if (!expr) return nullptr;
@@ -21,16 +21,17 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt() {
     matchOrReturn(TokenType::semicolon, "expected ';' at the end of a return statement");
     eat_next_token();  // eat ';'
 
-    return std::make_unique<ReturnStmt>(location, std::move(expr));
+    return makePtr<ReturnStmt>(location, std::move(expr));
 }
 
-std::unique_ptr<Stmt> Parser::parse_statement() {
+ptr<Stmt> Parser::parse_statement() {
     debug_func("");
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
-    if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer) return parse_defer_stmt();
+    if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
+        return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
     if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
     return parse_assignment_or_expr();
@@ -38,12 +39,12 @@ std::unique_ptr<Stmt> Parser::parse_statement() {
 
 // <block>
 //   ::= '{' <statement>* '}'
-std::unique_ptr<Block> Parser::parse_block(bool oneStmt) {
+ptr<Block> Parser::parse_block(bool oneStmt) {
     debug_func("");
     SourceLocation loc = m_nextToken.loc;
     if (!oneStmt) eat_next_token();  // eat '{'
 
-    std::vector<std::unique_ptr<Stmt>> statements;
+    std::vector<ptr<Stmt>> statements;
     do {
         if (!oneStmt)
             if (m_nextToken.type == TokenType::block_r) break;
@@ -65,10 +66,10 @@ std::unique_ptr<Block> Parser::parse_block(bool oneStmt) {
         eat_next_token();  // eat '}'
     }
 
-    return std::make_unique<Block>(loc, std::move(statements));
+    return makePtr<Block>(loc, std::move(statements));
 }
 
-std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
+ptr<IfStmt> Parser::parse_if_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'if'
@@ -76,7 +77,7 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
     matchOrReturn(TokenType::par_l, "expected '('");
     eat_next_token();  // eat '('
 
-    varOrReturn(condition, with_restrictions<std::unique_ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
+    varOrReturn(condition, with_restrictions<ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
 
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat ')'
@@ -86,18 +87,18 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
     varOrReturn(trueBlock, parse_block());
 
     if (m_nextToken.type != TokenType::kw_else)
-        return std::make_unique<IfStmt>(location, std::move(condition), std::move(trueBlock));
+        return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock));
     eat_next_token();  // eat 'else'
 
-    std::unique_ptr<Block> falseBlock;
+    ptr<Block> falseBlock;
     if (m_nextToken.type == TokenType::kw_if) {
         varOrReturn(elseIf, parse_if_stmt());
 
         SourceLocation loc = elseIf->location;
-        std::vector<std::unique_ptr<Stmt>> stmts;
+        std::vector<ptr<Stmt>> stmts;
         stmts.emplace_back(std::move(elseIf));
 
-        falseBlock = std::make_unique<Block>(loc, std::move(stmts));
+        falseBlock = makePtr<Block>(loc, std::move(stmts));
     } else {
         matchOrReturn(TokenType::block_l, "expected 'else' body");
         falseBlock = parse_block();
@@ -105,10 +106,10 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt() {
 
     if (!falseBlock) return nullptr;
 
-    return std::make_unique<IfStmt>(location, std::move(condition), std::move(trueBlock), std::move(falseBlock));
+    return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock), std::move(falseBlock));
 }
 
-std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
+ptr<WhileStmt> Parser::parse_while_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'while'
@@ -116,7 +117,7 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
     matchOrReturn(TokenType::par_l, "expected '('");
     eat_next_token();  // eat '('
 
-    varOrReturn(cond, with_restrictions<std::unique_ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
+    varOrReturn(cond, with_restrictions<ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
 
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat ')'
@@ -124,10 +125,10 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt() {
     matchOrReturn(TokenType::block_l, "expected 'while' body");
     varOrReturn(body, parse_block());
 
-    return std::make_unique<WhileStmt>(location, std::move(cond), std::move(body));
+    return makePtr<WhileStmt>(location, std::move(cond), std::move(body));
 }
 
-std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
+ptr<DeclStmt> Parser::parse_decl_stmt() {
     debug_func("");
     Token tok = m_nextToken;
     bool isConst = m_nextToken.type == TokenType::kw_const;
@@ -139,10 +140,10 @@ std::unique_ptr<DeclStmt> Parser::parse_decl_stmt() {
     matchOrReturn(TokenType::semicolon, "expected ';' after declaration");
     eat_next_token();  // eat ';'
 
-    return std::make_unique<DeclStmt>(tok.loc, std::move(varDecl));
+    return makePtr<DeclStmt>(tok.loc, std::move(varDecl));
 }
 
-std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
+ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     debug_func("");
     varOrReturn(lhs, parse_prefix_expr());
 
@@ -160,7 +161,7 @@ std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     if (!dre) return report(lhs->location, "expected variable on the LHS of an assignment");
     std::ignore = lhs.release();
 
-    varOrReturn(assignment, parse_assignment_rhs(std::unique_ptr<AssignableExpr>(dre)));
+    varOrReturn(assignment, parse_assignment_rhs(ptr<AssignableExpr>(dre)));
 
     if (expectSemicolon) {
         matchOrReturn(TokenType::semicolon, "expected ';' at the end of assignment");
@@ -170,19 +171,19 @@ std::unique_ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     return assignment;
 }
 
-std::unique_ptr<Assignment> Parser::parse_assignment_rhs(std::unique_ptr<AssignableExpr> lhs) {
+ptr<Assignment> Parser::parse_assignment_rhs(ptr<AssignableExpr> lhs) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat '='
 
     varOrReturn(rhs, parse_expr());
 
-    return std::make_unique<Assignment>(location, std::move(lhs), std::move(rhs));
+    return makePtr<Assignment>(location, std::move(lhs), std::move(rhs));
 }
 
 // <fieldInit>
 //  ::= <identifier> ':' <expr>
-std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
+ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
     debug_func("");
     matchOrReturn(TokenType::id, "expected field initialization");
 
@@ -197,25 +198,25 @@ std::unique_ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
 
     varOrReturn(init, parse_expr());
 
-    return std::make_unique<FieldInitStmt>(location, std::move(identifier), std::move(init));
+    return makePtr<FieldInitStmt>(location, std::move(identifier), std::move(init));
 }
 
-std::unique_ptr<DeferStmt> Parser::parse_defer_stmt() {
+ptr<DeferStmt> Parser::parse_defer_stmt() {
     debug_func("");
-    if (m_nextToken.type != TokenType::kw_errdefer && m_nextToken.type != TokenType::kw_defer){
+    if (m_nextToken.type != TokenType::kw_errdefer && m_nextToken.type != TokenType::kw_defer) {
         return report(m_nextToken.loc, "expected defer");
-    } 
+    }
     bool isErrDefer = m_nextToken.type == TokenType::kw_errdefer;
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat defer or errdefer
 
-    varOrReturn(block, with_restrictions<std::unique_ptr<Block>>(
+    varOrReturn(block, with_restrictions<ptr<Block>>(
                            ReturnNotAllowed, [&]() { return parse_block(m_nextToken.type != TokenType::block_l); }));
 
-    return std::make_unique<DeferStmt>(location, std::move(block), isErrDefer);
+    return makePtr<DeferStmt>(location, std::move(block), isErrDefer);
 }
 
-std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
+ptr<SwitchStmt> Parser::parse_switch_stmt() {
     debug_func("");
     matchOrReturn(TokenType::kw_switch, "expected switch");
     SourceLocation location = m_nextToken.loc;
@@ -224,7 +225,7 @@ std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
     matchOrReturn(TokenType::par_l, "expected '('");
     eat_next_token();  // eat '('
 
-    varOrReturn(condition, with_restrictions<std::unique_ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
+    varOrReturn(condition, with_restrictions<ptr<Expr>>(StructNotAllowed, [&]() { return parse_expr(); }));
 
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat ')'
@@ -232,8 +233,8 @@ std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat '{'
 
-    std::vector<std::unique_ptr<CaseStmt>> cases;
-    std::unique_ptr<Block> elseBlock;
+    std::vector<ptr<CaseStmt>> cases;
+    ptr<Block> elseBlock;
     while (m_nextToken.type == TokenType::kw_case || m_nextToken.type == TokenType::kw_else) {
         bool isElse = m_nextToken.type == TokenType::kw_else;
         varOrReturn(cas, parse_case_stmt());
@@ -259,10 +260,10 @@ std::unique_ptr<SwitchStmt> Parser::parse_switch_stmt() {
     matchOrReturn(TokenType::block_r, "expected '}'");
     eat_next_token();  // eat '}'
 
-    return std::make_unique<SwitchStmt>(location, std::move(condition), std::move(cases), std::move(elseBlock));
+    return makePtr<SwitchStmt>(location, std::move(condition), std::move(cases), std::move(elseBlock));
 }
 
-std::unique_ptr<CaseStmt> Parser::parse_case_stmt() {
+ptr<CaseStmt> Parser::parse_case_stmt() {
     debug_func("");
     auto location = m_nextToken.loc;
     if (m_nextToken.type != TokenType::kw_case && m_nextToken.type != TokenType::kw_else) {
@@ -271,7 +272,7 @@ std::unique_ptr<CaseStmt> Parser::parse_case_stmt() {
     bool isElse = m_nextToken.type == TokenType::kw_else;
     eat_next_token();  // eat case or else
 
-    std::unique_ptr<Expr> condition;
+    ptr<Expr> condition;
     if (!isElse) {
         auto conditionLocation = m_nextToken.loc;
         condition = parse_expr();
@@ -283,6 +284,6 @@ std::unique_ptr<CaseStmt> Parser::parse_case_stmt() {
 
     varOrReturn(block, parse_block(m_nextToken.type != TokenType::block_l));
 
-    return std::make_unique<CaseStmt>(location, std::move(condition), std::move(block));
+    return makePtr<CaseStmt>(location, std::move(condition), std::move(block));
 }
 }  // namespace DMZ

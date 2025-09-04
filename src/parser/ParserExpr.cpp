@@ -2,47 +2,47 @@
 #include "parser/Parser.hpp"
 namespace DMZ {
 
-std::unique_ptr<Expr> Parser::parse_primary() {
+ptr<Expr> Parser::parse_primary() {
     debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'");
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::par_l) {
         eat_next_token();  // eat '('
 
-        varOrReturn(expr, with_no_restrictions<std::unique_ptr<Expr>>([&]() { return parse_expr(); }));
+        varOrReturn(expr, with_no_restrictions<ptr<Expr>>([&]() { return parse_expr(); }));
 
         matchOrReturn(TokenType::par_r, "expected ')'");
         eat_next_token();  // eat ')'
 
-        return std::make_unique<GroupingExpr>(location, std::move(expr));
+        return makePtr<GroupingExpr>(location, std::move(expr));
     }
     if (m_nextToken.type == TokenType::lit_int) {
-        auto literal = std::make_unique<IntLiteral>(location, m_nextToken.str);
+        auto literal = makePtr<IntLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat int
         return literal;
     }
     if (m_nextToken.type == TokenType::lit_float) {
-        auto literal = std::make_unique<FloatLiteral>(location, m_nextToken.str);
+        auto literal = makePtr<FloatLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat float
         return literal;
     }
     if (m_nextToken.type == TokenType::lit_char) {
-        auto literal = std::make_unique<CharLiteral>(location, m_nextToken.str);
+        auto literal = makePtr<CharLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat char
         return literal;
     }
     if (m_nextToken.type == TokenType::kw_true || m_nextToken.type == TokenType::kw_false) {
-        auto literal = std::make_unique<BoolLiteral>(location, m_nextToken.str);
+        auto literal = makePtr<BoolLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat bool
         return literal;
     }
     if (m_nextToken.type == TokenType::kw_null) {
-        auto literal = std::make_unique<NullLiteral>(location);
+        auto literal = makePtr<NullLiteral>(location);
         eat_next_token();  // eat null
         return literal;
     }
     if (m_nextToken.type == TokenType::lit_string) {
-        auto literal = std::make_unique<StringLiteral>(location, m_nextToken.str);
+        auto literal = makePtr<StringLiteral>(location, m_nextToken.str);
         eat_next_token();  // eat string
         return literal;
     }
@@ -50,7 +50,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
 
-        std::unique_ptr<Expr> expr = std::make_unique<DeclRefExpr>(location, std::move(identifier));
+        ptr<Expr> expr = makePtr<DeclRefExpr>(location, std::move(identifier));
 
         if (!(restrictions & StructNotAllowed) &&
             (m_nextToken.type == TokenType::block_l || nextToken_is_generic(TokenType::block_l))) {
@@ -67,8 +67,8 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             }
 
             GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
-            expr = std::make_unique<StructInstantiationExpr>(location, std::move(expr), std::move(genTypes),
-                                                             std::move(*fieldInitList));
+            expr = makePtr<StructInstantiationExpr>(location, std::move(expr), std::move(genTypes),
+                                                    std::move(*fieldInitList));
         }
         return expr;
     }
@@ -81,7 +81,7 @@ std::unique_ptr<Expr> Parser::parse_primary() {
             return nullptr;
         }
 
-        return std::make_unique<ArrayInstantiationExpr>(location, std::move(*initList));
+        return makePtr<ArrayInstantiationExpr>(location, std::move(*initList));
     }
     if (m_nextToken.type == TokenType::kw_catch) {
         return parse_catch_error_expr();
@@ -113,11 +113,11 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 //
 // <memberExpr>
 //  ::= '.' <identifier>
-std::unique_ptr<Expr> Parser::parse_postfix_expr() {
+ptr<Expr> Parser::parse_postfix_expr() {
     debug_func("");
     varOrReturn(expr, parse_primary());
 
-    std::unique_ptr<DMZ::GenericTypes> genericTypes;
+    ptr<DMZ::GenericTypes> genericTypes;
 
     if (m_nextToken.type == TokenType::bracket_l) {
         SourceLocation location = m_nextToken.loc;
@@ -128,7 +128,7 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
 
         matchOrReturn(TokenType::bracket_r, "expected ']'");
         eat_next_token();  // eat ']'
-        expr = std::make_unique<ArrayAtExpr>(location, std::move(expr), std::move(index));
+        expr = makePtr<ArrayAtExpr>(location, std::move(expr), std::move(index));
     }
 
     while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l ||
@@ -144,8 +144,7 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
                         parse_list_with_trailing_comma<Expr>({TokenType::par_l, "expected '('"}, &Parser::parse_expr,
                                                              {TokenType::par_r, "expected ')'"}));
 
-            expr = std::make_unique<CallExpr>(location, std::move(expr), std::move(*argumentList),
-                                              std::move(genericTypes));
+            expr = makePtr<CallExpr>(location, std::move(expr), std::move(*argumentList), std::move(genericTypes));
         }
         if (m_nextToken.type == TokenType::block_l) {
             SourceLocation location = m_nextToken.loc;
@@ -170,8 +169,8 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
             // Type t = Type::customType(identifier);
             GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
 
-            expr = std::make_unique<StructInstantiationExpr>(expr->location, std::move(expr), std::move(genTypes),
-                                                             std::move(*fieldInitList));
+            expr = makePtr<StructInstantiationExpr>(expr->location, std::move(expr), std::move(genTypes),
+                                                    std::move(*fieldInitList));
         }
         if (m_nextToken.type == TokenType::dot) {
             SourceLocation location = m_nextToken.loc;
@@ -180,7 +179,7 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
             matchOrReturn(TokenType::id, "expected field identifier");
             // assert(m_nextToken.value && "identifier without value");
 
-            expr = std::make_unique<MemberExpr>(location, std::move(expr), m_nextToken.str);
+            expr = makePtr<MemberExpr>(location, std::move(expr), m_nextToken.str);
             eat_next_token();  // eat identifier
         }
     }
@@ -189,13 +188,13 @@ std::unique_ptr<Expr> Parser::parse_postfix_expr() {
         eat_next_token();  // eat orelse
         varOrReturn(orelse, parse_expr());
 
-        expr = std::make_unique<OrElseErrorExpr>(expr->location, std::move(expr), std::move(orelse));
+        expr = makePtr<OrElseErrorExpr>(expr->location, std::move(expr), std::move(orelse));
     }
 
     return expr;
 }
 
-std::unique_ptr<Expr> Parser::parse_prefix_expr() {
+ptr<Expr> Parser::parse_prefix_expr() {
     debug_func("");
     Token tok = m_nextToken;
     std::unordered_set<TokenType> unaryOps = {
@@ -214,15 +213,15 @@ std::unique_ptr<Expr> Parser::parse_prefix_expr() {
 
     switch (tok.type) {
         case TokenType::asterisk:
-            return std::make_unique<DerefPtrExpr>(tok.loc, std::move(rhs));
+            return makePtr<DerefPtrExpr>(tok.loc, std::move(rhs));
         case TokenType::amp:
-            return std::make_unique<RefPtrExpr>(tok.loc, std::move(rhs));
+            return makePtr<RefPtrExpr>(tok.loc, std::move(rhs));
         default:
-            return std::make_unique<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
+            return makePtr<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
     }
 }
 
-std::unique_ptr<Expr> Parser::parse_expr() {
+ptr<Expr> Parser::parse_expr() {
     debug_func("");
     varOrReturn(lhs, parse_prefix_expr());
     return parse_expr_rhs(std::move(lhs), 0);
@@ -255,7 +254,7 @@ std::unique_ptr<Expr> Parser::parse_expr() {
     }
 }
 
-std::unique_ptr<Expr> Parser::parse_expr_rhs(std::unique_ptr<Expr> lhs, int precedence) {
+ptr<Expr> Parser::parse_expr_rhs(ptr<Expr> lhs, int precedence) {
     debug_func("");
     while (true) {
         Token op = m_nextToken;
@@ -271,11 +270,11 @@ std::unique_ptr<Expr> Parser::parse_expr_rhs(std::unique_ptr<Expr> lhs, int prec
             if (!rhs) return nullptr;
         }
 
-        lhs = std::make_unique<BinaryOperator>(op.loc, std::move(lhs), std::move(rhs), op.type);
+        lhs = makePtr<BinaryOperator>(op.loc, std::move(lhs), std::move(rhs), op.type);
     }
 }
 
-std::unique_ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
+ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_catch, "expected 'catch'");
     auto location = m_nextToken.loc;
@@ -286,10 +285,10 @@ std::unique_ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
     varOrReturn(first_expr, parse_expr());
 
     Type type = Type::builtinError("err");
-    std::unique_ptr<Expr> initializer;
+    ptr<Expr> initializer;
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return std::make_unique<CatchErrorExpr>(location, std::move(first_expr), nullptr);
+        return makePtr<CatchErrorExpr>(location, std::move(first_expr), nullptr);
     }
 
     matchOrReturn(TokenType::op_assign, "expected '='");
@@ -297,13 +296,13 @@ std::unique_ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
 
     varOrReturn(errorToCatch, parse_expr());
 
-    auto varDecl = std::make_unique<VarDecl>(idLocation, identifier, std::make_unique<Type>(std::move(type)), false,
-                                             std::move(errorToCatch));
-    auto declaration = std::make_unique<DeclStmt>(idLocation, std::move(varDecl));
-    return std::make_unique<CatchErrorExpr>(location, nullptr, std::move(declaration));
+    auto varDecl =
+        makePtr<VarDecl>(idLocation, identifier, makePtr<Type>(std::move(type)), false, std::move(errorToCatch));
+    auto declaration = makePtr<DeclStmt>(idLocation, std::move(varDecl));
+    return makePtr<CatchErrorExpr>(location, nullptr, std::move(declaration));
 }
 
-std::unique_ptr<TryErrorExpr> Parser::parse_try_error_expr() {
+ptr<TryErrorExpr> Parser::parse_try_error_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_try, "expected 'try'");
     auto location = m_nextToken.loc;
@@ -311,10 +310,10 @@ std::unique_ptr<TryErrorExpr> Parser::parse_try_error_expr() {
 
     varOrReturn(first_expr, parse_expr());
 
-    return std::make_unique<TryErrorExpr>(location, std::move(first_expr));
+    return makePtr<TryErrorExpr>(location, std::move(first_expr));
 }
 
-std::unique_ptr<ImportExpr> Parser::parse_import_expr() {
+ptr<ImportExpr> Parser::parse_import_expr() {
     debug_func("");
     auto location = m_nextToken.loc;
     matchOrReturn(TokenType::kw_import, "expected 'import'");
@@ -331,10 +330,10 @@ std::unique_ptr<ImportExpr> Parser::parse_import_expr() {
     eat_next_token();  // eat )
 
     Driver::register_import(identifier);
-    return std::make_unique<ImportExpr>(location, identifier);
+    return makePtr<ImportExpr>(location, identifier);
 }
 
-std::unique_ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
+ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
     debug_func("");
     auto loc = m_nextToken.loc;
     matchOrReturn(TokenType::dot, "expected '.'");
@@ -343,10 +342,10 @@ std::unique_ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
     auto identifier = m_nextToken.str;
     eat_next_token();  // eat id
 
-    return std::make_unique<SelfMemberExpr>(loc, identifier);
+    return makePtr<SelfMemberExpr>(loc, identifier);
 }
 
-std::unique_ptr<SizeofExpr> Parser::parse_sizeof_expr() {
+ptr<SizeofExpr> Parser::parse_sizeof_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_sizeof, "expected @sizeof");
     auto location = m_nextToken.loc;
@@ -360,6 +359,6 @@ std::unique_ptr<SizeofExpr> Parser::parse_sizeof_expr() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )
 
-    return std::make_unique<SizeofExpr>(location, *type);
+    return makePtr<SizeofExpr>(location, *type);
 }
 }  // namespace DMZ

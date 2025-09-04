@@ -110,9 +110,6 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
             return report(loc, "unexpected use of @This outside a struct");
         }
     }
-    if (id == "@sizeof") {
-        
-    }
 
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         for (auto &&[declID, decl] : *it) {
@@ -172,87 +169,112 @@ ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const
     return nullptr;
 }
 
-std::optional<Type> Sema::resolve_type(Type parsedType) {
-    std::optional<Type> ret = std::nullopt;
-    Type retCopy;
+ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
+    ptr<ResolvedType> ret = nullptr;
     debug_func("'" << parsedType << "' -> '" << (ret.has_value() ? retCopy.to_str() : "nullopt") << "'");
-    if (parsedType.kind == Type::Kind::Custom) {
-        if (parsedType.name == "@This") {
-            if (m_currentStruct == nullptr) {
-                report(parsedType.location, "unexpected use of @This outside a struct");
-                ret = std::nullopt;
-                return retCopy;
-            }
-            retCopy = Type::structType(parsedType, m_currentStruct);
-            retCopy.name = m_currentStruct->identifier;
-            ret = retCopy;
-            return ret;
-        }
-
-        if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
-            if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-                auto auxstructDecl =
-                    specialize_generic_struct(parsedType.location, *genStructDecl, *parsedType.genericTypes);
-                if (auxstructDecl) structDecl = auxstructDecl;
-            }
-            retCopy = Type::structType(parsedType, structDecl);
-            ret = retCopy;
-            return ret;
-        }
-        if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-            if (decl->specializedType) {
-                if ((*decl->specializedType).kind == Type::Kind::Custom) {
-                    auto t = resolve_type(*decl->specializedType);
-                    if (!t) {
-                        report(decl->location, "cannot resolve type");
-                    }
-                    return t;
-                } else {
-                    retCopy = Type::specializeType(parsedType, *decl->specializedType);
-                    ret = retCopy;
+    switch (parsedType.kind) {
+        case Type::Kind::Custom: {
+            if (parsedType.name == "@This") {
+                if (m_currentStruct == nullptr) {
+                    report(parsedType.location, "unexpected use of @This outside a struct");
+                    ret = nullptr;
                     return ret;
                 }
-            } else {
-                retCopy = Type::genericType(parsedType);
-                ret = retCopy;
+                ret = makePtr<ResolvedTypeStruct>(parsedType.location, m_currentStruct);
                 return ret;
             }
-        }
-#ifdef DEBUG
-        dump_scopes();
-#endif
-        ret = std::nullopt;
-        return ret;
-    }
 
-    if (parsedType.kind == Type::Kind::Generic) {
-        if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-            if (decl->specializedType) {
-                if ((*decl->specializedType).kind == Type::Kind::Custom) {
-                    auto t = resolve_type(*decl->specializedType);
-                    if (!t) {
-                        report(decl->location, "cannot resolve type");
+            if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
+                if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
+                    auto specializedTypes = resolve_specialized_type(*parsedType.genericTypes);
+                    if (!specializedTypes) return report(parsedType.location, "cannot specialize generic types");
+                    auto auxstructDecl =
+                        specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
+                    if (auxstructDecl) structDecl = auxstructDecl;
+                }
+                ret = makePtr<ResolvedTypeStruct>(parsedType.location, structDecl);
+                return ret;
+            }
+            if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+                if (decl->specializedType) {
+                    if (dynamic_cast<const ResolvedTypeGeneric *>(decl->specializedType.get())) {
+                        auto t = re_resolve_type(*decl->specializedType);
+                        if (!t) {
+                            report(decl->location, "cannot resolve type");
+                        }
+                        return t;
+                    } else {
+                        ret = re_resolve_type(*decl->specializedType);
+                        return ret;
                     }
-                    return t;
                 } else {
-                    retCopy = Type::specializeType(parsedType, *decl->specializedType);
-                    ret = retCopy;
+                    ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
                     return ret;
                 }
             }
-        }
-    }
+#ifdef DEBUG
+            dump_scopes();
+#endif
+            ret = nullptr;
+            return ret;
+        } break;
 
-    retCopy = parsedType;
-    ret = retCopy;
-    debug_msg("same type");
+        case Type::Kind::Generic: {
+            if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+                if (decl->specializedType) {
+                    if (dynamic_cast<const ResolvedTypeGeneric *>(decl->specializedType.get())) {
+                        auto ret = re_resolve_type(*decl->specializedType);
+                        if (!ret) {
+                            return report(decl->location, "cannot resolve type");
+                        }
+                    } else {
+                        ret = re_resolve_type(*decl->specializedType);
+                    }
+                }
+            }
+        } break;
+        case Type::Kind::Int: {
+            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Int, parsedType.size);
+        } break;
+        case Type::Kind::UInt: {
+            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::UInt, parsedType.size);
+        } break;
+        case Type::Kind::Float: {
+            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Float, parsedType.size);
+        } break;
+        case Type::Kind::Void: {
+            ret = makePtr<ResolvedTypeVoid>(parsedType.location);
+        } break;
+        case Type::Kind::Struct:
+        case Type::Kind::Error:
+        case Type::Kind::ErrorGroup:
+        case Type::Kind::Module:
+            parsedType.dump();
+            dmz_unreachable("Unsuported type");
+            break;
+    }
+    if (parsedType.isPointer) {
+        ret = makePtr<ResolvedTypePointer>(ret->location, std::move(ret));
+        return ret;
+    }
     return ret;
 }
 
-std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
+ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericTypes &parsedType) { dmz_unreachable("TODO"); }
+
+ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
+    if (dynamic_cast<const ResolvedTypeVoid *>(&type) || dynamic_cast<const ResolvedTypeNumber *>(&type) ||
+        dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        return type.clone();
+    }
+    type.dump();
+    dmz_unreachable("TODO");
+}
+
+std::vector<ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
-    std::vector<std::unique_ptr<Decl>> decls;
+    std::vector<ptr<Decl>> decls;
     decls.reserve(m_ast.size());
 
     for (auto &moduleDeclPtr : m_ast) {
@@ -269,7 +291,7 @@ std::vector<std::unique_ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     return declarations;
 }
 
-bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
+bool Sema::resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Body);
     auto ret = resolve_in_module_body(decls);
@@ -279,9 +301,9 @@ bool Sema::resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
     return ret;
 }
 
-void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_ptr<ResolvedDecl>> &decls) {
+void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls) {
     debug_func("");
-    // auto add_deps = [parent](std::unique_ptr<DMZ::ResolvedDecl> &d) {
+    // auto add_deps = [parent](ref<DMZ::ResolvedDecl> &d) {
     //     if (parent == nullptr) return;
     //     debug_msg_func("add_deps", d->identifier);
 
@@ -303,7 +325,7 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_pt
         }
         if (auto sd = dynamic_cast<ResolvedStructDecl *>(decl.get())) {
             debug_msg("StructDecl " << sd->identifier);
-            std::vector<std::unique_ptr<ResolvedDecl>> aux_decls;
+            std::vector<ptr<ResolvedDecl>> aux_decls;
             decls.reserve(sd->functions.size());
 
             for (auto &fnDecl : sd->functions) {
@@ -322,7 +344,7 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<std::unique_pt
         }
         if (auto gen = dynamic_cast<ResolvedGenericFunctionDecl *>(decl.get())) {
             debug_msg("ResolvedFunctionDecl " << gen->identifier);
-            std::vector<std::unique_ptr<ResolvedDecl>> aux_decls;
+            std::vector<ptr<ResolvedDecl>> aux_decls;
             decls.reserve(gen->specializations.size());
 
             for (auto &fnDecl : gen->specializations) {
@@ -386,7 +408,7 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
     return false;
 }
 
-void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest) {
+void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) {
     debug_func("");
 
     std::unordered_set<ResolvedDependencies *> recurse_check;
@@ -412,7 +434,7 @@ void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool
         d->isUsedBy.clear();
         m_removed_decls.emplace(d);
     };
-    auto add_to_remove_smart = [&](std::unique_ptr<DMZ::ResolvedDecl> &d) {
+    auto add_to_remove_smart = [&](ptr<DMZ::ResolvedDecl> &d) {
         if (auto deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
             add_to_remove(deps);
             d.reset();
@@ -437,7 +459,7 @@ void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool
         }
         if (auto sd = dynamic_cast<ResolvedStructDecl *>(decl.get())) {
             debug_msg("StructDecl " << sd->identifier);
-            std::vector<std::unique_ptr<ResolvedDecl>> aux_decls;
+            std::vector<ptr<ResolvedDecl>> aux_decls;
             decls.reserve(sd->functions.size());
 
             for (auto &fnDecl : sd->functions) {
@@ -474,8 +496,8 @@ void Sema::remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool
     // }
 
     // std::erase_if(decls,
-    //   [&](std::unique_ptr<ResolvedDecl> &d) -> bool { return to_remove.find(d.get()) != to_remove.end(); });
-    std::erase_if(decls, [&](std::unique_ptr<ResolvedDecl> &d) -> bool { return d ? false : true; });
+    //   [&](ref<ResolvedDecl> &d) -> bool { return to_remove.find(d.get()) != to_remove.end(); });
+    std::erase_if(decls, [&](ptr<ResolvedDecl> &d) -> bool { return d ? false : true; });
 }
 
 bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
@@ -501,7 +523,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
 
 bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg) {
     debug_func(fn.location);
-    if (fn.type.kind == Type::Kind::Void) return false;
+    if (dynamic_cast<const ResolvedTypeVoid *>(fn.type.get())) return false;
 
     int returnCount = 0;
     bool exitReached = false;
@@ -598,8 +620,9 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
 
                     const auto *decl = dynamic_cast<const ResolvedDecl *>(&dre->decl);
 
-                    if (!decl->isMutable && !decl->type.isPointer && tmp[decl] != State::Unassigned) {
-                        std::string msg = '\'' + std::string(decl->identifier) + "' cannot be mutated";
+                    if (!decl->isMutable && !dynamic_cast<const ResolvedTypePointer *>(decl->type.get()) &&
+                        tmp[decl] != State::Unassigned) {
+                        std::string msg = '\'' + decl->identifier + "' cannot be mutated";
                         pendingErrors.emplace_back(assignment->location, std::move(msg));
                     }
 
@@ -614,7 +637,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                         }
 
                         if (tmp[var] != State::Assigned) {
-                            std::string msg = '\'' + std::string(var->identifier) + "' is not initialized";
+                            std::string msg = '\'' + var->identifier + "' is not initialized";
                             pendingErrors.emplace_back(dre->location, std::move(msg));
                         }
                     }
@@ -637,7 +660,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
     return !pendingErrors.empty();
 }
 
-void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
+void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     struct elem {
         ResolvedDecl *decl;
@@ -666,13 +689,13 @@ void Sema::resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>>
         elem e = stack.top();
         stack.pop();
 
-        e.decl->symbolName = e.symbol + std::string(e.decl->identifier);
+        e.decl->symbolName = e.symbol + e.decl->identifier;
 
         if (const auto *func = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(e.decl)) {
-            e.decl->symbolName += func->genericTypes.to_str();
+            e.decl->symbolName += func->specializedTypes->to_str();
         }
         if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
-            e.decl->symbolName += struc->genericTypes.to_str();
+            e.decl->symbolName += struc->specializedTypes->to_str();
         }
         // println(indent(e.level) << "Symbol identifier: " << e.decl->identifier);
         // println(indent(e.level) << "e Symbol: " << e.symbol);

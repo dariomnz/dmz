@@ -14,7 +14,7 @@ fn error1(x: i32) -> void {
     2;
 }
 
-// CHECK: FunctionDecl error1 -> Void void
+// CHECK: FunctionDecl error1 -> void
 // CHECK-NEXT:   ParamDecl:Int i32 x
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     IfStmt

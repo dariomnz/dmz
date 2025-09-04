@@ -12,10 +12,10 @@ struct Color {
     }
 }
 // CHECK: StructDecl Color
-// CHECK-NEXT:   FieldDecl:Int i32 r
-// CHECK-NEXT:   FieldDecl:Int i32 g
-// CHECK-NEXT:   FieldDecl:Int i32 b
-// CHECK-NEXT:   MemberFunctionDecl print -> Int i32
+// CHECK-NEXT:   FieldDecl:i32 r
+// CHECK-NEXT:   FieldDecl:i32 g
+// CHECK-NEXT:   FieldDecl:i32 b
+// CHECK-NEXT:   MemberFunctionDecl print -> i32
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       ReturnStmt
 // CHECK-NEXT:         CallExpr
@@ -29,7 +29,7 @@ fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};
     c.print(); 
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl:Custom Color c

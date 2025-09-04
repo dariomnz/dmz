@@ -2,7 +2,7 @@
 
 fn foo(x: i32) -> void {
 }
-// CHECK: FunctionDecl foo -> Void void
+// CHECK: FunctionDecl foo -> void
 // CHECK-NEXT:   ParamDecl:Int i32 x
 // CHECK-NEXT:   Block
 

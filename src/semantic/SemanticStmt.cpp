@@ -3,7 +3,7 @@
 
 namespace DMZ {
 
-std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
+ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     debug_func(stmt.location);
     if (auto *expr = dynamic_cast<const Expr *>(&stmt)) {
         return resolve_expr(*expr);
@@ -37,40 +37,40 @@ std::unique_ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     dmz_unreachable("unexpected statement");
 }
 
-std::unique_ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {
+ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {
     debug_func(returnStmt.location);
     if (!m_currentFunction) {
         return report(returnStmt.location, "unexpected return stmt outside a function");
     }
 
-    if (m_currentFunction->type.kind == Type::Kind::Void && returnStmt.expr)
-        if (!m_currentFunction->type.isOptional)
+    if (dynamic_cast<const ResolvedTypeVoid *>(m_currentFunction->type.get()) && returnStmt.expr)
+        if (!dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get()))
             return report(returnStmt.location, "unexpected return value in void function");
 
-    if (m_currentFunction->type.kind != Type::Kind::Void && !returnStmt.expr)
+    if (!dynamic_cast<const ResolvedTypeVoid *>(m_currentFunction->type.get()) && !returnStmt.expr)
         return report(returnStmt.location, "expected a return value");
 
-    std::unique_ptr<ResolvedExpr> resolvedExpr;
+    ptr<ResolvedExpr> resolvedExpr;
     if (returnStmt.expr) {
         resolvedExpr = resolve_expr(*returnStmt.expr);
         if (!resolvedExpr) return nullptr;
 
-        if (!Type::compare(m_currentFunction->type, resolvedExpr->type))
+        if (!m_currentFunction->type->compare(*resolvedExpr->type))
             return report(resolvedExpr->location, "unexpected return type, expected '" +
-                                                      m_currentFunction->type.to_str() + "' actual '" +
-                                                      resolvedExpr->type.to_str() + "'");
+                                                      m_currentFunction->type->to_str() + "' actual '" +
+                                                      resolvedExpr->type->to_str() + "'");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }
-    bool isError = resolvedExpr && resolvedExpr->type.kind == Type::Kind::Error;
+    bool isError = resolvedExpr && dynamic_cast<const ResolvedTypeError *>(resolvedExpr->type.get());
     auto defers = resolve_defer_ref_stmt(false, isError);
 
-    return std::make_unique<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr), std::move(defers));
+    return makePtr<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr), std::move(defers));
 }
 
-std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
+ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
     debug_func(block.location);
-    std::vector<std::unique_ptr<ResolvedStmt>> resolvedStatements;
+    std::vector<ptr<ResolvedStmt>> resolvedStatements;
 
     bool error = false;
     int reportUnreachableCount = 0;
@@ -93,25 +93,29 @@ std::unique_ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 
     if (error) return nullptr;
 
-    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
+    std::vector<ptr<ResolvedDeferRefStmt>> defers;
     // Only if not finish in return, return handle that part
     if (resolvedStatements.size() == 0 || !dynamic_cast<ResolvedReturnStmt *>(resolvedStatements.back().get())) {
         defers = resolve_defer_ref_stmt(true, false);
     }
 
-    return std::make_unique<ResolvedBlock>(block.location, std::move(resolvedStatements), std::move(defers));
+    return makePtr<ResolvedBlock>(block.location, std::move(resolvedStatements), std::move(defers));
 }
 
-std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
+ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     debug_func(ifStmt.location);
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
+        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
+            return report(condition->location, "expected int in condition");
+        }
+    } else {
         return report(condition->location, "expected int in condition");
     }
     varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
 
-    std::unique_ptr<ResolvedBlock> resolvedFalseBlock;
+    ptr<ResolvedBlock> resolvedFalseBlock;
     if (ifStmt.falseBlock) {
         resolvedFalseBlock = resolve_block(*ifStmt.falseBlock);
         if (!resolvedFalseBlock) return nullptr;
@@ -119,15 +123,19 @@ std::unique_ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
 
     condition->set_constant_value(cee.evaluate(*condition, false));
 
-    return std::make_unique<ResolvedIfStmt>(ifStmt.location, std::move(condition), std::move(resolvedTrueBlock),
-                                            std::move(resolvedFalseBlock));
+    return makePtr<ResolvedIfStmt>(ifStmt.location, std::move(condition), std::move(resolvedTrueBlock),
+                                   std::move(resolvedFalseBlock));
 }
 
-std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
+ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     debug_func(whileStmt.location);
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
+        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
+            return report(condition->location, "expected int in condition");
+        }
+    } else {
         return report(condition->location, "expected int in condition");
     }
 
@@ -135,69 +143,72 @@ std::unique_ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whi
 
     condition->set_constant_value(cee.evaluate(*condition, false));
 
-    return std::make_unique<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
+    return makePtr<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
 }
 
-std::unique_ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
+ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
     debug_func(declStmt.location);
     varOrReturn(resolvedVarDecl, resolve_var_decl(*declStmt.varDecl));
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    return std::make_unique<ResolvedDeclStmt>(declStmt.location, std::move(resolvedVarDecl));
+    return makePtr<ResolvedDeclStmt>(declStmt.location, resolvedVarDecl->type->clone(), std::move(resolvedVarDecl));
 }
 
-std::unique_ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
+ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     debug_func(assignment.location);
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
-    if (resolvedLHS->type.kind == Type::Kind::Void) {
+    if (dynamic_cast<const ResolvedTypeVoid *>(resolvedLHS->type.get())) {
         return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
     }
-    if (!Type::compare(resolvedLHS->type, resolvedRHS->type)) {
-        return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type.to_str() +
-                                                 "' doesn't match variable type '" + resolvedLHS->type.to_str() + "'");
+    if (!resolvedLHS->type->compare(*resolvedRHS->type)) {
+        return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type->to_str() +
+                                                 "' doesn't match variable type '" + resolvedLHS->type->to_str() + "'");
     }
 
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 
-    return std::make_unique<ResolvedAssignment>(assignment.location, std::move(resolvedLHS), std::move(resolvedRHS));
+    return makePtr<ResolvedAssignment>(assignment.location, std::move(resolvedLHS), std::move(resolvedRHS));
 }
 
-std::unique_ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
+ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
     debug_func(deferStmt.location);
     varOrReturn(block, resolve_block(*deferStmt.block));
-    auto resolvedDeferStmt =
-        std::make_unique<ResolvedDeferStmt>(deferStmt.location, std::move(block), deferStmt.isErrDefer);
+    auto resolvedDeferStmt = makePtr<ResolvedDeferStmt>(deferStmt.location, std::move(block), deferStmt.isErrDefer);
     m_defers.back().emplace_back(resolvedDeferStmt.get());
     return resolvedDeferStmt;
 }
 
-std::vector<std::unique_ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope, bool isError) {
+std::vector<ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope, bool isError) {
     debug_func("");
-    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> defers;
+    std::vector<ptr<ResolvedDeferRefStmt>> defers;
     // Traversing in reverse the defers vector
     for (int i = m_defers.size() - 1; i >= 0; --i) {
         for (int j = m_defers[i].size() - 1; j >= 0; --j) {
             auto deferStmt = m_defers[i][j];
             if (!isError && deferStmt->isErrDefer) continue;
-            defers.emplace_back(std::make_unique<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
+            defers.emplace_back(makePtr<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
         }
         if (isScope) break;
     }
     return defers;
 }
 
-std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) {
+ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) {
     debug_func(switchStmt.location);
     varOrReturn(condition, resolve_expr(*switchStmt.condition));
 
-    if (condition->type.kind != Type::Kind::Int && condition->type.kind != Type::Kind::UInt) {
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
+        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
+            return report(condition->location, "expected int in condition");
+        }
+    } else {
         return report(condition->location, "expected int in condition");
     }
 
-    std::vector<std::unique_ptr<ResolvedCaseStmt>> cases;
+    std::vector<ptr<ResolvedCaseStmt>> cases;
 
     for (auto &&cas : switchStmt.cases) {
         varOrReturn(c, resolve_case_stmt(*cas));
@@ -208,11 +219,11 @@ std::unique_ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &
 
     condition->set_constant_value(cee.evaluate(*condition, false));
 
-    return std::make_unique<ResolvedSwitchStmt>(switchStmt.location, std::move(condition), std::move(cases),
-                                                std::move(resolvedElseBlock));
+    return makePtr<ResolvedSwitchStmt>(switchStmt.location, std::move(condition), std::move(cases),
+                                       std::move(resolvedElseBlock));
 }
 
-std::unique_ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt) {
+ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt) {
     debug_func(caseStmt.location);
     varOrReturn(condition, resolve_expr(*caseStmt.condition));
 
@@ -223,6 +234,6 @@ std::unique_ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseSt
         return report(condition->location, "condition in case must be a constant value");
     }
 
-    return std::make_unique<ResolvedCaseStmt>(caseStmt.location, std::move(condition), std::move(block));
+    return makePtr<ResolvedCaseStmt>(caseStmt.location, std::move(condition), std::move(block));
 }
 }  // namespace DMZ

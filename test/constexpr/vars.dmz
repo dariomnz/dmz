@@ -8,7 +8,7 @@ fn pass() -> i32 {
 // CHECK-NEXT:       | value: 20
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 x
 // CHECK-NEXT:       | value: 2
-// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '10'
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
 
 fn pass2() -> i32 {
     const x: i32 = 2;
@@ -26,7 +26,7 @@ fn error1() -> i32 {
 // CHECK:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedBinaryOperator:Int i32 '*'
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '10'
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
 
 fn err2() -> i32 {
     let x: i32 = 2;
@@ -35,6 +35,6 @@ fn err2() -> i32 {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator:Int i32 '*'
 // CHECK-NEXT:        ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:        ResolvedIntLiteral:Int i32 '10'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '10'
 
 fn main() -> void {}

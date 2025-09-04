@@ -34,12 +34,12 @@ struct CompilerOptions {
 class Driver {
     ThreadPool m_workers;
     std::mutex m_modulesMutex;
-    std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules;
+    std::vector<ptr<llvm::orc::ThreadSafeModule>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
     std::unordered_map<std::string, ModuleDecl*> imported_modules;
-    
-    public:
+
+   public:
     CompilerOptions m_options;
     Driver(CompilerOptions options) : m_options(options) {}
     int main();
@@ -48,10 +48,10 @@ class Driver {
     bool need_exit();
 
     using Type_Sources = std::vector<std::filesystem::path>;
-    using Type_Lexers = std::vector<std::unique_ptr<Lexer>>;
-    using Type_Ast = std::vector<std::unique_ptr<ModuleDecl>>;
-    using Type_ResolvedTree = std::vector<std::unique_ptr<ResolvedDecl>>;
-    using Type_Module = std::unique_ptr<llvm::orc::ThreadSafeModule>;
+    using Type_Lexers = std::vector<ptr<Lexer>>;
+    using Type_Ast = std::vector<ptr<ModuleDecl>>;
+    using Type_ResolvedTree = std::vector<ptr<ResolvedDecl>>;
+    using Type_Module = ptr<llvm::orc::ThreadSafeModule>;
 
     void check_sources_pass(Type_Sources& sources);
     Type_Lexers lexer_pass(Type_Sources& sources);
@@ -59,11 +59,11 @@ class Driver {
     Type_Sources find_modules(const Type_Sources& includeDirs,
                               const std::unordered_set<std::string_view>& importedModuleIDs);
     void include_pass(Type_Ast& asts);
-    std::unique_ptr<ModuleDecl> merge_modules(std::vector<std::unique_ptr<ModuleDecl>> modules);
+    ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
     static void register_import(std::string_view imported);
     static ModuleDecl* get_import(std::string_view imported);
     bool all_imported();
-    ModuleDecl* find_module(std::string_view name, std::unique_ptr<ModuleDecl>& find_ast);
+    ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
 
     Type_ResolvedTree semantic_pass(Type_Ast& asts);
     Type_Module codegen_pass(Type_ResolvedTree& resolvedTrees);
@@ -72,13 +72,13 @@ class Driver {
     int generate_exec_pass(Type_Module& module);
 
    private:
-    static std::unique_ptr<Driver> driver_instance;
+    static ptr<Driver> driver_instance;
 
    public:
     static Driver& create_instance(CompilerOptions options) {
         if (driver_instance) dmz_unreachable("Driver instance already created");
 
-        driver_instance = std::make_unique<Driver>(options);
+        driver_instance = makePtr<Driver>(options);
         if (!driver_instance) dmz_unreachable("Driver instance not created");
         return *driver_instance;
     }

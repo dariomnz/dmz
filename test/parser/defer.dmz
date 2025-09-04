@@ -8,7 +8,7 @@ fn main() -> void {
         defer println(4);
     }
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:  Block
 // CHECK-NEXT:    DeferStmt 
 // CHECK-NEXT:      Block

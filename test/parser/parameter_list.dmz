@@ -21,7 +21,7 @@ fn f(x: i32, 2) -> void {}
 fn f(,) -> void {}
 
 fn trailingComma(x:i32,) -> void {}
-// CHECK: FunctionDecl trailingComma -> Void void
+// CHECK: FunctionDecl trailingComma -> void
 // CHECK-NEXT:   ParamDecl:Int i32 x
 // CHECK-NEXT:   Block
 
@@ -29,13 +29,13 @@ fn trailingComma2(
     x:i32, 
     y:i32,
 ) -> void {}
-// CHECK: FunctionDecl trailingComma2 -> Void void
+// CHECK: FunctionDecl trailingComma2 -> void
 // CHECK-NEXT:   ParamDecl:Int i32 x
 // CHECK-NEXT:   ParamDecl:Int i32 y
 // CHECK-NEXT:   Block
 
 fn f(x: i32, y: i32) -> void {}
-// CHECK: FunctionDecl f -> Void void
+// CHECK: FunctionDecl f -> void
 // CHECK-NEXT:   ParamDecl:Int i32 x
 // CHECK-NEXT:   ParamDecl:Int i32 y
 // CHECK-NEXT:   Block

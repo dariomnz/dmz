@@ -15,7 +15,7 @@ fn main() -> void {
     
     ops.print(result);
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: x

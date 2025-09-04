@@ -16,14 +16,14 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
             return name;
         }
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(&decl)) {
-            name = std::string(decl.identifier);
+            name = decl.identifier;
             return name;
         }
     }
     if (!decl.symbolName.empty()) {
         name = decl.symbolName;
     } else {
-        name = std::string(decl.identifier);
+        name = decl.identifier;
     }
 
     // if (auto structDecl = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
@@ -92,10 +92,11 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
-    llvm::Type *retType = generate_type(functionDecl.type);
+    llvm::Type *retType = generate_type(*functionDecl.type);
     std::vector<llvm::Type *> paramTypes;
 
-    if (functionDecl.type.kind == Type::Kind::Struct || functionDecl.type.isOptional) {
+    if (dynamic_cast<ResolvedTypeStruct *>(functionDecl.type.get()) ||
+        dynamic_cast<ResolvedTypeOptional *>(functionDecl.type.get())) {
         paramTypes.emplace_back(llvm::PointerType::get(retType, 0));
         retType = m_builder.getVoidTy();
     }
@@ -106,8 +107,8 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             isVararg = true;
             continue;
         }
-        llvm::Type *paramType = generate_type(param->type);
-        if (param->type.kind == Type::Kind::Struct) {
+        llvm::Type *paramType = generate_type(*param->type);
+        if (dynamic_cast<ResolvedTypeStruct *>(param->type.get())) {
             paramType = llvm::PointerType::get(paramType, 0);
         }
         paramTypes.emplace_back(paramType);
@@ -119,26 +120,28 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     fn->setAttributes(construct_attr_list(functionDecl));
 }
 
-llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &funcDecl) {
+llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
     debug_func(funcDecl.symbolName);
-    const ResolvedFuncDecl *fn = &funcDecl;
-    bool isReturningStruct = fn->type.kind == Type::Kind::Struct || fn->type.isOptional;
+    bool isReturningStruct =
+        dynamic_cast<ResolvedTypeStruct *>(fn.type.get()) || dynamic_cast<ResolvedTypeOptional *>(fn.type.get());
     std::vector<llvm::AttributeSet> argsAttrSets;
 
     if (isReturningStruct) {
         llvm::AttrBuilder retAttrs(*m_context);
-        retAttrs.addStructRetAttr(generate_type(fn->type));
+        retAttrs.addStructRetAttr(generate_type(*fn.type));
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, retAttrs));
     }
 
-    for ([[maybe_unused]] auto &&param : fn->params) {
+    for (auto &&param : fn.params) {
         debug_msg("Param: " << param->type);
         llvm::AttrBuilder paramAttrs(*m_context);
-        if (param->type.isPointer && param->type.kind != Type::Kind::Void) {
-            paramAttrs.addByRefAttr(generate_type(param->type.remove_pointer()));
-        } else if (param->type.kind == Type::Kind::Struct) {
+        if (auto typePrt = dynamic_cast<ResolvedTypePointer *>(param->type.get())) {
+            if (!dynamic_cast<ResolvedTypeVoid *>(typePrt->pointerType.get())) {
+                paramAttrs.addByRefAttr(generate_type(*typePrt->pointerType));
+            }
+        } else if (dynamic_cast<ResolvedTypeStruct *>(param->type.get())) {
             if (param->isMutable) {
-                paramAttrs.addByValAttr(generate_type(param->type));
+                paramAttrs.addByValAttr(generate_type(*param->type));
             } else {
                 paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
             }
@@ -175,10 +178,12 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
 
-    bool returnsVoid = functionDecl.type.kind == Type::Kind::Struct || functionDecl.type.kind == Type::Kind::Void ||
-                       functionDecl.type.isOptional;
+    bool returnsVoid = dynamic_cast<const ResolvedTypeStruct *>(functionDecl.type.get()) ||
+                       dynamic_cast<const ResolvedTypeVoid *>(functionDecl.type.get()) ||
+                       dynamic_cast<const ResolvedTypeOptional *>(functionDecl.type.get());
+
     if (!returnsVoid) {
-        retVal = allocate_stack_variable("retval", functionDecl.type);
+        retVal = allocate_stack_variable("retval", *functionDecl.type);
     }
     retBB = llvm::BasicBlock::Create(*m_context, "return");
 
@@ -194,9 +199,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (paramDecl->type.kind != Type::Kind::Struct && paramDecl->isMutable) {
-            declVal = allocate_stack_variable(paramDecl->identifier, paramDecl->type);
-            store_value(&arg, declVal, paramDecl->type, paramDecl->type);
+        if (!dynamic_cast<const ResolvedTypeStruct *>(paramDecl->type.get())) {
+            declVal = allocate_stack_variable(paramDecl->identifier, *paramDecl->type);
+            store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
         }
 
         m_declarations[paramDecl] = declVal;
@@ -234,7 +239,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
-    m_builder.CreateRet(load_value(retVal, functionDecl.type));
+    m_builder.CreateRet(load_value(retVal, *functionDecl.type));
 
     m_currentFunction = nullptr;
 }
@@ -265,7 +270,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
         }
         return;
     }
-    auto *type = static_cast<llvm::StructType *>(generate_type(structDecl.type));
+    auto *type = static_cast<llvm::StructType *>(generate_type(*structDecl.type));
 
     if (!type->isOpaque()) {
         debug_msg("already generated " << structDecl.symbolName);
@@ -274,7 +279,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 
     std::vector<llvm::Type *> fieldTypes;
     for (auto &&field : structDecl.fields) {
-        llvm::Type *t = generate_type(field->type);
+        llvm::Type *t = generate_type(*field->type);
         fieldTypes.emplace_back(t);
     }
 
@@ -326,7 +331,7 @@ void Codegen::generate_module_body(const ResolvedModuleDecl &moduleDecl) {
     generate_in_module_body(moduleDecl.declarations);
 }
 
-void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
+void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     generate_error_no_err();
     for (auto &&decl : declarations) {
@@ -362,7 +367,7 @@ void Codegen::generate_in_module_decl(const std::vector<std::unique_ptr<Resolved
     }
 }
 
-void Codegen::generate_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations) {
+void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     for (auto &&decl : declarations) {
         if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) || dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
@@ -399,9 +404,9 @@ void Codegen::generate_in_module_body(const std::vector<std::unique_ptr<Resolved
 
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
-    if (stmt.type.kind == Type::Kind::Module) return;
+    if (dynamic_cast<const ResolvedTypeModule *>(stmt.type.get())) return;
 
-    if (stmt.type.kind == Type::Kind::ErrorGroup) {
+    if (dynamic_cast<const ResolvedTypeErrorGroup *>(stmt.type.get())) {
         if (auto errorGroup = dynamic_cast<ResolvedErrorGroupExprDecl *>(stmt.varDecl->initializer.get())) {
             generate_error_group_expr_decl(*errorGroup);
         } else {
@@ -416,7 +421,7 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
         initializer = m_builder.getInt32(*constVal);
     }
     auto globalVar =
-        new llvm::GlobalVariable(generate_type(stmt.type), !stmt.isMutable,
+        new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
                                  llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.identifier);
     m_module->insertGlobalVariable(globalVar);
     m_declarations[stmt.varDecl.get()] = globalVar;

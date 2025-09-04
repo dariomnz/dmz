@@ -34,15 +34,15 @@ fn main() -> void {
     let bool3 = fnBool();
 }
 
-// CHECK:   ResolvedVarDecl:Int i32 x
-// CHECK-NEXT:     ResolvedIntLiteral:Int i32 '1'
+// CHECK:   ResolvedVarDecl:i32 x
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:Int i32 y
+// CHECK-NEXT:   ResolvedVarDecl:i32 y
 // CHECK-NEXT:     ResolvedBinaryOperator:Int i32 '+'
 // CHECK-NEXT:       ResolvedCallExpr:Int i32
-// CHECK-NEXT:         ResolvedFunctionDecl foo -> Int i32
-// CHECK-NEXT:       ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:         ResolvedFunctionDecl foo -> i32
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 
 // CHECK:      ResolvedVarDecl:UInt *u8 str1
 // CHECK-NEXT:        ResolvedStringLiteral:UInt *u8 'something\n'
@@ -51,14 +51,14 @@ fn main() -> void {
 // CHECK-NEXT:        ResolvedCallExpr:UInt *u8
 // CHECK-NEXT:          ResolvedFunctionDecl str -> UInt *u8
 
-// CHECK:   ResolvedVarDecl:Int i1 bool1
+// CHECK:   ResolvedVarDecl:i1 bool1
 // CHECK-NEXT:     ResolvedBoolLiteral:Int i1 'true'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:Int i1 bool2
+// CHECK-NEXT:   ResolvedVarDecl:i1 bool2
 // CHECK-NEXT:     ResolvedBoolLiteral:Int i1 'false'
 // CHECK-NEXT:     | value: 0
 // CHECK-NEXT: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:Int i1 bool3
+// CHECK-NEXT:   ResolvedVarDecl:i1 bool3
 // CHECK-NEXT:     ResolvedCallExpr:Int i1
-// CHECK-NEXT:       ResolvedFunctionDecl fnBool -> Int i1
+// CHECK-NEXT:       ResolvedFunctionDecl fnBool -> i1

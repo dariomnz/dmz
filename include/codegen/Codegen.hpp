@@ -8,14 +8,14 @@ namespace DMZ {
 
 class Codegen {
     static llvm::orc::ThreadSafeContext get_shared_context() {
-        static llvm::orc::ThreadSafeContext tsc(std::make_unique<llvm::LLVMContext>());
+        static llvm::orc::ThreadSafeContext tsc(makePtr<llvm::LLVMContext>());
         return tsc;
     }
-    const std::vector<std::unique_ptr<ResolvedDecl>> &m_resolvedTree;
+    const std::vector<ptr<ResolvedDecl>> &m_resolvedTree;
 
     llvm::LLVMContext *m_context;
     llvm::IRBuilder<> m_builder;
-    std::unique_ptr<llvm::Module> m_module;
+    ptr<llvm::Module> m_module;
 
     std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint = nullptr;
@@ -27,15 +27,14 @@ class Codegen {
     llvm::BasicBlock *retBB = nullptr;
 
    public:
-    Codegen(const std::vector<std::unique_ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
+    Codegen(const std::vector<ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
 
-    std::unique_ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
-    llvm::Type *generate_type(const Type &type, bool noOpaque = false);
-    llvm::Type *generate_optional_type(const Type &type, llvm::Type *llvmType);
+    ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
+    llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     std::string generate_decl_name(const ResolvedDecl &decl);
     void generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
-    llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const Type &type);
+    llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const ResolvedType &type);
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
@@ -48,16 +47,16 @@ class Codegen {
     llvm::Value *generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr, bool keepPointer = false);
     llvm::Value *generate_binary_operator(const ResolvedBinaryOperator &binop);
     llvm::Value *cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs);
-    llvm::Value *to_bool(llvm::Value *v, const Type &type);
-    llvm::Value *cast_to(llvm::Value *v, const Type &from, const Type &to);
+    llvm::Value *to_bool(llvm::Value *v, const ResolvedType &type);
+    llvm::Value *cast_to(llvm::Value *v, const ResolvedType &from, const ResolvedType &to);
     void generate_conditional_operator(const ResolvedExpr &op, llvm::BasicBlock *trueBB, llvm::BasicBlock *falseBB);
     llvm::Function *get_current_function();
     llvm::Value *generate_if_stmt(const ResolvedIfStmt &stmt);
     llvm::Value *generate_while_stmt(const ResolvedWhileStmt &stmt);
     llvm::Value *generate_decl_stmt(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_assignment(const ResolvedAssignment &stmt);
-    llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const Type &from, const Type &to);
-    llvm::Value *load_value(llvm::Value *v, Type type);
+    llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from, const ResolvedType &to);
+    llvm::Value *load_value(llvm::Value *v, const ResolvedType &type);
     llvm::Value *generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer);
     llvm::Value *generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer);
     llvm::Value *generate_self_member_expr(const ResolvedSelfMemberExpr &memberExpr, bool keepPointer);
@@ -75,8 +74,8 @@ class Codegen {
     llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_module_body(const ResolvedModuleDecl &moduleDecl);
-    void generate_in_module_decl(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
-    void generate_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
+    void generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &declarations);
+    void generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &declarations);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);

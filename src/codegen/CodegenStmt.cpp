@@ -53,12 +53,15 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
     debug_func("");
     if (stmt.expr) {
-        if (stmt.expr->type.kind == Type::Kind::Error) {
-            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(m_currentFunction->type), retVal, 1);
-            store_value(generate_expr(*stmt.expr), dst, Type::builtinError("err"), Type::builtinError("err"));
+        if (dynamic_cast<const ResolvedTypeError *>(stmt.expr->type.get())) {
+            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*m_currentFunction->type), retVal, 1);
+            store_value(generate_expr(*stmt.expr), dst, *stmt.expr->type, *stmt.expr->type);
         } else {
-            store_value(generate_expr(*stmt.expr), retVal, stmt.expr->type.withoutOptional(),
-                        m_currentFunction->type.withoutOptional());
+            if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get())) {
+                store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *fnTypeOptional->optionalType);
+            } else {
+                store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *m_currentFunction->type);
+            }
         }
     }
 
@@ -82,7 +85,7 @@ llvm::Value *Codegen::generate_if_stmt(const ResolvedIfStmt &stmt) {
     if (stmt.falseBlock) elseBB = llvm::BasicBlock::Create(*m_context, "if.false");
 
     llvm::Value *cond = generate_expr(*stmt.condition);
-    m_builder.CreateCondBr(to_bool(cond, stmt.condition->type), trueBB, elseBB);
+    m_builder.CreateCondBr(to_bool(cond, *stmt.condition->type), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -113,7 +116,7 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
     m_builder.SetInsertPoint(header);
     llvm::Value *cond = generate_expr(*stmt.condition);
-    m_builder.CreateCondBr(to_bool(cond, stmt.condition->type), body, exit);
+    m_builder.CreateCondBr(to_bool(cond, *stmt.condition->type), body, exit);
 
     m_builder.SetInsertPoint(body);
     generate_block(*stmt.body);
@@ -127,15 +130,15 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     debug_func("");
     const auto *decl = stmt.varDecl.get();
     // if (!decl->type.isRef) {
-        llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, decl->type);
+    llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, *decl->type);
 
-        if (const auto &init = decl->initializer) {
-            auto tmpArray = dynamic_cast<ResolvedArrayInstantiationExpr *>(decl->initializer.get());
-            if (!tmpArray || (tmpArray && tmpArray->type.kind != Type::Kind::Void))
-                store_value(generate_expr(*init), var, init->type, decl->type);
-        }
-        m_declarations[decl] = var;
-        return var;
+    if (const auto &init = decl->initializer) {
+        auto tmpArray = dynamic_cast<ResolvedArrayInstantiationExpr *>(decl->initializer.get());
+        if (!tmpArray || (tmpArray && !dynamic_cast<const ResolvedTypeVoid *>(tmpArray->type.get())))
+            store_value(generate_expr(*init), var, *init->type, *decl->type);
+    }
+    m_declarations[decl] = var;
+    return var;
     // } else {
     //     // Only permit ref with a unary operator
     //     if (const auto init = dynamic_cast<ResolvedRefPtrExpr *>(decl->initializer.get())) {
@@ -154,7 +157,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     debug_func("");
     llvm::Value *val = generate_expr(*stmt.expr);
-    return store_value(val, generate_expr(*stmt.assignee, true), stmt.expr->type, stmt.assignee->type);
+    return store_value(val, generate_expr(*stmt.assignee, true), *stmt.expr->type, *stmt.assignee->type);
 }
 
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {

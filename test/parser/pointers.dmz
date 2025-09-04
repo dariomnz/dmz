@@ -11,7 +11,7 @@ fn main() -> void {
     *i_ptr = 12;
     printf("%d\n", i);
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl:Int i32 i

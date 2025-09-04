@@ -8,9 +8,9 @@ struct WithTrailingComma {
     b: i32,
 }
 // CHECK: StructDecl WithTrailingComma
-// CHECK-NEXT:   FieldDecl:Int i32 r
-// CHECK-NEXT:   FieldDecl:Int i32 g
-// CHECK-NEXT:   FieldDecl:Int i32 b
+// CHECK-NEXT:   FieldDecl:i32 r
+// CHECK-NEXT:   FieldDecl:i32 g
+// CHECK-NEXT:   FieldDecl:i32 b
 
 struct WithoutTrailingComma {
     a: i32,
@@ -18,6 +18,6 @@ struct WithoutTrailingComma {
     c: i32
 }
 // CHECK: StructDecl WithoutTrailingComma
-// CHECK-NEXT:   FieldDecl:Int i32 a
-// CHECK-NEXT:   FieldDecl:Int i32 b
-// CHECK-NEXT:   FieldDecl:Int i32 c
+// CHECK-NEXT:   FieldDecl:i32 a
+// CHECK-NEXT:   FieldDecl:i32 b
+// CHECK-NEXT:   FieldDecl:i32 c

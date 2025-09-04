@@ -44,7 +44,7 @@ class Stats {
             auto stats = Stats::instance();
             double time = stats.get_time(type);
             double percentage = time / parentTime * 100;
-            std::cerr << indent_line(level, 0, true) << std::left << std::setw(20 ) << StatType_to_str[type];
+            std::cerr << indent_line(level, 0, true) << std::left << std::setw(20) << StatType_to_str[type];
 
             std::cerr << std::fixed << std::setprecision(2) << indent(2) << std::setw(5) << percentage << "%";
             std::cerr << std::fixed << std::setprecision(4) << indent(2) << std::setw(10) << time << "ms";
@@ -87,10 +87,10 @@ class Stats {
         return s;
     }
 };
-#define __line2_ScopedTimer(type, line)                   \
-    std::unique_ptr<__ScopedTimer> st##line;              \
-    if (Driver::instance().m_options.printStats) {        \
-        st##line = std::make_unique<__ScopedTimer>(type); \
+#define __line2_ScopedTimer(type, line)            \
+    ptr<__ScopedTimer> st##line;                   \
+    if (Driver::instance().m_options.printStats) { \
+        st##line = makePtr<__ScopedTimer>(type);   \
     }
 #define __line1_ScopedTimer(type, line) __line2_ScopedTimer(type, line)
 #define ScopedTimer(type)               __line1_ScopedTimer(type, __LINE__)

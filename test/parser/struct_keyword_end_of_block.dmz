@@ -16,7 +16,7 @@ struct S2 {
 }
 
 // CHECK: StructDecl S
-// CHECK-NEXT:   FieldDecl:Int i32 x
+// CHECK-NEXT:   FieldDecl:i32 x
 // CHECK-NEXT: StructDecl S2
-// CHECK-NEXT:   FieldDecl:Int i32 x
+// CHECK-NEXT:   FieldDecl:i32 x
 // CHECK-NOT: {{.*}}

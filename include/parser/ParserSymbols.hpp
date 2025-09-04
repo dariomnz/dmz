@@ -6,7 +6,7 @@
 
 namespace DMZ {
 
-[[maybe_unused]] static inline std::string_view get_op_str(TokenType op) {
+[[maybe_unused]] static inline std::string get_op_str(TokenType op) {
     if (op == TokenType::op_plus) return "+";
     if (op == TokenType::op_minus) return "-";
     if (op == TokenType::asterisk) return "*";
@@ -31,9 +31,9 @@ namespace DMZ {
 struct Type;
 
 struct GenericTypes {
-    std::vector<std::unique_ptr<Type>> types;
+    std::vector<ptr<Type>> types;
 
-    GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept;
+    GenericTypes(std::vector<ptr<Type>> types) noexcept;
 
     GenericTypes(const GenericTypes& other);
     GenericTypes& operator=(const GenericTypes& other);
@@ -225,21 +225,20 @@ struct Expr : public Stmt {
 };
 
 struct Block : public Stmt {
-    std::vector<std::unique_ptr<Stmt>> statements;
+    std::vector<ptr<Stmt>> statements;
 
-    Block(SourceLocation location, std::vector<std::unique_ptr<Stmt>> statements)
+    Block(SourceLocation location, std::vector<ptr<Stmt>> statements)
         : Stmt(location), statements(std::move(statements)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct IfStmt : public Stmt {
-    std::unique_ptr<Expr> condition;
-    std::unique_ptr<Block> trueBlock;
-    std::unique_ptr<Block> falseBlock;
+    ptr<Expr> condition;
+    ptr<Block> trueBlock;
+    ptr<Block> falseBlock;
 
-    IfStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> trueBlock,
-           std::unique_ptr<Block> falseBlock = nullptr)
+    IfStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> trueBlock, ptr<Block> falseBlock = nullptr)
         : Stmt(location),
           condition(std::move(condition)),
           trueBlock(std::move(trueBlock)),
@@ -249,62 +248,61 @@ struct IfStmt : public Stmt {
 };
 
 struct WhileStmt : public Stmt {
-    std::unique_ptr<Expr> condition;
-    std::unique_ptr<Block> body;
+    ptr<Expr> condition;
+    ptr<Block> body;
 
-    WhileStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> body)
+    WhileStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> body)
         : Stmt(location), condition(std::move(condition)), body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct CaseStmt : public Stmt {
-    std::unique_ptr<Expr> condition;
-    std::unique_ptr<Block> block;
+    ptr<Expr> condition;
+    ptr<Block> block;
 
-    CaseStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> block)
+    CaseStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> block)
         : Stmt(location), condition(std::move(condition)), block(std::move(block)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct SwitchStmt : public Stmt {
-    std::unique_ptr<Expr> condition;
-    std::vector<std::unique_ptr<CaseStmt>> cases;
-    std::unique_ptr<Block> elseBlock;
+    ptr<Expr> condition;
+    std::vector<ptr<CaseStmt>> cases;
+    ptr<Block> elseBlock;
 
-    SwitchStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::vector<std::unique_ptr<CaseStmt>> cases,
-               std::unique_ptr<Block> elseBlock)
+    SwitchStmt(SourceLocation location, ptr<Expr> condition, std::vector<ptr<CaseStmt>> cases, ptr<Block> elseBlock)
         : Stmt(location), condition(std::move(condition)), cases(std::move(cases)), elseBlock(std::move(elseBlock)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct ReturnStmt : public Stmt {
-    std::unique_ptr<Expr> expr;
+    ptr<Expr> expr;
 
-    ReturnStmt(SourceLocation location, std::unique_ptr<Expr> expr = nullptr) : Stmt(location), expr(std::move(expr)) {}
+    ReturnStmt(SourceLocation location, ptr<Expr> expr = nullptr) : Stmt(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct FieldInitStmt : public Stmt {
     std::string identifier;
-    std::unique_ptr<Expr> initializer;
+    ptr<Expr> initializer;
 
-    FieldInitStmt(SourceLocation location, std::string_view identifier, std::unique_ptr<Expr> initializer)
+    FieldInitStmt(SourceLocation location, std::string_view identifier, ptr<Expr> initializer)
         : Stmt(location), identifier(identifier), initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct StructInstantiationExpr : public Expr {
-    std::unique_ptr<Expr> base;
+    ptr<Expr> base;
     GenericTypes genericTypes;
-    std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers;
+    std::vector<ptr<FieldInitStmt>> fieldInitializers;
 
-    StructInstantiationExpr(SourceLocation location, std::unique_ptr<Expr> base, GenericTypes genericTypes,
-                            std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers)
+    StructInstantiationExpr(SourceLocation location, ptr<Expr> base, GenericTypes genericTypes,
+                            std::vector<ptr<FieldInitStmt>> fieldInitializers)
         : Expr(location),
           base(std::move(base)),
           genericTypes(std::move(genericTypes)),
@@ -314,9 +312,9 @@ struct StructInstantiationExpr : public Expr {
 };
 
 struct ArrayInstantiationExpr : public Expr {
-    std::vector<std::unique_ptr<Expr>> initializers;
+    std::vector<ptr<Expr>> initializers;
 
-    ArrayInstantiationExpr(SourceLocation location, std::vector<std::unique_ptr<Expr>> initializers)
+    ArrayInstantiationExpr(SourceLocation location, std::vector<ptr<Expr>> initializers)
         : Expr(location), initializers(std::move(initializers)) {}
 
     void dump(size_t level = 0) const override;
@@ -376,12 +374,12 @@ struct SizeofExpr : public Expr {
 };
 
 struct CallExpr : public Expr {
-    std::unique_ptr<Expr> callee;
-    std::vector<std::unique_ptr<Expr>> arguments;
-    std::unique_ptr<GenericTypes> genericTypes;
+    ptr<Expr> callee;
+    std::vector<ptr<Expr>> arguments;
+    ptr<GenericTypes> genericTypes;
 
-    CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments,
-             std::unique_ptr<GenericTypes> genericTypes = nullptr)
+    CallExpr(SourceLocation location, ptr<Expr> callee, std::vector<ptr<Expr>> arguments,
+             ptr<GenericTypes> genericTypes = nullptr)
         : Expr(location),
           callee(std::move(callee)),
           arguments(std::move(arguments)),
@@ -404,10 +402,10 @@ struct DeclRefExpr : public AssignableExpr {
 };
 
 struct MemberExpr : public AssignableExpr {
-    std::unique_ptr<Expr> base;
+    ptr<Expr> base;
     std::string field;
 
-    MemberExpr(SourceLocation location, std::unique_ptr<Expr> base, std::string_view field)
+    MemberExpr(SourceLocation location, ptr<Expr> base, std::string_view field)
         : AssignableExpr(location), base(std::move(base)), field(std::move(field)) {}
 
     void dump(size_t level = 0) const override;
@@ -423,57 +421,56 @@ struct SelfMemberExpr : public AssignableExpr {
 };
 
 struct ArrayAtExpr : public AssignableExpr {
-    std::unique_ptr<Expr> array;
-    std::unique_ptr<Expr> index;
+    ptr<Expr> array;
+    ptr<Expr> index;
 
-    ArrayAtExpr(SourceLocation location, std::unique_ptr<Expr> array, std::unique_ptr<Expr> index)
+    ArrayAtExpr(SourceLocation location, ptr<Expr> array, ptr<Expr> index)
         : AssignableExpr(location), array(std::move(array)), index(std::move(index)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct GroupingExpr : public Expr {
-    std::unique_ptr<Expr> expr;
+    ptr<Expr> expr;
 
-    GroupingExpr(SourceLocation location, std::unique_ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
+    GroupingExpr(SourceLocation location, ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct BinaryOperator : public Expr {
-    std::unique_ptr<Expr> lhs;
-    std::unique_ptr<Expr> rhs;
+    ptr<Expr> lhs;
+    ptr<Expr> rhs;
     TokenType op;
 
-    BinaryOperator(SourceLocation location, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs, TokenType op)
+    BinaryOperator(SourceLocation location, ptr<Expr> lhs, ptr<Expr> rhs, TokenType op)
         : Expr(location), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct UnaryOperator : public Expr {
-    std::unique_ptr<Expr> operand;
+    ptr<Expr> operand;
     TokenType op;
 
-    UnaryOperator(SourceLocation location, std::unique_ptr<Expr> operand, TokenType op)
+    UnaryOperator(SourceLocation location, ptr<Expr> operand, TokenType op)
         : Expr(location), operand(std::move(operand)), op(op) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct RefPtrExpr : public Expr {
-    std::unique_ptr<Expr> expr;
+    ptr<Expr> expr;
 
-    RefPtrExpr(SourceLocation location, std::unique_ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
+    RefPtrExpr(SourceLocation location, ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct DerefPtrExpr : public AssignableExpr {
-    std::unique_ptr<Expr> expr;
+    ptr<Expr> expr;
 
-    DerefPtrExpr(SourceLocation location, std::unique_ptr<Expr> expr)
-        : AssignableExpr(location), expr(std::move(expr)) {}
+    DerefPtrExpr(SourceLocation location, ptr<Expr> expr) : AssignableExpr(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
@@ -490,12 +487,12 @@ struct ParamDecl : public Decl {
 };
 
 struct VarDecl : public Decl {
-    std::unique_ptr<Type> type;
-    std::unique_ptr<Expr> initializer;
+    ptr<Type> type;
+    ptr<Expr> initializer;
     bool isMutable;
 
-    VarDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<Type> type, bool isMutable,
-            std::unique_ptr<Expr> initializer = nullptr)
+    VarDecl(SourceLocation location, std::string_view identifier, ptr<Type> type, bool isMutable,
+            ptr<Expr> initializer = nullptr)
         : Decl(location, std::move(identifier)),
           type(std::move(type)),
           initializer(std::move(initializer)),
@@ -506,37 +503,36 @@ struct VarDecl : public Decl {
 
 struct FuncDecl : public Decl {
     Type type;
-    std::vector<std::unique_ptr<ParamDecl>> params;
+    std::vector<ptr<ParamDecl>> params;
 
-    FuncDecl(SourceLocation location, std::string_view identifier, Type type,
-             std::vector<std::unique_ptr<ParamDecl>> params)
+    FuncDecl(SourceLocation location, std::string_view identifier, Type type, std::vector<ptr<ParamDecl>> params)
         : Decl(location, std::move(identifier)), type(std::move(type)), params(std::move(params)) {}
 };
 
 struct ExternFunctionDecl : public FuncDecl {
     ExternFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                       std::vector<std::unique_ptr<ParamDecl>> params)
+                       std::vector<ptr<ParamDecl>> params)
         : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct FunctionDecl : public FuncDecl {
-    std::unique_ptr<Block> body;
+    ptr<Block> body;
 
-    FunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body)
+    FunctionDecl(SourceLocation location, std::string_view identifier, Type type, std::vector<ptr<ParamDecl>> params,
+                 ptr<Block> body)
         : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)), body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct GenericFunctionDecl : public FunctionDecl {
-    std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes;
+    std::vector<ptr<GenericTypeDecl>> genericTypes;
 
     GenericFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                        std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                        std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes)
+                        std::vector<ptr<ParamDecl>> params, ptr<Block> body,
+                        std::vector<ptr<GenericTypeDecl>> genericTypes)
         : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           genericTypes(std::move(genericTypes)) {}
 
@@ -550,8 +546,7 @@ struct MemberFunctionDecl : public FunctionDecl {
     bool isStatic;
 
     MemberFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                       std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                       StructDecl* structBase, bool isStatic)
+                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, StructDecl* structBase, bool isStatic)
         : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           structBase(structBase),
           isStatic(isStatic) {}
@@ -563,8 +558,8 @@ struct MemberGenericFunctionDecl : public GenericFunctionDecl {
     StructDecl* structBase;
 
     MemberGenericFunctionDecl(SourceLocation location, std::string_view identifier, Type type,
-                              std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body,
-                              std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes, StructDecl* structBase)
+                              std::vector<ptr<ParamDecl>> params, ptr<Block> body,
+                              std::vector<ptr<GenericTypeDecl>> genericTypes, StructDecl* structBase)
         : GenericFunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body),
                               std::move(genericTypes)),
           structBase(structBase) {}
@@ -583,12 +578,11 @@ struct FieldDecl : public Decl {
 
 struct StructDecl : public Decl {
     bool isPacked;
-    std::vector<std::unique_ptr<FieldDecl>> fields;
-    std::vector<std::unique_ptr<MemberFunctionDecl>> functions;
+    std::vector<ptr<FieldDecl>> fields;
+    std::vector<ptr<MemberFunctionDecl>> functions;
 
-    StructDecl(SourceLocation location, std::string_view identifier, bool isPacked,
-               std::vector<std::unique_ptr<FieldDecl>> fields,
-               std::vector<std::unique_ptr<MemberFunctionDecl>> functions)
+    StructDecl(SourceLocation location, std::string_view identifier, bool isPacked, std::vector<ptr<FieldDecl>> fields,
+               std::vector<ptr<MemberFunctionDecl>> functions)
         : Decl(location, std::move(identifier)),
           isPacked(isPacked),
           fields(std::move(fields)),
@@ -598,12 +592,11 @@ struct StructDecl : public Decl {
 };
 
 struct GenericStructDecl : public StructDecl {
-    std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes;
+    std::vector<ptr<GenericTypeDecl>> genericTypes;
 
     GenericStructDecl(SourceLocation location, std::string_view identifier, bool isPacked,
-                      std::vector<std::unique_ptr<FieldDecl>> fields,
-                      std::vector<std::unique_ptr<MemberFunctionDecl>> functions,
-                      std::vector<std::unique_ptr<GenericTypeDecl>> genericTypes)
+                      std::vector<ptr<FieldDecl>> fields, std::vector<ptr<MemberFunctionDecl>> functions,
+                      std::vector<ptr<GenericTypeDecl>> genericTypes)
         : StructDecl(location, std::move(identifier), isPacked, std::move(fields), std::move(functions)),
           genericTypes(std::move(genericTypes)) {}
 
@@ -612,29 +605,29 @@ struct GenericStructDecl : public StructDecl {
 
 struct DeclStmt : public Decl, public Stmt {
     SourceLocation location;
-    std::unique_ptr<VarDecl> varDecl;
+    ptr<VarDecl> varDecl;
 
-    DeclStmt(SourceLocation location, std::unique_ptr<VarDecl> varDecl)
+    DeclStmt(SourceLocation location, ptr<VarDecl> varDecl)
         : Decl(location, varDecl->identifier), Stmt(location), location(location), varDecl(std::move(varDecl)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct Assignment : public Stmt {
-    std::unique_ptr<AssignableExpr> assignee;
-    std::unique_ptr<Expr> expr;
+    ptr<AssignableExpr> assignee;
+    ptr<Expr> expr;
 
-    Assignment(SourceLocation location, std::unique_ptr<AssignableExpr> assignee, std::unique_ptr<Expr> expr)
+    Assignment(SourceLocation location, ptr<AssignableExpr> assignee, ptr<Expr> expr)
         : Stmt(location), assignee(std::move(assignee)), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct DeferStmt : public Stmt {
-    std::unique_ptr<Block> block;
+    ptr<Block> block;
     bool isErrDefer = false;
 
-    DeferStmt(SourceLocation location, std::unique_ptr<Block> block, bool isErrDefer)
+    DeferStmt(SourceLocation location, ptr<Block> block, bool isErrDefer)
         : Stmt(location), block(std::move(block)), isErrDefer(isErrDefer) {}
 
     void dump(size_t level = 0) const override;
@@ -648,48 +641,46 @@ struct ErrorDecl : public Decl {
 
 struct ErrorGroupExprDecl : public Expr, public Decl {
     SourceLocation location;
-    std::vector<std::unique_ptr<ErrorDecl>> errs;
+    std::vector<ptr<ErrorDecl>> errs;
 
-    ErrorGroupExprDecl(SourceLocation location, std::vector<std::unique_ptr<ErrorDecl>> errs)
+    ErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ErrorDecl>> errs)
         : Expr(location), Decl(location, ""), errs(std::move(errs)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct CatchErrorExpr : public Expr {
-    std::unique_ptr<Expr> errorToCatch;
-    std::unique_ptr<DeclStmt> declaration;
+    ptr<Expr> errorToCatch;
+    ptr<DeclStmt> declaration;
 
-    CatchErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToCatch, std::unique_ptr<DeclStmt> declaration)
+    CatchErrorExpr(SourceLocation location, ptr<Expr> errorToCatch, ptr<DeclStmt> declaration)
         : Expr(location), errorToCatch(std::move(errorToCatch)), declaration(std::move(declaration)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct TryErrorExpr : public Expr {
-    std::unique_ptr<Expr> errorToTry;
+    ptr<Expr> errorToTry;
 
-    TryErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToTry)
-        : Expr(location), errorToTry(std::move(errorToTry)) {}
+    TryErrorExpr(SourceLocation location, ptr<Expr> errorToTry) : Expr(location), errorToTry(std::move(errorToTry)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct OrElseErrorExpr : public Expr {
-    std::unique_ptr<Expr> errorToOrElse;
-    std::unique_ptr<Expr> orElseExpr;
+    ptr<Expr> errorToOrElse;
+    ptr<Expr> orElseExpr;
 
-    OrElseErrorExpr(SourceLocation location, std::unique_ptr<Expr> errorToOrElse, std::unique_ptr<Expr> orElseExpr)
+    OrElseErrorExpr(SourceLocation location, ptr<Expr> errorToOrElse, ptr<Expr> orElseExpr)
         : Expr(location), errorToOrElse(std::move(errorToOrElse)), orElseExpr(std::move(orElseExpr)) {}
 
     void dump(size_t level = 0) const override;
 };
 
 struct ModuleDecl : public Decl {
-    std::vector<std::unique_ptr<Decl>> declarations;
+    std::vector<ptr<Decl>> declarations;
 
-    ModuleDecl(SourceLocation location, std::string_view identifier,
-               std::vector<std::unique_ptr<Decl>> declarations = {})
+    ModuleDecl(SourceLocation location, std::string_view identifier, std::vector<ptr<Decl>> declarations = {})
         : Decl(location, identifier), declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;
@@ -703,7 +694,7 @@ struct ImportExpr : public Expr {
 };
 
 struct TestDecl : public FunctionDecl {
-    TestDecl(SourceLocation location, std::string_view identifier, std::unique_ptr<Block> body)
+    TestDecl(SourceLocation location, std::string_view identifier, ptr<Block> body)
         : FunctionDecl(location, identifier, Type::builtinVoid(), {}, std::move(body)) {
         type.isOptional = true;
     }

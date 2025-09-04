@@ -2,16 +2,16 @@
 
 namespace DMZ {
 
-std::unique_ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
+ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
     debug_func("");
     matchOrReturn(TokenType::id, "expected identifier");
     auto location = m_nextToken.loc;
     auto identifier = m_nextToken.str;
     eat_next_token();  // eat id
-    return std::make_unique<GenericTypeDecl>(location, identifier);
+    return makePtr<GenericTypeDecl>(location, identifier);
 }
 
-std::vector<std::unique_ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
+std::vector<ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
     debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
         return {};
@@ -25,7 +25,7 @@ std::vector<std::unique_ptr<GenericTypeDecl>> Parser::parse_generic_types_decl()
 
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
-std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
+ptr<FuncDecl> Parser::parse_function_decl() {
     debug_func("");
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
@@ -61,31 +61,30 @@ std::unique_ptr<FuncDecl> Parser::parse_function_decl() {
         if (m_nextToken.type == TokenType::block_l) return report(m_nextToken.loc, "extern fn cannot have a body");
         matchOrReturn(TokenType::semicolon, "expected ';'");
         eat_next_token();
-        return std::make_unique<ExternFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList));
+        return makePtr<ExternFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList));
     }
 
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
     if (genericTypes.size() != 0) {
-        return std::make_unique<GenericFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
-                                                     std::move(block), std::move(genericTypes));
+        return makePtr<GenericFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block),
+                                            std::move(genericTypes));
     } else {
-        return std::make_unique<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList),
-                                              std::move(block));
+        return makePtr<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block));
     }
 }
 
 // <paramDecl>
 //  ::= 'const'? <identifier> ':' <type>
-std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
+ptr<ParamDecl> Parser::parse_param_decl() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::dotdotdot) {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat '...'
-        return std::make_unique<ParamDecl>(location, std::move(identifier), Type::builtinVoid(), false, true);
+        return makePtr<ParamDecl>(location, std::move(identifier), Type::builtinVoid(), false, true);
     }
 
     matchOrReturn(TokenType::id, "expected parameter declaration");
@@ -98,17 +97,17 @@ std::unique_ptr<ParamDecl> Parser::parse_param_decl() {
 
     varOrReturn(type, parse_type());
 
-    return std::make_unique<ParamDecl>(location, std::move(identifier), std::move(*type), false);
+    return makePtr<ParamDecl>(location, std::move(identifier), std::move(*type), false);
 }
 
-std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
+ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
 
     std::string_view identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
-    std::unique_ptr<Type> type;
+    ptr<Type> type;
     if (m_nextToken.type == TokenType::colon) {
         eat_next_token();  // eat ':'
 
@@ -117,13 +116,13 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     }
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return std::make_unique<VarDecl>(location, identifier, std::move(type), !isConst);
+        return makePtr<VarDecl>(location, identifier, std::move(type), !isConst);
     }
     eat_next_token();  // eat '='
 
     varOrReturn(initializer, parse_expr());
 
-    return std::make_unique<VarDecl>(location, identifier, std::move(type), !isConst, std::move(initializer));
+    return makePtr<VarDecl>(location, identifier, std::move(type), !isConst, std::move(initializer));
 }
 
 // <structDecl>
@@ -131,7 +130,7 @@ std::unique_ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
 //
 // <fieldList>
 //  ::= '{' (<fieldDecl> (',' <fieldDecl>)* ','?)? '}'
-std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
+ptr<StructDecl> Parser::parse_struct_decl() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     bool isPacked = false;
@@ -153,15 +152,15 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat openingToken
 
-    std::vector<std::unique_ptr<FieldDecl>> fieldList;
-    std::vector<std::unique_ptr<MemberFunctionDecl>> funcList;
-    std::unique_ptr<StructDecl> structDecl;
+    std::vector<ptr<FieldDecl>> fieldList;
+    std::vector<ptr<MemberFunctionDecl>> funcList;
+    ptr<StructDecl> structDecl;
     if (genericTypes.size() != 0) {
-        structDecl = std::make_unique<GenericStructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
-                                                         std::move(funcList), std::move(genericTypes));
+        structDecl = makePtr<GenericStructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
+                                                std::move(funcList), std::move(genericTypes));
     } else {
-        structDecl = std::make_unique<StructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
-                                                  std::move(funcList));
+        structDecl =
+            makePtr<StructDecl>(location, structIdentifier, isPacked, std::move(fieldList), std::move(funcList));
     }
 
     while (true) {
@@ -179,9 +178,9 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
             }
             varOrReturn(init, parse_function_decl());
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            auto memberFunc = std::make_unique<MemberFunctionDecl>(func->location, func->identifier, func->type,
-                                                                   std::move(func->params), std::move(func->body),
-                                                                   structDecl.get(), isStatic);
+            auto memberFunc =
+                makePtr<MemberFunctionDecl>(func->location, func->identifier, func->type, std::move(func->params),
+                                            std::move(func->body), structDecl.get(), isStatic);
             funcList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");
@@ -199,7 +198,7 @@ std::unique_ptr<StructDecl> Parser::parse_struct_decl() {
 
 // <fieldDecl>
 //  ::= <identifier> ':' <type>
-std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
+ptr<FieldDecl> Parser::parse_field_decl() {
     debug_func("");
 
     SourceLocation location = m_nextToken.loc;
@@ -214,10 +213,10 @@ std::unique_ptr<FieldDecl> Parser::parse_field_decl() {
 
     varOrReturn(type, parse_type());
 
-    return std::make_unique<FieldDecl>(location, std::move(identifier), std::move(*type));
+    return makePtr<FieldDecl>(location, std::move(identifier), std::move(*type));
 };
 
-std::unique_ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
+ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
     debug_func("");
     matchOrReturn(TokenType::kw_error, "expected 'error'");
     auto location = m_nextToken.loc;
@@ -227,20 +226,20 @@ std::unique_ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
     varOrReturn(errors, parse_list_with_trailing_comma<ErrorDecl>({TokenType::block_l, "expected '{'"},
                                                                   &Parser::parse_error_decl,
                                                                   {TokenType::block_r, "expected '}'"}));
-    return std::make_unique<ErrorGroupExprDecl>(location, std::move(*errors));
+    return makePtr<ErrorGroupExprDecl>(location, std::move(*errors));
 }
 
-std::unique_ptr<ErrorDecl> Parser::parse_error_decl() {
+ptr<ErrorDecl> Parser::parse_error_decl() {
     debug_func("");
     matchOrReturn(TokenType::id, "expected identifier");
     auto location = m_nextToken.loc;
     auto id = m_nextToken.str;
 
     eat_next_token();  // eat id
-    return std::make_unique<ErrorDecl>(location, id);
+    return makePtr<ErrorDecl>(location, id);
 }
 
-std::unique_ptr<ModuleDecl> Parser::parse_module_decl() {
+ptr<ModuleDecl> Parser::parse_module_decl() {
     debug_func("");
     auto location = m_nextToken.loc;
     matchOrReturn(TokenType::kw_module, "expected 'module'");
@@ -258,12 +257,12 @@ std::unique_ptr<ModuleDecl> Parser::parse_module_decl() {
     matchOrReturn(TokenType::block_r, "expected '}'");
     eat_next_token();  // eat {
 
-    return std::make_unique<ModuleDecl>(location, identifier, std::move(declarations));
+    return makePtr<ModuleDecl>(location, identifier, std::move(declarations));
 }
 
-std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
+std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
     debug_func("");
-    std::vector<std::unique_ptr<Decl>> declarations;
+    std::vector<ptr<Decl>> declarations;
 
     while (m_nextToken.type != TokenType::eof && m_nextToken.type != TokenType::block_r) {
         if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
@@ -302,7 +301,7 @@ std::vector<std::unique_ptr<Decl>> Parser::parse_in_module_decl() {
     return declarations;
 }
 
-std::unique_ptr<TestDecl> Parser::parse_test_decl() {
+ptr<TestDecl> Parser::parse_test_decl() {
     auto location = m_nextToken.loc;
     matchOrReturn(TokenType::kw_test, "expected 'test'");
     eat_next_token();  // eat test
@@ -315,6 +314,6 @@ std::unique_ptr<TestDecl> Parser::parse_test_decl() {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    return std::make_unique<TestDecl>(location, name, std::move(block));
+    return makePtr<TestDecl>(location, name, std::move(block));
 }
 }  // namespace DMZ

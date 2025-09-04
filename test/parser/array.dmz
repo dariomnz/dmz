@@ -9,7 +9,7 @@ fn main() -> void {
     array[0] = '9';
     array[4] = array[0];
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl:UInt u8[5] array

@@ -4,7 +4,7 @@
 #include "Stats.hpp"
 namespace DMZ {
 
-std::unique_ptr<Driver> Driver::driver_instance = nullptr;
+ptr<Driver> Driver::driver_instance = nullptr;
 
 void Driver::display_help() {
     println("Usage:");
@@ -103,12 +103,12 @@ void Driver::check_sources_pass(Type_Sources &sources) {
 }
 
 Driver::Type_Lexers Driver::lexer_pass(Type_Sources &sources) {
-    std::vector<std::unique_ptr<Lexer>> lexers;
+    std::vector<ptr<Lexer>> lexers;
     lexers.resize(sources.size());
     for (size_t index = 0; index < sources.size(); index++) {
         debug_msg(sources[index]);
         // m_workers.submit([&, index]() {
-        lexers[index] = std::make_unique<Lexer>(sources[index].c_str());
+        lexers[index] = makePtr<Lexer>(sources[index].c_str());
         //  });
     }
 
@@ -182,7 +182,7 @@ bool Driver::all_imported() {
     return true;
 }
 
-ModuleDecl *Driver::find_module(std::string_view name, std::unique_ptr<DMZ::ModuleDecl> &find_ast) {
+ModuleDecl *Driver::find_module(std::string_view name, ptr<DMZ::ModuleDecl> &find_ast) {
     debug_msg("Find module: " << name);
     for (auto &&decl : find_ast->declarations) {
         debug_msg("Decl: " << decl->identifier);
@@ -203,7 +203,7 @@ void Driver::include_pass(Type_Ast &ast) {
 
     // TODO: make in a way that only import the necesary modules
 
-    std::vector<std::unique_ptr<ModuleDecl>> imported;
+    std::vector<ptr<ModuleDecl>> imported;
     for (const auto &includeDir : m_options.includes) {
         if (!std::filesystem::exists(includeDir)) {
             std::cerr << "Warning: The include directory does not exist: " << includeDir << std::endl;
@@ -360,12 +360,12 @@ void Driver::include_pass(Type_Ast &ast) {
     return;
 }
 
-bool merge_module_decls(std::vector<std::unique_ptr<Decl>> &decls1, std::vector<std::unique_ptr<Decl>> &decls2) {
+bool merge_module_decls(std::vector<ptr<Decl>> &decls1, std::vector<ptr<Decl>> &decls2) {
     debug_func("");
     bool error = false;
     for (auto &&decl2 : decls2) {
         auto it = std::find_if(decls1.begin(), decls1.end(),
-                               [&decl2](std::unique_ptr<Decl> &d) { return decl2->identifier == d->identifier; });
+                               [&decl2](ptr<Decl> &d) { return decl2->identifier == d->identifier; });
 
         if (it == decls1.end()) {
             // Not found
@@ -391,22 +391,21 @@ bool merge_module_decls(std::vector<std::unique_ptr<Decl>> &decls1, std::vector<
     return !error;
 }
 
-std::unique_ptr<ModuleDecl> Driver::merge_modules(std::vector<std::unique_ptr<ModuleDecl>> modules) {
+ptr<ModuleDecl> Driver::merge_modules(std::vector<ptr<ModuleDecl>> modules) {
     debug_func("");
-    std::vector<std::unique_ptr<Decl>> declarations;
+    std::vector<ptr<Decl>> declarations;
     for (auto &&mod : modules) {
         if (!merge_module_decls(declarations, mod->declarations)) {
             return report(mod->location, "cannot merge modules");
         }
     }
-    return std::make_unique<ModuleDecl>(SourceLocation{.file_name = "imported"}, "imported.dmz",
-                                        std::move(declarations));
+    return makePtr<ModuleDecl>(SourceLocation{.file_name = "imported"}, "imported.dmz", std::move(declarations));
 }
 
 Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     debug_func("");
     ScopedTimer(StatType::Semantic);
-    std::vector<std::unique_ptr<ResolvedDecl>> resolvedTree;
+    std::vector<ptr<ResolvedDecl>> resolvedTree;
     Sema sema(std::move(asts));
     resolvedTree = sema.resolve_ast_decl();
     if (resolvedTree.empty()) m_haveError = true;
@@ -457,7 +456,7 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
 
 Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree &resolvedTree) {
     debug_func("");
-    std::unique_ptr<llvm::orc::ThreadSafeModule> module;
+    ptr<llvm::orc::ThreadSafeModule> module;
     Codegen codegen(resolvedTree, m_options.sources[0].c_str());
     module = codegen.generate_ir(m_options.test);
 

@@ -9,7 +9,7 @@ fn error1() -> void {
     let z: void =;
 }
 
-// CHECK: FunctionDecl error1 -> Void void
+// CHECK: FunctionDecl error1 -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:    DeclStmt
 // CHECK-NEXT:      VarDecl:Int i32 y

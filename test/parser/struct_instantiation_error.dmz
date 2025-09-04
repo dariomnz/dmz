@@ -16,10 +16,10 @@ fn main() -> void {
     let x = 1;
 }
 // CHECK: StructDecl Color
-// CHECK-NEXT:   FieldDecl:Int i32 r
-// CHECK-NEXT:   FieldDecl:Int i32 g
-// CHECK-NEXT:   FieldDecl:Int i32 b
-// CHECK-NEXT: FunctionDecl main -> Void void
+// CHECK-NEXT:   FieldDecl:i32 r
+// CHECK-NEXT:   FieldDecl:i32 g
+// CHECK-NEXT:   FieldDecl:i32 b
+// CHECK-NEXT: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: x

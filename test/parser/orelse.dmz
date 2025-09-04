@@ -4,7 +4,7 @@ fn main() -> void {
     const a = println(1) orelse 0;
     const a = println(1) orelse println(3) orelse 0;
 }
-// CHECK:  FunctionDecl main -> Void void
+// CHECK:  FunctionDecl main -> void
 // CHECK-NEXT:    Block
 // CHECK-NEXT:      DeclStmt
 // CHECK-NEXT:        VarDecl:const  a

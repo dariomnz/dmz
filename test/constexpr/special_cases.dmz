@@ -8,11 +8,11 @@ fn binaryLhsKnown(y: i32) -> i32 {
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedGroupingExpr:Int i1
 // CHECK-NEXT:           ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 y
 // CHECK-NEXT:         ResolvedGroupingExpr:Int i1
 // CHECK-NEXT:           ResolvedBinaryOperator:Int i1 '||'
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 x
 
 fn unaryNonConst() -> i32 {
@@ -36,7 +36,7 @@ fn call() -> void {
 // CHECK:    ResolvedIfStmt
 // CHECK-NEXT:      ResolvedUnaryOperator:Int i1 '!'
 // CHECK-NEXT:        ResolvedCallExpr:Int i32 
-// CHECK-NEXT:          ResolvedFunctionDecl ret -> Int i32
+// CHECK-NEXT:          ResolvedFunctionDecl ret -> i32
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
 
@@ -45,7 +45,7 @@ fn lhsKnownRhsNot(y: i32) -> i32 {
 }
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator:Int i1 '&&'
-// CHECK-NEXT:        ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:        ResolvedDeclRefExpr:Int i32 y
 
 fn lhsUnknownRhsFalse(x: i32) -> i32 {
@@ -54,7 +54,7 @@ fn lhsUnknownRhsFalse(x: i32) -> i32 {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator:Int i1 '&&'
 // CHECK-NEXT:        ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:        ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '0'
 
 fn lhsUnknownRhsTrue(x: i32) -> i32 {
     return x || 1;
@@ -62,7 +62,7 @@ fn lhsUnknownRhsTrue(x: i32) -> i32 {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator:Int i1 '||'
 // CHECK-NEXT:        ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:        ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '1'
 
 fn lhsUnknownRhsFalseOr(x: i32) -> i32 {
     return x || 0;
@@ -70,6 +70,6 @@ fn lhsUnknownRhsFalseOr(x: i32) -> i32 {
 // CHECK:    ResolvedReturnStmt
 // CHECK-NEXT:      ResolvedBinaryOperator:Int i1 '||'
 // CHECK-NEXT:        ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:        ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '0'
 
 fn main() -> void {}

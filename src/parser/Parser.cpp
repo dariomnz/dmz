@@ -10,7 +10,7 @@ bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_toke
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
-std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
+std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
     debug_func("");
     ScopedTimer(StatType::Parse);
 
@@ -21,7 +21,7 @@ std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expe
 
     if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found in global module");
     SourceLocation location = {.file_name = m_lexer.get_file_name(), .line = 0, .col = 0};
-    auto mod = std::make_unique<ModuleDecl>(location, m_lexer.get_file_name(), std::move(declarations));
+    auto mod = makePtr<ModuleDecl>(location, m_lexer.get_file_name(), std::move(declarations));
     debug_msg("Incomplete AST " << (m_incompleteAST ? "true" : "false"));
     return {std::move(mod), !m_incompleteAST && hasMainFunction};
 }
@@ -32,7 +32,7 @@ std::pair<std::unique_ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expe
 //  |   'bool'
 //  |   'void'
 //  |   <identifier>
-std::unique_ptr<Type> Parser::parse_type() {
+ptr<Type> Parser::parse_type() {
     debug_func("");
     int isArray = -1;
     std::optional<int> isPointer = std::nullopt;
@@ -107,10 +107,10 @@ std::unique_ptr<Type> Parser::parse_type() {
         eat_next_token();  // eat '!'
     }
     t.location = loc;
-    return std::make_unique<Type>(std::move(t));
+    return makePtr<Type>(std::move(t));
 }
 
-std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
+ptr<GenericTypes> Parser::parse_generic_types() {
     debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
         return nullptr;
@@ -119,7 +119,7 @@ std::unique_ptr<GenericTypes> Parser::parse_generic_types() {
         {TokenType::op_less, "expected '<'"}, &Parser::parse_type, {TokenType::op_more, "expected '>'"}));
     if (!typesDeclList) return nullptr;
 
-    return std::make_unique<GenericTypes>(std::move(*typesDeclList));
+    return makePtr<GenericTypes>(std::move(*typesDeclList));
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
@@ -162,13 +162,14 @@ void Parser::synchronize() {
 }
 
 template <typename T, typename F>
-std::unique_ptr<std::vector<std::unique_ptr<T>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *> openingToken, F parser, std::pair<TokenType, const char *> closingToken) {
+ptr<std::vector<ptr<T>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken,
+                                                                F parser,
+                                                                std::pair<TokenType, const char *> closingToken) {
     debug_func("");
     matchOrReturn(openingToken.first, openingToken.second);
     eat_next_token();  // eat openingToken
 
-    std::vector<std::unique_ptr<T>> list;
+    std::vector<ptr<T>> list;
     while (true) {
         if (m_nextToken.type == closingToken.first) break;
 
@@ -182,23 +183,25 @@ std::unique_ptr<std::vector<std::unique_ptr<T>>> Parser::parse_list_with_trailin
     matchOrReturn(closingToken.first, closingToken.second);
     eat_next_token();  // eat closingToken
 
-    return std::make_unique<decltype(list)>(std::move(list));
+    return makePtr<decltype(list)>(std::move(list));
 }
 // Instanciate the template for the needed type
-template std::unique_ptr<std::vector<std::unique_ptr<ParamDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<ParamDecl> (Parser::*)(), std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<FieldDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<FieldDecl> (Parser::*)(), std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<ErrorDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<ErrorDecl> (Parser::*)(), std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<FieldInitStmt>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<FieldInitStmt> (Parser::*)(),
-    std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<Expr>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<Expr> (Parser::*)(), std::pair<TokenType, const char *>);
-template std::unique_ptr<std::vector<std::unique_ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::unique_ptr<GenericTypeDecl> (Parser::*)(),
-    std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<ParamDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
+                                                                                 ptr<ParamDecl> (Parser::*)(),
+                                                                                 std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<FieldDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
+                                                                                 ptr<FieldDecl> (Parser::*)(),
+                                                                                 std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<ErrorDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
+                                                                                 ptr<ErrorDecl> (Parser::*)(),
+                                                                                 std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<FieldInitStmt>>> Parser::parse_list_with_trailing_comma(
+    std::pair<TokenType, const char *>, ptr<FieldInitStmt> (Parser::*)(), std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<Expr>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
+                                                                            ptr<Expr> (Parser::*)(),
+                                                                            std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
+    std::pair<TokenType, const char *>, ptr<GenericTypeDecl> (Parser::*)(), std::pair<TokenType, const char *>);
 
 bool Parser::nextToken_is_generic(TokenType nextToken) {
     bool ret = false;

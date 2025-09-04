@@ -11,39 +11,39 @@ struct Color {
         return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
 }
-// CHECK:       ResolvedMemberFunctionDecl print -> Int i32
+// CHECK:       ResolvedMemberFunctionDecl print -> i32
 // CHECK-NEXT:         ResolvedParamDecl:Struct *Color 
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
 // CHECK-NEXT:             ResolvedCallExpr:Int i32
-// CHECK-NEXT:               ResolvedExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:               ResolvedExternFunctionDecl printf -> i32
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:               ResolvedSelfMemberExpr:Int i32 r
-// CHECK-NEXT:                 ResolvedDeclRefExpr:Struct *Color 
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*Color 
 // CHECK-NEXT:               ResolvedSelfMemberExpr:Int i32 g
-// CHECK-NEXT:                 ResolvedDeclRefExpr:Struct *Color 
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*Color 
 // CHECK-NEXT:               ResolvedSelfMemberExpr:Int i32 b
-// CHECK-NEXT:                 ResolvedDeclRefExpr:Struct *Color 
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*Color 
 
 fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};
     c.print(); 
 }
-// CHECK: ResolvedFunctionDecl main -> Void void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Struct Color c
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Struct Color
-// CHECK-NEXT:           ResolvedFieldInitStmt:Int i32 r
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:       ResolvedVarDecl:Color c
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
-// CHECK-NEXT:           ResolvedFieldInitStmt:Int i32 g
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '2'
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 g
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
-// CHECK-NEXT:           ResolvedFieldInitStmt:Int i32 b
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '3'
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 b
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:             | value: 3
 // CHECK-NEXT:     ResolvedCallExpr:Int i32
-// CHECK-NEXT:       ResolvedMemberFunctionDecl print -> Int i32
+// CHECK-NEXT:       ResolvedMemberFunctionDecl print -> i32
 // CHECK-NEXT:       ResolvedRefPtrExpr:Struct *Color
-// CHECK-NEXT:         ResolvedDeclRefExpr:Struct Color c
+// CHECK-NEXT:         ResolvedDeclRefExpr:Color c

@@ -11,7 +11,7 @@ namespace DMZ {
 class Sema {
    private:
     ConstantExpressionEvaluator cee;
-    std::vector<std::unique_ptr<ModuleDecl>> m_ast;
+    std::vector<ptr<ModuleDecl>> m_ast;
     std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
     std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
@@ -35,7 +35,7 @@ class Sema {
             m_sema.m_defers.pop_back();
         }
     };
-    std::unique_ptr<ScopeRAII> m_globalScope;
+    ptr<ScopeRAII> m_globalScope;
     ResolvedModuleDecl *m_currentModule = nullptr;
 
     std::vector<const ResolvedTestDecl *> m_tests;
@@ -43,13 +43,12 @@ class Sema {
     std::unordered_set<ResolvedDecl *> m_removed_decls;
 
    public:
-    explicit Sema(std::vector<std::unique_ptr<ModuleDecl>> ast)
-        : m_ast(std::move(ast)), m_globalScope(std::make_unique<ScopeRAII>(*this)) {}
-    // std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast();
-    std::vector<std::unique_ptr<ResolvedDecl>> resolve_ast_decl();
-    bool resolve_ast_body(std::vector<std::unique_ptr<ResolvedDecl>> &decls);
-    void fill_depends(ResolvedDependencies *parent, std::vector<std::unique_ptr<ResolvedDecl>> &decls);
-    void remove_unused(std::vector<std::unique_ptr<ResolvedDecl>> &decls, bool buildTest);
+    explicit Sema(std::vector<ptr<ModuleDecl>> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
+    // std::vector<ref<ResolvedDecl>> resolve_ast();
+    std::vector<ptr<ResolvedDecl>> resolve_ast_decl();
+    bool resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls);
+    void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
+    void remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest);
     bool recurse_needed(ResolvedDependencies &deps, bool buildTest,
                         std::unordered_set<ResolvedDependencies *> &recurse_check);
 
@@ -67,74 +66,75 @@ class Sema {
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::vector<ResolvedDecl *> collect_scope();
     // bool insert_decl_to_modules(ResolvedDecl &decl);
-    // std::unique_ptr<ResolvedFunctionDecl> create_builtin_println();
-    std::optional<Type> resolve_type(Type parsedType);
-    std::unique_ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
-    std::vector<std::unique_ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
-        const std::vector<std::unique_ptr<GenericTypeDecl>> &genericTypesDecl);
-    ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation& location, ResolvedGenericFunctionDecl &funcDecl,
-                                                                 const GenericTypes &genericTypes);
-    ResolvedSpecializedStructDecl *specialize_generic_struct(const SourceLocation& location, ResolvedGenericStructDecl &struDecl,
-                                                             const GenericTypes &genericTypes);
-    std::unique_ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
-    std::unique_ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
-                                                                             const MemberFunctionDecl &function);
-    std::unique_ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
-    std::unique_ptr<ResolvedBlock> resolve_block(const Block &block);
-    std::unique_ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
-    std::unique_ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
-    std::unique_ptr<ResolvedExpr> resolve_expr(const Expr &expr);
-    std::unique_ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false,
-                                                               bool isStructInst = false);
-    std::unique_ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
-    std::unique_ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
-    std::unique_ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);
-    std::unique_ptr<ResolvedDerefPtrExpr> resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr);
-    std::unique_ptr<ResolvedBinaryOperator> resolve_binary_operator(const BinaryOperator &binop);
-    std::unique_ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
-    std::unique_ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
-    std::unique_ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
+    // ref<ResolvedFunctionDecl> create_builtin_println();
+    ptr<ResolvedType> resolve_type(const Type &parsedType);
+    ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericTypes &parsedType);
+    ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
+    ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
+    std::vector<ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
+        const std::vector<ptr<GenericTypeDecl>> &genericTypesDecl);
+    ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation &location,
+                                                                 ResolvedGenericFunctionDecl &funcDecl,
+                                                                 const ResolvedTypeSpecialized &specializedTypes);
+    ResolvedSpecializedStructDecl *specialize_generic_struct(const SourceLocation &location,
+                                                             ResolvedGenericStructDecl &struDecl,
+                                                             const ResolvedTypeSpecialized &specializedTypes);
+    ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
+    ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
+                                                                 const MemberFunctionDecl &function);
+    ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
+    ptr<ResolvedBlock> resolve_block(const Block &block);
+    ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
+    ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
+    ptr<ResolvedExpr> resolve_expr(const Expr &expr);
+    ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false,
+                                                   bool isStructInst = false);
+    ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
+    ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
+    ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);
+    ptr<ResolvedDerefPtrExpr> resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr);
+    ptr<ResolvedBinaryOperator> resolve_binary_operator(const BinaryOperator &binop);
+    ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
+    ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
+    ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
-    std::unique_ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
-    std::unique_ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
-    std::unique_ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
+    ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
+    ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
+    ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
-    std::unique_ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
-    std::unique_ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
-    std::unique_ptr<ResolvedSelfMemberExpr> resolve_self_member_expr(const SelfMemberExpr &memberExpr);
-    std::unique_ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
-    std::unique_ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
+    ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
+    ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
+    ptr<ResolvedSelfMemberExpr> resolve_self_member_expr(const SelfMemberExpr &memberExpr);
+    ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
+    ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);
-    std::unique_ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(
-        const ArrayInstantiationExpr &arrayInstantiation);
-    std::unique_ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
+    ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);
+    ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
-    std::unique_ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
-    std::vector<std::unique_ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
-    std::unique_ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(
-        const ErrorGroupExprDecl &ErrorGroupExprDecl);
-    std::unique_ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
-    std::unique_ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
-    std::unique_ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
-    std::unique_ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl, int level);
+    ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
+    std::vector<ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
+    ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
+    ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
+    ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
+    ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
+    ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl, int level);
     bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
-    std::vector<std::unique_ptr<ResolvedDecl>> resolve_in_module_decl(
-        const std::vector<std::unique_ptr<Decl>> &decls,
-        std::vector<std::unique_ptr<ResolvedDecl>> alreadyResolved = {});
-    bool resolve_in_module_body(const std::vector<std::unique_ptr<ResolvedDecl>> &decls);
-    std::unique_ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
-    std::unique_ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
-    std::unique_ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
+    std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
+                                                          std::vector<ptr<ResolvedDecl>> alreadyResolved = {});
+    bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);
+    ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
+    ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
+    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
-    void resolve_symbol_names(const std::vector<std::unique_ptr<ResolvedDecl>> &declarations);
+    void resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declarations);
     bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
     void add_dependency(ResolvedDecl *decl);
-    std::unique_ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
+    ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
 };
 }  // namespace DMZ

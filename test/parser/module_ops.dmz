@@ -32,19 +32,19 @@ module ops {
 // CHECK-NEXT:     VarDecl:const  std
 // CHECK-NEXT:       ImportExpr asdf
 // CHECK-NEXT:   StructDecl str_ops
-// CHECK-NEXT:     FieldDecl:Int i32 x
-// CHECK-NEXT:     FieldDecl:Int i32 y
-// CHECK-NEXT:     FieldDecl:Int i32 z
-// CHECK-NEXT:   FunctionDecl print -> Void void
+// CHECK-NEXT:     FieldDecl:i32 x
+// CHECK-NEXT:     FieldDecl:i32 y
+// CHECK-NEXT:     FieldDecl:i32 z
+// CHECK-NEXT:   FunctionDecl print -> void
 // CHECK-NEXT:     ParamDecl:Int i32 x
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       CallExpr
 // CHECK-NEXT:         DeclRefExpr println
 // CHECK-NEXT:         DeclRefExpr x
-// CHECK-NEXT:   ExternFunctionDecl printf -> Int i32
+// CHECK-NEXT:   ExternFunctionDecl printf -> i32
 // CHECK-NEXT:     ParamDecl:UInt *u8 fmt
 // CHECK-NEXT:     ParamDecl:vararg ...
-// CHECK-NEXT:   FunctionDecl println -> Void void
+// CHECK-NEXT:   FunctionDecl println -> void
 // CHECK-NEXT:     ParamDecl:Int i32 n
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       CallExpr
@@ -53,7 +53,7 @@ module ops {
 // CHECK-NEXT:           StringLiteral '"%d\n"'
 // CHECK-NEXT:         DeclRefExpr n
 // CHECK-NEXT:   ModuleDecl integer
-// CHECK-NEXT:     FunctionDecl add -> Int i32
+// CHECK-NEXT:     FunctionDecl add -> i32
 // CHECK-NEXT:       ParamDecl:Int i32 x
 // CHECK-NEXT:       ParamDecl:Int i32 y
 // CHECK-NEXT:       Block
@@ -61,7 +61,7 @@ module ops {
 // CHECK-NEXT:           BinaryOperator '+'
 // CHECK-NEXT:             DeclRefExpr x
 // CHECK-NEXT:             DeclRefExpr y
-// CHECK-NEXT:     FunctionDecl sub -> Int i32
+// CHECK-NEXT:     FunctionDecl sub -> i32
 // CHECK-NEXT:       ParamDecl:Int i32 x
 // CHECK-NEXT:       ParamDecl:Int i32 y
 // CHECK-NEXT:       Block

@@ -5,7 +5,7 @@ extern fn printf(fmt:*u8, ...) -> i32;
 fn print<T>(param:T) -> void! {
     printf("Pointer of type %d\n", param);
 }
-// CHECK: GenericFunctionDecl print -> Void void!
+// CHECK: GenericFunctionDecl print -> void!
 // CHECK-NEXT:   GenericTypeDecl T
 // CHECK-NEXT:   ParamDecl:Custom T param
 // CHECK-NEXT:   Block
@@ -19,7 +19,7 @@ fn main() -> void {
     print(123);
 }
 
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     CallExpr<i32>
 // CHECK-NEXT:       DeclRefExpr print

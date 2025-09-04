@@ -13,92 +13,92 @@ fn foo(x: i32) -> void {
     }
     return;
 }
-// CHECK: ResolvedFunctionDecl foo -> Void void
-// CHECK-NEXT:   ResolvedParamDecl:Int i32 x
+// CHECK: ResolvedFunctionDecl foo -> void
+// CHECK-NEXT:   ResolvedParamDecl:i32 x
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:Int i32 
-// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 '1\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedBinaryOperator:Int i1 '=='
 // CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:         ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '2\n'
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '3\n'
 // CHECK-NEXT:         ResolvedReturnStmt
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:Int i32 
-// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:                 ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:UInt *u8 '3\n'
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:Int i32 
-// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:                 ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:UInt *u8 '2\n'
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:Int i32 
-// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:                 ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:                 ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:UInt *u8 '1\n'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '4\n'
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '5\n'
 // CHECK-NEXT:         ResolvedDeferRefStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '5\n'
 // CHECK-NEXT:         ResolvedDeferRefStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:Int i32 
-// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:               ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:               ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:UInt *u8 '4\n'
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedDeferRefStmt
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:Int i32 
-// CHECK-NEXT:             ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:             ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:             ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
 // CHECK-NEXT:             ResolvedStringLiteral:UInt *u8 '1\n'
 
@@ -110,41 +110,41 @@ fn main() -> void {
     defer dprintf(1, "Second-last\n");
     foo(1);
 }
-// CHECK: ResolvedFunctionDecl main -> Void void
+// CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:Int i32 
-// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 'The last one\n'
 // CHECK-NEXT:     ResolvedCallExpr:Void void 
-// CHECK-NEXT:       ResolvedFunctionDecl foo -> Void void
-// CHECK-NEXT:       ResolvedIntLiteral:Int i32 '0'
+// CHECK-NEXT:       ResolvedFunctionDecl foo -> void
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:     ResolvedDeferStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:Int i32 
-// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 'Second-last\n'
 // CHECK-NEXT:     ResolvedCallExpr:Void void 
-// CHECK-NEXT:       ResolvedFunctionDecl foo -> Void void
-// CHECK-NEXT:       ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:       ResolvedFunctionDecl foo -> void
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:     ResolvedDeferRefStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:Int i32 
-// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 'Second-last\n'
 // CHECK-NEXT:     ResolvedDeferRefStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:Int i32 
-// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> Int i32
-// CHECK-NEXT:           ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:           ResolvedExternFunctionDecl dprintf -> i32
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:UInt *u8 'The last one\n'

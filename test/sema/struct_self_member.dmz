@@ -8,23 +8,23 @@ struct Point {
         .x = .x + 1;
         .y = .y + 1;
     }
-// CHECK:  ResolvedMemberFunctionDecl addOne -> Void void
+// CHECK:  ResolvedMemberFunctionDecl addOne -> void
 // CHECK-NEXT:    ResolvedParamDecl:Struct *Point 
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedAssignment
 // CHECK-NEXT:        ResolvedSelfMemberExpr:Int i32 x
-// CHECK-NEXT:          ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:          ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:        ResolvedBinaryOperator:Int i32 '+'
 // CHECK-NEXT:          ResolvedSelfMemberExpr:Int i32 x
-// CHECK-NEXT:            ResolvedDeclRefExpr:Struct *Point 
-// CHECK-NEXT:          ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:            ResolvedDeclRefExpr:*Point 
+// CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:      ResolvedAssignment
 // CHECK-NEXT:        ResolvedSelfMemberExpr:Int i32 y
-// CHECK-NEXT:          ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:          ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:        ResolvedBinaryOperator:Int i32 '+'
 // CHECK-NEXT:          ResolvedSelfMemberExpr:Int i32 y
-// CHECK-NEXT:            ResolvedDeclRefExpr:Struct *Point 
-// CHECK-NEXT:          ResolvedIntLiteral:Int i32 '1'
+// CHECK-NEXT:            ResolvedDeclRefExpr:*Point 
+// CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
 }
 
 fn main() -> void {
@@ -33,6 +33,6 @@ fn main() -> void {
 }
 
 // CHECK:       ResolvedCallExpr:Void void
-// CHECK-NEXT:         ResolvedMemberFunctionDecl addOne -> Void void
+// CHECK-NEXT:         ResolvedMemberFunctionDecl addOne -> void
 // CHECK-NEXT:         ResolvedRefPtrExpr:Struct *Point
-// CHECK-NEXT:           ResolvedDeclRefExpr:Struct Point p
+// CHECK-NEXT:           ResolvedDeclRefExpr:Point p

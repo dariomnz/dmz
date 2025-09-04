@@ -18,7 +18,7 @@ fn main() -> void {
     p.y = 2;
     printf(&"Point %d %d\n", p.x, p.y);
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: p1

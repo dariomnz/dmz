@@ -5,11 +5,11 @@
 namespace DMZ {
 
 class Linker {
-    std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> m_modules;
+    std::vector<ptr<llvm::orc::ThreadSafeModule>> m_modules;
 
    public:
-    Linker(std::vector<std::unique_ptr<llvm::orc::ThreadSafeModule>> modules);
+    Linker(std::vector<ptr<llvm::orc::ThreadSafeModule>> modules);
 
-    std::unique_ptr<llvm::orc::ThreadSafeModule> link_modules();
+    ptr<llvm::orc::ThreadSafeModule> link_modules();
 };
 }  // namespace DMZ

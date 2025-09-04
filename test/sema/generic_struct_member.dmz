@@ -11,25 +11,25 @@ struct Point<T> {
         .y = .y + n;
     }
 // CHECK: ResolvedSpecializedStructDecl Struct Point<i32>
-// CHECK-NEXT:   ResolvedFieldDecl:Int i32 x
-// CHECK-NEXT:   ResolvedFieldDecl:Int i32 y
-// CHECK-NEXT:   ResolvedMemberFunctionDecl add -> Void void
+// CHECK-NEXT:   ResolvedFieldDecl:i32 x
+// CHECK-NEXT:   ResolvedFieldDecl:i32 y
+// CHECK-NEXT:   ResolvedMemberFunctionDecl add -> void
 // CHECK-NEXT:     ResolvedParamDecl:Struct *Point 
-// CHECK-NEXT:     ResolvedParamDecl:Int i32 n
+// CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedAssignment
 // CHECK-NEXT:         ResolvedSelfMemberExpr:Int i32 x
-// CHECK-NEXT:           ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:           ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:         ResolvedBinaryOperator:Int i32 '+'
 // CHECK-NEXT:           ResolvedSelfMemberExpr:Int i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:             ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:           ResolvedDeclRefExpr:Int i32 n
 // CHECK-NEXT:       ResolvedAssignment
 // CHECK-NEXT:         ResolvedSelfMemberExpr:Int i32 y
-// CHECK-NEXT:           ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:           ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:         ResolvedBinaryOperator:Int i32 '+'
 // CHECK-NEXT:           ResolvedSelfMemberExpr:Int i32 y
-// CHECK-NEXT:             ResolvedDeclRefExpr:Struct *Point 
+// CHECK-NEXT:             ResolvedDeclRefExpr:*Point 
 // CHECK-NEXT:           ResolvedDeclRefExpr:Int i32 n
 }
 

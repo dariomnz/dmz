@@ -20,7 +20,7 @@ fn foo(x:i32) -> i32! {
     }
     return 10;
 }
-// CHECK: FunctionDecl foo -> Int i32!
+// CHECK: FunctionDecl foo -> i32!
 // CHECK-NEXT:     ParamDecl:Int i32 x
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       IfStmt
@@ -58,7 +58,7 @@ fn main() -> void {
 
     printf(&"No safe error %d\n", try foo(10));
 }
-// CHECK: FunctionDecl main -> Void void
+// CHECK: FunctionDecl main -> void
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       DeclStmt
 // CHECK-NEXT:         VarDecl: result

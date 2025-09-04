@@ -105,13 +105,13 @@ std::ostream &operator<<(std::ostream &os, const Type &t) {
     return os;
 }
 
-GenericTypes::GenericTypes(std::vector<std::unique_ptr<Type>> types) noexcept : types(std::move(types)) {}
+GenericTypes::GenericTypes(std::vector<ptr<Type>> types) noexcept : types(std::move(types)) {}
 
 GenericTypes::GenericTypes(const GenericTypes &other) {
     types.reserve(other.types.size());
     for (const auto &ptr : other.types) {
         if (ptr) {
-            types.emplace_back(std::make_unique<Type>(*ptr));
+            types.emplace_back(makePtr<Type>(*ptr));
         } else {
             types.emplace_back(nullptr);
         }
@@ -124,7 +124,7 @@ GenericTypes &GenericTypes::operator=(const GenericTypes &other) {
         types.reserve(other.types.size());
         for (const auto &ptr : other.types) {
             if (ptr) {
-                types.emplace_back(std::make_unique<Type>(*ptr));
+                types.emplace_back(makePtr<Type>(*ptr));
             } else {
                 types.emplace_back(nullptr);
             }
@@ -183,7 +183,7 @@ void FunctionDecl::dump(size_t level) const {
     } else {
         std::cerr << indent(level) << "FunctionDecl ";
     }
-    std::cerr << identifier << " -> " << type << "\n";
+    std::cerr << identifier << " -> " << type.to_str() << "\n";
 
     for (auto &&param : params) param->dump(level + 1);
 
@@ -191,7 +191,7 @@ void FunctionDecl::dump(size_t level) const {
 }
 
 void GenericFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericFunctionDecl " << identifier << " -> " << type << "\n";
+    std::cerr << indent(level) << "GenericFunctionDecl " << identifier << " -> " << type.to_str() << "\n";
     for (auto &&genType : genericTypes) genType->dump(level + 1);
 
     for (auto &&param : params) param->dump(level + 1);
@@ -207,7 +207,7 @@ void MemberGenericFunctionDecl::dump(size_t level) const {
 }
 
 void ExternFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type << "\n";
+    std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type.to_str() << "\n";
 
     for (auto &&param : params) param->dump(level + 1);
 }
@@ -235,7 +235,7 @@ void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "St
 
 void NullLiteral::dump(size_t level) const { std::cerr << indent(level) << "NullLiteral\n"; }
 
-void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType << "\n"; }
+void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType.to_str() << "\n"; }
 
 void DeclRefExpr::dump(size_t level) const {
     std::cerr << indent(level) << "DeclRefExpr ";
@@ -349,7 +349,7 @@ void Assignment::dump(size_t level) const {
 }
 
 void FieldDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FieldDecl:" << type << " " << identifier << '\n';
+    std::cerr << indent(level) << "FieldDecl:" << type.to_str() << " " << identifier << '\n';
 }
 
 void StructDecl::dump(size_t level) const {
