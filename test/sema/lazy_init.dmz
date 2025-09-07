@@ -59,8 +59,8 @@ fn initConditionVar() -> void {
     // CHECK: [[# @LINE + 1 ]]:14: error: 'x' is not initialized
     if (1 || x) {
         x = 1;
-    // CHECK: [[# @LINE + 1 ]]:21: error: 'x' is not initialized
-    } else if (0 && x == 2) {
+    // CHECK: [[# @LINE + 1 ]]:25: error: 'x' is not initialized
+    } else if (false && x == 2) {
         x = 3;
     } else {
         x = 2;

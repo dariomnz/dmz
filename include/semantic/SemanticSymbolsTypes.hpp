@@ -42,6 +42,16 @@ struct ResolvedTypeNumber : public ResolvedType {
     std::string to_str() const override;
 };
 
+struct ResolvedTypeBool : public ResolvedTypeNumber {
+    ResolvedTypeBool(SourceLocation location) : ResolvedTypeNumber(location, ResolvedNumberKind::Int, 1) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct ResolvedStructDecl;  // Forward declaration
 struct ResolvedTypeStruct : public ResolvedType {
     ResolvedStructDecl *decl;
@@ -86,9 +96,7 @@ struct ResolvedTypeSpecialized : public ResolvedType {
 
 struct ResolvedErrorDecl;  // Forward declaration
 struct ResolvedTypeError : public ResolvedType {
-    ResolvedErrorDecl *decl;
-    ResolvedTypeError(SourceLocation location, ResolvedErrorDecl *decl)
-        : ResolvedType(std::move(location)), decl(decl) {}
+    ResolvedTypeError(SourceLocation location) : ResolvedType(std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

@@ -445,34 +445,11 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
 
 llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr) {
     debug_func("");
-    llvm::Value *error_struct = nullptr;
-    llvm::Value *decl_value = nullptr;
-    ResolvedType *error_type;
-    if (catchErrorExpr.errorToCatch) {
-        error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
-        error_type = catchErrorExpr.errorToCatch->type.get();
-    } else if (catchErrorExpr.declaration) {
-        error_struct = generate_expr(*catchErrorExpr.declaration->varDecl->initializer, true);
-
-        decl_value = allocate_stack_variable(catchErrorExpr.declaration->varDecl->identifier,
-                                             *catchErrorExpr.declaration->varDecl->type);
-
-        m_declarations[catchErrorExpr.declaration->varDecl.get()] = decl_value;
-
-        error_type = catchErrorExpr.declaration->varDecl->initializer->type.get();
-    } else {
-        dmz_unreachable("malformed ResolvedCatchErrorExpr");
-    }
+    llvm::Value * error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
+    ResolvedType * error_type = catchErrorExpr.errorToCatch->type.get();
     llvm::Value *error_value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 1);
-    llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}, nullptr});
-    llvm::Value *error_value_bool = to_bool(error_value, ResolvedTypeError{SourceLocation{}, nullptr});
-    if (catchErrorExpr.declaration) {
-        llvm::Value *selectedError = m_builder.CreateSelect(error_value_bool, error_value, m_success, "select.err");
-        store_value(selectedError, decl_value, ResolvedTypeError{SourceLocation{}, nullptr},
-                    ResolvedTypeError{SourceLocation{}, nullptr});
-    }
 
-    return m_builder.CreateSelect(error_value_bool, m_builder.getInt1(true), m_builder.getInt1(false), "catch.result");
+    return load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
 }
 
 llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr) {
@@ -488,9 +465,9 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
 
     llvm::Value *error_value_ptr =
         m_builder.CreateStructGEP(generate_type(*tryErrorExpr.errorToTry->type), error_struct, 1);
-    llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}, nullptr});
+    llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
 
-    m_builder.CreateCondBr(to_bool(error_value, ResolvedTypeError{SourceLocation{}, nullptr}), trueBB, elseBB);
+    m_builder.CreateCondBr(to_bool(error_value, ResolvedTypeError{SourceLocation{}}), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
@@ -500,15 +477,14 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
 
     if (dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get())) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*m_currentFunction->type), retVal, 1);
-        store_value(error_value, dst, ResolvedTypeError{SourceLocation{}, nullptr},
-                    ResolvedTypeError{SourceLocation{}, nullptr});
+        store_value(error_value, dst, ResolvedTypeError{SourceLocation{}}, ResolvedTypeError{SourceLocation{}});
 
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
-        auto fmt = m_builder.CreateGlobalString(
-            tryErrorExpr.location.to_string() + ": Aborted: Try catch an error value of '%s' in the function '" +
-            m_currentFunction->identifier + "' that not return an optional\n");
+        auto fmt = m_builder.CreateGlobalString(tryErrorExpr.location.to_string() +
+                                                ": Aborted: Try catch an error value of '%s' in the function '" +
+                                                m_currentFunction->identifier + "' that not return an optional\n");
         auto printf_func = m_module->getOrInsertFunction(
             "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getInt8Ty()->getPointerTo(), true));
         m_builder.CreateCall(printf_func, {fmt, error_value});
@@ -539,7 +515,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
 
     llvm::Value *error_value_ptr =
         m_builder.CreateStructGEP(generate_type(*orelseErrorExpr.errorToOrElse->type), error_struct, 1);
-    llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}, nullptr});
+    llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
 
     llvm::Value *return_value = allocate_stack_variable("tmp.orelse", *orelseErrorExpr.type);
 
@@ -550,7 +526,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
     auto error_expr_value = load_value(error_expr_value_ptr, *typeOptional->optionalType);
     store_value(error_expr_value, return_value, *typeOptional->optionalType, *orelseErrorExpr.type);
 
-    llvm::Value *error_value_bool = to_bool(error_value, ResolvedTypeError{SourceLocation{}, nullptr});
+    llvm::Value *error_value_bool = to_bool(error_value, ResolvedTypeError{SourceLocation{}});
     m_builder.CreateCondBr(error_value_bool, trueBB, elseBB);
 
     trueBB->insertInto(function);

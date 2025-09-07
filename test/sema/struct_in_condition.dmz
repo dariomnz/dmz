@@ -6,8 +6,8 @@ fn main() -> void {
   let x = S {};
 
   if (x) {}
-  // CHECK: [[# @LINE - 1 ]]:7: error: expected int in condition
+  // CHECK: [[# @LINE - 1 ]]:7: error: unexpected type in condition 'S'
 
   while (x) {}
-  // CHECK: [[# @LINE - 1 ]]:10: error: expected int in condition
+  // CHECK: [[# @LINE - 1 ]]:10: error: unexpected type in condition 'S'
 }

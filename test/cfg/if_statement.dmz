@@ -205,9 +205,9 @@ fn orCondition() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [2]
@@ -243,9 +243,9 @@ fn andCondition() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [2]
@@ -277,13 +277,13 @@ fn ifWhileFirstStmt(p: i32) -> void {
 // CHECK-NEXT: [5]
 // CHECK-NEXT:   preds: 6 
 // CHECK-NEXT:   succs: 2 4 
-// CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 p
+// CHECK-NEXT:   ResolvedDeclRefExpr:i32 p
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]
 // CHECK-NEXT:   preds: 3 5 
 // CHECK-NEXT:   succs: 0 3 
-// CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 p
+// CHECK-NEXT:   ResolvedDeclRefExpr:i32 p
 // CHECK-NEXT:   ResolvedWhileStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [3]
@@ -293,7 +293,7 @@ fn ifWhileFirstStmt(p: i32) -> void {
 // CHECK-NEXT: [2]
 // CHECK-NEXT:   preds: 1 5
 // CHECK-NEXT:   succs: 0 1 
-// CHECK-NEXT:   ResolvedDeclRefExpr:Int i32 p
+// CHECK-NEXT:   ResolvedDeclRefExpr:i32 p
 // CHECK-NEXT:   ResolvedWhileStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]
@@ -323,7 +323,7 @@ fn nestedInLoopConditionalOps() -> void {
 // CHECK-NEXT:   succs: 5(U) 7 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '8'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '8'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [7]
@@ -341,7 +341,7 @@ fn nestedInLoopConditionalOps() -> void {
 // CHECK-NEXT:   succs: 2(U) 4 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
-// CHECK-NEXT:   ResolvedBinaryOperator:Int i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]

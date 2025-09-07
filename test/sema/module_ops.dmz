@@ -37,30 +37,30 @@ module ops {
 // CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:Int i32 '+'
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 y
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:     ResolvedFunctionDecl sub -> i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 x
 // CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:Int i32 '-'
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 y
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:   ResolvedFunctionDecl print -> void
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:Void void
+// CHECK-NEXT:       ResolvedCallExpr:void
 // CHECK-NEXT:         ResolvedFunctionDecl println -> void
-// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 x
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:     ResolvedParamDecl:UInt *u8 fmt
+// CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
 // CHECK-NEXT:   ResolvedFunctionDecl println -> void
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 '%d\n'
-// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 n
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 '%d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 n

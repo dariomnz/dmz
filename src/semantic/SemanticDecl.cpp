@@ -324,7 +324,7 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     }
     ResolvedType *type = nullptr;
     ptr<ResolvedType> resolvedType = nullptr;
-    if (varDecl.type.get() != nullptr) {
+    if (!resolvedInitializer) {
         resolvedType = resolve_type(*varDecl.type);
         type = resolvedType.get();
         if (!type) {
@@ -337,6 +337,19 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
             return report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +
                                                 resolvedInitializer->type->to_str() + "' type");
         }
+
+        if (varDecl.type) {
+            auto resType = resolve_type(*varDecl.type);
+            if (!resType) return nullptr;
+            if (!resType->compare(*resolvedInitializer->type))
+                return report(resolvedInitializer->location, "initializer type mismatch '" + resType->to_str() +
+                                                                 "' <- '" + resolvedInitializer->type->to_str() + "'");
+        }
+    }
+
+    if (type && ResolvedTypeVoid{SourceLocation{}}.equal(*type)) {
+        return report(varDecl.location,
+                      "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
     }
 
     if (resolvedInitializer) {
@@ -349,9 +362,6 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
                 }
             }
         }
-        if (!type->compare(*resolvedInitializer->type))
-            return report(resolvedInitializer->location, "initializer type mismatch '" + type->to_str() + "' <- '" +
-                                                             resolvedInitializer->type->to_str() + "'");
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
     }
@@ -362,40 +372,32 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
 ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) {
     debug_func(structDecl.location);
     std::set<std::string_view> identifiers;
-    std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
-    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
 
     ScopeRAII fieldScope(*this);
     ptr<ResolvedStructDecl> resStructDecl;
     if (auto genstruct = dynamic_cast<const GenericStructDecl *>(&structDecl)) {
         auto resolvedGenericTypesDecl = resolve_generic_types_decl(genstruct->genericTypes);
         if (resolvedGenericTypesDecl.size() == 0) return nullptr;
-        resStructDecl = makePtr<ResolvedGenericStructDecl>(
-            structDecl.location, structDecl.identifier, &structDecl, structDecl.isPacked, std::move(resolvedFields),
-            std::move(resolvedFunctions), std::move(resolvedGenericTypesDecl), collect_scope());
+        resStructDecl = makePtr<ResolvedGenericStructDecl>(structDecl.location, structDecl.identifier, &structDecl,
+                                                           structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{},
+                                                           std::vector<ptr<ResolvedMemberFunctionDecl>>{},
+                                                           std::move(resolvedGenericTypesDecl), collect_scope());
     } else {
-        resStructDecl =
-            makePtr<ResolvedStructDecl>(structDecl.location, structDecl.identifier, &structDecl, structDecl.isPacked,
-                                        std::move(resolvedFields), std::move(resolvedFunctions));
+        resStructDecl = makePtr<ResolvedStructDecl>(structDecl.location, structDecl.identifier, &structDecl,
+                                                    structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{},
+                                                    std::vector<ptr<ResolvedMemberFunctionDecl>>{});
     }
 
-    unsigned idx = 0;
+    // unsigned idx = 0;
     for (auto &&field : structDecl.fields) {
         if (!identifiers.emplace(field->identifier).second)
             return report(field->location, "field '" + field->identifier + "' is already declared");
-
-        auto type = resolve_type(field->type);
-        resolvedFields.emplace_back(
-            makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
     }
 
     for (auto &&function : structDecl.functions) {
         if (!identifiers.emplace(function->identifier).second)
             return report(function->location, "function '" + function->identifier + "' is already declared");
     }
-
-    resStructDecl->fields = std::move(resolvedFields);
-    // resStructDecl->functions = std::move(resolvedFunctions);
 
     return resStructDecl;
 }
@@ -419,13 +421,11 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             report(currentDecl->location, "struct '" + currentDecl->identifier + "' contains itself");
             return false;
         }
-
-        for (auto &&field : currentDecl->fields) {
-            auto type = re_resolve_type(*field->type);
-            if (!type) {
-                report(field->location, "unable to resolve '" + field->type->to_str() + "' type of struct field");
-                return false;
-            }
+        size_t idx = 0;
+        currentDecl->fields.reserve(currentDecl->structDecl->fields.size());
+        for (auto &&field : currentDecl->structDecl->fields) {
+            auto type = resolve_type(field->type);
+            if (!type) return false;
 
             if (dynamic_cast<const ResolvedTypeVoid *>(type.get())) {
                 report(field->location, "struct field cannot be void");
@@ -435,8 +435,12 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(type.get())) {
                 worklist.push({struType->decl, visited});
             }
-
-            field->type = type->clone();
+            if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl> &v) {
+                    return v->identifier == field->identifier;
+                }) == currentDecl->fields.end()) {
+                currentDecl->fields.emplace_back(
+                    makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
+            }
         }
     }
 

@@ -6,7 +6,7 @@ fn bar() -> i32 { return 1; }
 fn main() -> void {
     while (bar()) {}
 
-    // CHECK: [[# @LINE + 1 ]]:15: error: expected int in condition
+    // CHECK: [[# @LINE + 1 ]]:15: error: unexpected type in condition 'void'
     while (foo()) {}
 }
 // CHECK-NOT: {{.*}}

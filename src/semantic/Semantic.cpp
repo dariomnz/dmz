@@ -4,6 +4,9 @@
 #include "Stats.hpp"
 
 // #define DEBUG_SCOPES
+#ifdef DEBUG
+#define DEBUG_SCOPES
+#endif
 
 namespace DMZ {
 
@@ -34,7 +37,9 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     const auto foundDecl = lookup(decl.location, decl.identifier, ResolvedDeclType::ResolvedDecl, false);
 
     if (foundDecl) {
+#ifdef DEBUG_SCOPES
         dump_scopes();
+#endif
         report(decl.location, "redeclaration of '" + decl.identifier + '\'');
         return false;
     }
@@ -186,7 +191,8 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
 
             if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
                 if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-                    auto specializedTypes = resolve_specialized_type(*parsedType.genericTypes);
+                    auto specializedTypes =
+                        resolve_specialized_type(parsedType.location, *structDecl, *parsedType.genericTypes);
                     if (!specializedTypes) return report(parsedType.location, "cannot specialize generic types");
                     auto auxstructDecl =
                         specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
@@ -197,16 +203,8 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
             }
             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
                 if (decl->specializedType) {
-                    if (dynamic_cast<const ResolvedTypeGeneric *>(decl->specializedType.get())) {
-                        auto t = re_resolve_type(*decl->specializedType);
-                        if (!t) {
-                            report(decl->location, "cannot resolve type");
-                        }
-                        return t;
-                    } else {
-                        ret = re_resolve_type(*decl->specializedType);
-                        return ret;
-                    }
+                    ret = re_resolve_type(*decl->specializedType);
+                    return ret;
                 } else {
                     ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
                     return ret;
@@ -215,21 +213,14 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
 #ifdef DEBUG
             dump_scopes();
 #endif
-            ret = nullptr;
+            ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
             return ret;
         } break;
 
         case Type::Kind::Generic: {
             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
                 if (decl->specializedType) {
-                    if (dynamic_cast<const ResolvedTypeGeneric *>(decl->specializedType.get())) {
-                        auto ret = re_resolve_type(*decl->specializedType);
-                        if (!ret) {
-                            return report(decl->location, "cannot resolve type");
-                        }
-                    } else {
-                        ret = re_resolve_type(*decl->specializedType);
-                    }
+                    ret = re_resolve_type(*decl->specializedType);
                 }
             }
         } break;
@@ -239,14 +230,19 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
         case Type::Kind::UInt: {
             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::UInt, parsedType.size);
         } break;
+        case Type::Kind::Bool: {
+            ret = makePtr<ResolvedTypeBool>(parsedType.location);
+        } break;
         case Type::Kind::Float: {
             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Float, parsedType.size);
         } break;
         case Type::Kind::Void: {
             ret = makePtr<ResolvedTypeVoid>(parsedType.location);
         } break;
+        case Type::Kind::Error: {
+            ret = makePtr<ResolvedTypeError>(parsedType.location);
+        } break;
         case Type::Kind::Struct:
-        case Type::Kind::Error:
         case Type::Kind::ErrorGroup:
         case Type::Kind::Module:
             parsedType.dump();
@@ -255,16 +251,33 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
     }
     if (parsedType.isPointer) {
         ret = makePtr<ResolvedTypePointer>(ret->location, std::move(ret));
-        return ret;
+    }
+    if (parsedType.isArray) {
+        ret = makePtr<ResolvedTypeArray>(ret->location, std::move(ret), *parsedType.isArray);
+    }
+    if (parsedType.isOptional) {
+        ret = makePtr<ResolvedTypeOptional>(ret->location, std::move(ret));
     }
     return ret;
 }
 
-ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericTypes &parsedType) { dmz_unreachable("TODO"); }
+ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(SourceLocation location, const ResolvedDecl &genericDecl,
+                                                            const GenericTypes &parsedType) {
+    std::vector<ptr<ResolvedType>> specializedTypes;
+
+    for (auto &&t : parsedType.types) {
+        varOrReturn(resType, resolve_type(*t));
+        specializedTypes.emplace_back(std::move(resType));
+    }
+
+    return makePtr<ResolvedTypeSpecialized>(location, genericDecl.type->clone(), std::move(specializedTypes));
+}
 
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     if (dynamic_cast<const ResolvedTypeVoid *>(&type) || dynamic_cast<const ResolvedTypeNumber *>(&type) ||
-        dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        dynamic_cast<const ResolvedTypeStruct *>(&type) || dynamic_cast<const ResolvedTypeArray *>(&type) ||
+        dynamic_cast<const ResolvedTypeErrorGroup *>(&type) || dynamic_cast<const ResolvedTypeError *>(&type) ||
+        dynamic_cast<const ResolvedTypeOptional *>(&type) || dynamic_cast<const ResolvedTypePointer *>(&type)) {
         return type.clone();
     }
     type.dump();
@@ -523,7 +536,10 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
 
 bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg) {
     debug_func(fn.location);
-    if (dynamic_cast<const ResolvedTypeVoid *>(fn.type.get())) return false;
+    auto optType = dynamic_cast<const ResolvedTypeOptional *>(fn.type.get());
+    if (dynamic_cast<const ResolvedTypeVoid *>(fn.type.get()) ||
+        (optType && dynamic_cast<const ResolvedTypeVoid *>(optType->optionalType.get())))
+        return false;
 
     int returnCount = 0;
     bool exitReached = false;

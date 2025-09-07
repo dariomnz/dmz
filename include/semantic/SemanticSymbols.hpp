@@ -375,7 +375,7 @@ struct ResolvedBoolLiteral : public ResolvedExpr {
     bool value;
 
     ResolvedBoolLiteral(SourceLocation location, bool value)
-        : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 1)), value(value) {}
+        : ResolvedExpr(location, makePtr<ResolvedTypeBool>(location)), value(value) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -578,7 +578,7 @@ struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
 
 struct ResolvedErrorDecl : public ResolvedDecl {
     ResolvedErrorDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeError>(location, this), false) {}
+        : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeError>(location), false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -598,12 +598,9 @@ struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDecl {
 
 struct ResolvedCatchErrorExpr : public ResolvedExpr {
     ptr<ResolvedExpr> errorToCatch;
-    ptr<ResolvedDeclStmt> declaration;
 
-    ResolvedCatchErrorExpr(SourceLocation location, ptr<ResolvedExpr> errorToCatch, ptr<ResolvedDeclStmt> declaration)
-        : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 1)),
-          errorToCatch(std::move(errorToCatch)),
-          declaration(std::move(declaration)) {}
+    ResolvedCatchErrorExpr(SourceLocation location, ptr<ResolvedExpr> errorToCatch)
+        : ResolvedExpr(location, makePtr<ResolvedTypeError>(location)), errorToCatch(std::move(errorToCatch)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

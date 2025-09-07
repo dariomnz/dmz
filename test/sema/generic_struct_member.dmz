@@ -14,23 +14,23 @@ struct Point<T> {
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 // CHECK-NEXT:   ResolvedMemberFunctionDecl add -> void
-// CHECK-NEXT:     ResolvedParamDecl:Struct *Point 
+// CHECK-NEXT:     ResolvedParamDecl:*Point 
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedAssignment
-// CHECK-NEXT:         ResolvedSelfMemberExpr:Int i32 x
+// CHECK-NEXT:         ResolvedSelfMemberExpr:i32 x
 // CHECK-NEXT:           ResolvedDeclRefExpr:*Point 
-// CHECK-NEXT:         ResolvedBinaryOperator:Int i32 '+'
-// CHECK-NEXT:           ResolvedSelfMemberExpr:Int i32 x
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:           ResolvedSelfMemberExpr:i32 x
 // CHECK-NEXT:             ResolvedDeclRefExpr:*Point 
-// CHECK-NEXT:           ResolvedDeclRefExpr:Int i32 n
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 // CHECK-NEXT:       ResolvedAssignment
-// CHECK-NEXT:         ResolvedSelfMemberExpr:Int i32 y
+// CHECK-NEXT:         ResolvedSelfMemberExpr:i32 y
 // CHECK-NEXT:           ResolvedDeclRefExpr:*Point 
-// CHECK-NEXT:         ResolvedBinaryOperator:Int i32 '+'
-// CHECK-NEXT:           ResolvedSelfMemberExpr:Int i32 y
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:           ResolvedSelfMemberExpr:i32 y
 // CHECK-NEXT:             ResolvedDeclRefExpr:*Point 
-// CHECK-NEXT:           ResolvedDeclRefExpr:Int i32 n
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 }
 
 fn main() -> void {

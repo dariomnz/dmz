@@ -15,22 +15,22 @@ test "add test 2" {
 }
 // CHECK:  ResolvedTestDecl add test
 // CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedTryErrorExpr:Void void
-// CHECK-NEXT:           ResolvedCallExpr:Void void!
+// CHECK-NEXT:         ResolvedTryErrorExpr:void
+// CHECK-NEXT:           ResolvedCallExpr:void!
 // CHECK-NEXT:             ResolvedFunctionDecl expect -> void!
-// CHECK-NEXT:             ResolvedBinaryOperator:Int i1 '=='
-// CHECK-NEXT:               ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:               ResolvedCallExpr:i32
 // CHECK-NEXT:                 ResolvedFunctionDecl add -> i32
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
-// CHECK-NEXT:         ResolvedTryErrorExpr:Void void
-// CHECK-NEXT:           ResolvedCallExpr:Void void!
+// CHECK-NEXT:         ResolvedTryErrorExpr:void
+// CHECK-NEXT:           ResolvedCallExpr:void!
 // CHECK-NEXT:             ResolvedFunctionDecl expect -> void!
-// CHECK-NEXT:             ResolvedBinaryOperator:Int i1 '=='
-// CHECK-NEXT:               ResolvedCallExpr:Int i32
+// CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:               ResolvedCallExpr:i32
 // CHECK-NEXT:                 ResolvedFunctionDecl add -> i32
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
@@ -48,18 +48,18 @@ test "add test 2" {
 // CHECK-NEXT:         ResolvedParamDecl:i32 n
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedSwitchStmt
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 n
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 n
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedTryErrorExpr:Void void
-// CHECK-NEXT:                   ResolvedCallExpr:Void void!
+// CHECK-NEXT:                 ResolvedTryErrorExpr:void
+// CHECK-NEXT:                   ResolvedCallExpr:void!
 // CHECK-NEXT:                     ResolvedTestDecl add test
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedTryErrorExpr:Void void
-// CHECK-NEXT:                   ResolvedCallExpr:Void void!
+// CHECK-NEXT:                 ResolvedTryErrorExpr:void
+// CHECK-NEXT:                   ResolvedCallExpr:void!
 // CHECK-NEXT:                     ResolvedTestDecl add test 2
 // CHECK-NEXT:             ElseBlock
 // CHECK-NEXT:             ResolvedBlock
@@ -68,18 +68,18 @@ test "add test 2" {
 // CHECK-NEXT:         ResolvedParamDecl:i32 n
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedSwitchStmt
-// CHECK-NEXT:             ResolvedDeclRefExpr:Int i32 n
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 n
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedReturnStmt
-// CHECK-NEXT:                   ResolvedStringLiteral:UInt *u8 'add test'
+// CHECK-NEXT:                   ResolvedStringLiteral:*u8 'add test'
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedReturnStmt
-// CHECK-NEXT:                   ResolvedStringLiteral:UInt *u8 'add test 2'
+// CHECK-NEXT:                   ResolvedStringLiteral:*u8 'add test 2'
 // CHECK-NEXT:             ElseBlock
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedReturnStmt
-// CHECK-NEXT:                 ResolvedStringLiteral:UInt *u8 'Error in builtin_test_name'
+// CHECK-NEXT:                 ResolvedStringLiteral:*u8 'Error in builtin_test_name'

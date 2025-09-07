@@ -18,5 +18,5 @@ fn f() -> 1 {}
 fn f() -> void }
 
 fn main() -> validCustomTypeDuringParsing {}
-// CHECK: FunctionDecl main -> Custom validCustomTypeDuringParsing
+// CHECK: FunctionDecl main -> validCustomTypeDuringParsing
 // CHECK-NEXT:   Block

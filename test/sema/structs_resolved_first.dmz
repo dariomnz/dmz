@@ -15,8 +15,8 @@ struct S2 { x: i32, y:i32}
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-// CHECK-NEXT: ResolvedFunctionDecl foo -> Struct S2
-// CHECK-NEXT:   ResolvedParamDecl:Struct S s
+// CHECK-NEXT: ResolvedFunctionDecl foo -> S2
+// CHECK-NEXT:   ResolvedParamDecl:S s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:S2

@@ -8,8 +8,8 @@ struct Point<T> {
 }
 // CHECK: ResolvedGenericStructDecl Struct Point
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
-// CHECK-NEXT:   ResolvedFieldDecl:Custom T x
-// CHECK-NEXT:   ResolvedFieldDecl:Custom T y
+// CHECK-NEXT:   ResolvedFieldDecl:T x
+// CHECK-NEXT:   ResolvedFieldDecl:T y
 // CHECK-NEXT:   ResolvedSpecializedStructDecl Struct Point<i32>
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
@@ -51,9 +51,9 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:       | value: 2
-// CHECK-NEXT:     ResolvedCallExpr:Int i32
+// CHECK-NEXT:     ResolvedCallExpr:i32
 // CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:       ResolvedStringLiteral:UInt *u8 'Point %d %d\n'
+// CHECK-NEXT:       ResolvedStringLiteral:*u8 'Point %d %d\n'
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
 // CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
 // CHECK-NEXT:       ResolvedMemberExpr:i32 y

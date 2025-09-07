@@ -107,7 +107,7 @@ ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     std::string_view identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
-    ptr<Type> type;
+    ptr<Type> type = nullptr;
     if (m_nextToken.type == TokenType::colon) {
         eat_next_token();  // eat ':'
 

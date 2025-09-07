@@ -47,7 +47,7 @@ ptr<Type> Parser::parse_type() {
 
     std::unordered_set<TokenType> types = {
         TokenType::ty_void, TokenType::ty_f16, TokenType::ty_f32, TokenType::ty_f64,
-        TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
+        TokenType::ty_bool, TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
     };
 
     if (types.count(type) == 0) {
@@ -90,6 +90,9 @@ ptr<Type> Parser::parse_type() {
     }
     if (type == TokenType::ty_iN) {
         t = Type::builtinIN(name);
+    }
+    if (type == TokenType::ty_bool) {
+        t = Type::builtinBool();
     }
     if (type == TokenType::ty_uN) {
         t = Type::builtinUN(name);

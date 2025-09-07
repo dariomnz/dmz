@@ -429,7 +429,6 @@ void ResolvedCatchErrorExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCatchErrorExpr:" << type->to_str() << '\n';
 
     if (onlySelf) return;
-    if (declaration) declaration->dump(level + 1, onlySelf);
     if (errorToCatch) errorToCatch->dump(level + 1, onlySelf);
 }
 

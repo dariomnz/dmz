@@ -421,7 +421,6 @@ void ErrorGroupExprDecl::dump(size_t level) const {
 void CatchErrorExpr::dump(size_t level) const {
     std::cerr << indent(level) << "CatchErrorExpr " << '\n';
 
-    if (declaration) declaration->dump(level + 1);
     if (errorToCatch) errorToCatch->dump(level + 1);
 }
 

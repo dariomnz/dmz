@@ -280,26 +280,9 @@ ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
     auto location = m_nextToken.loc;
     eat_next_token();  // eat catch
 
-    std::string_view identifier = m_nextToken.str;
-    auto idLocation = m_nextToken.loc;
-    varOrReturn(first_expr, parse_expr());
-
-    Type type = Type::builtinError("err");
-    ptr<Expr> initializer;
-
-    if (m_nextToken.type != TokenType::op_assign) {
-        return makePtr<CatchErrorExpr>(location, std::move(first_expr), nullptr);
-    }
-
-    matchOrReturn(TokenType::op_assign, "expected '='");
-    eat_next_token();  // eat '='
-
     varOrReturn(errorToCatch, parse_expr());
 
-    auto varDecl =
-        makePtr<VarDecl>(idLocation, identifier, makePtr<Type>(std::move(type)), false, std::move(errorToCatch));
-    auto declaration = makePtr<DeclStmt>(idLocation, std::move(varDecl));
-    return makePtr<CatchErrorExpr>(location, nullptr, std::move(declaration));
+    return makePtr<CatchErrorExpr>(location, std::move(errorToCatch));
 }
 
 ptr<TryErrorExpr> Parser::parse_try_error_expr() {
@@ -308,9 +291,9 @@ ptr<TryErrorExpr> Parser::parse_try_error_expr() {
     auto location = m_nextToken.loc;
     eat_next_token();  // eat try
 
-    varOrReturn(first_expr, parse_expr());
+    varOrReturn(errorToTry, parse_expr());
 
-    return makePtr<TryErrorExpr>(location, std::move(first_expr));
+    return makePtr<TryErrorExpr>(location, std::move(errorToTry));
 }
 
 ptr<ImportExpr> Parser::parse_import_expr() {

@@ -49,12 +49,14 @@ struct GenericTypes {
 // Forward declaration
 struct ResolvedDecl;
 struct Type {
-    enum class Kind { Void, Int, UInt, Float, Struct, Custom, Generic, Error, Module, ErrorGroup };
+    enum class Kind { Void, Bool, Int, UInt, Float, Struct, Custom, Generic, Error, Module, ErrorGroup };
 
     static std::string KindString(Kind k) {
         switch (k) {
             case Kind::Void:
                 return "Void";
+            case Kind::Bool:
+                return "Bool";
             case Kind::Int:
                 return "Int";
             case Kind::UInt:
@@ -88,7 +90,7 @@ struct Type {
     SourceLocation location = {};
 
     static Type builtinVoid() { return {Kind::Void, "void"}; }
-    static Type builtinBool() { return {Kind::Int, "i1", 1}; }
+    static Type builtinBool() { return {Kind::Bool}; }
     static Type builtinIN(const std::string_view& name) {
         auto num = name.substr(1);
         int result = 0;
@@ -651,10 +653,9 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
 
 struct CatchErrorExpr : public Expr {
     ptr<Expr> errorToCatch;
-    ptr<DeclStmt> declaration;
 
-    CatchErrorExpr(SourceLocation location, ptr<Expr> errorToCatch, ptr<DeclStmt> declaration)
-        : Expr(location), errorToCatch(std::move(errorToCatch)), declaration(std::move(declaration)) {}
+    CatchErrorExpr(SourceLocation location, ptr<Expr> errorToCatch)
+        : Expr(location), errorToCatch(std::move(errorToCatch)) {}
 
     void dump(size_t level = 0) const override;
 };

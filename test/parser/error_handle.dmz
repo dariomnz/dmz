@@ -48,7 +48,8 @@ extern fn printf(fmt:*u8, ...) -> i32;
 fn main() -> void {
     let result = foo(1);
     
-    if (catch err = result) {
+    let err = catch result;
+    if (err) {
         printf(&"%s\n", err);
     }
     
@@ -65,11 +66,12 @@ fn main() -> void {
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr foo
 // CHECK-NEXT:             IntLiteral '1'
+// CHECK-NEXT:       DeclStmt
+// CHECK-NEXT:         VarDecl: err
+// CHECK-NEXT:           CatchErrorExpr 
+// CHECK-NEXT:             DeclRefExpr result
 // CHECK-NEXT:       IfStmt
-// CHECK-NEXT:         CatchErrorExpr 
-// CHECK-NEXT:           DeclStmt
-// CHECK-NEXT:             VarDecl:const Error err err
-// CHECK-NEXT:               DeclRefExpr result
+// CHECK-NEXT:         DeclRefExpr err
 // CHECK-NEXT:         Block
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf

@@ -1,4 +1,5 @@
 #include "semantic/CFG.hpp"
+
 #include "Stats.hpp"
 
 namespace DMZ {
@@ -118,23 +119,13 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         return block;
     }
     if (const auto *catchErrorExpr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
-        if (catchErrorExpr->errorToCatch) {
-            return insert_expr(*catchErrorExpr->errorToCatch, block);
-        } else if (catchErrorExpr->declaration) {
-            return insert_stmt(*catchErrorExpr->declaration, block);
-        } else {
-            dmz_unreachable("malformed CatchErrorExpr");
-        }
+        return insert_expr(*catchErrorExpr->errorToCatch, block);
     }
     if (const auto *tryErrorExpr = dynamic_cast<const ResolvedTryErrorExpr *>(&expr)) {
         for (auto &&d : tryErrorExpr->defers) {
             block = insert_block(*d->resolvedDefer.block, block);
         }
-        if (tryErrorExpr->errorToTry) {
-            return insert_expr(*tryErrorExpr->errorToTry, block);
-        } else {
-            dmz_unreachable("malformed TryErrorExpr");
-        }
+        return insert_expr(*tryErrorExpr->errorToTry, block);
     }
 
     return block;

@@ -1,49 +1,75 @@
+#define DEBUG
 #include "semantic/SemanticSymbolsTypes.hpp"
+
+#include "Debug.hpp"
 
 namespace DMZ {
 
-bool ResolvedTypeVoid::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeVoid::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
+bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (dynamic_cast<const ResolvedTypeVoid *>(&other)) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
-ptr<ResolvedType> ResolvedTypeVoid::clone() const { return makePtr<ResolvedTypeVoid>(location); }
+bool ResolvedTypeVoid::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+
+    dump();
+    other.dump();
+    dmz_unreachable("TODO");
+}
+
+ptr<ResolvedType> ResolvedTypeVoid::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeVoid>(location);
+}
 
 void ResolvedTypeVoid::dump(size_t level) const {
+    debug_func(location);
     std::cerr << indent(level) << "ResolvedTypeVoid " << to_str() << "\n";
 }
 
-std::string ResolvedTypeVoid::to_str() const { return "void"; }
+std::string ResolvedTypeVoid::to_str() const {
+    debug_func(location);
+    return "void";
+}
 
 bool ResolvedTypeNumber::equal(const ResolvedType &other) const {
+    debug_func(location);
     if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
         return numberKind == numType->numberKind && bitSize == numType->bitSize;
     } else {
         return false;
     }
-
-    dump();
-    other.dump();
-    dmz_unreachable("TODO");
 }
+
 bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
+    debug_func(location);
     if (equal(other)) return true;
 
-    if (dynamic_cast<const ResolvedTypePointer *>(&other)) {
-        return false;
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
+        // TODO think if is ok to ignore size
+        return numberKind == numType->numberKind;
     }
-    dump();
-    other.dump();
-    dmz_unreachable("TODO");
+    return false;
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::clone() const {
+    debug_func(location);
     return makePtr<ResolvedTypeNumber>(location, numberKind, bitSize);
 }
 
 void ResolvedTypeNumber::dump(size_t level) const {
+    debug_func(location);
     std::cerr << indent(level) << "ResolvedTypeNumber " << to_str() << "\n";
 }
 
 std::string ResolvedTypeNumber::to_str() const {
+    debug_func(location);
     std::stringstream out;
     switch (numberKind) {
         case ResolvedNumberKind::Int:
@@ -61,7 +87,45 @@ std::string ResolvedTypeNumber::to_str() const {
     return out.str();
 }
 
+bool ResolvedTypeBool::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (dynamic_cast<const ResolvedTypeBool *>(&other)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeBool::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+
+    if (dynamic_cast<const ResolvedTypeError *>(&other)) {
+        return true;
+    } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
+        return numType->numberKind == ResolvedNumberKind::Int || numType->numberKind == ResolvedNumberKind::UInt;
+    } else {
+        return false;
+    }
+}
+
+ptr<ResolvedType> ResolvedTypeBool::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeBool>(location);
+}
+
+void ResolvedTypeBool::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeBool " << to_str() << "\n";
+}
+
+std::string ResolvedTypeBool::to_str() const {
+    debug_func(location);
+    return "bool";
+}
+
 bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
+    debug_func(location);
     if (auto strType = dynamic_cast<const ResolvedTypeStruct *>(&other)) {
         return decl == strType->decl;
     } else {
@@ -70,20 +134,24 @@ bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
 }
 
 bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
+    debug_func(location);
     if (equal(other)) return true;
 
-    dump();
-    other.dump();
-    dmz_unreachable("TODO");
+    return false;
 }
 
-ptr<ResolvedType> ResolvedTypeStruct::clone() const { return makePtr<ResolvedTypeStruct>(location, decl); }
+ptr<ResolvedType> ResolvedTypeStruct::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeStruct>(location, decl);
+}
 
 void ResolvedTypeStruct::dump(size_t level) const {
+    debug_func(location);
     std::cerr << indent(level) << "ResolvedTypeStruct " << to_str() << "\n";
 }
 
 std::string ResolvedTypeStruct::to_str() const {
+    debug_func(location);
     std::stringstream out;
     out << decl->name();
     if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
@@ -92,25 +160,120 @@ std::string ResolvedTypeStruct::to_str() const {
     return out.str();
 }
 
-bool ResolvedTypeGeneric::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeGeneric::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-ptr<ResolvedType> ResolvedTypeGeneric::clone() const { dmz_unreachable("TODO"); }
-void ResolvedTypeGeneric::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeGeneric::to_str() const { dmz_unreachable("TODO"); }
+bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&other)) {
+        return decl == genType->decl;
+    } else {
+        return false;
+    }
+}
 
-bool ResolvedTypeSpecialized::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeSpecialized::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-ptr<ResolvedType> ResolvedTypeSpecialized::clone() const { dmz_unreachable("TODO"); }
-void ResolvedTypeSpecialized::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeSpecialized::to_str() const { dmz_unreachable("TODO"); }
+bool ResolvedTypeGeneric::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+    return false;
+}
 
-bool ResolvedTypeError::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeError::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-ptr<ResolvedType> ResolvedTypeError::clone() const { dmz_unreachable("TODO"); }
-void ResolvedTypeError::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeError::to_str() const { dmz_unreachable("TODO"); }
+ptr<ResolvedType> ResolvedTypeGeneric::clone() const {
+    debug_func(location);
+    dmz_unreachable("TODO");
+}
+
+void ResolvedTypeGeneric::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeGeneric " << to_str() << "\n";
+}
+
+std::string ResolvedTypeGeneric::to_str() const {
+    debug_func(location);
+    return decl->name();
+}
+
+bool ResolvedTypeSpecialized::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (auto specType = dynamic_cast<const ResolvedTypeSpecialized *>(&other)) {
+        if (!baseType->equal(*specType->baseType)) return false;
+        if (specializedTypes.size() != specType->specializedTypes.size()) return false;
+
+        for (size_t i = 0; i < specializedTypes.size(); i++) {
+            if (!specializedTypes[i]->equal(*specType->specializedTypes[i])) return false;
+        }
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeSpecialized::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+    return false;
+}
+
+ptr<ResolvedType> ResolvedTypeSpecialized::clone() const {
+    debug_func(location);
+    std::vector<ptr<ResolvedType>> specTypes;
+    specTypes.reserve(specializedTypes.size());
+    for (auto &&t : specializedTypes) {
+        specTypes.emplace_back(t->clone());
+    }
+    return makePtr<ResolvedTypeSpecialized>(location, baseType->clone(), std::move(specTypes));
+}
+
+void ResolvedTypeSpecialized::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeSpecialized " << to_str() << "\n";
+}
+
+std::string ResolvedTypeSpecialized::to_str() const {
+    debug_func(location);
+    std::stringstream out;
+    out << baseType->to_str();
+    out << "<";
+    for (size_t i = 0; i < specializedTypes.size(); i++) {
+        out << specializedTypes[i]->to_str();
+        if (i != specializedTypes.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ">";
+    return out.str();
+}
+
+bool ResolvedTypeError::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (dynamic_cast<const ResolvedTypeError *>(&other)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeError::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+    return false;
+}
+
+ptr<ResolvedType> ResolvedTypeError::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeError>(location);
+}
+
+void ResolvedTypeError::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeError " << to_str() << "\n";
+}
+
+std::string ResolvedTypeError::to_str() const {
+    debug_func(location);
+    return "error";
+}
 
 bool ResolvedTypeErrorGroup::equal(const ResolvedType &other) const {
+    debug_func(location);
     if (auto egType = dynamic_cast<const ResolvedTypeErrorGroup *>(&other)) {
         return decl == egType->decl;
     } else {
@@ -119,15 +282,28 @@ bool ResolvedTypeErrorGroup::equal(const ResolvedType &other) const {
 }
 
 bool ResolvedTypeErrorGroup::compare(const ResolvedType &other) const {
+    debug_func(location);
     if (equal(other)) return true;
     return false;
 }
 
-ptr<ResolvedType> ResolvedTypeErrorGroup::clone() const { return makePtr<ResolvedTypeErrorGroup>(location, decl); }
-void ResolvedTypeErrorGroup::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeErrorGroup::to_str() const { dmz_unreachable("TODO"); }
+ptr<ResolvedType> ResolvedTypeErrorGroup::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeErrorGroup>(location, decl);
+}
+
+void ResolvedTypeErrorGroup::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeErrorGroup " << to_str() << "\n";
+}
+
+std::string ResolvedTypeErrorGroup::to_str() const {
+    debug_func(location);
+    return "errorGroup";
+}
 
 bool ResolvedTypeModule::equal(const ResolvedType &other) const {
+    debug_func(location);
     if (auto modType = dynamic_cast<const ResolvedTypeModule *>(&other)) {
         return moduleDecl == modType->moduleDecl;
     } else {
@@ -136,22 +312,63 @@ bool ResolvedTypeModule::equal(const ResolvedType &other) const {
 }
 
 bool ResolvedTypeModule::compare(const ResolvedType &other) const {
+    debug_func(location);
     if (equal(other)) return true;
     return false;
 }
 
-ptr<ResolvedType> ResolvedTypeModule::clone() const { return makePtr<ResolvedTypeModule>(location, moduleDecl); }
+ptr<ResolvedType> ResolvedTypeModule::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeModule>(location, moduleDecl);
+}
 
-void ResolvedTypeModule::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeModule::to_str() const { dmz_unreachable("TODO"); }
+void ResolvedTypeModule::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeModule " << to_str() << "\n";
+}
+std::string ResolvedTypeModule::to_str() const {
+    debug_func(location);
+    return moduleDecl->name();
+}
 
-bool ResolvedTypeOptional::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeOptional::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-ptr<ResolvedType> ResolvedTypeOptional::clone() const { dmz_unreachable("TODO"); }
-void ResolvedTypeOptional::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeOptional::to_str() const { dmz_unreachable("TODO"); }
+bool ResolvedTypeOptional::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
+        return optionalType->equal(*optType->optionalType);
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeOptional::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (dynamic_cast<const ResolvedTypeError *>(&other)) return true;
+    if (equal(other)) return true;
+
+    if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
+        return optionalType->compare(*optType->optionalType);
+    } else {
+        return optionalType->compare(other);
+    }
+}
+
+ptr<ResolvedType> ResolvedTypeOptional::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeOptional>(location, optionalType->clone());
+}
+
+void ResolvedTypeOptional::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeOptional " << to_str() << "\n";
+}
+
+std::string ResolvedTypeOptional::to_str() const {
+    debug_func(location);
+    return optionalType->to_str() + "!";
+}
 
 bool ResolvedTypePointer::equal(const ResolvedType &other) const {
+    debug_func(location);
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
         return pointerType->equal(*ptrType->pointerType);
     } else {
@@ -160,6 +377,42 @@ bool ResolvedTypePointer::equal(const ResolvedType &other) const {
 }
 
 bool ResolvedTypePointer::compare(const ResolvedType &other) const {
+    debug_func(location);
+    if (equal(other)) return true;
+
+    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
+        return pointerType->compare(*ptrType->pointerType);
+    } else {
+        return false;
+    }
+}
+
+ptr<ResolvedType> ResolvedTypePointer::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypePointer>(location, pointerType->clone());
+}
+
+void ResolvedTypePointer::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypePointer " << to_str() << "\n";
+}
+
+std::string ResolvedTypePointer::to_str() const {
+    debug_func(location);
+    return "*" + pointerType->to_str();
+}
+
+bool ResolvedTypeArray::equal(const ResolvedType &other) const {
+    debug_func(location);
+    if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&other)) {
+        return arraySize == arrType->arraySize && arrayType->equal(*arrType->arrayType);
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeArray::compare(const ResolvedType &other) const {
+    debug_func(location);
     if (equal(other)) return true;
 
     dump();
@@ -167,19 +420,18 @@ bool ResolvedTypePointer::compare(const ResolvedType &other) const {
     dmz_unreachable("TODO");
 }
 
-ptr<ResolvedType> ResolvedTypePointer::clone() const {
-    return makePtr<ResolvedTypePointer>(location, pointerType->clone());
+ptr<ResolvedType> ResolvedTypeArray::clone() const {
+    debug_func(location);
+    return makePtr<ResolvedTypeArray>(location, arrayType->clone(), arraySize);
 }
 
-void ResolvedTypePointer::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedTypePointer " << to_str() << "\n";
+void ResolvedTypeArray::dump(size_t level) const {
+    debug_func(location);
+    std::cerr << indent(level) << "ResolvedTypeArray " << to_str() << "\n";
 }
 
-std::string ResolvedTypePointer::to_str() const { return "*" + pointerType->to_str(); }
-
-bool ResolvedTypeArray::equal(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-bool ResolvedTypeArray::compare(const ResolvedType &other) const { dmz_unreachable("TODO"); }
-ptr<ResolvedType> ResolvedTypeArray::clone() const { dmz_unreachable("TODO"); }
-void ResolvedTypeArray::dump(size_t level) const { dmz_unreachable("TODO"); }
-std::string ResolvedTypeArray::to_str() const { dmz_unreachable("TODO"); }
+std::string ResolvedTypeArray::to_str() const {
+    debug_func(location);
+    return arrayType->to_str() + "[" + std::to_string(arraySize) + "]";
+}
 }  // namespace DMZ

@@ -17,7 +17,9 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     // Search in the module scope
     ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
     if (!decl) {
+#ifdef DEBUG
         dump_scopes();
+#endif
         return report(declRefExpr.location, "symbol '" + declRefExpr.identifier + "' not found");
     }
 
@@ -72,7 +74,8 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
         if (call.genericTypes) {
-            varOrReturn(resolvedSpecialized, resolve_specialized_type(*call.genericTypes));
+            varOrReturn(resolvedSpecialized,
+                        resolve_specialized_type(call.location, *resolvedFunctionDecl, *call.genericTypes));
             auto resolvedFuncDecl = specialize_generic_function(
                 call.location, *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl), *resolvedSpecialized);
             if (!resolvedFuncDecl) return nullptr;
@@ -225,7 +228,7 @@ ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &una
     debug_func(unary.location);
     varOrReturn(resolvedRHS, resolve_expr(*unary.operand));
 
-    auto boolType = ResolvedTypeNumber{SourceLocation{}, ResolvedNumberKind::Int, 1};
+    auto boolType = ResolvedTypeBool{SourceLocation{}};
 
     if (dynamic_cast<const ResolvedTypeVoid *>(resolvedRHS->type.get()) ||
         (unary.op == TokenType::op_excla_mark && !boolType.compare(*resolvedRHS->type)))
@@ -272,13 +275,14 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
     if (!resolvedLHS->type->compare(*resolvedRHS->type)) {
-        return report(binop.location, "unexpected type " + resolvedLHS->type->to_str() + " in binop");
+        return report(binop.location, "unexpected type in binop, expected '" + resolvedLHS->type->to_str() +
+                                          "' actual '" + resolvedRHS->type->to_str() + "' ");
     }
 
     auto ret =
         makePtr<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS), std::move(resolvedRHS));
     if (op_generate_bool(binop.op)) {
-        ret->type = makePtr<ResolvedTypeNumber>(binop.location, ResolvedNumberKind::Int, 1);
+        ret->type = makePtr<ResolvedTypeBool>(binop.location);
     }
     return ret;
 }
@@ -428,7 +432,8 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
             return report(structInstantiation.location,
                           "'" + st->identifier + "' is a generic and need specialization");
 
-        varOrReturn(resolvedSpecialized, resolve_specialized_type(structInstantiation.genericTypes));
+        varOrReturn(resolvedSpecialized, resolve_specialized_type(structInstantiation.location, *genStruct,
+                                                                  structInstantiation.genericTypes));
         st = specialize_generic_struct(structInstantiation.location, *genStruct, *resolvedSpecialized);
         if (!st) return nullptr;
     }
@@ -511,8 +516,9 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
             type = resolved->type->clone();
         }
 
-        if (resolved->type != type) {
-            return report(initializer->location, "unexpected different types in array instantiation");
+        if (!resolved->type->compare(*type)) {
+            return report(initializer->location, "unexpected different types in array instantiation expected '" +
+                                                     resolved->type->to_str() + "' actual '" + type->to_str() + "'");
         }
     }
     type = makePtr<ResolvedTypeArray>(SourceLocation{}, std::move(type), arrayInstantiation.initializers.size());
@@ -523,15 +529,8 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
 
 ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr) {
     debug_func(catchErrorExpr.location);
-    if (catchErrorExpr.errorToCatch) {
-        auto resolvedErr = resolve_expr(*catchErrorExpr.errorToCatch);
-        return makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, std::move(resolvedErr), nullptr);
-    } else if (catchErrorExpr.declaration) {
-        auto declaration = resolve_decl_stmt(*catchErrorExpr.declaration);
-        return makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, nullptr, std::move(declaration));
-    } else {
-        dmz_unreachable("malformed CatchErrorExpr");
-    }
+    auto resolvedErr = resolve_expr(*catchErrorExpr.errorToCatch);
+    return makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, std::move(resolvedErr));
 }
 
 ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryErrorExpr) {

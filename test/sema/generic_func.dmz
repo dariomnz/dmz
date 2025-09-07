@@ -11,17 +11,17 @@ fn print<T>(param:T) -> void! {
 // CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i32> -> void!
 // CHECK-NEXT:     ResolvedParamDecl:i32 param
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Pointer of type %d\n'
-// CHECK-NEXT:         ResolvedDeclRefExpr:Int i32 param
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 'Pointer of type %d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 param
 // CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i64> -> void!
 // CHECK-NEXT:     ResolvedParamDecl:i64 param
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedCallExpr:Int i32
+// CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
-// CHECK-NEXT:         ResolvedStringLiteral:UInt *u8 'Pointer of type %d\n'
-// CHECK-NEXT:         ResolvedDeclRefExpr:Int i64 param
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 'Pointer of type %d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i64 param
 
 fn main() -> void {
     print<i32>(123);
@@ -30,11 +30,11 @@ fn main() -> void {
 
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr:Void void!
+// CHECK-NEXT:     ResolvedCallExpr:void!
 // CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<i32> -> void!
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '123'
 // CHECK-NEXT:       | value: 123
-// CHECK-NEXT:     ResolvedCallExpr:Void void!
+// CHECK-NEXT:     ResolvedCallExpr:void!
 // CHECK-NEXT:       ResolvedSpecializedFunctionDecl print<i64> -> void!
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '123'
 // CHECK-NEXT:       | value: 123

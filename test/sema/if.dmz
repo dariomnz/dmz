@@ -4,12 +4,12 @@ fn foo() -> void {}
 fn bar() -> i32 { return 1; }
 
 fn main() -> void {
-    // CHECK: [[# @LINE + 1 ]]:12: error: expected int in condition
+    // CHECK: [[# @LINE + 1 ]]:12: error: unexpected type in condition 'void'
     if (foo()) {}
 
     if (bar()) {}
     
-    // CHECK: [[# @LINE + 1 ]]:17: error: expected int in condition
+    // CHECK: [[# @LINE + 1 ]]:17: error: unexpected type in condition 'void'
     else if (foo()) {}
 }
 // CHECK-NOT: {{.*}}

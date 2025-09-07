@@ -15,12 +15,12 @@ fn main() -> void {
 // CHECK-NEXT: ResolvedFunctionDecl bar -> void
 // CHECK-NEXT:   ResolvedParamDecl:i32 x
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr:Void void 
+// CHECK-NEXT:     ResolvedCallExpr:void 
 // CHECK-NEXT:       ResolvedFunctionDecl foo -> void
-// CHECK-NEXT:       ResolvedDeclRefExpr:Int i32 x
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr:Void void 
+// CHECK-NEXT:     ResolvedCallExpr:void 
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1

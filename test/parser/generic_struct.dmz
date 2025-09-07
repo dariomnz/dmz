@@ -8,8 +8,8 @@ struct Point<T> {
 }
 // CHECK: StructDecl Point
 // CHECK-NEXT:   GenericTypeDecl T
-// CHECK-NEXT:   FieldDecl:Custom T x
-// CHECK-NEXT:   FieldDecl:Custom T y
+// CHECK-NEXT:   FieldDecl:T x
+// CHECK-NEXT:   FieldDecl:T y
 
 fn main() -> void {
     let p1 = Point<i32>{x:1, y:2};

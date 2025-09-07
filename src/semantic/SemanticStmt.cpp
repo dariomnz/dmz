@@ -106,13 +106,11 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     debug_func(ifStmt.location);
     varOrReturn(condition, resolve_expr(*ifStmt.condition));
 
-    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
-        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
-            return report(condition->location, "expected int in condition");
-        }
-    } else {
-        return report(condition->location, "expected int in condition");
+    auto typeToCompare = ResolvedTypeBool{SourceLocation{}};
+    if (!typeToCompare.compare(*condition->type)) {
+        return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
     }
+
     varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
 
     ptr<ResolvedBlock> resolvedFalseBlock;
@@ -131,12 +129,9 @@ ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     debug_func(whileStmt.location);
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
 
-    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
-        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
-            return report(condition->location, "expected int in condition");
-        }
-    } else {
-        return report(condition->location, "expected int in condition");
+    auto typeToCompare = ResolvedTypeBool{SourceLocation{}};
+    if (!typeToCompare.compare(*condition->type)) {
+        return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
     }
 
     varOrReturn(body, resolve_block(*whileStmt.body));
@@ -200,12 +195,9 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
     debug_func(switchStmt.location);
     varOrReturn(condition, resolve_expr(*switchStmt.condition));
 
-    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(condition->type.get())) {
-        if (numType->numberKind != ResolvedNumberKind::Int && numType->numberKind != ResolvedNumberKind::UInt) {
-            return report(condition->location, "expected int in condition");
-        }
-    } else {
-        return report(condition->location, "expected int in condition");
+    auto typeToCompare = ResolvedTypeBool{SourceLocation{}};
+    if (!typeToCompare.compare(*condition->type)) {
+        return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
     }
 
     std::vector<ptr<ResolvedCaseStmt>> cases;

@@ -20,7 +20,8 @@ module std {
                 result = result + 1;
                 const test_name = @builtin_test_name(i);
                 // std.io.printf("Run test [%d/%d] '%s'.\n", i+1, num_test, test_name);
-                if (catch err = @builtin_test_run(i)) {
+                let err = catch @builtin_test_run(i);
+                if (err) {
                     std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i+1, num_test, test_name, err);
                     result = result - 1;
                 }
