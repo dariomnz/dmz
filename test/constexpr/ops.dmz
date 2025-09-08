@@ -1,40 +1,40 @@
 // RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s --match-full-lines
 fn foo(n: i32) -> void {}
-fn bar(n: i1) -> void {}
+fn bar(n: bool) -> void {}
 
 fn prefix(x: i32) -> void {
-    bar(!1);
-    bar(!0);
+    bar(!true);
+    bar(!false);
     bar(!x);
     foo(-x);
-    foo(-1);
+    foo(-true);
 }
 // CHECK: ResolvedFunctionDecl prefix -> void
 // CHECK-NEXT:   ResolvedParamDecl:i32 x
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedUnaryOperator:Int i1 '!'
+// CHECK-NEXT:       ResolvedUnaryOperator:bool '!'
 // CHECK-NEXT:       | value: 0
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         ResolvedBoolLiteral:bool 'true'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedUnaryOperator:Int i1 '!'
+// CHECK-NEXT:       ResolvedUnaryOperator:bool '!'
 // CHECK-NEXT:       | value: 1
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:         ResolvedBoolLiteral:bool 'false'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedUnaryOperator:Int i1 '!'
+// CHECK-NEXT:       ResolvedUnaryOperator:bool '!'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl foo -> void
-// CHECK-NEXT:       ResolvedUnaryOperator:Int i32 '-'
+// CHECK-NEXT:       ResolvedUnaryOperator:i32 '-'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl foo -> void
-// CHECK-NEXT:       ResolvedUnaryOperator:Int i32 '-'
+// CHECK-NEXT:       ResolvedUnaryOperator:bool '-'
 // CHECK-NEXT:       | value: -1
-// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         ResolvedBoolLiteral:bool 'true'
 
 fn multiplicative(x: i32) -> void {
     foo(5 * 3);
@@ -99,25 +99,25 @@ fn comparison() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '<'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '<'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '<'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '<'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '>'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '>'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '>'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '>'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
@@ -151,25 +151,25 @@ fn conjunction() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
@@ -184,25 +184,25 @@ fn disjunction() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:     ResolvedCallExpr:void
 // CHECK-NEXT:       ResolvedFunctionDecl bar -> void
-// CHECK-NEXT:       ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:       ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:       | value: 0
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '0'

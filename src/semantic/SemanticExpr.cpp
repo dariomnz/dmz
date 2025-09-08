@@ -31,11 +31,10 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     }
 
     // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
-    varOrReturn(type, re_resolve_type(*decl->type));
-    auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, type->clone());
+    auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, decl->type->clone());
 
     resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
-    // println(type->to_str());
+
     return resolvedDeclRefExpr;
 }
 
@@ -71,18 +70,14 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     }
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
-
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
         if (call.genericTypes) {
-            varOrReturn(resolvedSpecialized,
-                        resolve_specialized_type(call.location, *resolvedFunctionDecl, *call.genericTypes));
-            auto resolvedFuncDecl = specialize_generic_function(
+            varOrReturn(resolvedSpecialized, resolve_specialized_type(call.location, *call.genericTypes));
+            resolvedFuncDecl = specialize_generic_function(
                 call.location, *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl), *resolvedSpecialized);
             if (!resolvedFuncDecl) return nullptr;
         } else {
-            if (dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
-                return report(call.location, "try to call a generic function without specialization");
-            }
+            return report(call.location, "try to call a generic function without specialization");
         }
     }
 
@@ -238,9 +233,10 @@ ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &una
     ptr<DMZ::ResolvedType> resolvedType = nullptr;
     if (op_generate_bool(unary.op)) {
         resolvedType = boolType.clone();
-    }
-    if (unary.op == TokenType::amp) {
-        resolvedType = makePtr<ResolvedTypePointer>(resolvedRHS->type->location, std::move(resolvedRHS->type));
+    } else if (unary.op == TokenType::amp) {
+        resolvedType = makePtr<ResolvedTypePointer>(resolvedRHS->type->location, resolvedRHS->type->clone());
+    } else {
+        resolvedType = resolvedRHS->type->clone();
     }
     return makePtr<ResolvedUnaryOperator>(unary.location, std::move(resolvedType), unary.op, std::move(resolvedRHS));
 }
@@ -265,7 +261,8 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (!dynamic_cast<const ResolvedTypeNumber *>(resolvedLHS->type.get())) {
+    if (!dynamic_cast<const ResolvedTypeNumber *>(resolvedLHS->type.get()) &&
+        !dynamic_cast<const ResolvedTypePointer *>(resolvedLHS->type.get())) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
@@ -323,7 +320,13 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     // println("Type " << resolvedBase->type.to_str() << " type");
     // println("Type " << resolvedBase->type.decl << " type");
     // println("Type " << resolvedBase->type.decl->location << " type");
-    if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(resolvedBase->type.get())) {
+    ResolvedType *baseType = resolvedBase->type.get();
+    // TODO: change acces members
+    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(baseType)) {
+        baseType = ptrType->pointerType.get();
+    }
+
+    if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
         const DMZ::ResolvedStructDecl *st = struType->decl;
 
         if (!st) return report(memberExpr.location, "failed to lookup struct " + resolvedBase->type->to_str());
@@ -339,7 +342,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
 
-    } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(resolvedBase->type.get())) {
+    } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(baseType)) {
         auto moduleDecl = modType->moduleDecl;
         if (!moduleDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
@@ -349,7 +352,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "module \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
 
-    } else if (auto modType = dynamic_cast<const ResolvedTypeErrorGroup *>(resolvedBase->type.get())) {
+    } else if (auto modType = dynamic_cast<const ResolvedTypeErrorGroup *>(baseType)) {
         auto errorGroupDecl = modType->decl;
         if (!errorGroupDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a error group decl");
@@ -371,9 +374,11 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
 ptr<ResolvedSelfMemberExpr> Sema::resolve_self_member_expr(const SelfMemberExpr &memberExpr) {
     if (!m_currentStruct) return report(memberExpr.location, "unexpected use of self member outside a struct");
     auto decl = cast_lookup_in_struct(*m_currentStruct, memberExpr.field, ResolvedDecl);
-    if (!decl)
+    if (!decl) {
+        m_currentStruct->dump();
         return report(memberExpr.location, "struct \'" + m_currentStruct->type->to_str() +
                                                "' has no self member called '" + memberExpr.field + '\'');
+    }
     if (!m_currentFunction) return report(memberExpr.location, "internal error resolve_self_member_expr");
 
     if (m_currentFunction->params.size() == 0)
@@ -432,8 +437,8 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
             return report(structInstantiation.location,
                           "'" + st->identifier + "' is a generic and need specialization");
 
-        varOrReturn(resolvedSpecialized, resolve_specialized_type(structInstantiation.location, *genStruct,
-                                                                  structInstantiation.genericTypes));
+        varOrReturn(resolvedSpecialized,
+                    resolve_specialized_type(structInstantiation.location, structInstantiation.genericTypes));
         st = specialize_generic_struct(structInstantiation.location, *genStruct, *resolvedSpecialized);
         if (!st) return nullptr;
     }

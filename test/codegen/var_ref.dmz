@@ -74,12 +74,12 @@ fn main() -> void {
 // CHECK-NEXT:   %i = alloca i32, align 4
 // CHECK-NEXT:   %i_ptr = alloca ptr, align 8
 // CHECK-NEXT:   %col = alloca %Color, align 8
-// CHECK-NEXT:   %Color.tmp = alloca %Color, align 8
+// CHECK-NEXT:   %tmp.struct.Color = alloca %Color, align 8
 // CHECK-NEXT:   %col_ptr = alloca ptr, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i_ptr, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %col, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Color.tmp, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.Color, i8 0, i64 12, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %col_ptr, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   store i32 10, ptr %i, align 4
 // CHECK-NEXT:   store ptr %i, ptr %i_ptr, align 8
@@ -90,16 +90,18 @@ fn main() -> void {
 // CHECK-NEXT:   %3 = load ptr, ptr %i_ptr, align 8
 // CHECK-NEXT:   %4 = load i32, ptr %3, align 4
 // CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.4, i32 %4)
-// CHECK-NEXT:   %6 = getelementptr inbounds %Color, ptr %Color.tmp, i32 0, i32 0
+// CHECK-NEXT:   %6 = getelementptr inbounds %Color, ptr %tmp.struct.Color, i32 0, i32 0
 // CHECK-NEXT:   store i32 1, ptr %6, align 4
-// CHECK-NEXT:   %7 = getelementptr inbounds %Color, ptr %Color.tmp, i32 0, i32 1
+// CHECK-NEXT:   %7 = getelementptr inbounds %Color, ptr %tmp.struct.Color, i32 0, i32 1
 // CHECK-NEXT:   store i32 1, ptr %7, align 4
-// CHECK-NEXT:   %8 = getelementptr inbounds %Color, ptr %Color.tmp, i32 0, i32 2
+// CHECK-NEXT:   %8 = getelementptr inbounds %Color, ptr %tmp.struct.Color, i32 0, i32 2
 // CHECK-NEXT:   store i32 1, ptr %8, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %col, ptr align 4 %Color.tmp, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %col, ptr align 4 %tmp.struct.Color, i64 12, i1 false)
 // CHECK-NEXT:   store ptr %col, ptr %col_ptr, align 8
 // CHECK-NEXT:   call void @printColor(ptr byref(%Color) %col)
-// CHECK-NEXT:   call void @bar(ptr byref(%Color) %col_ptr)
-// CHECK-NEXT:   call void @printColor(ptr byref(%Color) %col_ptr)
+// CHECK-NEXT:   %9 = load ptr, ptr %col_ptr, align 8
+// CHECK-NEXT:   call void @bar(ptr byref(%Color) %9)
+// CHECK-NEXT:   %10 = load ptr, ptr %col_ptr, align 8
+// CHECK-NEXT:   call void @printColor(ptr byref(%Color) %10)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

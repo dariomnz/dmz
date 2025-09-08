@@ -48,7 +48,7 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
     SourceLocation loc{};
     if (!function.isStatic) {
         auto selfParam =
-            makePtr<ResolvedParamDecl>(loc, "", makePtr<ResolvedTypePointer>(loc, structDecl.type->clone()), true);
+            makePtr<ResolvedParamDecl>(loc, "", makePtr<ResolvedTypePointer>(loc, structDecl.type->clone()), false);
         resolvedFunctionDecl->params.insert(resolvedFunctionDecl->params.begin(), std::move(selfParam));
     }
 
@@ -157,7 +157,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     // If not found specialize the function
     for (size_t i = 0; i < funcDecl.genericTypeDecls.size(); i++) {
         debug_msg("Specialize " << funcDecl.genericTypeDecls[i]->identifier << " to "
-                                << genericTypes.types[i]->to_str());
+                                << genericTypes.specializedTypes[i]->to_str());
         funcDecl.genericTypeDecls[i]->specializedType = genericTypes.specializedTypes[i]->clone();
     }
     // Restore scope
@@ -250,7 +250,7 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     // If not found specialize the function
     for (size_t i = 0; i < struDecl.genericTypeDecls.size(); i++) {
         debug_msg("Specialize " << struDecl.genericTypeDecls[i]->identifier << " to "
-                                << genericTypes.types[i]->to_str());
+                                << genericTypes.specializedTypes[i]->to_str());
         struDecl.genericTypeDecls[i]->specializedType = genericTypes.specializedTypes[i]->clone();
     }
     // Restore scope
@@ -306,7 +306,6 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     if (!resolve_struct_members(*resolvedStruct)) return nullptr;
 
     auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
-    retStruct->type = genericTypes.clone();
     retStruct->specializedTypes = castPtr<ResolvedTypeSpecialized>(genericTypes.clone());
     add_dependency(retStruct.get());
     return retStruct.get();
@@ -339,32 +338,40 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
         }
 
         if (varDecl.type) {
-            auto resType = resolve_type(*varDecl.type);
-            if (!resType) return nullptr;
-            if (!resType->compare(*resolvedInitializer->type))
-                return report(resolvedInitializer->location, "initializer type mismatch '" + resType->to_str() +
-                                                                 "' <- '" + resolvedInitializer->type->to_str() + "'");
-        }
-    }
+            resolvedType = resolve_type(*varDecl.type);
+            if (!resolvedType) return nullptr;
+            bool shouldCheckType = true;
 
-    if (type && ResolvedTypeVoid{SourceLocation{}}.equal(*type)) {
-        return report(varDecl.location,
-                      "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
-    }
-
-    if (resolvedInitializer) {
-        if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get())) {
-            if (auto arrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get())) {
-                if (auto arrInnerType = dynamic_cast<ResolvedTypeVoid *>(arrType->arrayType.get())) {
-                    dmz_unreachable("TODO");
-                    // resolvedInitializer->type = *type;
-                    // resolvedInitializer->type.isArray = 0;
+            if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get())) {
+                if (auto arrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get())) {
+                    if (auto arrInnerType = dynamic_cast<ResolvedTypeVoid *>(arrType->arrayType.get())) {
+                        resolvedInitializer->type = resolvedType->clone();
+                        auto rarrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get());
+                        if (!rarrType) dmz_unreachable("unexpected error");
+                        rarrType->arraySize = 0;
+                        shouldCheckType = false;
+                    }
                 }
             }
+            if (shouldCheckType) {
+                if (!resolvedType->compare(*resolvedInitializer->type)) {
+                    resolvedInitializer->dump();
+                    return report(resolvedInitializer->location, "initializer type mismatch expected '" +
+                                                                     resolvedType->to_str() + "' actual '" +
+                                                                     resolvedInitializer->type->to_str() + "'");
+                }
+            }
+            type = resolvedType.get();
         }
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
     }
+
+    if (dynamic_cast<const ResolvedTypeVoid *>(type)) {
+        return report(varDecl.location,
+                      "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
+    }
+
     return makePtr<ResolvedVarDecl>(varDecl.location, varDecl.identifier, type->clone(), varDecl.isMutable,
                                     std::move(resolvedInitializer));
 }
@@ -404,7 +411,6 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
 
 bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
     debug_func(resolvedStructDecl.location);
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) return true;
 
     auto prevStruct = m_currentStruct;
     m_currentStruct = &resolvedStructDecl;
@@ -417,14 +423,20 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         auto [currentDecl, visited] = worklist.top();
         worklist.pop();
 
+        ScopeRAII fieldScope(*this);
+        if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
+            for (auto &&genType : genStruct->genericTypeDecls) {
+                if (!insert_decl_to_current_scope(*genType)) dmz_unreachable("unexpected error");
+            }
+        }
+
         if (!visited.emplace(currentDecl).second) {
             report(currentDecl->location, "struct '" + currentDecl->identifier + "' contains itself");
             return false;
         }
-        size_t idx = 0;
-        currentDecl->fields.reserve(currentDecl->structDecl->fields.size());
-        for (auto &&field : currentDecl->structDecl->fields) {
-            auto type = resolve_type(field->type);
+        // size_t idx = 0;
+        for (auto &&field : currentDecl->fields) {
+            auto type = re_resolve_type(*field->type);
             if (!type) return false;
 
             if (dynamic_cast<const ResolvedTypeVoid *>(type.get())) {
@@ -435,14 +447,17 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(type.get())) {
                 worklist.push({struType->decl, visited});
             }
-            if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl> &v) {
-                    return v->identifier == field->identifier;
-                }) == currentDecl->fields.end()) {
-                currentDecl->fields.emplace_back(
-                    makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
-            }
+            // currentDecl->dump();
+            // if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl> &v) {
+            //         return v->identifier == field->identifier;
+            //     }) == currentDecl->fields.end()) {
+            // currentDecl->fields.emplace_back(
+            //     makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
+            // }
         }
     }
+
+    if (dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) return true;
 
     for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
         auto &func = resolvedStructDecl.structDecl->functions[i];
@@ -466,6 +481,20 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
             if (!insert_decl_to_current_scope(*gen)) return false;
         }
     }
+
+    std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
+    int idx = 0;
+    for (auto &&field : resolvedStructDecl.structDecl->fields) {
+        auto type = resolve_type(field->type);
+        if (!type) {
+            report(field->type.location, "unexpected type '" + field->type.to_str() + "'");
+            return false;
+        }
+        resolvedFields.emplace_back(
+            std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
+    }
+
+    resolvedStructDecl.fields = std::move(resolvedFields);
 
     std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
     for (auto &&function : resolvedStructDecl.structDecl->functions) {
@@ -561,11 +590,6 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
                     continue;
                 }
 
-                if (!resolve_struct_decl_funcs(*dynamic_cast<ResolvedStructDecl *>(resolvedDecl.get()))) {
-                    error = true;
-                    continue;
-                }
-
                 resolvedTree.emplace_back(std::move(resolvedDecl));
                 continue;
             }
@@ -606,6 +630,17 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
 
     if (error) return {};
 
+    {
+        for (auto &&resDecl : resolvedTree) {
+            if (auto *st = dynamic_cast<ResolvedStructDecl *>(resDecl.get())) {
+                if (!resolve_struct_decl_funcs(*st)) {
+                    error = true;
+                    continue;
+                }
+            }
+        }
+    }
+    if (error) return {};
     {
         for (auto &&decl : decls) {
             if (auto *st = dynamic_cast<ModuleDecl *>(decl.get())) {

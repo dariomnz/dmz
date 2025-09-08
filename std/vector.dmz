@@ -17,7 +17,7 @@ module std {
                     .capacity = .capacity * 2;
                     .buf = std.mem.realloc(.buf, .capacity * @sizeof(T));
                 }
-                if (.buf == null) {
+                if (!.buf) {
                     return vector_error.OutOfMemory;
                 }
             }

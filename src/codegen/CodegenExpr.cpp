@@ -209,6 +209,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
     auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(binop.lhs->type.get());
     if (!typeNum) {
         binop.lhs->type->dump();
+        println(binop.location);
         dmz_unreachable("not expected type in binop");
     }
     if (binop.op == TokenType::op_plus) {
@@ -361,7 +362,12 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
     debug_func("");
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
-        llvm::Value *field = m_builder.CreateStructGEP(generate_type(*memberExpr.base->type), base, member->index);
+        ResolvedType *typeToGenerate = memberExpr.base->type.get();
+        if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(typeToGenerate)) {
+            typeToGenerate = ptrType->pointerType.get();
+        }
+        llvm::Type *type = generate_type(*typeToGenerate);
+        llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
         return keepPointer ? field : load_value(field, *member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
@@ -376,7 +382,12 @@ llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &me
     debug_func("");
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
-        llvm::Value *field = m_builder.CreateStructGEP(generate_type(*memberExpr.base->type), base, member->index);
+        ResolvedType *typeToGenerate = memberExpr.base->type.get();
+        if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(typeToGenerate)) {
+            typeToGenerate = ptrType->pointerType.get();
+        }
+        llvm::Type *type = generate_type(*typeToGenerate);
+        llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
         return keepPointer ? field : load_value(field, *member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
@@ -407,7 +418,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
     debug_func("");
-    llvm::Value *tmp = allocate_stack_variable("tmp.struct", *sie.type);
+    llvm::Value *tmp = allocate_stack_variable("tmp.struct." + sie.type->to_str(), *sie.type);
 
     std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
     for (auto &&initStmt : sie.fieldInitializers)
@@ -445,8 +456,8 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
 
 llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr) {
     debug_func("");
-    llvm::Value * error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
-    ResolvedType * error_type = catchErrorExpr.errorToCatch->type.get();
+    llvm::Value *error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
+    ResolvedType *error_type = catchErrorExpr.errorToCatch->type.get();
     llvm::Value *error_value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 1);
 
     return load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});

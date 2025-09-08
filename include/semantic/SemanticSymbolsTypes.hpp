@@ -79,13 +79,9 @@ struct ResolvedTypeGeneric : public ResolvedType {
 };
 
 struct ResolvedTypeSpecialized : public ResolvedType {
-    ptr<ResolvedType> baseType;
     std::vector<ptr<ResolvedType>> specializedTypes;
-    ResolvedTypeSpecialized(SourceLocation location, ptr<ResolvedType> baseType,
-                            std::vector<ptr<ResolvedType>> specializedTypes)
-        : ResolvedType(std::move(location)),
-          baseType(std::move(baseType)),
-          specializedTypes(std::move(specializedTypes)) {}
+    ResolvedTypeSpecialized(SourceLocation location, std::vector<ptr<ResolvedType>> specializedTypes)
+        : ResolvedType(std::move(location)), specializedTypes(std::move(specializedTypes)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

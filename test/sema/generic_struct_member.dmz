@@ -10,7 +10,7 @@ struct Point<T> {
         .x = .x + n;
         .y = .y + n;
     }
-// CHECK: ResolvedSpecializedStructDecl Struct Point<i32>
+// CHECK: ResolvedSpecializedStructDecl Point<i32>
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 // CHECK-NEXT:   ResolvedMemberFunctionDecl add -> void

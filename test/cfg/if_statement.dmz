@@ -205,9 +205,9 @@ fn orCondition() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [2]
@@ -243,9 +243,9 @@ fn andCondition() -> void {
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '4'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [2]
@@ -323,7 +323,7 @@ fn nestedInLoopConditionalOps() -> void {
 // CHECK-NEXT:   succs: 5(U) 7 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '8'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '8'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '||'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '||'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [7]
@@ -341,7 +341,7 @@ fn nestedInLoopConditionalOps() -> void {
 // CHECK-NEXT:   succs: 2(U) 4 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '5'
-// CHECK-NEXT:   ResolvedBinaryOperator:i1 '&&'
+// CHECK-NEXT:   ResolvedBinaryOperator:bool '&&'
 // CHECK-NEXT:   ResolvedIfStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]

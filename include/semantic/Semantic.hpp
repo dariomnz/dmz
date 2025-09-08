@@ -68,7 +68,7 @@ class Sema {
     // bool insert_decl_to_modules(ResolvedDecl &decl);
     // ref<ResolvedFunctionDecl> create_builtin_println();
     ptr<ResolvedType> resolve_type(const Type &parsedType);
-    ptr<ResolvedTypeSpecialized> resolve_specialized_type(SourceLocation location, const ResolvedDecl& genericDecl, const GenericTypes &parsedType);
+    ptr<ResolvedTypeSpecialized> resolve_specialized_type(SourceLocation location, const GenericTypes &parsedType);
     ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
     ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
     std::vector<ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(

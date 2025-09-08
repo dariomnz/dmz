@@ -7,7 +7,7 @@ fn print<T>(param:T) -> void! {
 }
 // CHECK: ResolvedGenericFunctionDecl print -> void!
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
-// CHECK-NEXT:   ResolvedParamDecl:Generic T param
+// CHECK-NEXT:   ResolvedParamDecl:T param
 // CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i32> -> void!
 // CHECK-NEXT:     ResolvedParamDecl:i32 param
 // CHECK-NEXT:     ResolvedBlock

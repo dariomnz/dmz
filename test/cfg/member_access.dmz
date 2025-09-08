@@ -27,7 +27,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedStructInstantiationExpr:S
 // CHECK-NEXT:   ResolvedDeclStmt
 // CHECK-NEXT:   ResolvedDeclRefExpr:S s
-// CHECK-NEXT:   ResolvedMemberExpr:Struct S2 s2
+// CHECK-NEXT:   ResolvedMemberExpr:S2 s2
 // CHECK-NEXT:   ResolvedMemberExpr:i32 y
 // CHECK-NEXT:   ResolvedDeclStmt
 // CHECK-NEXT: 

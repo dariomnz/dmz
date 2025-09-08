@@ -4,9 +4,9 @@
 #include "Stats.hpp"
 
 // #define DEBUG_SCOPES
-#ifdef DEBUG
-#define DEBUG_SCOPES
-#endif
+// #ifdef DEBUG
+// #define DEBUG_SCOPES
+// #endif
 
 namespace DMZ {
 
@@ -176,45 +176,49 @@ ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const
 
 ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
     ptr<ResolvedType> ret = nullptr;
-    debug_func("'" << parsedType << "' -> '" << (ret.has_value() ? retCopy.to_str() : "nullopt") << "'");
+    ResolvedType *retPtr = nullptr;
+    debug_func("'" << parsedType << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
     switch (parsedType.kind) {
         case Type::Kind::Custom: {
             if (parsedType.name == "@This") {
                 if (m_currentStruct == nullptr) {
                     report(parsedType.location, "unexpected use of @This outside a struct");
                     ret = nullptr;
-                    return ret;
+                    retPtr = ret.get();
+                } else {
+                    ret = makePtr<ResolvedTypeStruct>(parsedType.location, m_currentStruct);
+                    retPtr = ret.get();
                 }
-                ret = makePtr<ResolvedTypeStruct>(parsedType.location, m_currentStruct);
-                return ret;
             }
 
             if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
                 if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-                    auto specializedTypes =
-                        resolve_specialized_type(parsedType.location, *structDecl, *parsedType.genericTypes);
+                    auto specializedTypes = resolve_specialized_type(parsedType.location, *parsedType.genericTypes);
                     if (!specializedTypes) return report(parsedType.location, "cannot specialize generic types");
                     auto auxstructDecl =
                         specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
                     if (auxstructDecl) structDecl = auxstructDecl;
                 }
                 ret = makePtr<ResolvedTypeStruct>(parsedType.location, structDecl);
-                return ret;
+                retPtr = ret.get();
             }
             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
                 if (decl->specializedType) {
                     ret = re_resolve_type(*decl->specializedType);
-                    return ret;
+                    retPtr = ret.get();
                 } else {
                     ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
-                    return ret;
+                    retPtr = ret.get();
                 }
             }
-#ifdef DEBUG
-            dump_scopes();
+            if (!ret) {
+#ifdef DEBUG_SCOPES
+                dump_scopes();
 #endif
-            ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
-            return ret;
+                ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
+                retPtr = ret.get();
+                return ret;
+            }
         } break;
 
         case Type::Kind::Generic: {
@@ -258,11 +262,13 @@ ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
     if (parsedType.isOptional) {
         ret = makePtr<ResolvedTypeOptional>(ret->location, std::move(ret));
     }
+    retPtr = ret.get();
     return ret;
+    (void)retPtr;
 }
 
-ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(SourceLocation location, const ResolvedDecl &genericDecl,
-                                                            const GenericTypes &parsedType) {
+ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(SourceLocation location, const GenericTypes &parsedType) {
+    debug_func(location << " " << parsedType.to_str());
     std::vector<ptr<ResolvedType>> specializedTypes;
 
     for (auto &&t : parsedType.types) {
@@ -270,14 +276,30 @@ ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(SourceLocation locat
         specializedTypes.emplace_back(std::move(resType));
     }
 
-    return makePtr<ResolvedTypeSpecialized>(location, genericDecl.type->clone(), std::move(specializedTypes));
+    return makePtr<ResolvedTypeSpecialized>(location, std::move(specializedTypes));
 }
 
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
+    debug_func(Dumper([&]() { type.dump(); }));
+    if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
+        if (genType->decl->specializedType) {
+            return re_resolve_type(*genType->decl->specializedType);
+        }
+    }
+    if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
+        return makePtr<ResolvedTypeArray>(arrType->location, re_resolve_type(*arrType->arrayType), arrType->arraySize);
+    }
+    if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&type)) {
+        return makePtr<ResolvedTypeOptional>(optType->location, re_resolve_type(*optType->optionalType));
+    }
+    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&type)) {
+        return makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
+    }
     if (dynamic_cast<const ResolvedTypeVoid *>(&type) || dynamic_cast<const ResolvedTypeNumber *>(&type) ||
-        dynamic_cast<const ResolvedTypeStruct *>(&type) || dynamic_cast<const ResolvedTypeArray *>(&type) ||
-        dynamic_cast<const ResolvedTypeErrorGroup *>(&type) || dynamic_cast<const ResolvedTypeError *>(&type) ||
-        dynamic_cast<const ResolvedTypeOptional *>(&type) || dynamic_cast<const ResolvedTypePointer *>(&type)) {
+        dynamic_cast<const ResolvedTypeStruct *>(&type) || dynamic_cast<const ResolvedTypeErrorGroup *>(&type) ||
+        dynamic_cast<const ResolvedTypeError *>(&type) ||
+
+        dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
         return type.clone();
     }
     type.dump();

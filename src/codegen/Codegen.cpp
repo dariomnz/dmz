@@ -29,7 +29,7 @@ ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) {
 
 llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
     llvm::Type *ret = nullptr;
-    debug_func("In type: '" << type << "' out type '" << Dumper([&ret]() {
+    debug_func("In type: '" << type.to_str() << "' out type '" << Dumper([&ret]() {
                    if (ret)
                        ret->print(llvm::errs());
                    else
@@ -86,19 +86,24 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         ret = llvm::ArrayType::get(ret, typeArray->arraySize);
     } else if (auto typeOptional = dynamic_cast<const ResolvedTypeOptional *>(&type)) {
         std::string structName("error.struct." + typeOptional->optionalType->to_str());
-        auto ret = llvm::StructType::getTypeByName(*m_context, structName);
+        ret = llvm::StructType::getTypeByName(*m_context, structName);
         if (!ret) {
             ret = llvm::StructType::create(*m_context, structName);
 
             std::vector<llvm::Type *> fieldTypes;
             // Type of value
-            fieldTypes.emplace_back(generate_type(*typeOptional->optionalType));
+            if (dynamic_cast<const ResolvedTypeVoid *>(typeOptional->optionalType.get())) {
+                fieldTypes.emplace_back(m_builder.getInt1Ty());
+            } else {
+                fieldTypes.emplace_back(generate_type(*typeOptional->optionalType));
+            }
             // Type of error
             fieldTypes.emplace_back(llvm::PointerType::get(*m_context, 0));
-            ret->setBody(fieldTypes);
+            static_cast<llvm::StructType *>(ret)->setBody(fieldTypes);
         }
     }
     if (ret == nullptr) {
+        type.dump();
         dmz_unreachable("cannot generate type '" + type.to_str() + "'");
     }
     return ret;
@@ -106,15 +111,15 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
 
 llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identifier, const ResolvedType &type) {
     debug_func("");
-    debug_msg("m_allocaInsertPoint " << (void *)m_allocaInsertPoint);
-    debug_msg("m_memsetInsertPoint " << (void *)m_memsetInsertPoint);
     assert(m_allocaInsertPoint != nullptr);
     assert(m_memsetInsertPoint != nullptr);
     llvm::IRBuilder<> tmpBuilder(*m_context);
+    debug_msg("m_allocaInsertPoint " << (void *)m_allocaInsertPoint);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
     auto value = tmpBuilder.CreateAlloca(generate_type(type, true), nullptr, identifier);
     // if (type.isOptional) {
     llvm::IRBuilder<> tmpBuilderMemset(*m_context);
+    debug_msg("m_memsetInsertPoint " << (void *)m_memsetInsertPoint);
     tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
     const llvm::DataLayout &dl = m_module->getDataLayout();
     tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
@@ -250,7 +255,7 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from,
                                   const ResolvedType &to) {
-    debug_func("from " << from << " to " << to);
+    debug_func("from " << from.to_str() << " to " << to.to_str());
     if (!dynamic_cast<const ResolvedTypePointer *>(&from)) {
         if (dynamic_cast<const ResolvedTypeStruct *>(&from) || dynamic_cast<const ResolvedTypeOptional *>(&from)) {
             const llvm::DataLayout &dl = m_module->getDataLayout();

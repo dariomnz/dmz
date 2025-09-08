@@ -2,24 +2,25 @@
 // RUN: diff <(compiler %s -run) <(echo -n -e 'is null\nis something 42\n')
 
 fn foo(n:*i32) -> void {
-    if (n == null) {
-        printf("is null\n");
-    }else{
+    if (n) {
         printf("is something %d\n", *n);
+    }else{
+        printf("is null\n");
     }
 }
 // CHECK: define void @foo(ptr byref(i32) %n) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = icmp eq ptr %n, null
-// CHECK-NEXT:   br i1 %0, label %if.true, label %if.false
+// CHECK-NEXT:   %0 = ptrtoint ptr %n to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %0, 0
+// CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
-// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str)
+// CHECK-NEXT:   %1 = load i32, ptr %n, align 4
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %entry
-// CHECK-NEXT:   %2 = load i32, ptr %n, align 4
-// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %2)
+// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true

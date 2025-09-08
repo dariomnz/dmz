@@ -2,7 +2,7 @@
 
 const ops = import("ops");
 // CHECK: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:const Module ops ops
+// CHECK-NEXT:   ResolvedVarDecl:const ops ops
 // CHECK-NEXT:     ResolvedImportExpr ops
 
 fn main() -> void {

@@ -121,7 +121,7 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 }
 
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
-    debug_func(funcDecl.symbolName);
+    debug_func(fn.name());
     bool isReturningStruct =
         dynamic_cast<ResolvedTypeStruct *>(fn.type.get()) || dynamic_cast<ResolvedTypeOptional *>(fn.type.get());
     std::vector<llvm::AttributeSet> argsAttrSets;
@@ -199,7 +199,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (!dynamic_cast<const ResolvedTypeStruct *>(paramDecl->type.get())) {
+        if (!dynamic_cast<const ResolvedTypeStruct *>(paramDecl->type.get()) && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, *paramDecl->type);
             store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
         }

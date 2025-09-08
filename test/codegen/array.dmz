@@ -21,16 +21,16 @@ fn main() -> void {
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %array = alloca [5 x i8], align 1
-// CHECK-NEXT:   %array.u8.tmp = alloca ptr, align 8
+// CHECK-NEXT:   %"array.u8[0].tmp" = alloca [0 x i8], align 1
 // CHECK-NEXT:   %hello_array = alloca [6 x i8], align 1
-// CHECK-NEXT:   %array.u8.tmp1 = alloca [6 x i8], align 1
+// CHECK-NEXT:   %"array.u8[6].tmp" = alloca [6 x i8], align 1
 // CHECK-NEXT:   %hello_array2 = alloca [6 x i8], align 1
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %array, i8 0, i64 5, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %array.u8.tmp, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.u8[0].tmp", i8 0, i64 0, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %hello_array, i8 0, i64 6, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %array.u8.tmp1, i8 0, i64 6, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.u8[6].tmp", i8 0, i64 6, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %hello_array2, i8 0, i64 6, i1 false)
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %array, ptr align 8 %array.u8.tmp, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %array, ptr align 1 %"array.u8[0].tmp", i64 0, i1 false)
 // CHECK-NEXT:   %0 = getelementptr [5 x i8], ptr %array, i32 0, i32 0
 // CHECK-NEXT:   store i8 57, ptr %0, align 1
 // CHECK-NEXT:   %1 = getelementptr [5 x i8], ptr %array, i32 0, i32 1
@@ -42,19 +42,19 @@ fn main() -> void {
 // CHECK-NEXT:   %5 = getelementptr [5 x i8], ptr %array, i32 0, i32 3
 // CHECK-NEXT:   store i8 %4, ptr %5, align 1
 // CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, ptr %array)
-// CHECK-NEXT:   %7 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 0
+// CHECK-NEXT:   %7 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 0
 // CHECK-NEXT:   store i8 72, ptr %7, align 1
-// CHECK-NEXT:   %8 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 1
+// CHECK-NEXT:   %8 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 1
 // CHECK-NEXT:   store i8 101, ptr %8, align 1
-// CHECK-NEXT:   %9 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 2
+// CHECK-NEXT:   %9 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 2
 // CHECK-NEXT:   store i8 108, ptr %9, align 1
-// CHECK-NEXT:   %10 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 3
+// CHECK-NEXT:   %10 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 3
 // CHECK-NEXT:   store i8 108, ptr %10, align 1
-// CHECK-NEXT:   %11 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 4
+// CHECK-NEXT:   %11 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 4
 // CHECK-NEXT:   store i8 111, ptr %11, align 1
-// CHECK-NEXT:   %12 = getelementptr [6 x i8], ptr %array.u8.tmp1, i32 0, i32 5
+// CHECK-NEXT:   %12 = getelementptr [6 x i8], ptr %"array.u8[6].tmp", i32 0, i32 5
 // CHECK-NEXT:   store i8 0, ptr %12, align 1
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %hello_array, ptr align 1 %array.u8.tmp1, i64 6, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %hello_array, ptr align 1 %"array.u8[6].tmp", i64 6, i1 false)
 // CHECK-NEXT:   %13 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, ptr %hello_array)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %hello_array2, ptr align 1 %hello_array, i64 6, i1 false)
 // CHECK-NEXT:   %14 = getelementptr [6 x i8], ptr %hello_array2, i32 0, i32 0

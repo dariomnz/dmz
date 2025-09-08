@@ -6,11 +6,11 @@ struct Point<T> {
     x:T,
     y:T,
 }
-// CHECK: ResolvedGenericStructDecl Struct Point
+// CHECK: ResolvedGenericStructDecl Point
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedFieldDecl:T x
 // CHECK-NEXT:   ResolvedFieldDecl:T y
-// CHECK-NEXT:   ResolvedSpecializedStructDecl Struct Point<i32>
+// CHECK-NEXT:   ResolvedSpecializedStructDecl Point<i32>
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
 

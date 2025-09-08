@@ -40,7 +40,7 @@ struct ResolvedDecl {
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
     virtual void dump_dependencies(size_t level = 0) const {};
-    std::string name() {
+    inline std::string name() const {
         if (symbolName.empty()) return identifier;
         return symbolName;
     }

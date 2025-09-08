@@ -193,9 +193,8 @@ void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << identifier;
-    specializedTypes->dump();
-    std::cerr << " -> " << type->to_str() << '\n';
+    std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << identifier << specializedTypes->to_str()
+              << " -> " << type->to_str() << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1, onlySelf);

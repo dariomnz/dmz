@@ -36,12 +36,12 @@ fn main() -> void {
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %p = alloca %Point, align 8
-// CHECK-NEXT:   %Point.tmp = alloca %Point, align 8
+// CHECK-NEXT:   %tmp.struct.Point = alloca %Point, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %Point.tmp, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   %0 = getelementptr inbounds %Point, ptr %Point.tmp, i32 0, i32 0
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.Point, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   %0 = getelementptr inbounds %Point, ptr %tmp.struct.Point, i32 0, i32 0
 // CHECK-NEXT:   store i32 1, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr inbounds %Point, ptr %Point.tmp, i32 0, i32 1
+// CHECK-NEXT:   %1 = getelementptr inbounds %Point, ptr %tmp.struct.Point, i32 0, i32 1
 // CHECK-NEXT:   store i32 1, ptr %1, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %Point.tmp, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %tmp.struct.Point, i64 8, i1 false)
 // CHECK-NEXT:   call void @Point.addOne(ptr byref(%Point) %p)
