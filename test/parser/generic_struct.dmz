@@ -22,14 +22,15 @@ fn main() -> void {
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: p1
-// CHECK-NEXT:         StructInstantiationExpr <i32>
-// CHECK-NEXT:           DeclRefExpr Point
+// CHECK-NEXT:         StructInstantiationExpr
+// CHECK-NEXT:           GenericExpr Point<i32>
+// CHECK-NEXT:             DeclRefExpr Point
 // CHECK-NEXT:           FieldInitStmt x
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:           FieldInitStmt y
 // CHECK-NEXT:             IntLiteral '2'
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Custom Point<i32> p
+// CHECK-NEXT:       VarDecl:Point<i32> p
 // CHECK-NEXT:     Assignment
 // CHECK-NEXT:       MemberExpr .x
 // CHECK-NEXT:         DeclRefExpr p

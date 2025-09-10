@@ -304,7 +304,7 @@ struct ResolvedStructDecl : public ResolvedDependencies {
     ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
                        bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                        std::vector<ptr<ResolvedMemberFunctionDecl>> functions)
-        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeStruct>(location, this), false),
+        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeStructDecl>(location, this), false),
           structDecl(structDecl),
           isPacked(isPacked),
           fields(std::move(fields)),
@@ -554,12 +554,12 @@ struct ResolvedFieldInitStmt : public ResolvedStmt {
 };
 
 struct ResolvedStructInstantiationExpr : public ResolvedExpr {
-    const ResolvedStructDecl &structDecl;
+    ResolvedStructDecl &structDecl;
     std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers;
 
-    ResolvedStructInstantiationExpr(SourceLocation location, const ResolvedStructDecl &structDecl,
+    ResolvedStructInstantiationExpr(SourceLocation location, ResolvedStructDecl &structDecl,
                                     std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers)
-        : ResolvedExpr(location, structDecl.type->clone()),
+        : ResolvedExpr(location, makePtr<ResolvedTypeStruct>(structDecl.type->location, &structDecl)),
           structDecl(structDecl),
           fieldInitializers(std::move(fieldInitializers)) {}
 

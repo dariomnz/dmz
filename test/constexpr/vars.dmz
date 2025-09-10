@@ -19,7 +19,7 @@ fn pass2() -> i32 {
 // CHECK-NEXT:       | value: 2
 
 fn error1() -> i32 {
-    const x: i32;
+    let x: i32;
     x = 2;
     return x * 10;
 }

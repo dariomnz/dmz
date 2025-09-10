@@ -13,10 +13,10 @@ fn main() -> void {
     
     y = 3;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'bar'
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'bar' cannot be mutated
     bar = 3;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'foo' cannot be mutated
     foo = 3;
 
     let z: i32;
@@ -24,7 +24,7 @@ fn main() -> void {
 }
 
 fn assignParam(x: i32) -> void {
-    // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' cannot be mutated
     x = 1;
 }
 // CHECK-NOT: {{.*}}

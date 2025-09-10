@@ -7,6 +7,6 @@ fn main() -> void {
   // CHECK: [[# @LINE + 1 ]]:7: error: redeclaration of 'S'
   let S = S { x: 0 };
 
-  // CHECK: [[# @LINE + 1 ]]:11: error: expected an instance of 'S'
+  // CHECK: [[# @LINE + 1 ]]:12: error: expected an instance of 'S'
   let x = S.x;
 }

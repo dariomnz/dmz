@@ -34,5 +34,5 @@ fn main() -> void {
 
 // CHECK:       ResolvedCallExpr:void
 // CHECK-NEXT:         ResolvedMemberFunctionDecl addOne -> void
-// CHECK-NEXT:         ResolvedRefPtrExpr:*Point
-// CHECK-NEXT:           ResolvedDeclRefExpr:Point p
+// CHECK-NEXT:         ResolvedRefPtrExpr:*Point{}
+// CHECK-NEXT:           ResolvedDeclRefExpr:Point{} p

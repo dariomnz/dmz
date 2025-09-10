@@ -64,8 +64,15 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         } else {
             dmz_unreachable("internal error");
         }
-    } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
-        std::string name = generate_decl_name(*typeStruct->decl);
+    } else if (dynamic_cast<const ResolvedTypeStructDecl *>(&type) || dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        ResolvedStructDecl *decl = nullptr;
+        if (auto typeStruct = dynamic_cast<const ResolvedTypeStructDecl *>(&type)) {
+            decl = typeStruct->decl;
+        }
+        if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+            decl = typeStruct->decl;
+        }
+        std::string name = generate_decl_name(*decl);
         debug_msg("struct '" << name << "'");
         auto structType = llvm::StructType::getTypeByName(*m_context, name);
         ret = structType;
@@ -73,7 +80,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             dmz_unreachable("cannot get type '" + name + "'");
         }
         if (noOpaque && structType->isOpaque()) {
-            if (auto structDecl = dynamic_cast<ResolvedStructDecl *>(typeStruct->decl)) {
+            if (auto structDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
                 generate_struct_fields(*structDecl);
                 ret = llvm::StructType::getTypeByName(*m_context, name);
                 if (!ret) dmz_unreachable("unexpected error generating struct decl");
@@ -277,6 +284,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
 
 llvm::Value *Codegen::load_value(llvm::Value *v, const ResolvedType &type) {
     debug_func("");
+    if (dynamic_cast<const ResolvedTypeVoid *>(&type)) return nullptr;
     return m_builder.CreateLoad(generate_type(type), v);
 }
 

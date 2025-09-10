@@ -55,23 +55,24 @@ ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::return_arrow, "expected '->'");
     eat_next_token();  // eat '->'
 
-    varOrReturn(type, parse_type());
+    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
 
     if (isExtern) {
         if (m_nextToken.type == TokenType::block_l) return report(m_nextToken.loc, "extern fn cannot have a body");
         matchOrReturn(TokenType::semicolon, "expected ';'");
         eat_next_token();
-        return makePtr<ExternFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList));
+        return makePtr<ExternFunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList));
     }
 
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
     if (genericTypes.size() != 0) {
-        return makePtr<GenericFunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block),
-                                            std::move(genericTypes));
+        return makePtr<GenericFunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList),
+                                            std::move(block), std::move(genericTypes));
     } else {
-        return makePtr<FunctionDecl>(loc, functionIdentifier, *type, std::move(*parameterList), std::move(block));
+        return makePtr<FunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList),
+                                     std::move(block));
     }
 }
 
@@ -84,7 +85,7 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     if (m_nextToken.type == TokenType::dotdotdot) {
         std::string_view identifier = m_nextToken.str;
         eat_next_token();  // eat '...'
-        return makePtr<ParamDecl>(location, std::move(identifier), Type::builtinVoid(), false, true);
+        return makePtr<ParamDecl>(location, std::move(identifier), makePtr<TypeVoid>(location), false, true);
     }
 
     matchOrReturn(TokenType::id, "expected parameter declaration");
@@ -95,9 +96,9 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     matchOrReturn(TokenType::colon, "expected ':'");
     eat_next_token();  // eat :
 
-    varOrReturn(type, parse_type());
+    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
 
-    return makePtr<ParamDecl>(location, std::move(identifier), std::move(*type), false);
+    return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false);
 }
 
 ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
@@ -107,11 +108,11 @@ ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     std::string_view identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
-    ptr<Type> type = nullptr;
+    ptr<Expr> type = nullptr;
     if (m_nextToken.type == TokenType::colon) {
         eat_next_token();  // eat ':'
 
-        type = parse_type();
+        type = with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); });
         if (!type) return nullptr;
     }
 
@@ -179,8 +180,8 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             varOrReturn(init, parse_function_decl());
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
             auto memberFunc =
-                makePtr<MemberFunctionDecl>(func->location, func->identifier, func->type, std::move(func->params),
-                                            std::move(func->body), structDecl.get(), isStatic);
+                makePtr<MemberFunctionDecl>(func->location, func->identifier, std::move(func->type),
+                                            std::move(func->params), std::move(func->body), structDecl.get(), isStatic);
             funcList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");
@@ -211,9 +212,9 @@ ptr<FieldDecl> Parser::parse_field_decl() {
     matchOrReturn(TokenType::colon, "expected ':'");
     eat_next_token();  // eat :
 
-    varOrReturn(type, parse_type());
+    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
 
-    return makePtr<FieldDecl>(location, std::move(identifier), std::move(*type));
+    return makePtr<FieldDecl>(location, std::move(identifier), std::move(type));
 };
 
 ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {

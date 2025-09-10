@@ -12,7 +12,7 @@ fn error1() -> void {
 // CHECK: FunctionDecl error1 -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:    DeclStmt
-// CHECK-NEXT:      VarDecl:Int i32 y
+// CHECK-NEXT:      VarDecl:i32 y
 // CHECK-NEXT:        BinaryOperator '+'
 // CHECK-NEXT:          IntLiteral '1'
 // CHECK-NEXT:          IntLiteral '2'

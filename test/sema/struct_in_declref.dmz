@@ -9,5 +9,5 @@ fn foo(s: S) -> i32 {
 
 fn main() -> void {
   foo(S);
-  // CHECK: [[# @LINE - 1 ]]:7: error: expected an instance of 'S'
+  // CHECK: [[# @LINE - 1 ]]:7: error: unexpected type of argument 'S' expected 'S{}'
 }

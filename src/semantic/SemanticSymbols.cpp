@@ -382,7 +382,7 @@ void ResolvedFieldInitStmt::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructInstantiationExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedStructInstantiationExpr:" << structDecl.type->to_str() << "\n";
+    std::cerr << indent(level) << "ResolvedStructInstantiationExpr:" << type->to_str() << "\n";
 
     if (onlySelf) return;
     for (auto &&field : fieldInitializers) field->dump(level + 1, onlySelf);

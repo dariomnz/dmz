@@ -13,5 +13,5 @@ fn main() -> void {
 
   s = s;
   s = s2;
-  // CHECK: [[# @LINE - 1 ]]:7: error: assigned value type 'S2' doesn't match variable type 'S'
+  // CHECK: [[# @LINE - 1 ]]:7: error: assigned value type 'S2{}' doesn't match variable type 'S{}'
 }

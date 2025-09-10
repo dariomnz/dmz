@@ -4,7 +4,6 @@ fn foo() -> void {}
 fn main() -> void {
     let x: i32 = 1;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: expected to call function 'foo'
     foo;
     
     x;

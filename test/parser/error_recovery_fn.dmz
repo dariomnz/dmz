@@ -1,5 +1,5 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
-// CHECK: [[# @LINE + 1 ]]:16: error: expected type specifier
+// CHECK: [[# @LINE + 1 ]]:16: error: expected type expression
 fn error1() -> {
     let y: i32 = 1 + 2;
 }
@@ -25,14 +25,14 @@ fn pass() -> i32 {
 // CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Int i32 y
+// CHECK-NEXT:       VarDecl:i32 y
 // CHECK-NEXT:         BinaryOperator '+'
 // CHECK-NEXT:           IntLiteral '1'
 // CHECK-NEXT:           IntLiteral '2'
 // CHECK-NEXT: FunctionDecl pass -> i32
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Int i32 y
+// CHECK-NEXT:       VarDecl:i32 y
 // CHECK-NEXT:         BinaryOperator '+'
 // CHECK-NEXT:           IntLiteral '1'
 // CHECK-NEXT:           IntLiteral '2'

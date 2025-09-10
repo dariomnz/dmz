@@ -67,8 +67,8 @@ class Sema {
     std::vector<ResolvedDecl *> collect_scope();
     // bool insert_decl_to_modules(ResolvedDecl &decl);
     // ref<ResolvedFunctionDecl> create_builtin_println();
-    ptr<ResolvedType> resolve_type(const Type &parsedType);
-    ptr<ResolvedTypeSpecialized> resolve_specialized_type(SourceLocation location, const GenericTypes &parsedType);
+    ptr<ResolvedType> resolve_type(const Expr &parsedType);
+    ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericExpr &parsedType);
     ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
     ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
     std::vector<ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
@@ -87,8 +87,8 @@ class Sema {
     ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
     ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     ptr<ResolvedExpr> resolve_expr(const Expr &expr);
-    ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee = false,
-                                                   bool isStructInst = false);
+    ptr<ResolvedDeclRefExpr> resolve_generic_expr(const GenericExpr &genericExpr);
+    ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
     ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
     ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);

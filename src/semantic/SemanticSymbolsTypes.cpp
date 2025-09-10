@@ -109,6 +109,44 @@ void ResolvedTypeBool::dump(size_t level) const {
 
 std::string ResolvedTypeBool::to_str() const { return "bool"; }
 
+bool ResolvedTypeStructDecl::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeStructDecl " << location);
+    if (auto strType = dynamic_cast<const ResolvedTypeStructDecl *>(&other)) {
+        return decl == strType->decl;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeStructDecl " << location);
+    if (equal(other)) return true;
+
+    return false;
+}
+
+ptr<ResolvedType> ResolvedTypeStructDecl::clone() const {
+    debug_func("ResolvedTypeStructDecl " << location);
+    return makePtr<ResolvedTypeStructDecl>(location, decl);
+}
+
+void ResolvedTypeStructDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeStructDecl " << to_str() << "\n";
+}
+
+std::string ResolvedTypeStructDecl::to_str() const {
+    std::stringstream out;
+    if (decl->symbolName.empty()) {
+        out << decl->identifier;
+        if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
+            out << speStru->specializedTypes->to_str();
+        }
+    } else {
+        out << decl->symbolName;
+    }
+    return out.str();
+}
+
 bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeStruct " << location);
     if (auto strType = dynamic_cast<const ResolvedTypeStruct *>(&other)) {
@@ -144,7 +182,7 @@ std::string ResolvedTypeStruct::to_str() const {
     } else {
         out << decl->symbolName;
     }
-    return out.str();
+    return out.str() + "{}";
 }
 
 bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {

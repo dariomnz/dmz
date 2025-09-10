@@ -21,7 +21,7 @@ fn foo(x:i32) -> i32! {
     return 10;
 }
 // CHECK: FunctionDecl foo -> i32!
-// CHECK-NEXT:     ParamDecl:Int i32 x
+// CHECK-NEXT:     ParamDecl:i32 x
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       IfStmt
 // CHECK-NEXT:         BinaryOperator '=='

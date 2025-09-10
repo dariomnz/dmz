@@ -16,16 +16,16 @@ struct S2 { x: i32, y:i32}
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
 // CHECK-NEXT: ResolvedFunctionDecl foo -> S2
-// CHECK-NEXT:   ResolvedParamDecl:S s
+// CHECK-NEXT:   ResolvedParamDecl:S{} s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedStructInstantiationExpr:S2
 // CHECK-NEXT:         ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:           ResolvedMemberExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:S s
+// CHECK-NEXT:             ResolvedDeclRefExpr:S{} s
 // CHECK-NEXT:         ResolvedFieldInitStmt:i32 y
 // CHECK-NEXT:           ResolvedMemberExpr:i32 y
-// CHECK-NEXT:             ResolvedDeclRefExpr:S s
+// CHECK-NEXT:             ResolvedDeclRefExpr:S{} s
 
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock

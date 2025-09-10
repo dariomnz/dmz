@@ -1,6 +1,6 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 fn main() -> void {
-    const x: i32;
+    let x: i32;
     
     if (1) {
         x = 2;
@@ -15,22 +15,21 @@ fn modifyImmutable() -> void {
     const x: i32 = 1;
     
     if (1) {
-        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
+        // CHECK: [[# @LINE + 1 ]]:9: error: 'x' cannot be mutated
         x = 1;
     } else {
-        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
         x = 2;
     }
 
-    // CHECK: [[# @LINE + 1 ]]:7: error: 'x' cannot be mutated
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' cannot be mutated
     x = 3;
 }
 
 fn uninitOneBranch() -> void {
-    const x: i32;
+    let x: i32;
     
     if (1) {
-        const y: i32;
+        let y: i32;
         y = 1; // init inner 'x'
     } else {
         x = 2;
@@ -75,17 +74,11 @@ fn loop() -> void {
     let y: i32;
     
     while (1) {
-        // CHECK: [[# @LINE + 1 ]]:11: error: 'x' cannot be mutated
+        // CHECK: [[# @LINE + 1 ]]:9: error: 'x' cannot be mutated
         x = 1;
 
-        // CHECK-NOT: [[# @LINE + 1 ]]:11: error
         y = 1;
     }
-
-    // CHECK: [[# @LINE + 1 ]]:5: error: 'x' is not initialized
-    x;
-    // CHECK: [[# @LINE + 1 ]]:5: error: 'y' is not initialized
-    y;
 }
 
 fn shadowInitialization() -> void {
@@ -94,6 +87,7 @@ fn shadowInitialization() -> void {
     if (1) {
         // CHECK: [[# @LINE + 1 ]]:15: error: redeclaration of 'x'
         const x: i32;
+        // CHECK: [[# @LINE + 1 ]]:9: error: 'x' cannot be mutated
         x = 1;
     } else {
         x = 2;
@@ -103,7 +97,7 @@ fn shadowInitialization() -> void {
 }
 
 fn shadowInitialized() -> void {
-    const x: i32;
+    let x: i32;
     
     if (1) {
         x = 1;

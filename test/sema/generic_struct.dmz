@@ -24,8 +24,8 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Point<i32> p1
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>
+// CHECK-NEXT:       ResolvedVarDecl:Point<i32>{} p1
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -33,8 +33,8 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Point<i32> p
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>
+// CHECK-NEXT:       ResolvedVarDecl:Point<i32>{} p
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Point<i32>{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -43,18 +43,18 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:     ResolvedAssignment
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
-// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32>{} p
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:     ResolvedAssignment
 // CHECK-NEXT:       ResolvedMemberExpr:i32 y
-// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32>{} p
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:       | value: 2
 // CHECK-NEXT:     ResolvedCallExpr:i32
 // CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 'Point %d %d\n'
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
-// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32>{} p
 // CHECK-NEXT:       ResolvedMemberExpr:i32 y
-// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32> p
+// CHECK-NEXT:         ResolvedDeclRefExpr:Point<i32>{} p

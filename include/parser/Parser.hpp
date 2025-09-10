@@ -16,18 +16,27 @@ class Parser {
     using RestrictionType = unsigned char;
     RestrictionType restrictions = 0;
 
-    enum RestrictionKind : RestrictionType { StructNotAllowed = 0b1, ReturnNotAllowed = 0b10 };
+    enum RestrictionKind : RestrictionType { StructNotAllowed = 0b1, ReturnNotAllowed = 0b10, OnlyTypeExpr = 0b100 };
+
+    std::string restiction_to_str(RestrictionType rests) const {
+        return std::string(rests & StructNotAllowed ? "StructNotAllowed " : "") +
+               std::string(rests & ReturnNotAllowed ? "ReturnNotAllowed" : "") +
+               std::string(rests & OnlyTypeExpr ? "OnlyTypeExpr" : "");
+    }
 
     template <typename T>
     T with_restrictions(RestrictionType rests, std::function<T()> func) {
+        debug_func(restiction_to_str(rests));
+        RestrictionType prevRestrictions = restrictions;
         restrictions |= rests;
         auto res = (func)();
-        restrictions &= ~rests;
+        restrictions = prevRestrictions;
         return res;
     }
 
     template <typename T>
     T with_no_restrictions(std::function<T()> func) {
+        debug_func("");
         RestrictionType prevRestrictions = restrictions;
         restrictions = 0;
         auto res = (func)();
@@ -36,6 +45,7 @@ class Parser {
     }
     std::deque<Token> m_peekedTokens;
     void eat_next_token() {
+        debug_func("");
         do {
             if (!m_peekedTokens.empty()) {
                 m_nextToken = m_peekedTokens.front();
@@ -44,9 +54,11 @@ class Parser {
                 m_nextToken = m_lexer.next_token();
             }
         } while (m_nextToken.type == TokenType::comment);
+        debug_msg(m_nextToken.loc << " '" << m_nextToken.str << "'");
     }
 
     const Token &peek_token(size_t jump = 0) {
+        debug_func("");
         while (m_peekedTokens.size() <= jump) {
             Token nextLexerToken = m_lexer.next_token();
             if (nextLexerToken.type != TokenType::comment) {
@@ -61,7 +73,7 @@ class Parser {
             static const Token eof_token = {TokenType::eof, ""};
             return eof_token;
         }
-
+        debug_msg(m_peekedTokens[jump].loc << " '" << m_peekedTokens[jump].str << "'");
         return m_peekedTokens[jump];
     }
     // void eat_next_token() {
@@ -97,17 +109,17 @@ class Parser {
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
 
    private:
-    bool nextToken_is_generic(TokenType nextToken);
+    bool nextToken_is_generic();
     ptr<FuncDecl> parse_function_decl();
-    ptr<Type> parse_type();
-    ptr<GenericTypes> parse_generic_types();
+    // ptr<Type> parse_type();
+    ptr<GenericExpr> parse_generic_expr(ptr<Expr> &prevExpr);
     ptr<GenericTypeDecl> parse_generic_type_decl();
     std::vector<ptr<GenericTypeDecl>> parse_generic_types_decl();
     ptr<Block> parse_block(bool oneStmt = false);
     ptr<ReturnStmt> parse_return_stmt();
     ptr<Stmt> parse_statement();
     ptr<Expr> parse_primary();
-    ptr<Expr> parse_postfix_expr();
+    ptr<Expr> parse_postfix_expr(ptr<Expr> expr);
     template <typename T, typename F>
     ptr<std::vector<ptr<T>>> parse_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken, F parser,
                                                             std::pair<TokenType, const char *> closingToken);

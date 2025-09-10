@@ -7,12 +7,12 @@ namespace DMZ {
 
 ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     debug_func(param.location);
-    auto type = resolve_type(param.type);
+    auto type = resolve_type(*param.type);
 
     if (!param.isVararg)
         if (!type || dynamic_cast<const ResolvedTypeVoid *>(type.get()))
             return report(param.location,
-                          "parameter '" + param.identifier + "' has invalid '" + param.type.name + "' type");
+                          "parameter '" + param.identifier + "' has invalid '" + param.type->to_str() + "' type");
     return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(type), param.isMutable,
                                       param.isVararg);
 }
@@ -72,11 +72,11 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         }
     }
 
-    auto type = resolve_type(function.type);
+    auto type = resolve_type(*function.type);
 
     if (!type)
         return report(function.location,
-                      "function '" + function.identifier + "' has invalid '" + function.type.name + "' type");
+                      "function '" + function.identifier + "' has invalid '" + function.type->to_str() + "' type");
 
     if (function.identifier == "main") {
         if (!dynamic_cast<const ResolvedTypeVoid *>(type.get()))
@@ -170,7 +170,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
 
     ScopeRAII functionScope(*this);
 
-    auto type = resolve_type(funcDecl.functionDecl->type);
+    auto type = resolve_type(*funcDecl.functionDecl->type);
 
     if (!type)
         return report(funcDecl.location,
@@ -220,7 +220,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
 ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocation &location,
                                                                ResolvedGenericStructDecl &struDecl,
                                                                const ResolvedTypeSpecialized &genericTypes) {
-    debug_func(struDecl.location);
+    debug_func(struDecl.location << " " << genericTypes.to_str());
     if (struDecl.genericTypeDecls.size() != genericTypes.specializedTypes.size()) {
         return report(location, "unexpected number of specializations, expected " +
                                     std::to_string(struDecl.genericTypeDecls.size()) + " actual " +
@@ -322,14 +322,19 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
         if (!resolvedInitializer) return nullptr;
     }
     ResolvedType *type = nullptr;
-    ptr<ResolvedType> resolvedType = nullptr;
-    if (!resolvedInitializer) {
-        resolvedType = resolve_type(*varDecl.type);
-        type = resolvedType.get();
-        if (!type) {
+    ptr<ResolvedType> resolvedvarType = nullptr;
+    if (varDecl.type) {
+        resolvedvarType = resolve_type(*varDecl.type);
+        if (!resolvedvarType) {
             return report(varDecl.location,
                           "variable '" + varDecl.identifier + "' has invalid '" + varDecl.type->to_str() + "' type");
         }
+        // if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(resolvedvarType.get())) {
+        //     resolvedvarType = makePtr<ResolvedTypeStruct>(struType->location, struType->decl);
+        // }
+    }
+    if (!resolvedInitializer) {
+        type = resolvedvarType.get();
     } else {
         type = resolvedInitializer->type.get();
         if (!type) {
@@ -338,14 +343,12 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
         }
 
         if (varDecl.type) {
-            resolvedType = resolve_type(*varDecl.type);
-            if (!resolvedType) return nullptr;
             bool shouldCheckType = true;
 
             if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get())) {
                 if (auto arrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get())) {
                     if (auto arrInnerType = dynamic_cast<ResolvedTypeVoid *>(arrType->arrayType.get())) {
-                        resolvedInitializer->type = resolvedType->clone();
+                        resolvedInitializer->type = resolvedvarType->clone();
                         auto rarrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get());
                         if (!rarrType) dmz_unreachable("unexpected error");
                         rarrType->arraySize = 0;
@@ -354,14 +357,15 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
                 }
             }
             if (shouldCheckType) {
-                if (!resolvedType->compare(*resolvedInitializer->type)) {
-                    resolvedInitializer->dump();
+                if (!resolvedvarType->compare(*resolvedInitializer->type)) {
+                    resolvedvarType->dump();
+                    resolvedInitializer->type->dump();
                     return report(resolvedInitializer->location, "initializer type mismatch expected '" +
-                                                                     resolvedType->to_str() + "' actual '" +
+                                                                     resolvedvarType->to_str() + "' actual '" +
                                                                      resolvedInitializer->type->to_str() + "'");
                 }
             }
-            type = resolvedType.get();
+            type = resolvedvarType.get();
         }
 
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
@@ -448,7 +452,8 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
                 worklist.push({struType->decl, visited});
             }
             // currentDecl->dump();
-            // if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl> &v) {
+            // if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl>
+            // &v) {
             //         return v->identifier == field->identifier;
             //     }) == currentDecl->fields.end()) {
             // currentDecl->fields.emplace_back(
@@ -485,9 +490,9 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     int idx = 0;
     for (auto &&field : resolvedStructDecl.structDecl->fields) {
-        auto type = resolve_type(field->type);
+        auto type = resolve_type(*field->type);
         if (!type) {
-            report(field->type.location, "unexpected type '" + field->type.to_str() + "'");
+            report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
             return false;
         }
         resolvedFields.emplace_back(

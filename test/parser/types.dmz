@@ -1,26 +1,26 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     let i: i32 = 10;
-    // CHECK: VarDecl:Int i32 i
+    // CHECK: VarDecl:i32 i
     // CHECK-NEXT:   IntLiteral '10'
 
     let c1: u8 = 'c';
-    // CHECK: VarDecl:UInt u8 c1
+    // CHECK: VarDecl:u8 c1
     // CHECK-NEXT:   CharLiteral ''c''
 
     let c2: u8 = '\n';
-    // CHECK: VarDecl:UInt u8 c2
+    // CHECK: VarDecl:u8 c2
     // CHECK-NEXT:   CharLiteral ''\n''
 
-    let c3: u8[] = "Hello, world\n";
-    // CHECK: VarDecl:UInt u8[] c3
+    let c3: *u8 = "Hello, world\n";
+    // CHECK: VarDecl:*u8 c3
     // CHECK-NEXT:   StringLiteral '"Hello, world\n"'
 
     let b1: i1 = true;
-    // CHECK: VarDecl:Int i1 b1
+    // CHECK: VarDecl:i1 b1
     // CHECK-NEXT:   BoolLiteral 'true'
 
     let b2: i1 = false;
-    // CHECK: VarDecl:Int i1 b2
+    // CHECK: VarDecl:i1 b2
     // CHECK-NEXT:   BoolLiteral 'false'
 }

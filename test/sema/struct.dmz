@@ -19,7 +19,7 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Color x
+// CHECK-NEXT:       ResolvedVarDecl:Color{} x
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'

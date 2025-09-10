@@ -5,10 +5,10 @@ fn f(: void {}
 // CHECK: [[# @LINE + 1 ]]:7: error: expected ':'
 fn f(x) -> void {}
 
-// CHECK: [[# @LINE + 1 ]]:8: error: expected type specifier
+// CHECK: [[# @LINE + 1 ]]:8: error: expected type expression
 fn f(x:) -> void {}
 
-// CHECK: [[# @LINE + 1 ]]:9: error: expected type specifier
+// CHECK: [[# @LINE + 1 ]]:9: error: expected type expression
 fn f(x: 1) -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:12: error: expected ')'
@@ -22,7 +22,7 @@ fn f(,) -> void {}
 
 fn trailingComma(x:i32,) -> void {}
 // CHECK: FunctionDecl trailingComma -> void
-// CHECK-NEXT:   ParamDecl:Int i32 x
+// CHECK-NEXT:   ParamDecl:i32 x
 // CHECK-NEXT:   Block
 
 fn trailingComma2(
@@ -30,14 +30,14 @@ fn trailingComma2(
     y:i32,
 ) -> void {}
 // CHECK: FunctionDecl trailingComma2 -> void
-// CHECK-NEXT:   ParamDecl:Int i32 x
-// CHECK-NEXT:   ParamDecl:Int i32 y
+// CHECK-NEXT:   ParamDecl:i32 x
+// CHECK-NEXT:   ParamDecl:i32 y
 // CHECK-NEXT:   Block
 
 fn f(x: i32, y: i32) -> void {}
 // CHECK: FunctionDecl f -> void
-// CHECK-NEXT:   ParamDecl:Int i32 x
-// CHECK-NEXT:   ParamDecl:Int i32 y
+// CHECK-NEXT:   ParamDecl:i32 x
+// CHECK-NEXT:   ParamDecl:i32 y
 // CHECK-NEXT:   Block
 
 fn main() -> void {}

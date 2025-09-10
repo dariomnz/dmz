@@ -155,6 +155,11 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
 
+    if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(resolvedLHS.get())) {
+        if (!declRef->decl.isMutable) {
+            return report(resolvedLHS->location, "'" + declRef->decl.identifier + "' cannot be mutated");
+        }
+    }
     if (dynamic_cast<const ResolvedTypeVoid *>(resolvedLHS->type.get())) {
         return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
     }

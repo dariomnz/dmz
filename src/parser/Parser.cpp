@@ -32,97 +32,113 @@ std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
 //  |   'bool'
 //  |   'void'
 //  |   <identifier>
-ptr<Type> Parser::parse_type() {
-    debug_func("");
-    int isArray = -1;
-    std::optional<int> isPointer = std::nullopt;
-    SourceLocation loc = m_nextToken.loc;
+// ptr<Type> Parser::parse_type() {
+//     debug_func("");
+//     int isArray = -1;
+//     std::optional<int> isPointer = std::nullopt;
+//     SourceLocation loc = m_nextToken.loc;
 
-    while (m_nextToken.type == TokenType::asterisk) {
-        isPointer = isPointer.has_value() ? *isPointer + 1 : 1;
-        eat_next_token();  // eat '*'
-    }
-    TokenType type = m_nextToken.type;
-    std::string_view name = m_nextToken.str;
+//     while (m_nextToken.type == TokenType::asterisk) {
+//         isPointer = isPointer.has_value() ? *isPointer + 1 : 1;
+//         eat_next_token();  // eat '*'
+//     }
+//     TokenType type = m_nextToken.type;
+//     std::string_view name = m_nextToken.str;
 
-    std::unordered_set<TokenType> types = {
-        TokenType::ty_void, TokenType::ty_f16, TokenType::ty_f32, TokenType::ty_f64,
-        TokenType::ty_bool, TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
-    };
+//     std::unordered_set<TokenType> types = {
+//         TokenType::ty_void, TokenType::ty_f16, TokenType::ty_f32, TokenType::ty_f64,
+//         TokenType::ty_bool, TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
+//     };
 
-    if (types.count(type) == 0) {
-        report(m_nextToken.loc, "expected type specifier");
-        return nullptr;
-    }
-    eat_next_token();  // eat type
+//     if (types.count(type) == 0) {
+//         report(m_nextToken.loc, "expected type expression");
+//         return nullptr;
+//     }
+//     eat_next_token();  // eat type
 
-    auto genericTypes = parse_generic_types();
+//     auto genericTypes = parse_generic_types();
 
-    if (m_nextToken.type == TokenType::bracket_l) {
-        eat_next_token();  // eat '['
-        isArray = 0;
-        if (m_nextToken.type == TokenType::lit_int) {
-            int result = 0;
-            auto res = std::from_chars(m_nextToken.str.data(), m_nextToken.str.data() + m_nextToken.str.size(), result);
-            if (result == 0 || res.ec != std::errc()) {
-                dmz_unreachable("unexpected size of 0 array type");
-            }
-            isArray = result;
-            eat_next_token();  // eat lit_int
-        } else if (m_nextToken.type != TokenType::bracket_r) {
-            return report(m_nextToken.loc, "expected ']' next to a '[' in a type");
-        }
-        eat_next_token();  // eat ']'
-    }
+//     if (m_nextToken.type == TokenType::bracket_l) {
+//         eat_next_token();  // eat '['
+//         isArray = 0;
+//         if (m_nextToken.type == TokenType::lit_int) {
+//             int result = 0;
+//             auto res = std::from_chars(m_nextToken.str.data(), m_nextToken.str.data() + m_nextToken.str.size(),
+//             result); if (result == 0 || res.ec != std::errc()) {
+//                 dmz_unreachable("unexpected size of 0 array type");
+//             }
+//             isArray = result;
+//             eat_next_token();  // eat lit_int
+//         } else if (m_nextToken.type != TokenType::bracket_r) {
+//             return report(m_nextToken.loc, "expected ']' next to a '[' in a type");
+//         }
+//         eat_next_token();  // eat ']'
+//     }
 
-    Type t;
-    if (type == TokenType::ty_void) {
-        t = Type::builtinVoid();
-    }
-    if (type == TokenType::ty_f16) {
-        t = Type::builtinF16();
-    }
-    if (type == TokenType::ty_f32) {
-        t = Type::builtinF32();
-    }
-    if (type == TokenType::ty_f64) {
-        t = Type::builtinF64();
-    }
-    if (type == TokenType::ty_iN) {
-        t = Type::builtinIN(name);
-    }
-    if (type == TokenType::ty_bool) {
-        t = Type::builtinBool();
-    }
-    if (type == TokenType::ty_uN) {
-        t = Type::builtinUN(name);
-    }
-    if (type == TokenType::id) {
-        t = Type::customType(name);
-    }
+//     Type t;
+//     if (type == TokenType::ty_void) {
+//         t = Type::builtinVoid();
+//     }
+//     if (type == TokenType::ty_f16) {
+//         t = Type::builtinF16();
+//     }
+//     if (type == TokenType::ty_f32) {
+//         t = Type::builtinF32();
+//     }
+//     if (type == TokenType::ty_f64) {
+//         t = Type::builtinF64();
+//     }
+//     if (type == TokenType::ty_iN) {
+//         t = Type::builtinIN(name);
+//     }
+//     if (type == TokenType::ty_bool) {
+//         t = Type::builtinBool();
+//     }
+//     if (type == TokenType::ty_uN) {
+//         t = Type::builtinUN(name);
+//     }
+//     if (type == TokenType::id) {
+//         t = Type::customType(name);
+//     }
 
-    if (genericTypes) t.genericTypes = std::move(*genericTypes);
-    if (isArray != -1) t.isArray = isArray;
-    t.isPointer = isPointer;
+//     if (genericTypes) t.genericTypes = std::move(*genericTypes);
+//     if (isArray != -1) t.isArray = isArray;
+//     t.isPointer = isPointer;
 
-    if (m_nextToken.type == TokenType::op_excla_mark) {
-        t.isOptional = true;
-        eat_next_token();  // eat '!'
-    }
-    t.location = loc;
-    return makePtr<Type>(std::move(t));
-}
+//     if (m_nextToken.type == TokenType::op_excla_mark) {
+//         t.isOptional = true;
+//         eat_next_token();  // eat '!'
+//     }
+//     t.location = loc;
+//     return makePtr<Type>(std::move(t));
+// }
 
-ptr<GenericTypes> Parser::parse_generic_types() {
+ptr<GenericExpr> Parser::parse_generic_expr(ptr<Expr> &prevExpr) {
     debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
         return nullptr;
     }
-    auto typesDeclList = (parse_list_with_trailing_comma<Type>(
-        {TokenType::op_less, "expected '<'"}, &Parser::parse_type, {TokenType::op_more, "expected '>'"}));
-    if (!typesDeclList) return nullptr;
+    auto location = m_nextToken.loc;
+    matchOrReturn(TokenType::op_less, "expected '<'");
+    eat_next_token();  // eat openingToken
 
-    return makePtr<GenericTypes>(std::move(*typesDeclList));
+    std::vector<ptr<Expr>> typesDeclList;
+    while (true) {
+        if (m_nextToken.type == TokenType::op_more) break;
+
+        varOrReturn(init, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+        typesDeclList.emplace_back(std::move(init));
+
+        if (m_nextToken.type != TokenType::comma) break;
+        eat_next_token();  // eat ','
+    }
+
+    matchOrReturn(TokenType::op_more, "expected '>'");
+    eat_next_token();  // eat closingToken
+
+    if (typesDeclList.size() == 0) return nullptr;
+
+    return makePtr<GenericExpr>(location, std::move(prevExpr), std::move(typesDeclList));
 }
 
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
@@ -206,9 +222,12 @@ template ptr<std::vector<ptr<Expr>>> Parser::parse_list_with_trailing_comma(std:
 template ptr<std::vector<ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, ptr<GenericTypeDecl> (Parser::*)(), std::pair<TokenType, const char *>);
 
-bool Parser::nextToken_is_generic(TokenType nextToken) {
+bool Parser::nextToken_is_generic() {
     bool ret = false;
-    debug_func(nextToken << " ret: " << (ret ? "true" : "false"));
+    debug_func(" ret: " << (ret ? "true" : "false"));
+    std::unordered_set<TokenType> postGenericToken = {
+        TokenType::dot, TokenType::block_l, TokenType::par_l, TokenType::semicolon, TokenType::op_assign,
+    };
     if (m_nextToken.type == TokenType::op_less) {
         int blocks = 0;
         int actual_jump = 0;
@@ -226,7 +245,7 @@ bool Parser::nextToken_is_generic(TokenType nextToken) {
             }
             actual_jump++;
         }
-        ret = peek_token(actual_jump + 1).type == nextToken;
+        ret = postGenericToken.count(peek_token(actual_jump + 1).type) == 1;
         return ret;
     }
     ret = false;

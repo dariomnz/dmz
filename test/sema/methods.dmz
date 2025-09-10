@@ -32,8 +32,8 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Color c
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
+// CHECK-NEXT:       ResolvedVarDecl:Color{} c
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -45,5 +45,5 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 3
 // CHECK-NEXT:     ResolvedCallExpr:i32
 // CHECK-NEXT:       ResolvedMemberFunctionDecl print -> i32
-// CHECK-NEXT:       ResolvedRefPtrExpr:*Color
-// CHECK-NEXT:         ResolvedDeclRefExpr:Color c
+// CHECK-NEXT:       ResolvedRefPtrExpr:*Color{}
+// CHECK-NEXT:         ResolvedDeclRefExpr:Color{} c

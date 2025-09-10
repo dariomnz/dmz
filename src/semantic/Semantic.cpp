@@ -174,109 +174,211 @@ ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const
     return nullptr;
 }
 
-ptr<ResolvedType> Sema::resolve_type(const Type &parsedType) {
+ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     ptr<ResolvedType> ret = nullptr;
     ResolvedType *retPtr = nullptr;
-    debug_func("'" << parsedType << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
-    switch (parsedType.kind) {
-        case Type::Kind::Custom: {
-            if (parsedType.name == "@This") {
-                if (m_currentStruct == nullptr) {
-                    report(parsedType.location, "unexpected use of @This outside a struct");
-                    ret = nullptr;
-                    retPtr = ret.get();
-                } else {
-                    ret = makePtr<ResolvedTypeStruct>(parsedType.location, m_currentStruct);
-                    retPtr = ret.get();
-                }
-            }
+    debug_func("'" << type.to_str() << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
 
-            if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
-                if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-                    auto specializedTypes = resolve_specialized_type(parsedType.location, *parsedType.genericTypes);
-                    if (!specializedTypes) return report(parsedType.location, "cannot specialize generic types");
-                    auto auxstructDecl =
-                        specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
-                    if (auxstructDecl) structDecl = auxstructDecl;
-                }
-                ret = makePtr<ResolvedTypeStruct>(parsedType.location, structDecl);
+    if (dynamic_cast<const TypeVoid *>(&type)) {
+        ret = makePtr<ResolvedTypeVoid>(type.location);
+        retPtr = ret.get();
+        return ret;
+    }
+    if (dynamic_cast<const TypeBool *>(&type)) {
+        ret = makePtr<ResolvedTypeBool>(type.location);
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto numType = dynamic_cast<const TypeNumber *>(&type)) {
+        auto num = numType->name.substr(1);
+        int bitSize = 0;
+        auto res = std::from_chars(num.data(), num.data() + num.size(), bitSize);
+        if (bitSize == 0 || res.ec != std::errc()) {
+            return report(type.location, "unexpected size of 0 in i type");
+        }
+        ResolvedNumberKind kind;
+        switch (numType->name[0]) {
+            case 'i':
+                kind = ResolvedNumberKind::Int;
+                break;
+            case 'u':
+                kind = ResolvedNumberKind::UInt;
+                break;
+            case 'f':
+                kind = ResolvedNumberKind::Float;
+                break;
+            default:
+                return report(type.location, "unexpected kind '" + numType->name + "' in number type");
+        }
+        ret = makePtr<ResolvedTypeNumber>(type.location, kind, bitSize);
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto ptrType = dynamic_cast<const DerefPtrExpr *>(&type)) {
+        varOrReturn(pointerType, resolve_type(*ptrType->expr));
+
+        ret = makePtr<ResolvedTypePointer>(type.location, std::move(pointerType));
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto optType = dynamic_cast<const UnaryOperator *>(&type)) {
+        if (optType->op != TokenType::op_excla_mark)
+            return report(type.location, "unexpected op in unary operator of a type");
+        varOrReturn(optionalType, resolve_type(*optType->operand));
+
+        ret = makePtr<ResolvedTypeOptional>(type.location, std::move(optionalType));
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto arrType = dynamic_cast<const ArrayAtExpr *>(&type)) {
+        varOrReturn(arrayType, resolve_type(*arrType->array));
+
+        varOrReturn(arraySizeExpr, resolve_expr(*arrType->index));
+        int arraySize = 0;
+        if (auto as = arraySizeExpr->get_constant_value()) {
+            arraySize = as.value();
+        } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(arraySizeExpr.get())) {
+            arraySize = intLit->value;
+        } else {
+            return report(arraySizeExpr->location, "cannot deduce array size");
+        }
+
+        ret = makePtr<ResolvedTypeArray>(type.location, std::move(arrayType), arraySize);
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto declRefType = dynamic_cast<const DeclRefExpr *>(&type)) {
+        auto decl = lookup(type.location, declRefType->identifier, ResolvedDeclType::ResolvedDecl);
+        if (!decl) return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
+        if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
+            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl);
+            retPtr = ret.get();
+            return ret;
+        }
+        if (auto genDecl = dynamic_cast<ResolvedGenericTypeDecl *>(decl)) {
+            if (genDecl->specializedType) {
+                ret = genDecl->specializedType->clone();
                 retPtr = ret.get();
-            }
-            if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-                if (decl->specializedType) {
-                    ret = re_resolve_type(*decl->specializedType);
-                    retPtr = ret.get();
-                } else {
-                    ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
-                    retPtr = ret.get();
-                }
-            }
-            if (!ret) {
-#ifdef DEBUG_SCOPES
-                dump_scopes();
-#endif
-                ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
+                return ret;
+            } else {
+                ret = makePtr<ResolvedTypeGeneric>(type.location, genDecl);
                 retPtr = ret.get();
                 return ret;
             }
-        } break;
+        }
+    }
+    if (auto genType = dynamic_cast<const GenericExpr *>(&type)) {
+        varOrReturn(specExpr, resolve_generic_expr(*genType));
+        if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(specExpr->type.get())) {
+            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl->decl);
+        } else {
+            ret = specExpr->type->clone();
+        }
+        retPtr = ret.get();
+        return ret;
+    }
 
-        case Type::Kind::Generic: {
-            if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-                if (decl->specializedType) {
-                    ret = re_resolve_type(*decl->specializedType);
-                }
-            }
-        } break;
-        case Type::Kind::Int: {
-            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Int, parsedType.size);
-        } break;
-        case Type::Kind::UInt: {
-            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::UInt, parsedType.size);
-        } break;
-        case Type::Kind::Bool: {
-            ret = makePtr<ResolvedTypeBool>(parsedType.location);
-        } break;
-        case Type::Kind::Float: {
-            ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Float, parsedType.size);
-        } break;
-        case Type::Kind::Void: {
-            ret = makePtr<ResolvedTypeVoid>(parsedType.location);
-        } break;
-        case Type::Kind::Error: {
-            ret = makePtr<ResolvedTypeError>(parsedType.location);
-        } break;
-        case Type::Kind::Struct:
-        case Type::Kind::ErrorGroup:
-        case Type::Kind::Module:
-            parsedType.dump();
-            dmz_unreachable("Unsuported type");
-            break;
-    }
-    if (parsedType.isPointer) {
-        ret = makePtr<ResolvedTypePointer>(ret->location, std::move(ret));
-    }
-    if (parsedType.isArray) {
-        ret = makePtr<ResolvedTypeArray>(ret->location, std::move(ret), *parsedType.isArray);
-    }
-    if (parsedType.isOptional) {
-        ret = makePtr<ResolvedTypeOptional>(ret->location, std::move(ret));
-    }
-    retPtr = ret.get();
-    return ret;
-    (void)retPtr;
+    type.dump();
+    dmz_unreachable("TODO");
+    //     switch (parsedType.kind) {
+    //         case Type::Kind::Custom: {
+    //             if (parsedType.name == "@This") {
+    //                 if (m_currentStruct == nullptr) {
+    //                     report(parsedType.location, "unexpected use of @This outside a struct");
+    //                     ret = nullptr;
+    //                     retPtr = ret.get();
+    //                 } else {
+    //                     ret = makePtr<ResolvedTypeStructDecl>(parsedType.location, m_currentStruct);
+    //                     retPtr = ret.get();
+    //                 }
+    //             }
+
+    //             if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
+    //                 if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
+    //                     auto specializedTypes = resolve_specialized_type(parsedType.location,
+    //                     *parsedType.genericTypes); if (!specializedTypes) return report(parsedType.location, "cannot
+    //                     specialize generic types"); auto auxstructDecl =
+    //                         specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
+    //                     if (auxstructDecl) structDecl = auxstructDecl;
+    //                 }
+    //                 ret = makePtr<ResolvedTypeStructDecl>(parsedType.location, structDecl);
+    //                 retPtr = ret.get();
+    //             }
+    //             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+    //                 if (decl->specializedType) {
+    //                     ret = re_resolve_type(*decl->specializedType);
+    //                     retPtr = ret.get();
+    //                 } else {
+    //                     ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
+    //                     retPtr = ret.get();
+    //                 }
+    //             }
+    //             if (!ret) {
+    // #ifdef DEBUG_SCOPES
+    //                 dump_scopes();
+    // #endif
+    //                 ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
+    //                 retPtr = ret.get();
+    //                 return ret;
+    //             }
+    //         } break;
+
+    //         case Type::Kind::Generic: {
+    //             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
+    //                 if (decl->specializedType) {
+    //                     ret = re_resolve_type(*decl->specializedType);
+    //                 }
+    //             }
+    //         } break;
+    //         case Type::Kind::Int: {
+    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Int, parsedType.size);
+    //         } break;
+    //         case Type::Kind::UInt: {
+    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::UInt, parsedType.size);
+    //         } break;
+    //         case Type::Kind::Bool: {
+    //             ret = makePtr<ResolvedTypeBool>(parsedType.location);
+    //         } break;
+    //         case Type::Kind::Float: {
+    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Float, parsedType.size);
+    //         } break;
+    //         case Type::Kind::Void: {
+    //             ret = makePtr<ResolvedTypeVoid>(parsedType.location);
+    //         } break;
+    //         case Type::Kind::Error: {
+    //             ret = makePtr<ResolvedTypeError>(parsedType.location);
+    //         } break;
+    //         case Type::Kind::Struct:
+    //         case Type::Kind::ErrorGroup:
+    //         case Type::Kind::Module:
+    //             parsedType.dump();
+    //             dmz_unreachable("Unsuported type");
+    //             break;
+    //     }
+    //     if (parsedType.isPointer) {
+    //         ret = makePtr<ResolvedTypePointer>(ret->location, std::move(ret));
+    //     }
+    //     if (parsedType.isArray) {
+    //         ret = makePtr<ResolvedTypeArray>(ret->location, std::move(ret), *parsedType.isArray);
+    //     }
+    //     if (parsedType.isOptional) {
+    //         ret = makePtr<ResolvedTypeOptional>(ret->location, std::move(ret));
+    //     }
+    //     retPtr = ret.get();
+    //     return ret;
+    //     (void)retPtr;
 }
 
-ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(SourceLocation location, const GenericTypes &parsedType) {
-    debug_func(location << " " << parsedType.to_str());
+ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {
+    debug_func(genericExpr.location << " " << genericExpr.to_str());
     std::vector<ptr<ResolvedType>> specializedTypes;
 
-    for (auto &&t : parsedType.types) {
+    for (auto &&t : genericExpr.types) {
         varOrReturn(resType, resolve_type(*t));
         specializedTypes.emplace_back(std::move(resType));
     }
 
-    return makePtr<ResolvedTypeSpecialized>(location, std::move(specializedTypes));
+    return makePtr<ResolvedTypeSpecialized>(genericExpr.location, std::move(specializedTypes));
 }
 
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
@@ -296,9 +398,8 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         return makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
     }
     if (dynamic_cast<const ResolvedTypeVoid *>(&type) || dynamic_cast<const ResolvedTypeNumber *>(&type) ||
-        dynamic_cast<const ResolvedTypeStruct *>(&type) || dynamic_cast<const ResolvedTypeErrorGroup *>(&type) ||
-        dynamic_cast<const ResolvedTypeError *>(&type) ||
-
+        dynamic_cast<const ResolvedTypeStructDecl *>(&type) || dynamic_cast<const ResolvedTypeStruct *>(&type) ||
+        dynamic_cast<const ResolvedTypeErrorGroup *>(&type) || dynamic_cast<const ResolvedTypeError *>(&type) ||
         dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
         return type.clone();
     }

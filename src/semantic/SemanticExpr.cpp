@@ -12,7 +12,37 @@ bool op_generate_bool(TokenType op) {
     return op_bool.count(op) != 0;
 }
 
-ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr, bool isCallee, bool isStructInst) {
+ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericExpr) {
+    debug_func(genericExpr.location);
+    varOrReturn(resolvedBase, resolve_expr(*genericExpr.base));
+
+    varOrReturn(specializedType, resolve_specialized_type(genericExpr));
+    ResolvedDecl *decl = nullptr;
+    if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(resolvedBase.get())) {
+        if (auto structDecl = dynamic_cast<const ResolvedGenericStructDecl *>(&declRef->decl)) {
+            decl = specialize_generic_struct(genericExpr.location, *const_cast<ResolvedGenericStructDecl *>(structDecl),
+                                             *specializedType);
+        }
+        if (auto functionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&declRef->decl)) {
+            decl = specialize_generic_function(
+                genericExpr.location, *const_cast<ResolvedGenericFunctionDecl *>(functionDecl), *specializedType);
+        }
+    } else {
+        resolvedBase->dump();
+        dmz_unreachable("unexpected base expresion in generic expresion");
+    }
+
+    if (!decl) {
+        resolvedBase->dump();
+        genericExpr.dump();
+        // dmz_unreachable("FIX");
+        return report(genericExpr.location,
+                      "cannot specialize '" + resolvedBase->type->to_str() + "' with " + genericExpr.to_str());
+    }
+    return makePtr<ResolvedDeclRefExpr>(resolvedBase->location, *decl, decl->type->clone());
+}
+
+ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr) {
     debug_func(declRefExpr.location);
     // Search in the module scope
     ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
@@ -23,15 +53,10 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "symbol '" + declRefExpr.identifier + "' not found");
     }
 
-    if (!isCallee && dynamic_cast<ResolvedFuncDecl *>(decl))
-        return report(declRefExpr.location, "expected to call function '" + declRefExpr.identifier + "'");
-
-    if (!isStructInst && dynamic_cast<ResolvedStructDecl *>(decl)) {
-        return report(declRefExpr.location, "expected an instance of '" + decl->type->to_str() + '\'');
-    }
-
     // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
-    auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, decl->type->clone());
+    // auto type = makePtr<ResolvedTypeType>(decl->type->location, decl->type->clone());
+    auto type = decl->type->clone();
+    auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, std::move(type));
 
     resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
 
@@ -61,24 +86,42 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
             // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
             isMemberCall = true;
         }
+    } else if (const auto *genExpr = dynamic_cast<const GenericExpr *>(call.callee.get())) {
+        varOrReturn(specifiedDecl, resolve_generic_expr(*genExpr));
+        if (auto specFuncDecl = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&specifiedDecl->decl)) {
+            resolvedFuncDecl = specFuncDecl;
+        } else {
+            return report(specifiedDecl->location, "unexpected symbol in a specialized function call");
+        }
+        // varOrReturn(base, resolve_expr(*genExpr->base));
+
+        // if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(base.get())) {
+        //     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&declRef->decl)) {
+        //         varOrReturn(resolvedSpecialized, resolve_specialized_type(call.location, *genExpr));
+        //         resolvedFuncDecl = specialize_generic_function(
+        //             call.location, *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl),
+        //             *resolvedSpecialized);
+        //         if (!resolvedFuncDecl) return nullptr;
+        //     } else {
+        //         return report(call.location, "unexpected generic for a not generic function");
+        //     }
+        // } else {
+        //     base->dump();
+        //     return report(call.location, "unexpected expresion");
+        // }
+
     } else {
         const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
         if (!dre) return report(call.location, "expression cannot be called as a function");
 
-        varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre, true));
+        varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre));
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
     }
 
     if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
-        if (call.genericTypes) {
-            varOrReturn(resolvedSpecialized, resolve_specialized_type(call.location, *call.genericTypes));
-            resolvedFuncDecl = specialize_generic_function(
-                call.location, *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl), *resolvedSpecialized);
-            if (!resolvedFuncDecl) return nullptr;
-        } else {
-            return report(call.location, "try to call a generic function without specialization");
-        }
+
+    if (dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
+        return report(call.location, "try to call a generic function without specialization");
     }
 
     size_t call_args_num = call.arguments.size();
@@ -166,6 +209,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *null = dynamic_cast<const NullLiteral *>(&expr)) {
         return makePtr<ResolvedNullLiteral>(null->location);
+    }
+    if (const auto *genericExpr = dynamic_cast<const GenericExpr *>(&expr)) {
+        return resolve_generic_expr(*genericExpr);
     }
     if (const auto *declRefExpr = dynamic_cast<const DeclRefExpr *>(&expr)) {
         return resolve_decl_ref_expr(*declRefExpr);
@@ -326,22 +372,29 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         baseType = ptrType->pointerType.get();
     }
 
-    if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
-        const DMZ::ResolvedStructDecl *st = struType->decl;
-
-        if (!st) return report(memberExpr.location, "failed to lookup struct " + resolvedBase->type->to_str());
-
-        // if (resolvedBase->type.genericTypes) {
-        //     st = specialize_generic_struct(*const_cast<ResolvedStructDecl *>(st),
-        //     *resolvedBase->type.genericTypes); if (!st) return report(memberExpr.location, "failed to specialize
-        //     generic struct");
-        // }
-
-        decl = cast_lookup_in_struct(*st, memberExpr.field, ResolvedDecl);
-        if (!decl)
+    if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
+        decl = cast_lookup_in_struct(*struType->decl, memberExpr.field, ResolvedDecl);
+        if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
-
+        }
+        auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl);
+        auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
+        if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
+            return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
+        }
+    } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
+        decl = cast_lookup_in_struct(*struType->decl, memberExpr.field, ResolvedDecl);
+        if (!decl) {
+            return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
+                                                   memberExpr.field + '\'');
+        }
+        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
+            if (memberFunc->isStatic) {
+                return report(memberExpr.location, "cannot call a static member with a instance of struct \'" +
+                                                       resolvedBase->type->to_str() + "'");
+            }
+        }
     } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(baseType)) {
         auto moduleDecl = modType->moduleDecl;
         if (!moduleDecl)
@@ -414,33 +467,20 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
 ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
-    ptr<DMZ::ResolvedExpr> resolvedBase;
-    if (auto declRef = dynamic_cast<DeclRefExpr *>(structInstantiation.base.get())) {
-        resolvedBase = resolve_decl_ref_expr(*declRef, false, true);
-    } else {
-        resolvedBase = resolve_expr(*structInstantiation.base);
-    }
 
-    if (!resolvedBase) return nullptr;
+    varOrReturn(resolvedBase, resolve_expr(*structInstantiation.base));
 
-    if (!dynamic_cast<const ResolvedTypeStruct *>(resolvedBase->type.get())) {
+    if (!dynamic_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get())) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
-    auto auxstruType = static_cast<const ResolvedTypeStruct *>(resolvedBase->type.get());
+    auto auxstruType = static_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get());
     auto st = auxstruType->decl;
     if (!st) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
 
     if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(st)) {
-        if (structInstantiation.genericTypes.types.size() == 0)
-            return report(structInstantiation.location,
-                          "'" + st->identifier + "' is a generic and need specialization");
-
-        varOrReturn(resolvedSpecialized,
-                    resolve_specialized_type(structInstantiation.location, structInstantiation.genericTypes));
-        st = specialize_generic_struct(structInstantiation.location, *genStruct, *resolvedSpecialized);
-        if (!st) return nullptr;
+        return report(structInstantiation.location, "'" + st->identifier + "' is a generic and need specialization");
     }
 
     std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
@@ -582,9 +622,9 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
 
 ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) {
     debug_func(sizeofExpr.location);
-    auto type = resolve_type(sizeofExpr.sizeofType);
+    auto type = resolve_type(*sizeofExpr.sizeofType);
     if (!type)
-        return report(sizeofExpr.sizeofType.location, "cannot resolve type '" + sizeofExpr.sizeofType.to_str() + "'");
+        return report(sizeofExpr.sizeofType->location, "cannot resolve type '" + sizeofExpr.sizeofType->to_str() + "'");
 
     return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type));
 }

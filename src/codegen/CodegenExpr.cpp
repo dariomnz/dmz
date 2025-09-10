@@ -418,7 +418,13 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
     debug_func("");
-    llvm::Value *tmp = allocate_stack_variable("tmp.struct." + sie.type->to_str(), *sie.type);
+    std::string tmpName = "tmp.struct.";
+    if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(sie.type.get())) {
+        tmpName += struType->decl->type->to_str();
+    } else {
+        tmpName += sie.type->to_str();
+    }
+    llvm::Value *tmp = allocate_stack_variable(tmpName, *sie.type);
 
     std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
     for (auto &&initStmt : sie.fieldInitializers)

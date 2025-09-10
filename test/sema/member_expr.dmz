@@ -13,7 +13,7 @@ fn main() -> void {
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:S s
+// CHECK-NEXT:       ResolvedVarDecl:S{} s
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:S
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
@@ -21,4 +21,4 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32 y
 // CHECK-NEXT:         ResolvedMemberExpr:i32 x
-// CHECK-NEXT:           ResolvedDeclRefExpr:S s
+// CHECK-NEXT:           ResolvedDeclRefExpr:S{} s

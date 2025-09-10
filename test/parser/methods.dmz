@@ -32,7 +32,7 @@ fn main() -> void {
 // CHECK: FunctionDecl main -> void
 // CHECK-NEXT:   Block
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Custom Color c
+// CHECK-NEXT:       VarDecl:Color c
 // CHECK-NEXT:         StructInstantiationExpr
 // CHECK-NEXT:           DeclRefExpr Color
 // CHECK-NEXT:           FieldInitStmt r

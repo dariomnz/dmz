@@ -12,10 +12,10 @@ extern fn f ;
 // CHECK: [[# @LINE + 1 ]]:15: error: expected '->'
 extern fn f() ;
 
-// CHECK: [[# @LINE + 1 ]]:18: error: expected type specifier
+// CHECK: [[# @LINE + 1 ]]:18: error: expected type expression
 extern fn f() -> ;
 
-// CHECK: [[# @LINE + 1 ]]:18: error: expected type specifier
+// CHECK: [[# @LINE + 1 ]]:18: error: expected type expression
 extern fn f() -> 1;
 
 // CHECK: [[# @LINE + 4 ]]:1: error: expected ';'
@@ -24,14 +24,14 @@ extern fn f() -> void
 // CHECK: [[# @LINE + 1 ]]:23: error: extern fn cannot have a body
 extern fn f() -> void {}
 
-extern fn puts(str: u8[]) -> i32;
+extern fn puts(str: *u8) -> i32;
 // CHECK: ExternFunctionDecl puts -> i32
-// CHECK-NEXT:  ParamDecl:UInt u8[] str
+// CHECK-NEXT:  ParamDecl:*u8 str
 
-extern fn dprintf(fd:i32, format: u8[], ...) -> i32;
+extern fn dprintf(fd:i32, format: *u8, ...) -> i32;
 // CHECK: ExternFunctionDecl dprintf -> i32
-// CHECK-NEXT:  ParamDecl:Int i32 fd
-// CHECK-NEXT:  ParamDecl:UInt u8[] format
+// CHECK-NEXT:  ParamDecl:i32 fd
+// CHECK-NEXT:  ParamDecl:*u8 format
 // CHECK-NEXT:  ParamDecl:vararg ...
 
 fn main() -> void {
