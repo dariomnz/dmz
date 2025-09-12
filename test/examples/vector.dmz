@@ -6,7 +6,8 @@
 const std = import("std");
 
 fn main() -> void {
-    let v = std.initVec<i32>();
+    // let v = std.initVec<i32>();
+    let v = std.vec<i32>.init();
 
     let i = 10;
     while (i > 0) {

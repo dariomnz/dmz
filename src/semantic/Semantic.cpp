@@ -53,6 +53,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
 }
 
 std::vector<ResolvedDecl *> Sema::collect_scope() {
+    debug_func("");
     std::vector<ResolvedDecl *> out;
     size_t needSize = 0;
     for (auto &&scope : m_scopes) {
@@ -63,6 +64,7 @@ std::vector<ResolvedDecl *> Sema::collect_scope() {
 
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         for (auto &&[declID, decl] : *it) {
+            debug_msg("Collect scope " << declID);
             out.emplace_back(decl);
         }
     }
@@ -71,8 +73,6 @@ std::vector<ResolvedDecl *> Sema::collect_scope() {
 
 #define switch_resolved_decl_type(type, decl, bool, expresion)                    \
     switch (type) {                                                               \
-        case ResolvedDeclType::Module:                                            \
-            break;                                                                \
         case ResolvedDeclType::ResolvedDecl:                                      \
             if (bool dynamic_cast<ResolvedDecl *>(decl)) expresion;               \
             break;                                                                \
@@ -87,9 +87,6 @@ std::vector<ResolvedDecl *> Sema::collect_scope() {
             break;                                                                \
         case ResolvedDeclType::ResolvedModuleDecl:                                \
             if (bool dynamic_cast<ResolvedModuleDecl *>(decl)) expresion;         \
-            break;                                                                \
-        case ResolvedDeclType::ResolvedStructDecl:                                \
-            if (bool dynamic_cast<ResolvedStructDecl *>(decl)) expresion;         \
             break;                                                                \
         case ResolvedDeclType::ResolvedGenericTypeDecl:                           \
             if (bool dynamic_cast<ResolvedGenericTypeDecl *>(decl)) expresion;    \
@@ -280,93 +277,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
 
     type.dump();
     dmz_unreachable("TODO");
-    //     switch (parsedType.kind) {
-    //         case Type::Kind::Custom: {
-    //             if (parsedType.name == "@This") {
-    //                 if (m_currentStruct == nullptr) {
-    //                     report(parsedType.location, "unexpected use of @This outside a struct");
-    //                     ret = nullptr;
-    //                     retPtr = ret.get();
-    //                 } else {
-    //                     ret = makePtr<ResolvedTypeStructDecl>(parsedType.location, m_currentStruct);
-    //                     retPtr = ret.get();
-    //                 }
-    //             }
-
-    //             if (auto structDecl = cast_lookup(parsedType.location, parsedType.name, ResolvedStructDecl)) {
-    //                 if (auto genStructDecl = dynamic_cast<ResolvedGenericStructDecl *>(structDecl)) {
-    //                     auto specializedTypes = resolve_specialized_type(parsedType.location,
-    //                     *parsedType.genericTypes); if (!specializedTypes) return report(parsedType.location, "cannot
-    //                     specialize generic types"); auto auxstructDecl =
-    //                         specialize_generic_struct(parsedType.location, *genStructDecl, *specializedTypes);
-    //                     if (auxstructDecl) structDecl = auxstructDecl;
-    //                 }
-    //                 ret = makePtr<ResolvedTypeStructDecl>(parsedType.location, structDecl);
-    //                 retPtr = ret.get();
-    //             }
-    //             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-    //                 if (decl->specializedType) {
-    //                     ret = re_resolve_type(*decl->specializedType);
-    //                     retPtr = ret.get();
-    //                 } else {
-    //                     ret = makePtr<ResolvedTypeGeneric>(parsedType.location, decl);
-    //                     retPtr = ret.get();
-    //                 }
-    //             }
-    //             if (!ret) {
-    // #ifdef DEBUG_SCOPES
-    //                 dump_scopes();
-    // #endif
-    //                 ret = report(parsedType.location, "cannot resolve type '" + parsedType.to_str() + "'");
-    //                 retPtr = ret.get();
-    //                 return ret;
-    //             }
-    //         } break;
-
-    //         case Type::Kind::Generic: {
-    //             if (auto decl = cast_lookup(parsedType.location, parsedType.name, ResolvedGenericTypeDecl)) {
-    //                 if (decl->specializedType) {
-    //                     ret = re_resolve_type(*decl->specializedType);
-    //                 }
-    //             }
-    //         } break;
-    //         case Type::Kind::Int: {
-    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Int, parsedType.size);
-    //         } break;
-    //         case Type::Kind::UInt: {
-    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::UInt, parsedType.size);
-    //         } break;
-    //         case Type::Kind::Bool: {
-    //             ret = makePtr<ResolvedTypeBool>(parsedType.location);
-    //         } break;
-    //         case Type::Kind::Float: {
-    //             ret = makePtr<ResolvedTypeNumber>(parsedType.location, ResolvedNumberKind::Float, parsedType.size);
-    //         } break;
-    //         case Type::Kind::Void: {
-    //             ret = makePtr<ResolvedTypeVoid>(parsedType.location);
-    //         } break;
-    //         case Type::Kind::Error: {
-    //             ret = makePtr<ResolvedTypeError>(parsedType.location);
-    //         } break;
-    //         case Type::Kind::Struct:
-    //         case Type::Kind::ErrorGroup:
-    //         case Type::Kind::Module:
-    //             parsedType.dump();
-    //             dmz_unreachable("Unsuported type");
-    //             break;
-    //     }
-    //     if (parsedType.isPointer) {
-    //         ret = makePtr<ResolvedTypePointer>(ret->location, std::move(ret));
-    //     }
-    //     if (parsedType.isArray) {
-    //         ret = makePtr<ResolvedTypeArray>(ret->location, std::move(ret), *parsedType.isArray);
-    //     }
-    //     if (parsedType.isOptional) {
-    //         ret = makePtr<ResolvedTypeOptional>(ret->location, std::move(ret));
-    //     }
-    //     retPtr = ret.get();
-    //     return ret;
-    //     (void)retPtr;
+    (void)retPtr;
 }
 
 ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {
@@ -439,17 +350,6 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls) {
 
 void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls) {
     debug_func("");
-    // auto add_deps = [parent](ref<DMZ::ResolvedDecl> &d) {
-    //     if (parent == nullptr) return;
-    //     debug_msg_func("add_deps", d->identifier);
-
-    //     debug_msg_func("add_deps", "Add all " << d->dependsOn.size() << " dependsOn of " << d->identifier);
-    //     for (auto &&decl : d->dependsOn) {
-    //         debug_msg_func("add_to_remove", "Adding " << parent->identifier << " to " << decl->identifier);
-    //         parent->dependsOn.emplace(decl);
-    //         decl->isUsedBy.emplace(parent);
-    //     }
-    // };
     for (auto &&decl : decls) {
         auto deps = dynamic_cast<ResolvedDependencies *>(decl.get());
         if (!deps) continue;
@@ -623,16 +523,6 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
         }
     }
 
-    // for (auto &&d : to_remove) {
-    //     debug_msg("Cleaning " << d->identifier);
-    //     for (auto &&decl : d->dependsOn) {
-    //         decl->isUsedBy.erase(d);
-    //     }
-    //     d->dependsOn.clear();
-    // }
-
-    // std::erase_if(decls,
-    //   [&](ref<ResolvedDecl> &d) -> bool { return to_remove.find(d.get()) != to_remove.end(); });
     std::erase_if(decls, [&](ptr<ResolvedDecl> &d) -> bool { return d ? false : true; });
 }
 
@@ -641,8 +531,6 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
     const ResolvedBlock *block;
     if (auto resfn = dynamic_cast<const ResolvedFunctionDecl *>(&fn)) {
         block = resfn->body.get();
-        // } else if (auto resfn = dynamic_cast<const ResolvedMemberFunctionDecl *>(&fn)) {
-        //     block = resfn->function->body.get();
     } else if (auto resfn = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&fn)) {
         block = resfn->body.get();
     } else {
@@ -810,14 +698,6 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declaratio
     for (auto &&decl : declarations) {
         decl->symbolName = decl->identifier;
         stack.push(elem{decl.get(), 0, ""});
-        // println("Symbol name: " << e.decl->symbolName);
-        // if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
-        //     dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
-        //     stack.push(elem{decl.get(), 0, ""});
-        // } else if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
-        //            dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
-        //            dynamic_cast<const ResolvedErrorGroupExprDecl *>(decl.get())) {
-        // } else {
         if (!dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             decl->dump();
             dmz_unreachable("unexpected declaration");

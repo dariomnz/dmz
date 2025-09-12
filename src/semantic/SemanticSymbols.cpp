@@ -3,12 +3,8 @@
 namespace DMZ {
 
 std::ostream &operator<<(std::ostream &os, const ResolvedDeclType &type) {
-    if (type == ResolvedDeclType::Module) {
-        os << "Module";
-    } else if (type == ResolvedDeclType::ResolvedDecl) {
+    if (type == ResolvedDeclType::ResolvedDecl) {
         os << "ResolvedDecl";
-    } else if (type == ResolvedDeclType::ResolvedStructDecl) {
-        os << "ResolvedStructDecl";
     } else if (type == ResolvedDeclType::ResolvedErrorDecl) {
         os << "ResolvedErrorDecl";
     } else if (type == ResolvedDeclType::ResolvedImportExpr) {

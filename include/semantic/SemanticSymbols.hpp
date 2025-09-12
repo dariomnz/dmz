@@ -59,9 +59,7 @@ struct ResolvedDependencies : public ResolvedDecl {
 };
 
 enum struct ResolvedDeclType {
-    Module,
     ResolvedDecl,
-    ResolvedStructDecl,
     ResolvedErrorDecl,
     ResolvedImportExpr,
     ResolvedModuleDecl,

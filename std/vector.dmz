@@ -8,6 +8,14 @@ module std {
         len: u64,
         capacity: u64,
 
+        static fn init() -> @This {
+            return @This {
+                buf: null,
+                len: 0,
+                capacity: 0,
+            };
+        }
+
         fn add(v: T) -> void! {
             if (.len >= .capacity) {
                 if (.capacity == 0) {

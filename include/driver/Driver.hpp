@@ -58,7 +58,7 @@ class Driver {
     Type_Ast parser_pass(Type_Lexers& lexers, bool expectMain = true);
     Type_Sources find_modules(const Type_Sources& includeDirs,
                               const std::unordered_set<std::string_view>& importedModuleIDs);
-    void include_pass(Type_Ast& asts);
+    void import_pass(Type_Ast& asts);
     ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
     static void register_import(std::string_view imported);
     static ModuleDecl* get_import(std::string_view imported);

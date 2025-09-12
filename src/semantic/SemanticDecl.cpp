@@ -258,6 +258,7 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     // defer([&]() { m_scopes = std::move(savedScope); });
     ScopeRAII restoreScope(*this);
     for (auto &&decl : struDecl.scopeToSpecialize) {
+        debug_msg("Restore to scope " << decl->identifier);
         m_scopes.back().emplace(decl->identifier, decl);
     }
     ScopeRAII structScope(*this);
@@ -288,12 +289,6 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
         } else {
             return report(function->location, "internal error, expected member function decl");
         }
-        // varOrReturn(func, resolve_function_decl(*function->functionDecl));
-        // auto f = dynamic_cast<ResolvedFunctionDecl *>(func.get());
-        // auto memberFunc =
-        //     makeRef<ResolvedMemberFunctionDecl>(f->location, f->identifier, f->type, std::move(f->params),
-        //                                                  f->functionDecl, std::move(f->body), resolvedStruct.get());
-        // resolvedFunctions.emplace_back(std::move(memberFunc));
     }
 
     resolvedStruct->fields = std::move(resolvedFields);
@@ -329,9 +324,6 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
             return report(varDecl.location,
                           "variable '" + varDecl.identifier + "' has invalid '" + varDecl.type->to_str() + "' type");
         }
-        // if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(resolvedvarType.get())) {
-        //     resolvedvarType = makePtr<ResolvedTypeStruct>(struType->location, struType->decl);
-        // }
     }
     if (!resolvedInitializer) {
         type = resolvedvarType.get();
@@ -451,14 +443,6 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(type.get())) {
                 worklist.push({struType->decl, visited});
             }
-            // currentDecl->dump();
-            // if (std::find_if(currentDecl->fields.begin(), currentDecl->fields.end(), [&](ptr<ResolvedFieldDecl>
-            // &v) {
-            //         return v->identifier == field->identifier;
-            //     }) == currentDecl->fields.end()) {
-            // currentDecl->fields.emplace_back(
-            //     makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
-            // }
         }
     }
 
@@ -736,10 +720,12 @@ bool Sema::resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls) {
     for (auto &&currentDeclRef : decls) {
         auto currentDecl = currentDeclRef.get();
         if (auto *fn = dynamic_cast<ResolvedGenericFunctionDecl *>(currentDecl)) {
+            debug_msg("Collect scope for: " << fn->identifier);
             auto collectedScope = collect_scope();
             fn->scopeToSpecialize.insert(fn->scopeToSpecialize.end(), collectedScope.begin(), collectedScope.end());
         }
         if (auto *fn = dynamic_cast<ResolvedGenericStructDecl *>(currentDecl)) {
+            debug_msg("Collect scope for: " << fn->identifier);
             auto collectedScope = collect_scope();
             fn->scopeToSpecialize.insert(fn->scopeToSpecialize.end(), collectedScope.begin(), collectedScope.end());
         }

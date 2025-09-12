@@ -26,93 +26,6 @@ std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
     return {std::move(mod), !m_incompleteAST && hasMainFunction};
 }
 
-// <type>
-//  ::= 'int'
-//  |   'char'
-//  |   'bool'
-//  |   'void'
-//  |   <identifier>
-// ptr<Type> Parser::parse_type() {
-//     debug_func("");
-//     int isArray = -1;
-//     std::optional<int> isPointer = std::nullopt;
-//     SourceLocation loc = m_nextToken.loc;
-
-//     while (m_nextToken.type == TokenType::asterisk) {
-//         isPointer = isPointer.has_value() ? *isPointer + 1 : 1;
-//         eat_next_token();  // eat '*'
-//     }
-//     TokenType type = m_nextToken.type;
-//     std::string_view name = m_nextToken.str;
-
-//     std::unordered_set<TokenType> types = {
-//         TokenType::ty_void, TokenType::ty_f16, TokenType::ty_f32, TokenType::ty_f64,
-//         TokenType::ty_bool, TokenType::ty_iN,   TokenType::ty_uN,  TokenType::id,
-//     };
-
-//     if (types.count(type) == 0) {
-//         report(m_nextToken.loc, "expected type expression");
-//         return nullptr;
-//     }
-//     eat_next_token();  // eat type
-
-//     auto genericTypes = parse_generic_types();
-
-//     if (m_nextToken.type == TokenType::bracket_l) {
-//         eat_next_token();  // eat '['
-//         isArray = 0;
-//         if (m_nextToken.type == TokenType::lit_int) {
-//             int result = 0;
-//             auto res = std::from_chars(m_nextToken.str.data(), m_nextToken.str.data() + m_nextToken.str.size(),
-//             result); if (result == 0 || res.ec != std::errc()) {
-//                 dmz_unreachable("unexpected size of 0 array type");
-//             }
-//             isArray = result;
-//             eat_next_token();  // eat lit_int
-//         } else if (m_nextToken.type != TokenType::bracket_r) {
-//             return report(m_nextToken.loc, "expected ']' next to a '[' in a type");
-//         }
-//         eat_next_token();  // eat ']'
-//     }
-
-//     Type t;
-//     if (type == TokenType::ty_void) {
-//         t = Type::builtinVoid();
-//     }
-//     if (type == TokenType::ty_f16) {
-//         t = Type::builtinF16();
-//     }
-//     if (type == TokenType::ty_f32) {
-//         t = Type::builtinF32();
-//     }
-//     if (type == TokenType::ty_f64) {
-//         t = Type::builtinF64();
-//     }
-//     if (type == TokenType::ty_iN) {
-//         t = Type::builtinIN(name);
-//     }
-//     if (type == TokenType::ty_bool) {
-//         t = Type::builtinBool();
-//     }
-//     if (type == TokenType::ty_uN) {
-//         t = Type::builtinUN(name);
-//     }
-//     if (type == TokenType::id) {
-//         t = Type::customType(name);
-//     }
-
-//     if (genericTypes) t.genericTypes = std::move(*genericTypes);
-//     if (isArray != -1) t.isArray = isArray;
-//     t.isPointer = isPointer;
-
-//     if (m_nextToken.type == TokenType::op_excla_mark) {
-//         t.isOptional = true;
-//         eat_next_token();  // eat '!'
-//     }
-//     t.location = loc;
-//     return makePtr<Type>(std::move(t));
-// }
-
 ptr<GenericExpr> Parser::parse_generic_expr(ptr<Expr> &prevExpr) {
     debug_func("");
     if (m_nextToken.type != TokenType::op_less) {
@@ -250,9 +163,5 @@ bool Parser::nextToken_is_generic() {
     }
     ret = false;
     return ret;
-
-    // return (m_nextToken.type == TokenType::op_less &&
-    //         (peek_token(1).type == TokenType::comma || peek_token(1).type == TokenType::op_more ||
-    //          peek_token(1).type == TokenType::op_less));
 }
 }  // namespace DMZ

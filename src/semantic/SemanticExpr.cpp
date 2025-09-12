@@ -17,29 +17,40 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
     varOrReturn(resolvedBase, resolve_expr(*genericExpr.base));
 
     varOrReturn(specializedType, resolve_specialized_type(genericExpr));
+    ResolvedDecl *declToGeneric = nullptr;
     ResolvedDecl *decl = nullptr;
-    if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(resolvedBase.get())) {
-        if (auto structDecl = dynamic_cast<const ResolvedGenericStructDecl *>(&declRef->decl)) {
-            decl = specialize_generic_struct(genericExpr.location, *const_cast<ResolvedGenericStructDecl *>(structDecl),
-                                             *specializedType);
-        }
-        if (auto functionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&declRef->decl)) {
-            decl = specialize_generic_function(
-                genericExpr.location, *const_cast<ResolvedGenericFunctionDecl *>(functionDecl), *specializedType);
-        }
+    if (auto memExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedBase.get())) {
+        declToGeneric = const_cast<ResolvedDecl *>(&memExpr->member);
+    } else if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(resolvedBase.get())) {
+        declToGeneric = const_cast<ResolvedDecl *>(&declRef->decl);
     } else {
         resolvedBase->dump();
-        dmz_unreachable("unexpected base expresion in generic expresion");
+        dmz_unreachable(resolvedBase->location.to_string() + " unexpected base expresion in generic expresion");
+    }
+
+    if (auto structDecl = dynamic_cast<ResolvedGenericStructDecl *>(declToGeneric)) {
+        decl = specialize_generic_struct(genericExpr.location, *structDecl, *specializedType);
+        if (!decl) {
+            decl = structDecl;
+        }
+    }
+    if (auto functionDecl = dynamic_cast<ResolvedGenericFunctionDecl *>(declToGeneric)) {
+        decl = specialize_generic_function(genericExpr.location, *functionDecl, *specializedType);
+        if (!decl) {
+            decl = functionDecl;
+        }
     }
 
     if (!decl) {
         resolvedBase->dump();
         genericExpr.dump();
+        specializedType->dump();
         // dmz_unreachable("FIX");
         return report(genericExpr.location,
                       "cannot specialize '" + resolvedBase->type->to_str() + "' with " + genericExpr.to_str());
+    } else {
+        return makePtr<ResolvedDeclRefExpr>(resolvedBase->location, *decl, decl->type->clone());
     }
-    return makePtr<ResolvedDeclRefExpr>(resolvedBase->location, *decl, decl->type->clone());
 }
 
 ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr) {
@@ -53,8 +64,6 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "symbol '" + declRefExpr.identifier + "' not found");
     }
 
-    // println("ResolvedDeclRefExpr " << declRefExpr.identifier << " " << decl << " " << decl->identifier);
-    // auto type = makePtr<ResolvedTypeType>(decl->type->location, decl->type->clone());
     auto type = decl->type->clone();
     auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, std::move(type));
 
@@ -72,9 +81,8 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         if (!resolvedMemberExpr) return nullptr;
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
-        if (dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
-            // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
-            isMemberCall = true;
+        if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
+            isMemberCall = !memFunc->isStatic;
         }
     } else if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(call.callee.get())) {
         auto resolvedMemberExpr = resolve_self_member_expr(*memberExpr);
@@ -82,9 +90,8 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
 
-        if (dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
-            // resolvedFuncDecl = resolvedMemberFuncDecl->function.get();
-            isMemberCall = true;
+        if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
+            isMemberCall = !memFunc->isStatic;
         }
     } else if (const auto *genExpr = dynamic_cast<const GenericExpr *>(call.callee.get())) {
         varOrReturn(specifiedDecl, resolve_generic_expr(*genExpr));
@@ -93,23 +100,6 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         } else {
             return report(specifiedDecl->location, "unexpected symbol in a specialized function call");
         }
-        // varOrReturn(base, resolve_expr(*genExpr->base));
-
-        // if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(base.get())) {
-        //     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&declRef->decl)) {
-        //         varOrReturn(resolvedSpecialized, resolve_specialized_type(call.location, *genExpr));
-        //         resolvedFuncDecl = specialize_generic_function(
-        //             call.location, *const_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl),
-        //             *resolvedSpecialized);
-        //         if (!resolvedFuncDecl) return nullptr;
-        //     } else {
-        //         return report(call.location, "unexpected generic for a not generic function");
-        //     }
-        // } else {
-        //     base->dump();
-        //     return report(call.location, "unexpected expresion");
-        // }
-
     } else {
         const auto *dre = dynamic_cast<const DeclRefExpr *>(call.callee.get());
         if (!dre) return report(call.location, "expression cannot be called as a function");
@@ -155,30 +145,17 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
         // Only check until vararg
         if (idx < funcDeclArgs) {
-            // Modifi ptr to reference
-            // if (resolvedFuncDecl->params[idx]->type.isRef && resolvedArg->type.isPointer) {
-            //     resolvedArg->type = resolvedArg->type.remove_pointer();
-            //     resolvedArg->type.isRef = true;
-            // }
-
             if (!resolvedFuncDecl->params[idx]->type->compare(*resolvedArg->type)) {
                 return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type->to_str() +
                                                          "' expected '" +
                                                          resolvedFuncDecl->params[idx]->type->to_str() + "'");
             }
-            // if (resolvedFuncDecl->params[idx]->type.isRef) {
-            //     if (!dynamic_cast<const ResolvedRefPtrExpr *>(resolvedArg.get())) {
-            //         return report(resolvedArg->location, "expected to reference the value with '&'");
-            //     }
-            // }
         }
         resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
 
         ++idx;
         resolvedArguments.emplace_back(std::move(resolvedArg));
     }
-    // resolvedFuncDecl->dump();
-    // println("param ptr " << resolvedFuncDecl->params[0].get());
     return makePtr<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
 }
 

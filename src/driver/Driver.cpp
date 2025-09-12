@@ -196,7 +196,7 @@ ModuleDecl *Driver::find_module(std::string_view name, ptr<DMZ::ModuleDecl> &fin
     return nullptr;
 };
 
-void Driver::include_pass(Type_Ast &ast) {
+void Driver::import_pass(Type_Ast &ast) {
     debug_func("");
 
     if (imported_modules.empty()) return;
@@ -233,124 +233,9 @@ void Driver::include_pass(Type_Ast &ast) {
     if (!imported_module) {
         report(SourceLocation{.file_name = "imported"}, "importing modules");
     } else {
-        ast.emplace_back(std::move(imported_module));
+        ast.insert(ast.begin(), std::move(imported_module));
     }
 
-    //     std::unordered_set<std::filesystem::path> sources;
-    //     // Insert already sources to not repeat
-    //     for (auto &&source : m_options.sources) {
-    //         debug_msg("Add to sources: " << source);
-    //         sources.emplace(source);
-    //     }
-
-    //     size_t source_size = sources.size();
-    //     do {
-    //         if (all_imported()) break;
-    // #ifdef DEBUG
-    //         debug_msg("Current imported modules");
-    //         for (auto &&[k, v] : imported_modules) {
-    //             debug_msg("  Module " << k << " " << (v == nullptr ? "false" : "true"));
-    //         }
-    // #endif
-    //         source_size = sources.size();
-    //         for (const auto &includeDir : m_options.includes) {
-    //             if (!std::filesystem::exists(includeDir)) {
-    //                 std::cerr << "Warning: The include directory does not exist: " << includeDir << std::endl;
-    //                 continue;
-    //             }
-    //             if (!std::filesystem::is_directory(includeDir)) {
-    //                 std::cerr << "Warning: The include directory is not a directory: " << includeDir << std::endl;
-    //                 continue;
-    //             }
-
-    //             for (const auto &entry : std::filesystem::recursive_directory_iterator(includeDir)) {
-    //                 if (std::filesystem::is_regular_file(entry.status())) {
-    //                     if (entry.path().extension() == ".dmz") {
-    //                         debug_msg("Parsing: " << entry.path());
-    //                         Lexer l(entry.path().c_str());
-    //                         Parser p(l);
-    //                         std::unordered_map<std::string, DMZ::ModuleDecl *> saved_imported_modules;
-    //                         saved_imported_modules.swap(imported_modules);
-
-    //                         auto [import_ast, success] = p.parse_source_file(false);
-    //                         if (!success) {
-    //                             imported_modules.swap(saved_imported_modules);
-    //                             continue;
-    //                         }
-
-    //                         bool found = false;
-    //                         for (auto &&[k, v] : saved_imported_modules) {
-    //                             if (v == nullptr) {
-    //                                 debug_msg("Need module: " << k);
-    //                                 if (auto modDecl = find_module(k, import_ast)) {
-    //                                     debug_msg("Add to sources: " << entry.path());
-    //                                     sources.emplace(entry.path());
-    //                                     debug_msg("Save ast");
-    //                                     ast.emplace_back(std::move(import_ast));
-    //                                     v = modDecl;
-    //                                     found = true;
-    //                                     break;
-    //                                 }
-    //                             }
-    //                         }
-    //                         imported_modules.swap(saved_imported_modules);
-    //                         if (found) {
-    //                             for (auto &&[k, v] : saved_imported_modules) {
-    //                                 imported_modules.emplace(k, v);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //                 if (all_imported()) goto exit_while;
-    //             }
-    //         }
-
-    //         // println("asdf");
-    //         // prev_size = sources.size();
-    //         // moduleIDs.clear();
-
-    //         // for (auto &&ast : asts) {
-    //         //     for (auto &&decl : ast) {
-    //         //         if (auto importDecl = dynamic_cast<ImportDecl *>(decl.get())) {
-    //         //             std::string moduleID = importDecl->get_moduleID();
-    //         //             if (importedModules.find(moduleID) != importedModules.end()) continue;
-    //         //             auto moduleIDEmplaced = importedModules.emplace(moduleID);
-    //         //             if (moduleIDEmplaced.second) moduleIDs.emplace(*moduleIDEmplaced.first);
-    //         //         }
-    //         //     }
-    //         // }
-
-    //         // auto sources = find_modules(m_options.includes, moduleIDs);
-    //         // for (auto &&path : sources) {
-    //         //     newSources.emplace(path);
-    //         // }
-
-    //         // if (prev_size == newSources.size()) break;
-
-    //         // for (auto &&path : sources) {
-    //         //     m_options.sources.emplace_back(path);
-    //         // }
-    //         // auto newLexers = lexer_pass(sources);
-    //         // auto newAsts = parser_pass(newLexers, false);
-
-    //         // for (auto &&lexer : newLexers) {
-    //         //     lexers.emplace_back(std::move(lexer));
-    //         // }
-    //         // for (auto &&ast : newAsts) {
-    //         //     asts.emplace_back(std::move(ast));
-    //         // }
-    //     } while (!all_imported() && source_size != sources.size());
-    // exit_while:
-
-    // #ifdef DEBUG
-    //     debug_msg("Current imported modules");
-    //     for (auto &&[k, v] : imported_modules) {
-    //         debug_msg("  Module " << k << " " << (v == nullptr ? "false" : "true"));
-    //         if (v) {
-    //             v->dump();
-    //         }
-    //     }
-    // #endif
     if (m_options.importDump) {
         for (auto &&decl : ast) {
             decl->dump();
@@ -610,7 +495,7 @@ int Driver::main() {
     auto asts = parser_pass(lexers);
     lexers.clear();
     if (need_exit()) return 0;
-    include_pass(asts);
+    import_pass(asts);
     if (need_exit()) return 0;
 
     auto resolvedTrees = semantic_pass(asts);
