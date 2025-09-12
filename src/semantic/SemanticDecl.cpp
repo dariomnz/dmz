@@ -161,8 +161,10 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         funcDecl.genericTypeDecls[i]->specializedType = genericTypes.specializedTypes[i]->clone();
     }
     // Restore scope
-    // auto savedScope = std::move(m_scopes);
-    // defer([&]() { m_scopes = std::move(savedScope); });
+    auto savedScope = std::move(m_scopes);
+    defer([&]() { m_scopes = std::move(savedScope); });
+    auto savedDefers = std::move(m_defers);
+    defer([&]() { m_defers = std::move(savedDefers); });
     ScopeRAII restoreScope(*this);
     for (auto &&decl : funcDecl.scopeToSpecialize) {
         m_scopes.back().emplace(decl->identifier, decl);
@@ -254,8 +256,10 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
         struDecl.genericTypeDecls[i]->specializedType = genericTypes.specializedTypes[i]->clone();
     }
     // Restore scope
-    // auto savedScope = std::move(m_scopes);
-    // defer([&]() { m_scopes = std::move(savedScope); });
+    auto savedScope = std::move(m_scopes);
+    defer([&]() { m_scopes = std::move(savedScope); });
+    auto savedDefers = std::move(m_defers);
+    defer([&]() { m_defers = std::move(savedDefers); });
     ScopeRAII restoreScope(*this);
     for (auto &&decl : struDecl.scopeToSpecialize) {
         debug_msg("Restore to scope " << decl->identifier);

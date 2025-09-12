@@ -12,12 +12,12 @@ class Sema {
    private:
     ConstantExpressionEvaluator cee;
     std::vector<ptr<ModuleDecl>> m_ast;
-    std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
     std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
     void dump_scopes() const;
     void dump_modules_for_import() const;
 
+    std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;

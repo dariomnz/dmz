@@ -3,5 +3,7 @@ module std {
         extern fn malloc(size: u64) -> *void;
         extern fn realloc(ptr: *void, size: u64) -> *void;
         extern fn free(ptr: *void) -> void;
+        extern fn memmove(dest: *void, src: *void, size:u64) -> *void;
+        extern fn memcpy(dest: *void, src: *void, size:u64) -> *void;
     }
 }

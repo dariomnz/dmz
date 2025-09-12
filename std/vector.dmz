@@ -16,6 +16,10 @@ module std {
             };
         }
 
+        fn deinit() -> void {
+            std.mem.free(.buf);
+        }
+
         fn add(v: T) -> void! {
             if (.len >= .capacity) {
                 if (.capacity == 0) {
@@ -39,25 +43,20 @@ module std {
             return ret;
         }
 
-        fn remove(index: u64) -> u1 {
-            // TODO
-            return true;
+        fn remove(index: u64) -> void! {
+            if (index >= .len) { return vector_error.IndexOutOfLenght; }
+
+            if (index < .len - 1) {
+                const num_bytes = (.len - index - 1) * @sizeof(T);
+                std.mem.memmove(&.buf[index], &.buf[index + 1], num_bytes);
+            }
+
+            .len = .len - 1;
         }
 
         fn size() -> u64 {
             return .len;
         }
 
-    }
-    // Tengo que hacer que cuando instancialize una funcion o algo
-    // se haga como si fuera en el momento que se ha hecho la funcion 
-    // inicial en los scopes igual guardando una copia, igual volviendo 
-    // ha reacer los scopes nose
-    fn initVec<vecType>() -> vec<vecType> {
-        return vec<vecType> {
-            buf: null,
-            len: 0,
-            capacity: 0,
-        };
     }
 }

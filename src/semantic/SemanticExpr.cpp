@@ -76,9 +76,11 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     debug_func(call.location);
     const ResolvedFuncDecl *resolvedFuncDecl = nullptr;
     bool isMemberCall = false;
+    ptr<ResolvedExpr> resolvedBase = nullptr;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
         auto resolvedMemberExpr = resolve_member_expr(*memberExpr);
         if (!resolvedMemberExpr) return nullptr;
+        resolvedBase = std::move(resolvedMemberExpr->base);
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
         if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
@@ -87,6 +89,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     } else if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(call.callee.get())) {
         auto resolvedMemberExpr = resolve_self_member_expr(*memberExpr);
         if (!resolvedMemberExpr) return nullptr;
+        resolvedBase = std::move(resolvedMemberExpr->base);
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
 
@@ -130,15 +133,27 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     }
 
     std::vector<ptr<ResolvedExpr>> resolvedArguments;
-
-    if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
-        varOrReturn(resolvedBase, resolve_expr(*memberExpr->base));
+    if (resolvedBase) {
+        ptr<ResolvedExpr> argsToAdd = nullptr;
         if (resolvedBase->type->kind == ResolvedTypeKind::Struct) {
-            auto resolvedRefPtrExpr = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
-            resolvedArguments.emplace_back(std::move(resolvedRefPtrExpr));
+            argsToAdd = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
+        } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
+            if (ptrType->pointerType->kind == ResolvedTypeKind::Struct) {
+                argsToAdd = std::move(resolvedBase);
+            }
+        }
+        if (argsToAdd) {
+            resolvedArguments.emplace_back(std::move(argsToAdd));
         }
     }
 
+    if (isMemberCall) {
+        if (resolvedArguments.size() == 0) {
+            call.dump();
+            resolvedFuncDecl->dump();
+            dmz_unreachable("unexpected member call without member pass as argument");
+        }
+    }
     size_t idx = 0;
     if (isMemberCall) idx += 1;
     for (auto &&arg : call.arguments) {

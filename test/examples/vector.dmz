@@ -1,22 +1,14 @@
 // RUN: compiler %s -I %S/../../std -run | filecheck %s
 
-// CHECK: vector [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+// CHECK: vector [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+// CHECK: vector [4, 5, 6, 7, 8, 9]
 // CHECK-NOT: {{.*}}
 
 const std = import("std");
 
-fn main() -> void {
-    // let v = std.initVec<i32>();
-    let v = std.vec<i32>.init();
-
-    let i = 10;
-    while (i > 0) {
-        try v.add(i);
-        i = i - 1;
-    }
-
-    i = 0;
+fn printVector<T>(v: *std.vec<T>) -> void {
     std.io.printf("vector [");
+    let i = 0;
     while (i < v.size()) {
         std.io.printf("%d", try v.get(i));
         if (i != v.size() - 1) {
@@ -26,4 +18,25 @@ fn main() -> void {
         i = i + 1;
     }
     std.io.printf("]\n");
+}
+
+fn main() -> void {
+    let v = std.vec<i32>.init();
+    defer v.deinit();
+
+    let i = 0;
+    while (i < 10) {
+        try v.add(i);
+        i = i + 1;
+    }
+
+    printVector<i32>(&v);
+    
+    i = 0;
+    while (i < 4) {
+        try v.remove(0);
+        i = i + 1;
+    }
+
+    printVector<i32>(&v);
 }

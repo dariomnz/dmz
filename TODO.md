@@ -15,7 +15,8 @@
 - [ ] pub pri in modules
 - [ ] Arrays, vectors and slice
 - [ ] Traits
-- [ ] Generics
+- [x] Generics
 - [-] std (in progress)
 - [x] test
+- [ ] formater
 - [ ] benckmark
