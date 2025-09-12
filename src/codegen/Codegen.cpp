@@ -35,10 +35,10 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
                    else
                        std::cerr << "null";
                }) << "'");
-    if (dynamic_cast<const ResolvedTypePointer *>(&type) || dynamic_cast<const ResolvedTypeError *>(&type)) {
+    if (type.kind == ResolvedTypeKind::Pointer || type.kind == ResolvedTypeKind::Error) {
         debug_msg("isPointer or error");
         ret = llvm::PointerType::get(*m_context, 0);
-    } else if (dynamic_cast<const ResolvedTypeVoid *>(&type)) {
+    } else if (type.kind == ResolvedTypeKind::Void) {
         debug_msg("kind Void");
         ret = m_builder.getVoidTy();
     } else if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(&type)) {
@@ -64,7 +64,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         } else {
             dmz_unreachable("internal error");
         }
-    } else if (dynamic_cast<const ResolvedTypeStructDecl *>(&type) || dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+    } else if (type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::StructDecl) {
         ResolvedStructDecl *decl = nullptr;
         if (auto typeStruct = dynamic_cast<const ResolvedTypeStructDecl *>(&type)) {
             decl = typeStruct->decl;
@@ -99,7 +99,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
 
             std::vector<llvm::Type *> fieldTypes;
             // Type of value
-            if (dynamic_cast<const ResolvedTypeVoid *>(typeOptional->optionalType.get())) {
+            if (typeOptional->optionalType->kind == ResolvedTypeKind::Void) {
                 fieldTypes.emplace_back(m_builder.getInt1Ty());
             } else {
                 fieldTypes.emplace_back(generate_type(*typeOptional->optionalType));
@@ -159,7 +159,7 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const ResolvedType &type) {
     debug_func("");
     // println("type: " << type.to_str());
     // v->dump();
-    if (dynamic_cast<const ResolvedTypePointer *>(&type) || dynamic_cast<const ResolvedTypeError *>(&type)) {
+    if (type.kind == ResolvedTypeKind::Pointer || type.kind == ResolvedTypeKind::Error) {
         v = m_builder.CreatePtrToInt(v, m_builder.getInt64Ty());
         return m_builder.CreateICmpNE(v, m_builder.getInt64(0), "ptr.to.bool");
     } else if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(&type)) {
@@ -190,8 +190,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                }) << "'");
     // m_module->dump();
     // v->dump();
-    if (dynamic_cast<const ResolvedTypePointer *>(&from)) {
-        if (dynamic_cast<const ResolvedTypePointer *>(&to)) {
+    if (from.kind == ResolvedTypeKind::Pointer) {
+        if (to.kind == ResolvedTypeKind::Pointer) {
             return v;
         } else {
             dmz_unreachable("unsuported type from ptr");
@@ -237,8 +237,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                 }
             }
         }
-    } else if (dynamic_cast<const ResolvedTypeError *>(&from)) {
-        if (dynamic_cast<const ResolvedTypeError *>(&to)) {
+    } else if (from.kind == ResolvedTypeKind::Error) {
+        if (to.kind == ResolvedTypeKind::Error) {
             return v;
         } else {
             dmz_unreachable("unsuported type from Err");
@@ -263,14 +263,14 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from,
                                   const ResolvedType &to) {
     debug_func("from " << from.to_str() << " to " << to.to_str());
-    if (!dynamic_cast<const ResolvedTypePointer *>(&from)) {
-        if (dynamic_cast<const ResolvedTypeStruct *>(&from) || dynamic_cast<const ResolvedTypeOptional *>(&from)) {
+    if (from.kind != ResolvedTypeKind::Pointer) {
+        if (from.kind == ResolvedTypeKind::Struct || from.kind == ResolvedTypeKind::Optional) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
 
             return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
         }
-        if (dynamic_cast<const ResolvedTypeArray *>(&from)) {
+        if (from.kind == ResolvedTypeKind::Array) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             auto t = generate_type(from);
 
@@ -284,7 +284,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
 
 llvm::Value *Codegen::load_value(llvm::Value *v, const ResolvedType &type) {
     debug_func("");
-    if (dynamic_cast<const ResolvedTypeVoid *>(&type)) return nullptr;
+    if (type.kind == ResolvedTypeKind::Void) return nullptr;
     return m_builder.CreateLoad(generate_type(type), v);
 }
 

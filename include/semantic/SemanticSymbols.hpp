@@ -58,18 +58,6 @@ struct ResolvedDependencies : public ResolvedDecl {
     void dump_dependencies(size_t level = 0) const override;
 };
 
-enum struct ResolvedDeclType {
-    ResolvedDecl,
-    ResolvedErrorDecl,
-    ResolvedImportExpr,
-    ResolvedModuleDecl,
-    ResolvedMemberFunctionDecl,
-    ResolvedFieldDecl,
-    ResolvedGenericTypeDecl,
-};
-
-std::ostream &operator<<(std::ostream &os, const ResolvedDeclType &type);
-
 struct ResolvedGenericTypeDecl : public ResolvedDecl {
     ptr<ResolvedType> specializedType;
 

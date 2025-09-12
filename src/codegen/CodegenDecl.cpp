@@ -178,9 +178,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
 
-    bool returnsVoid = dynamic_cast<const ResolvedTypeStruct *>(functionDecl.type.get()) ||
-                       dynamic_cast<const ResolvedTypeVoid *>(functionDecl.type.get()) ||
-                       dynamic_cast<const ResolvedTypeOptional *>(functionDecl.type.get());
+    bool returnsVoid = functionDecl.type->kind == ResolvedTypeKind::Struct ||
+                       functionDecl.type->kind == ResolvedTypeKind::Void ||
+                       functionDecl.type->kind == ResolvedTypeKind::Optional;
 
     if (!returnsVoid) {
         retVal = allocate_stack_variable("retval", *functionDecl.type);
@@ -199,7 +199,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (!dynamic_cast<const ResolvedTypeStruct *>(paramDecl->type.get()) && paramDecl->isMutable) {
+        if (paramDecl->type->kind != ResolvedTypeKind::Struct && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, *paramDecl->type);
             store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
         }
@@ -404,9 +404,9 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
 
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
-    if (dynamic_cast<const ResolvedTypeModule *>(stmt.type.get())) return;
+    if (stmt.type->kind == ResolvedTypeKind::Module) return;
 
-    if (dynamic_cast<const ResolvedTypeErrorGroup *>(stmt.type.get())) {
+    if (stmt.type->kind == ResolvedTypeKind::ErrorGroup) {
         if (auto errorGroup = dynamic_cast<ResolvedErrorGroupExprDecl *>(stmt.varDecl->initializer.get())) {
             generate_error_group_expr_decl(*errorGroup);
         } else {

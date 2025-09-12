@@ -2,23 +2,6 @@
 
 namespace DMZ {
 
-std::ostream &operator<<(std::ostream &os, const ResolvedDeclType &type) {
-    if (type == ResolvedDeclType::ResolvedDecl) {
-        os << "ResolvedDecl";
-    } else if (type == ResolvedDeclType::ResolvedErrorDecl) {
-        os << "ResolvedErrorDecl";
-    } else if (type == ResolvedDeclType::ResolvedImportExpr) {
-        os << "ResolvedImportExpr";
-    } else if (type == ResolvedDeclType::ResolvedModuleDecl) {
-        os << "ResolvedModuleDecl";
-    } else if (type == ResolvedDeclType::ResolvedMemberFunctionDecl) {
-        os << "ResolvedMemberFunctionDecl";
-    } else if (type == ResolvedDeclType::ResolvedGenericTypeDecl) {
-        os << "ResolvedGenericTypeDecl";
-    }
-    return os;
-}
-
 void ResolvedExpr::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';

@@ -352,8 +352,8 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     llvm::Value *val = m_declarations[&decl];
 
     keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
-    keepPointer |= dynamic_cast<const ResolvedTypeStruct *>(dre.type.get()) ? true : false;
-    keepPointer |= dynamic_cast<const ResolvedTypeArray *>(dre.type.get()) ? true : false;
+    keepPointer |= dre.type->kind == ResolvedTypeKind::Struct;
+    keepPointer |= dre.type->kind == ResolvedTypeKind::Array;
 
     return keepPointer ? val : load_value(val, *dre.type);
 }
@@ -492,7 +492,7 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         generate_block(*d->resolvedDefer.block);
     }
 
-    if (dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get())) {
+    if (m_currentFunction->type->kind == ResolvedTypeKind::Optional) {
         llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*m_currentFunction->type), retVal, 1);
         store_value(error_value, dst, ResolvedTypeError{SourceLocation{}}, ResolvedTypeError{SourceLocation{}});
 
@@ -513,7 +513,7 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
 
-    if (dynamic_cast<const ResolvedTypeVoid *>(tryErrorExpr.type.get())) return nullptr;
+    if (tryErrorExpr.type->kind == ResolvedTypeKind::Void) return nullptr;
 
     auto tryValue = m_builder.CreateStructGEP(generate_type(*tryErrorExpr.errorToTry->type), error_struct, 0);
     return load_value(tryValue, *tryErrorExpr.type);

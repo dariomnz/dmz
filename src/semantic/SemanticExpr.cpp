@@ -56,7 +56,7 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
 ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefExpr) {
     debug_func(declRefExpr.location);
     // Search in the module scope
-    ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier, ResolvedDeclType::ResolvedDecl);
+    ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier);
     if (!decl) {
 #ifdef DEBUG
         dump_scopes();
@@ -133,7 +133,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
         varOrReturn(resolvedBase, resolve_expr(*memberExpr->base));
-        if (dynamic_cast<const ResolvedTypeStruct *>(resolvedBase->type.get())) {
+        if (resolvedBase->type->kind == ResolvedTypeKind::Struct) {
             auto resolvedRefPtrExpr = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
             resolvedArguments.emplace_back(std::move(resolvedRefPtrExpr));
         }
@@ -248,7 +248,7 @@ ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &una
 
     auto boolType = ResolvedTypeBool{SourceLocation{}};
 
-    if (dynamic_cast<const ResolvedTypeVoid *>(resolvedRHS->type.get()) ||
+    if (resolvedRHS->type->kind == ResolvedTypeKind::Void ||
         (unary.op == TokenType::op_excla_mark && !boolType.compare(*resolvedRHS->type)))
         return report(resolvedRHS->location, '\'' + resolvedRHS->type->to_str() +
                                                  "' cannot be used as an operand to unary operator '" +
@@ -284,13 +284,13 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (!dynamic_cast<const ResolvedTypeNumber *>(resolvedLHS->type.get()) &&
-        !dynamic_cast<const ResolvedTypePointer *>(resolvedLHS->type.get())) {
+    if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Bool &&
+        resolvedLHS->type->kind != ResolvedTypeKind::Pointer) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
-    if (!dynamic_cast<const ResolvedTypeNumber *>(resolvedRHS->type.get()) &&
-        !dynamic_cast<const ResolvedTypePointer *>(resolvedRHS->type.get())) {
+    if (resolvedRHS->type->kind != ResolvedTypeKind::Number && resolvedRHS->type->kind != ResolvedTypeKind::Bool &&
+        resolvedRHS->type->kind != ResolvedTypeKind::Pointer) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
@@ -350,7 +350,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     }
 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
-        decl = cast_lookup_in_struct(*struType->decl, memberExpr.field, ResolvedDecl);
+        decl = lookup_in_struct(*struType->decl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -361,7 +361,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
         }
     } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
-        decl = cast_lookup_in_struct(*struType->decl, memberExpr.field, ResolvedDecl);
+        decl = lookup_in_struct(*struType->decl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -377,7 +377,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (!moduleDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
         // moduleDecl->dump();
-        decl = cast_lookup_in_module(*moduleDecl, memberExpr.field, ResolvedDecl);
+        decl = lookup_in_module(*moduleDecl, memberExpr.field);
         if (!decl)
             return report(memberExpr.location, "module \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -403,7 +403,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
 
 ptr<ResolvedSelfMemberExpr> Sema::resolve_self_member_expr(const SelfMemberExpr &memberExpr) {
     if (!m_currentStruct) return report(memberExpr.location, "unexpected use of self member outside a struct");
-    auto decl = cast_lookup_in_struct(*m_currentStruct, memberExpr.field, ResolvedDecl);
+    auto decl = lookup_in_struct(*m_currentStruct, memberExpr.field);
     if (!decl) {
         m_currentStruct->dump();
         return report(memberExpr.location, "struct \'" + m_currentStruct->type->to_str() +
@@ -424,8 +424,7 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
 
-    if (!dynamic_cast<const ResolvedTypeArray *>(resolvedBase->type.get()) &&
-        !dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
+    if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer) {
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type->to_str() + '\'');
     }
     ResolvedType *derefType = nullptr;
@@ -447,7 +446,7 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
 
     varOrReturn(resolvedBase, resolve_expr(*structInstantiation.base));
 
-    if (!dynamic_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get())) {
+    if (resolvedBase->type->kind != ResolvedTypeKind::StructDecl) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
     auto auxstruType = static_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get());
@@ -558,7 +557,7 @@ ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr 
 ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryErrorExpr) {
     debug_func(tryErrorExpr.location);
     varOrReturn(resolvedErr, resolve_expr(*tryErrorExpr.errorToTry));
-    if (!dynamic_cast<const ResolvedTypeOptional *>(resolvedErr->type.get()))
+    if (resolvedErr->type->kind != ResolvedTypeKind::Optional)
         return report(resolvedErr->location, "expect error union when using try");
     auto optType = static_cast<const ResolvedTypeOptional *>(resolvedErr->type.get());
     auto defers = resolve_defer_ref_stmt(false, true);
@@ -569,7 +568,7 @@ ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryEr
 ptr<ResolvedOrElseErrorExpr> Sema::resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr) {
     debug_func(orelseExpr.location);
     varOrReturn(resolvedErr, resolve_expr(*orelseExpr.errorToOrElse));
-    if (!dynamic_cast<const ResolvedTypeOptional *>(resolvedErr->type.get()))
+    if (resolvedErr->type->kind != ResolvedTypeKind::Optional)
         return report(resolvedErr->location, "expect error union when using orelse");
     varOrReturn(resolvedOrelse, resolve_expr(*orelseExpr.orElseExpr));
     auto resolvedErrOptional = static_cast<const ResolvedTypeOptional *>(resolvedErr->type.get());

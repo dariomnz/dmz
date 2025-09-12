@@ -53,15 +53,9 @@ class Sema {
                         std::unordered_set<ResolvedDependencies *> &recurse_check);
 
    private:
-    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, ResolvedDeclType type,
-                         bool needAddDeps = true);
-    ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id,
-                                   ResolvedDeclType type);
-    ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id,
-                                   ResolvedDeclType type);
-#define cast_lookup(loc, id, type)            static_cast<type *>(lookup(loc, id, ResolvedDeclType::type))
-#define cast_lookup_in_module(decl, id, type) static_cast<type *>(lookup_in_module(decl, id, ResolvedDeclType::type))
-#define cast_lookup_in_struct(decl, id, type) static_cast<type *>(lookup_in_struct(decl, id, ResolvedDeclType::type))
+    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true);
+    ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id);
+    ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id);
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::vector<ResolvedDecl *> collect_scope();

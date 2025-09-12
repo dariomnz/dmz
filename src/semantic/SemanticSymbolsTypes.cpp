@@ -4,7 +4,7 @@ namespace DMZ {
 
 bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << location);
-    if (dynamic_cast<const ResolvedTypeVoid *>(&other)) {
+    if (other.kind == ResolvedTypeKind::Void) {
         return true;
     } else {
         return false;
@@ -78,7 +78,7 @@ std::string ResolvedTypeNumber::to_str() const {
 
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
-    if (dynamic_cast<const ResolvedTypeBool *>(&other)) {
+    if (other.kind == ResolvedTypeKind::Bool) {
         return true;
     } else {
         return false;
@@ -89,7 +89,7 @@ bool ResolvedTypeBool::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
     if (equal(other)) return true;
 
-    if (dynamic_cast<const ResolvedTypeError *>(&other) || dynamic_cast<const ResolvedTypePointer *>(&other)) {
+    if (other.kind == ResolvedTypeKind::Error || other.kind == ResolvedTypeKind::Pointer) {
         return true;
     } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
         return numType->numberKind == ResolvedNumberKind::Int || numType->numberKind == ResolvedNumberKind::UInt;
@@ -262,7 +262,7 @@ std::string ResolvedTypeSpecialized::to_str() const {
 
 bool ResolvedTypeError::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeError " << location);
-    if (dynamic_cast<const ResolvedTypeError *>(&other)) {
+    if (other.kind == ResolvedTypeKind::Error) {
         return true;
     } else {
         return false;
@@ -348,7 +348,7 @@ bool ResolvedTypeOptional::equal(const ResolvedType &other) const {
 
 bool ResolvedTypeOptional::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeOptional " << location);
-    if (dynamic_cast<const ResolvedTypeError *>(&other)) return true;
+    if (other.kind == ResolvedTypeKind::Error) return true;
     if (equal(other)) return true;
 
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
@@ -384,8 +384,8 @@ bool ResolvedTypePointer::compare(const ResolvedType &other) const {
 
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
         if (pointerType->compare(*ptrType->pointerType)) return true;
-        if (dynamic_cast<const ResolvedTypeVoid *>(pointerType.get())) return true;
-        if (dynamic_cast<const ResolvedTypeVoid *>(ptrType->pointerType.get())) return true;
+        if (pointerType->kind == ResolvedTypeKind::Void) return true;
+        if (ptrType->pointerType->kind == ResolvedTypeKind::Void) return true;
     }
 
     return false;

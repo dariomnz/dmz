@@ -6,9 +6,26 @@
 
 namespace DMZ {
 
+enum class ResolvedTypeKind {
+    Void,
+    Number,
+    Bool,
+    StructDecl,
+    Struct,
+    Generic,
+    Specialized,
+    Error,
+    ErrorGroup,
+    Module,
+    Optional,
+    Pointer,
+    Array,
+};
+
 struct ResolvedType {
+    ResolvedTypeKind kind;
     SourceLocation location;
-    ResolvedType(SourceLocation location) : location(std::move(location)) {};
+    ResolvedType(ResolvedTypeKind kind, SourceLocation location) : kind(kind), location(std::move(location)) {};
     virtual ~ResolvedType() = default;
 
     virtual bool equal(const ResolvedType &other) const = 0;
@@ -19,7 +36,7 @@ struct ResolvedType {
 };
 
 struct ResolvedTypeVoid : public ResolvedType {
-    ResolvedTypeVoid(SourceLocation location) : ResolvedType(std::move(location)) {}
+    ResolvedTypeVoid(SourceLocation location) : ResolvedType(ResolvedTypeKind::Void, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -33,7 +50,11 @@ struct ResolvedTypeNumber : public ResolvedType {
     ResolvedNumberKind numberKind;
     int bitSize;
     ResolvedTypeNumber(SourceLocation location, ResolvedNumberKind numberKind, int bitSize)
-        : ResolvedType(std::move(location)), numberKind(numberKind), bitSize(bitSize) {}
+        : ResolvedType(ResolvedTypeKind::Number, std::move(location)), numberKind(numberKind), bitSize(bitSize) {
+        if (numberKind == ResolvedNumberKind::Int && bitSize == 1) {
+            kind = ResolvedTypeKind::Bool;
+        }
+    }
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -56,7 +77,7 @@ struct ResolvedStructDecl;  // Forward declaration
 struct ResolvedTypeStructDecl : public ResolvedType {
     ResolvedStructDecl *decl;
     ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl)
-        : ResolvedType(std::move(location)), decl(decl) {}
+        : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -68,7 +89,7 @@ struct ResolvedTypeStructDecl : public ResolvedType {
 struct ResolvedTypeStruct : public ResolvedType {
     ResolvedStructDecl *decl;
     ResolvedTypeStruct(SourceLocation location, ResolvedStructDecl *decl)
-        : ResolvedType(std::move(location)), decl(decl) {}
+        : ResolvedType(ResolvedTypeKind::Struct, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -81,7 +102,7 @@ struct ResolvedGenericTypeDecl;  // Forward declaration
 struct ResolvedTypeGeneric : public ResolvedType {
     ResolvedGenericTypeDecl *decl;
     ResolvedTypeGeneric(SourceLocation location, ResolvedGenericTypeDecl *decl)
-        : ResolvedType(std::move(location)), decl(decl) {}
+        : ResolvedType(ResolvedTypeKind::Generic, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -93,7 +114,8 @@ struct ResolvedTypeGeneric : public ResolvedType {
 struct ResolvedTypeSpecialized : public ResolvedType {
     std::vector<ptr<ResolvedType>> specializedTypes;
     ResolvedTypeSpecialized(SourceLocation location, std::vector<ptr<ResolvedType>> specializedTypes)
-        : ResolvedType(std::move(location)), specializedTypes(std::move(specializedTypes)) {}
+        : ResolvedType(ResolvedTypeKind::Specialized, std::move(location)),
+          specializedTypes(std::move(specializedTypes)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -104,7 +126,7 @@ struct ResolvedTypeSpecialized : public ResolvedType {
 
 struct ResolvedErrorDecl;  // Forward declaration
 struct ResolvedTypeError : public ResolvedType {
-    ResolvedTypeError(SourceLocation location) : ResolvedType(std::move(location)) {}
+    ResolvedTypeError(SourceLocation location) : ResolvedType(ResolvedTypeKind::Error, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -117,7 +139,7 @@ struct ResolvedErrorGroupExprDecl;  // Forward declaration
 struct ResolvedTypeErrorGroup : public ResolvedType {
     ResolvedErrorGroupExprDecl *decl;
     ResolvedTypeErrorGroup(SourceLocation location, ResolvedErrorGroupExprDecl *decl)
-        : ResolvedType(std::move(location)), decl(decl) {}
+        : ResolvedType(ResolvedTypeKind::ErrorGroup, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -130,7 +152,7 @@ struct ResolvedModuleDecl;  // Forward declaration
 struct ResolvedTypeModule : public ResolvedType {
     ResolvedModuleDecl *moduleDecl;
     ResolvedTypeModule(SourceLocation location, ResolvedModuleDecl *moduleDecl)
-        : ResolvedType(std::move(location)), moduleDecl(moduleDecl) {}
+        : ResolvedType(ResolvedTypeKind::Module, std::move(location)), moduleDecl(moduleDecl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -142,7 +164,7 @@ struct ResolvedTypeModule : public ResolvedType {
 struct ResolvedTypeOptional : public ResolvedType {
     ptr<ResolvedType> optionalType;
     ResolvedTypeOptional(SourceLocation location, ptr<ResolvedType> optionalType)
-        : ResolvedType(std::move(location)), optionalType(std::move(optionalType)) {}
+        : ResolvedType(ResolvedTypeKind::Optional, std::move(location)), optionalType(std::move(optionalType)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -154,7 +176,7 @@ struct ResolvedTypeOptional : public ResolvedType {
 struct ResolvedTypePointer : public ResolvedType {
     ptr<ResolvedType> pointerType;
     ResolvedTypePointer(SourceLocation location, ptr<ResolvedType> pointerType)
-        : ResolvedType(std::move(location)), pointerType(std::move(pointerType)) {}
+        : ResolvedType(ResolvedTypeKind::Pointer, std::move(location)), pointerType(std::move(pointerType)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -167,7 +189,9 @@ struct ResolvedTypeArray : public ResolvedType {
     ptr<ResolvedType> arrayType;
     int arraySize;
     ResolvedTypeArray(SourceLocation location, ptr<ResolvedType> arrayType, int arraySize)
-        : ResolvedType(std::move(location)), arrayType(std::move(arrayType)), arraySize(std::move(arraySize)) {}
+        : ResolvedType(ResolvedTypeKind::Array, std::move(location)),
+          arrayType(std::move(arrayType)),
+          arraySize(std::move(arraySize)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

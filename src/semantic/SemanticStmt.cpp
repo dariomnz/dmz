@@ -43,11 +43,11 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
         return report(returnStmt.location, "unexpected return stmt outside a function");
     }
 
-    if (dynamic_cast<const ResolvedTypeVoid *>(m_currentFunction->type.get()) && returnStmt.expr)
-        if (!dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get()))
+    if (m_currentFunction->type->kind == ResolvedTypeKind::Void && returnStmt.expr)
+        if (m_currentFunction->type->kind != ResolvedTypeKind::Optional)
             return report(returnStmt.location, "unexpected return value in void function");
 
-    if (!dynamic_cast<const ResolvedTypeVoid *>(m_currentFunction->type.get()) && !returnStmt.expr)
+    if (m_currentFunction->type->kind != ResolvedTypeKind::Void && !returnStmt.expr)
         return report(returnStmt.location, "expected a return value");
 
     ptr<ResolvedExpr> resolvedExpr;
@@ -62,7 +62,7 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }
-    bool isError = resolvedExpr && dynamic_cast<const ResolvedTypeError *>(resolvedExpr->type.get());
+    bool isError = resolvedExpr && resolvedExpr->type->kind == ResolvedTypeKind::Error;
     auto defers = resolve_defer_ref_stmt(false, isError);
 
     return makePtr<ResolvedReturnStmt>(returnStmt.location, std::move(resolvedExpr), std::move(defers));
@@ -160,7 +160,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
             return report(resolvedLHS->location, "'" + declRef->decl.identifier + "' cannot be mutated");
         }
     }
-    if (dynamic_cast<const ResolvedTypeVoid *>(resolvedLHS->type.get())) {
+    if (resolvedLHS->type->kind == ResolvedTypeKind::Void) {
         return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
     }
     if (!resolvedLHS->type->compare(*resolvedRHS->type)) {

@@ -10,7 +10,7 @@ ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     auto type = resolve_type(*param.type);
 
     if (!param.isVararg)
-        if (!type || dynamic_cast<const ResolvedTypeVoid *>(type.get()))
+        if (!type || type->kind == ResolvedTypeKind::Void)
             return report(param.location,
                           "parameter '" + param.identifier + "' has invalid '" + param.type->to_str() + "' type");
     return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(type), param.isMutable,
@@ -79,7 +79,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
                       "function '" + function.identifier + "' has invalid '" + function.type->to_str() + "' type");
 
     if (function.identifier == "main") {
-        if (!dynamic_cast<const ResolvedTypeVoid *>(type.get()))
+        if (type->kind != ResolvedTypeKind::Void)
             return report(function.location, "'main' function is expected to have 'void' type");
 
         if (!function.params.empty())
@@ -141,7 +141,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     }
     // // Not specialize if generic types are no specialized
     for (auto &gt : genericTypes.specializedTypes) {
-        if (dynamic_cast<const ResolvedTypeGeneric *>(gt.get())) {
+        if (gt->kind == ResolvedTypeKind::Generic) {
             debug_msg("Not specialize generic types are no specialized");
             return nullptr;
         }
@@ -234,7 +234,7 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
 
     // // Not specialize if generic types are no specialized
     for (auto &gt : genericTypes.specializedTypes) {
-        if (dynamic_cast<const ResolvedTypeGeneric *>(gt.get())) {
+        if (gt->kind == ResolvedTypeKind::Generic) {
             debug_msg("Not specialize generic types are no specialized");
             return nullptr;
         }
@@ -363,7 +363,7 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
         resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
     }
 
-    if (dynamic_cast<const ResolvedTypeVoid *>(type)) {
+    if (type->kind == ResolvedTypeKind::Void) {
         return report(varDecl.location,
                       "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
     }
@@ -435,7 +435,7 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             auto type = re_resolve_type(*field->type);
             if (!type) return false;
 
-            if (dynamic_cast<const ResolvedTypeVoid *>(type.get())) {
+            if (type->kind == ResolvedTypeKind::Void) {
                 report(field->location, "struct field cannot be void");
                 return false;
             }
