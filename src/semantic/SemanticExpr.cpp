@@ -599,9 +599,20 @@ ptr<ResolvedOrElseErrorExpr> Sema::resolve_orelse_error_expr(const OrElseErrorEx
 ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) {
     debug_func(importExpr.location);
 
-    auto it = m_modules_for_import.find(importExpr.identifier);
+    if (importExpr.module_path.empty()) {
+        if (importExpr.identifier.ends_with(".dmz")) {
+            return report(importExpr.location, "file '" + importExpr.identifier + "' doesn't exists");
+        } else {
+            return report(importExpr.location, "The required module '" + importExpr.identifier +
+                                                   "' could not be found.\n Please ensure the module is specified and "
+                                                   "its path is included using the '-I' "
+                                                   "flag during compilation, e.g., `-I <module> <path>`.");
+        }
+    }
+
+    auto it = m_modules_for_import.find(importExpr.module_path);
     if (it == m_modules_for_import.end()) {
-        return report(importExpr.location, "module '" + importExpr.identifier + "' not found");
+        dmz_unreachable("unexpected error module module '" + importExpr.identifier + "' not found");
     }
 
     auto im = (*it).second;

@@ -11,8 +11,8 @@
 
 namespace DMZ {
 struct CompilerOptions {
-    std::vector<std::filesystem::path> sources;
-    std::vector<std::filesystem::path> includes;
+    std::filesystem::path source;
+    std::unordered_map<std::string, std::filesystem::path> imports;
     std::filesystem::path output;
     bool displayHelp = false;
     bool lexerDump = false;
@@ -37,7 +37,18 @@ class Driver {
     std::vector<ptr<llvm::orc::ThreadSafeModule>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
-    std::unordered_map<std::string, ModuleDecl*> imported_modules;
+    struct imported_module {
+        enum class kind {
+            IMPORT_BY_PATH,
+            IMPORT_BY_MODULE,
+        };
+        kind type = kind::IMPORT_BY_PATH;
+        std::filesystem::path path = {};
+        std::string identifier = {};
+        ptr<ModuleDecl> decl = nullptr;
+    };
+   public:
+    std::vector<imported_module> imported_modules;
 
    public:
     CompilerOptions m_options;
@@ -47,23 +58,23 @@ class Driver {
 
     bool need_exit();
 
-    using Type_Sources = std::vector<std::filesystem::path>;
+    using Type_Source = std::filesystem::path;
     using Type_Lexers = std::vector<ptr<Lexer>>;
     using Type_Ast = std::vector<ptr<ModuleDecl>>;
     using Type_ResolvedTree = std::vector<ptr<ResolvedDecl>>;
     using Type_Module = ptr<llvm::orc::ThreadSafeModule>;
 
-    void check_sources_pass(Type_Sources& sources);
-    Type_Lexers lexer_pass(Type_Sources& sources);
+    void check_sources_pass(Type_Source& source);
+    Type_Lexers lexer_pass(Type_Source& source);
     Type_Ast parser_pass(Type_Lexers& lexers, bool expectMain = true);
-    Type_Sources find_modules(const Type_Sources& includeDirs,
-                              const std::unordered_set<std::string_view>& importedModuleIDs);
+    // Type_Sources find_modules(const Type_Sources& includeDirs,
+    //                           const std::unordered_set<std::string_view>& importedModuleIDs);
     void import_pass(Type_Ast& asts);
-    ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
-    static void register_import(std::string_view imported);
-    static ModuleDecl* get_import(std::string_view imported);
-    bool all_imported();
-    ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
+    // ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
+    static std::string register_import(const std::filesystem::path& source, std::string_view imported);
+    static imported_module* get_import(std::string_view imported);
+    // bool all_imported();
+    // ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
 
     Type_ResolvedTree semantic_pass(Type_Ast& asts);
     Type_Module codegen_pass(Type_ResolvedTree& resolvedTrees);

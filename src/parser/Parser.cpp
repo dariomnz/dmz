@@ -20,8 +20,9 @@ std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
     for (auto &&fn : declarations) hasMainFunction |= fn->identifier == "main";
 
     if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found in global module");
-    SourceLocation location = {.file_name = m_lexer.get_file_name(), .line = 0, .col = 0};
-    auto mod = makePtr<ModuleDecl>(location, m_lexer.get_file_name(), std::move(declarations));
+    auto file_path = m_lexer.get_file_path().string();
+    SourceLocation location = {.file_name = file_path, .line = 0, .col = 0};
+    auto mod = makePtr<ModuleDecl>(location, file_path, std::move(declarations));
     debug_msg("Incomplete AST " << (m_incompleteAST ? "true" : "false"));
     return {std::move(mod), !m_incompleteAST && hasMainFunction};
 }

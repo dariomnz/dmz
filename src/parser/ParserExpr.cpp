@@ -351,8 +351,8 @@ ptr<ImportExpr> Parser::parse_import_expr() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )
 
-    Driver::register_import(identifier);
-    return makePtr<ImportExpr>(location, identifier);
+    auto id = Driver::register_import(m_lexer.get_file_path(), identifier);
+    return makePtr<ImportExpr>(location, identifier, id);
 }
 
 ptr<SelfMemberExpr> Parser::parse_self_member_expr() {

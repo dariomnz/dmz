@@ -1,6 +1,6 @@
-// RUN: compiler %s %S/module_ops.dmz -res-dump 2>&1 | filecheck %s
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
-const ops = import("ops");
+const ops = import("module_ops.dmz");
 // CHECK: ResolvedDeclStmt
 // CHECK-NEXT:   ResolvedVarDecl:const ops ops
 // CHECK-NEXT:     ResolvedImportExpr ops

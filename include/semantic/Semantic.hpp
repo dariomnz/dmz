@@ -46,6 +46,7 @@ class Sema {
     explicit Sema(std::vector<ptr<ModuleDecl>> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
     std::vector<ptr<ResolvedDecl>> resolve_ast_decl();
+    std::vector<ptr<ResolvedModuleDecl>> resolve_import_modules();
     bool resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
     void remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest);
@@ -113,7 +114,7 @@ class Sema {
     ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
     ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
-    ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl, int level);
+    ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl);
     bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,

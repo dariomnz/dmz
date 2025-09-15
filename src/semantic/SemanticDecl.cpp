@@ -515,7 +515,7 @@ ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(const ErrorG
     return makePtr<ResolvedErrorGroupExprDecl>(ErrorGroupExprDecl.location, std::move(resolvedErrors));
 }
 
-ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl, int level) {
+ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl) {
     debug_func(moduleDecl.location);
     std::vector<ptr<DMZ::ResolvedDecl>> declarations;
     bool error = false;
@@ -523,10 +523,9 @@ ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl, int l
         ScopeRAII moduleScope(*this);
         for (auto &&decl : moduleDecl.declarations) {
             if (auto *md = dynamic_cast<ModuleDecl *>(decl.get())) {
-                int next_level = moduleDecl.identifier.find(".dmz") == std::string::npos ? level + 1 : level;
-                auto resolvedDecl = resolve_module(*md, next_level);
+                auto resolvedDecl = resolve_module(*md);
 
-                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                if (!resolvedDecl) {
                     error = true;
                     continue;
                 }
@@ -538,9 +537,6 @@ ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl, int l
     if (error) return nullptr;
     auto modDecl = makePtr<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, std::move(declarations));
 
-    if (level == 0 && modDecl->identifier.find(".dmz") == std::string::npos) {
-        m_modules_for_import.emplace(modDecl->identifier, modDecl.get());
-    }
     return modDecl;
 }
 
@@ -601,9 +597,9 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
                         continue;
                     }
                 } else {
-                    resolvedDecl = resolve_module(*st, 0);
+                    resolvedDecl = resolve_module(*st);
                 }
-                if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
+                if (!resolvedDecl) {
                     error = true;
                     continue;
                 }
@@ -638,7 +634,9 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
         for (auto &&decl : decls) {
             if (auto *st = dynamic_cast<ModuleDecl *>(decl.get())) {
                 auto success = resolve_module_decl(*st, *map_modules[st]);
-                if (!success) error = true;
+                if (!success) {
+                    error = true;
+                }
                 continue;
             }
         }
@@ -687,6 +685,7 @@ bool Sema::resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls) {
 
     for (auto &&currentDeclRef : decls) {
         auto currentDecl = currentDeclRef.get();
+        if (!currentDecl) dmz_unreachable("");
         debug_msg(currentDecl << " " << currentDecl->identifier << " " << currentDecl->location);
         if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
             if (!insert_decl_to_current_scope(*st)) {
@@ -708,13 +707,7 @@ bool Sema::resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls) {
             }
             continue;
         }
-        if (auto *md = dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
-            if (!insert_decl_to_current_scope(*md)) {
-                error = true;
-            }
-            continue;
-        }
-        if (dynamic_cast<ResolvedTestDecl *>(currentDecl)) {
+        if (dynamic_cast<ResolvedTestDecl *>(currentDecl) || dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
             continue;
         }
         currentDecl->dump();

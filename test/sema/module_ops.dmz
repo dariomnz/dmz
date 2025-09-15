@@ -1,5 +1,4 @@
 // RUN: compiler %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
-module ops {
     struct str_ops {
         x:i32,
         y:i32,
@@ -25,7 +24,6 @@ module ops {
             return x - y;
         }
     }
-}
 // CHECK: ResolvedModuleDecl ops
 // CHECK-NEXT:   ResolvedStructDecl  ops.str_ops
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x

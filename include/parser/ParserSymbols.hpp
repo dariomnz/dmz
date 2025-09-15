@@ -762,7 +762,9 @@ struct ModuleDecl : public Decl {
 
 struct ImportExpr : public Expr {
     std::string identifier;
-    ImportExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
+    std::string module_path;
+    ImportExpr(SourceLocation location, std::string_view identifier, std::string_view module_path)
+        : Expr(location), identifier(identifier), module_path(module_path) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

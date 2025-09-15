@@ -134,7 +134,10 @@ class Lexer {
     std::string get_file_name() {
         std::filesystem::path p(m_file_name);
         return p.filename().string();
-        // return m_file_name;
+    }
+
+    std::filesystem::path get_file_path() {
+        return std::filesystem::path(m_file_name);
     }
 
    private:

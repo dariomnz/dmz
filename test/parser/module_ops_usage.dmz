@@ -1,9 +1,9 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
 
-const ops = import("ops");
+const ops = import("module_ops.dmz");
 // CHECK: DeclStmt
 // CHECK-NEXT:   VarDecl:const  ops
-// CHECK-NEXT:     ImportExpr ops
+// CHECK-NEXT:     ImportExpr module_ops.dmz
 
 fn main() -> void {
     let x = 1;

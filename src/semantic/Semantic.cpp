@@ -97,7 +97,7 @@ std::vector<ResolvedDecl *> Sema::collect_scope() {
     }
 
 ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps) {
-    debug_func(id << " " << type);
+    debug_func(loc << " " << id);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
     dump_scopes();
@@ -124,7 +124,7 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
 }
 
 ResolvedDecl *Sema::lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id) {
-    debug_func("Module: " << moduleDecl.identifier << " id: " << id << " type: " << type);
+    debug_func("Module: " << moduleDecl.identifier << " id: " << id);
     add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
@@ -136,7 +136,7 @@ ResolvedDecl *Sema::lookup_in_module(const ResolvedModuleDecl &moduleDecl, const
 }
 
 ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id) {
-    debug_func("Struct " << structDecl.identifier << " " << id << " " << type);
+    debug_func("Struct " << structDecl.identifier << " " << id);
     add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
     for (auto &&decl : structDecl.functions) {
         if (id != decl->identifier) continue;
@@ -298,6 +298,25 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable("TODO");
 }
 
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_import_modules() {
+    debug_func("");
+    auto &imported_modules = Driver::instance().imported_modules;
+    std::vector<ptr<ResolvedModuleDecl>> resolvedDecl;
+    resolvedDecl.reserve(imported_modules.size());
+    bool error = false;
+    for (auto &&im : imported_modules) {
+        auto d = resolve_module(*im.decl);
+        if (!d || !resolve_module_decl(*im.decl, *d)) {
+            error = true;
+            continue;
+        }
+        auto &resDecl = resolvedDecl.emplace_back(std::move(d));
+        m_modules_for_import.emplace(im.identifier, resDecl.get());
+    }
+    if (error) return {};
+    return resolvedDecl;
+}
+
 std::vector<ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
@@ -309,13 +328,26 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     }
     m_ast.clear();
 
+    auto imported_mods = resolve_import_modules();
+
     auto declarations = resolve_in_module_decl(decls);
 
     for (auto &moduleDeclPtr : decls) {
         m_ast.emplace_back(static_cast<ModuleDecl *>(moduleDeclPtr.release()));
     }
     decls.clear();
-    return declarations;
+
+    std::vector<ptr<ResolvedDecl>> resolvedDecls;
+    resolvedDecls.reserve(imported_mods.size() + declarations.size());
+
+    for (auto &i : imported_mods) {
+        resolvedDecls.emplace_back(std::move(i));
+    }
+    for (auto &i : declarations) {
+        resolvedDecls.emplace_back(std::move(i));
+    }
+
+    return resolvedDecls;
 }
 
 bool Sema::resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls) {
