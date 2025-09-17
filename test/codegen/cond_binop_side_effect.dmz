@@ -14,13 +14,13 @@ fn fnFalse(x: i32) -> i1 {
 fn test1() -> void {
     fnFalse(1) || fnTrue(2) && fnFalse(3);
 }
-// CHECK: define void @test1() {
+// CHECK: define void @cond_binop_side_effect.test1() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i1 @fnFalse(i32 1)
+// CHECK-NEXT:   %0 = call i1 @cond_binop_side_effect.fnFalse(i32 1)
 // CHECK-NEXT:   br i1 %0, label %or.merge, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %entry
-// CHECK-NEXT:   %1 = call i1 @fnTrue(i32 2)
+// CHECK-NEXT:   %1 = call i1 @cond_binop_side_effect.fnTrue(i32 2)
 // CHECK-NEXT:   br i1 %1, label %and.rhs, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %and.merge, %entry
@@ -28,7 +28,7 @@ fn test1() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %or.rhs
-// CHECK-NEXT:   %3 = call i1 @fnFalse(i32 3)
+// CHECK-NEXT:   %3 = call i1 @cond_binop_side_effect.fnFalse(i32 3)
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.merge:                                        ; preds = %and.rhs, %or.rhs
@@ -39,13 +39,13 @@ fn test1() -> void {
 fn test2() -> void {
     fnFalse(4) || fnTrue(5) || fnTrue(6);
 }
-// CHECK: define void @test2() {
+// CHECK: define void @cond_binop_side_effect.test2() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i1 @fnFalse(i32 4)
+// CHECK-NEXT:   %0 = call i1 @cond_binop_side_effect.fnFalse(i32 4)
 // CHECK-NEXT:   br i1 %0, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %or.lhs.false
-// CHECK-NEXT:   %1 = call i1 @fnTrue(i32 6)
+// CHECK-NEXT:   %1 = call i1 @cond_binop_side_effect.fnTrue(i32 6)
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %or.rhs, %or.lhs.false, %entry
@@ -53,20 +53,20 @@ fn test2() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i1 @fnTrue(i32 5)
+// CHECK-NEXT:   %3 = call i1 @cond_binop_side_effect.fnTrue(i32 5)
 // CHECK-NEXT:   br i1 %3, label %or.merge, label %or.rhs
 // CHECK-NEXT: }
 
 fn test3() -> void {
     fnFalse(7) && fnFalse(8) && fnTrue(9);
 }
-// CHECK: define void @test3() {
+// CHECK: define void @cond_binop_side_effect.test3() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i1 @fnFalse(i32 7)
+// CHECK-NEXT:   %0 = call i1 @cond_binop_side_effect.fnFalse(i32 7)
 // CHECK-NEXT:   br i1 %0, label %and.lhs.true, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %and.lhs.true
-// CHECK-NEXT:   %1 = call i1 @fnTrue(i32 9)
+// CHECK-NEXT:   %1 = call i1 @cond_binop_side_effect.fnTrue(i32 9)
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.merge:                                        ; preds = %and.rhs, %and.lhs.true, %entry
@@ -74,20 +74,20 @@ fn test3() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: and.lhs.true:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i1 @fnFalse(i32 8)
+// CHECK-NEXT:   %3 = call i1 @cond_binop_side_effect.fnFalse(i32 8)
 // CHECK-NEXT:   br i1 %3, label %and.rhs, label %and.merge
 // CHECK-NEXT: }
 
 fn test4() -> void {
     fnTrue(10) || fnTrue(11) || fnTrue(12);
 }
-// CHECK: define void @test4() {
+// CHECK: define void @cond_binop_side_effect.test4() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i1 @fnTrue(i32 10)
+// CHECK-NEXT:   %0 = call i1 @cond_binop_side_effect.fnTrue(i32 10)
 // CHECK-NEXT:   br i1 %0, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %or.lhs.false
-// CHECK-NEXT:   %1 = call i1 @fnTrue(i32 12)
+// CHECK-NEXT:   %1 = call i1 @cond_binop_side_effect.fnTrue(i32 12)
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %or.rhs, %or.lhs.false, %entry
@@ -95,20 +95,20 @@ fn test4() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i1 @fnTrue(i32 11)
+// CHECK-NEXT:   %3 = call i1 @cond_binop_side_effect.fnTrue(i32 11)
 // CHECK-NEXT:   br i1 %3, label %or.merge, label %or.rhs
 // CHECK-NEXT: }
 
 fn test5() -> void {
     fnFalse(13) || fnTrue(14) && fnFalse(15) || fnTrue(16);
 }
-// CHECK: define void @test5() {
+// CHECK: define void @cond_binop_side_effect.test5() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i1 @fnFalse(i32 13)
+// CHECK-NEXT:   %0 = call i1 @cond_binop_side_effect.fnFalse(i32 13)
 // CHECK-NEXT:   br i1 %0, label %or.merge, label %or.lhs.false
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %and.lhs.true, %or.lhs.false
-// CHECK-NEXT:   %1 = call i1 @fnTrue(i32 16)
+// CHECK-NEXT:   %1 = call i1 @cond_binop_side_effect.fnTrue(i32 16)
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %or.rhs, %and.lhs.true, %entry
@@ -116,11 +116,11 @@ fn test5() -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: 
 // CHECK-NEXT: or.lhs.false:                                     ; preds = %entry
-// CHECK-NEXT:   %3 = call i1 @fnTrue(i32 14)
+// CHECK-NEXT:   %3 = call i1 @cond_binop_side_effect.fnTrue(i32 14)
 // CHECK-NEXT:   br i1 %3, label %and.lhs.true, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: and.lhs.true:                                     ; preds = %or.lhs.false
-// CHECK-NEXT:   %4 = call i1 @fnFalse(i32 15)
+// CHECK-NEXT:   %4 = call i1 @cond_binop_side_effect.fnFalse(i32 15)
 // CHECK-NEXT:   br i1 %4, label %or.merge, label %or.rhs
 // CHECK-NEXT: }
 

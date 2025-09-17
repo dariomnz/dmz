@@ -3,7 +3,7 @@ struct Point {
   x: i32,
   y: i32,
 }
-// CHECK: ResolvedStructDecl  Point
+// CHECK: ResolvedStructDecl  struct_with_struct_field.Point
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
@@ -13,11 +13,11 @@ struct Color {
   b: i32,
   p: Point,
 }
-// CHECK: ResolvedStructDecl  Color
+// CHECK: ResolvedStructDecl  struct_with_struct_field.Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
 // CHECK-NEXT:   ResolvedFieldDecl:i32 g
 // CHECK-NEXT:   ResolvedFieldDecl:i32 b
-// CHECK-NEXT:   ResolvedFieldDecl:Point{} p
+// CHECK-NEXT:   ResolvedFieldDecl:struct_with_struct_field.Point{} p
 
 fn main() -> void {
   let x = Color { 
@@ -30,8 +30,8 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Color{} x
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color{}
+// CHECK-NEXT:       ResolvedVarDecl:struct_with_struct_field.Color{} x
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:struct_with_struct_field.Color{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:             | value: 0
@@ -41,8 +41,8 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 b
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
-// CHECK-NEXT:           ResolvedFieldInitStmt:Point{} p
-// CHECK-NEXT:             ResolvedStructInstantiationExpr:Point{}
+// CHECK-NEXT:           ResolvedFieldInitStmt:struct_with_struct_field.Point{} p
+// CHECK-NEXT:             ResolvedStructInstantiationExpr:struct_with_struct_field.Point{}
 // CHECK-NEXT:               ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:                 ResolvedBinaryOperator:i32 '+'
 // CHECK-NEXT:                 | value: 7

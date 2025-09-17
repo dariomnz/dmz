@@ -1,13 +1,9 @@
-module std {
-    module testing {
-        const testingError = error {
-            EXPECT,
-        };
+const testingError = error {
+    EXPECT,
+};
 
-        fn expect(v: i1) -> void! {
-            if (v == false) {
-                return testingError.EXPECT;
-            }
-        }
+fn expect(v: i1) -> void! {
+    if (v == false) {
+        return testingError.EXPECT;
     }
 }

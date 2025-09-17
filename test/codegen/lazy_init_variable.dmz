@@ -12,7 +12,7 @@ fn foo(n: i32) -> void {
 
     println(x);
 }
-// CHECK: define void @foo(i32 %n) {
+// CHECK: define void @lazy_init_variable.foo(i32 %n) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
@@ -29,7 +29,7 @@ fn foo(n: i32) -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true
 // CHECK-NEXT:   %1 = load i32, ptr %x, align 4
-// CHECK-NEXT:   call void @println(i32 %1)
+// CHECK-NEXT:   call void @lazy_init_variable.println(i32 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

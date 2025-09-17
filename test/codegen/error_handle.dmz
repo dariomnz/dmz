@@ -17,7 +17,7 @@ fn foo(x:i32) -> i32! {
     }
     return x;
 }
-// CHECK: define void @foo(ptr sret(%error.struct.i32) %ret, i32 %x) {
+// CHECK: define void @error_handle.foo(ptr sret(%error.struct.i32) %ret, i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = icmp eq i32 %x, 1
 // CHECK-NEXT:   br i1 %0, label %if.true, label %if.exit
@@ -41,7 +41,7 @@ fn bar(x:i32) -> i32! {
     }
     return try foo(x);
 }
-// CHECK: define void @bar(ptr sret(%error.struct.i32) %ret, i32 %x) {
+// CHECK: define void @error_handle.bar(ptr sret(%error.struct.i32) %ret, i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
@@ -54,7 +54,7 @@ fn bar(x:i32) -> i32! {
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %entry
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 %x)
+// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 %x)
 // CHECK-NEXT:   %2 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %3 = load ptr, ptr %2, align 8
 // CHECK-NEXT:   %4 = ptrtoint ptr %3 to i64
@@ -128,9 +128,9 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %err, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp9, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp16, i8 0, i64 16, i1 false)
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 10)
+// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 10)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result, ptr align 8 %struct.ret.tmp, i64 16, i1 false)
-// CHECK-NEXT:   call void @bar(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 2)
+// CHECK-NEXT:   call void @error_handle.bar(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 2)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result2, ptr align 8 %struct.ret.tmp1, i64 16, i1 false)
 // CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
@@ -196,7 +196,7 @@ fn main() -> void {
 // CHECK-NEXT:   br label %if.exit8
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit8:                                         ; preds = %if.true7, %if.exit.try5
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp9, i32 1)
+// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp9, i32 1)
 // CHECK-NEXT:   %29 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp9, i32 0, i32 1
 // CHECK-NEXT:   %30 = load ptr, ptr %29, align 8
 // CHECK-NEXT:   %31 = ptrtoint ptr %30 to i64
@@ -223,7 +223,7 @@ fn main() -> void {
 // CHECK-NEXT:   %37 = getelementptr inbounds %error.struct.i32, ptr %result, i32 0, i32 0
 // CHECK-NEXT:   %38 = load i32, ptr %37, align 4
 // CHECK-NEXT:   %39 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.7, i32 %38)
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp16, i32 10)
+// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp16, i32 10)
 // CHECK-NEXT:   %40 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp16, i32 0, i32 1
 // CHECK-NEXT:   %41 = load ptr, ptr %40, align 8
 // CHECK-NEXT:   %42 = ptrtoint ptr %41 to i64

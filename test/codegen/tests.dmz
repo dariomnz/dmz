@@ -1,5 +1,5 @@
-// RUN: compiler %s -I %S/../../std -llvm-dump -test -module 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -I %S/../../std -run -test -module 2>&1) <(echo -n -e 'All 2 tests passed.\n')
+// RUN: compiler %s -I std %S/../../std/std.dmz -llvm-dump -test -module 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -I std %S/../../std/std.dmz -run -test -module 2>&1) <(echo -n -e 'All 2 tests passed.\n')
 const std = import("std");
 
 fn add(x:i32, y:i32) -> i32 {
@@ -41,7 +41,7 @@ test "add test 3" {
 // CHECK-NEXT:   ]
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case:                                      ; preds = %entry
-// CHECK-NEXT:   call void @"add test 2"(ptr sret(%error.struct.void) %struct.ret.tmp)
+// CHECK-NEXT:   call void @"tests.add test 2"(ptr sret(%error.struct.void) %struct.ret.tmp)
 // CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %2 = ptrtoint ptr %1 to i64
@@ -57,7 +57,7 @@ test "add test 3" {
 // CHECK-NEXT:   br label %switch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case1:                                     ; preds = %entry
-// CHECK-NEXT:   call void @"add test 3"(ptr sret(%error.struct.void) %struct.ret.tmp2)
+// CHECK-NEXT:   call void @"tests.add test 3"(ptr sret(%error.struct.void) %struct.ret.tmp2)
 // CHECK-NEXT:   %4 = getelementptr inbounds %error.struct.void, ptr %struct.ret.tmp2, i32 0, i32 1
 // CHECK-NEXT:   %5 = load ptr, ptr %4, align 8
 // CHECK-NEXT:   %6 = ptrtoint ptr %5 to i64

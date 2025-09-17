@@ -45,7 +45,12 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 std::string module_path;
                 if (++idx < argc) module_id = argv[idx];
                 if (++idx < argc) module_path = argv[idx];
+                if (!std::filesystem::exists(module_path)) {
+                    error("import '" + module_id + "' have a non existing path '" + module_path + '\'');
+                }
+                module_path = std::filesystem::canonical(module_path);
                 options.imports.emplace(module_id, module_path);
+
             } else if (arg == "-lexer-dump") {
                 options.lexerDump = true;
             } else if (arg == "-ast-dump") {
@@ -139,9 +144,12 @@ Driver::Type_Ast Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
         Parser parser(*lexers[index]);
         bool needMain = expectMain && !m_options.isModule && !m_options.test && index == 0;
         auto [ast, success] = parser.parse_source_file(needMain);
-        if (!success) m_haveError = true;
-
-        asts.emplace_back(std::move(ast));
+        if (!success) {
+            m_haveError = true;
+        }
+        if (ast) {
+            asts.emplace_back(std::move(ast));
+        }
         // });
     }
 
@@ -164,184 +172,154 @@ Driver::Type_Ast Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
     return asts;
 }
 
-std::string Driver::register_import(const std::filesystem::path &source, std::string_view imported) {
+std::vector<std::string> split(const std::string &s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
+    }
+    return tokens;
+}
+
+std::pair<std::string, std::filesystem::path> Driver::register_import(const std::filesystem::path &source,
+                                                                      std::string_view imported) {
+    debug_func("source: '" << source << "' imported '" << imported << "'");
     auto &d = instance();
+
+#ifdef DEBUG
+    debug_msg("Registed modules " << d.imported_modules.size());
+    for (auto &&[k, v] : d.imported_modules) {
+        debug_msg(k);
+    }
+#endif
+    std::string identifier = "";
+    std::filesystem::path module_path;
     if (imported.ends_with(".dmz")) {
         auto directory = source.parent_path();
-        auto module_path = directory.append(imported);
+        module_path = directory.append(imported);
+
         if (!std::filesystem::exists(module_path)) {
-            // error(module_path.string() + " doesn't exists");
-            return "";
+            return {"", ""};
+        }
+        module_path = std::filesystem::canonical(module_path);
+
+        std::filesystem::path parent_path = "";
+        std::string module_path_str = module_path.string();
+        // Find in imports the path to imported module
+        for (auto &&[k, v] : d.m_options.imports) {
+            auto imported_dir = v.parent_path();
+            imported_dir = std::filesystem::canonical(imported_dir);
+            if (module_path_str.find(imported_dir) != std::string::npos) {
+                parent_path = imported_dir;
+                identifier = k;
+                break;
+            }
+        }
+        if (parent_path.empty()) {
+            // if not in imports it need to be in the proyect dir
+            std::filesystem::path proyect_path = d.m_options.source.parent_path();
+            if (module_path_str.find(proyect_path) != std::string::npos) {
+                parent_path = proyect_path;
+            }
+        }
+        if (parent_path.empty()) {
+            return {"", ""};
+        }
+        // Extract the diferente, in other words the relative path
+        std::string parent_path_str = parent_path.string();
+        auto diff = module_path_str.substr(parent_path_str.size());
+        std::string termination = ".dmz";
+        if (diff.find_last_of(termination) != diff.size() - 1) {
+            dmz_unreachable("unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
         }
 
-        debug_msg("Search: " << module_path);
-        if (get_import(module_path.string())) {
-            debug_msg("find not reimport: " << module_path);
-            return module_path;
+        // convert the relative path to symbol name
+        int start_pos = (diff.size() > 0 && diff[0] == '/') ? 1 : 0;
+        diff = diff.substr(start_pos, diff.size() - (termination.size() + start_pos));
+        std::replace(diff.begin(), diff.end(), '/', '.');
+        // identifier empty if is not from imports
+        if (!identifier.empty() && !diff.empty()) {
+            identifier += ".";
         }
-
-        debug_msg("Register module: '" << module_path << "'");
-        imported_module im;
-        im.path = module_path;
-        im.identifier = module_path;
-        im.type = imported_module::kind::IMPORT_BY_PATH;
-        d.imported_modules.emplace_back(std::move(im));
-        return module_path;
+        identifier += diff;
     } else {
         auto it = d.m_options.imports.find(std::string(imported));
         if (it == d.m_options.imports.end()) {
-            // error("The required module '" + std::string(imported) +
-            //       "' could not be found. Please ensure the module is specified and its path is included using the '-I' "
-            //       "flag during compilation, e.g., `-I <module> <path>`.");
-            return "";
+            return {"", ""};
         }
-
-        debug_msg("Register module: '" << imported << "'");
-        imported_module im;
-        im.identifier = imported;
-        im.path = (*it).second;
-        im.type = imported_module::kind::IMPORT_BY_MODULE;
-        d.imported_modules.emplace_back(std::move(im));
-        return std::string(imported);
+        module_path = (*it).second;
+        // The identifier is simply the imported module
+        identifier = imported;
     }
-}
 
-Driver::imported_module *Driver::get_import(std::string_view imported) {
-    auto &d = instance();
-    auto it = std::find_if(d.imported_modules.begin(), d.imported_modules.end(), [&](const imported_module &i) {
-        debug_msg("compare '" << imported << "' '" << i.identifier << "' " << (imported == i.identifier));
-        return imported == i.identifier;
-    });
-    if (it == d.imported_modules.end()) {
-        return nullptr;
-    } else {
-        return &(*it);
+    debug_msg("module_path " << module_path);
+    debug_msg("identifier " << identifier);
+
+    debug_msg("Search: " << module_path);
+    if (d.imported_modules.find(module_path) != d.imported_modules.end()) {
+        debug_msg("find not reimport: " << module_path);
+        return {identifier, module_path};
     }
+
+    debug_msg("Register module: '" << module_path << "'");
+    d.imported_modules.emplace(module_path, nullptr);
+    return {identifier, module_path};
 }
-
-// bool Driver::all_imported() {
-//     for (auto &&[k, v] : imported_modules) {
-//         if (v == nullptr) return false;
-//     }
-//     return true;
-// }
-
-// ModuleDecl *Driver::find_module(std::string_view name, ptr<DMZ::ModuleDecl> &find_ast) {
-//     debug_msg("Find module: " << name);
-//     for (auto &&decl : find_ast->declarations) {
-//         debug_msg("Decl: " << decl->identifier);
-//         if (auto modDecl = dynamic_cast<ModuleDecl *>(decl.get())) {
-//             debug_msg("Encounter module: " << modDecl->identifier);
-//             if (name == modDecl->identifier) {
-//                 return modDecl;
-//             }
-//         }
-//     }
-//     return nullptr;
-// };
 
 void Driver::import_pass(Type_Ast &ast) {
     debug_func("");
 
-    for (auto &&im : imported_modules) {
-        Lexer l(im.path.c_str());
-        Parser p(l);
-        auto [parse_ast, success] = p.parse_source_file(false);
-        if (!success) {
-            continue;
+    auto all_imported = [&]() -> bool {
+        for (auto &&[k, v] : imported_modules) {
+            if (!v) return false;
         }
-        im.decl = std::move(parse_ast);
+        return true;
+    };
+
+    while (!all_imported()) {
+        std::vector<std::filesystem::path> to_remove;
+        for (auto &&[k, v] : imported_modules) {
+            if (!v) {
+                if (!std::filesystem::exists(k)) {
+                    debug_msg("error opening file " << k);
+                    std::cerr << "error: opening file '" << k << "'\n";
+                    to_remove.emplace_back(k);
+                    continue;
+                }
+                Lexer l(k.c_str());
+                Parser p(l);
+                auto [parse_ast, success] = p.parse_source_file(false);
+                if (!success) {
+                    debug_msg("error parsing " << k);
+                    to_remove.emplace_back(k);
+                    continue;
+                }
+                v = std::move(parse_ast);
+            }
+        }
+        if (to_remove.size() != 0) {
+            m_haveError = true;
+            for (auto &&k : to_remove) {
+                imported_modules.erase(k);
+            }
+        }
     }
-
-    // TODO: make in a way that only import the necesary modules
-
-    // std::vector<ptr<ModuleDecl>> imported;
-    // for (const auto &includeDir : m_options.includes) {
-    //     if (!std::filesystem::exists(includeDir)) {
-    //         std::cerr << "Warning: The include directory does not exist: " << includeDir << std::endl;
-    //         continue;
-    //     }
-    //     if (!std::filesystem::is_directory(includeDir)) {
-    //         std::cerr << "Warning: The include directory is not a directory: " << includeDir << std::endl;
-    //         continue;
-    //     }
-
-    //     for (const auto &entry : std::filesystem::recursive_directory_iterator(includeDir)) {
-    //         if (std::filesystem::is_regular_file(entry.status())) {
-    //             if (entry.path().extension() == ".dmz") {
-    //                 Lexer l(entry.path().c_str());
-    //                 Parser p(l);
-    //                 auto [import_ast, success] = p.parse_source_file(false);
-    //                 if (!success) {
-    //                     continue;
-    //                 }
-    //                 imported.emplace_back(std::move(import_ast));
-    //             }
-    //         }
-    //     }
-    // }
-
-    // auto imported_module = merge_modules(std::move(imported));
-    // if (!imported_module) {
-    //     report(SourceLocation{.file_name = "imported"}, "importing modules");
-    // } else {
-    //     ast.insert(ast.begin(), std::move(imported_module));
-    // }
 
     if (m_options.importDump) {
         for (auto &&decl : ast) {
             decl->dump();
         }
-        for (auto &&im : imported_modules) {
-            im.decl->dump();
+        for (auto &&[k, v] : imported_modules) {
+            v->dump();
         }
 
         m_haveNormalExit = true;
     }
     return;
 }
-
-// bool merge_module_decls(std::vector<ptr<Decl>> &decls1, std::vector<ptr<Decl>> &decls2) {
-//     debug_func("");
-//     bool error = false;
-//     for (auto &&decl2 : decls2) {
-//         auto it = std::find_if(decls1.begin(), decls1.end(),
-//                                [&decl2](ptr<Decl> &d) { return decl2->identifier == d->identifier; });
-
-//         if (it == decls1.end()) {
-//             // Not found
-//             decls1.emplace_back(std::move(decl2));
-//             continue;
-//         } else {
-//             // Found
-//             if (auto modDecl2 = dynamic_cast<ModuleDecl *>(decl2.get())) {
-//                 if (auto modDecl1 = dynamic_cast<ModuleDecl *>((*it).get())) {
-//                     error |= !merge_module_decls(modDecl1->declarations, modDecl2->declarations);
-//                 } else {
-//                     report(decl2->location, decl2->identifier + " already declared in the module");
-//                     error |= true;
-//                     continue;
-//                 }
-//             } else {
-//                 report(decl2->location, "expected module declaration to merge");
-//                 error |= true;
-//                 continue;
-//             }
-//         }
-//     }
-//     return !error;
-// }
-
-// ptr<ModuleDecl> Driver::merge_modules(std::vector<ptr<ModuleDecl>> modules) {
-//     debug_func("");
-//     std::vector<ptr<Decl>> declarations;
-//     for (auto &&mod : modules) {
-//         if (!merge_module_decls(declarations, mod->declarations)) {
-//             return report(mod->location, "cannot merge modules");
-//         }
-//     }
-//     return makePtr<ModuleDecl>(SourceLocation{.file_name = "imported"}, "imported.dmz", std::move(declarations));
-// }
 
 Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     debug_func("");
@@ -351,7 +329,7 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     resolvedTree = sema.resolve_ast_decl();
     if (resolvedTree.empty()) m_haveError = true;
 
-    if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
+    if (!m_haveError && !sema.resolve_ast_body(resolvedTree, m_options.noRemoveUnused)) m_haveError = true;
     if (!m_haveError && !m_options.noRemoveUnused) sema.remove_unused(resolvedTree, m_options.test);
 
     if (m_options.depsDump) {
@@ -409,19 +387,6 @@ Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree &resolvedTree) {
 
     return module;
 }
-
-// Driver::Type_Module Driver::linker_pass(Type_Module &modules) {
-//     debug_msg("modules size " << modules.size());
-//     Linker linker(std::move(modules));
-//     auto module = linker.link_modules();
-
-//     if (m_options.llvmDump) {
-//         module->withModuleDo([](auto &m) { m.dump(); });
-//         m_haveNormalExit = true;
-//         return nullptr;
-//     }
-//     return module;
-// }
 
 int Driver::jit_pass(Type_Module &module) {
     int pipefd[2];

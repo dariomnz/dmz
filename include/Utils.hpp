@@ -209,4 +209,21 @@ overload(Ts...) -> overload<Ts...>;
     return {};
 }
 
+template <typename from, typename to>
+std::vector<std::unique_ptr<to>> move_vector_ptr(std::vector<std::unique_ptr<from>>& source_vector) {
+    std::vector<std::unique_ptr<to>> target_vector;
+    target_vector.reserve(source_vector.size());
+
+    for (auto& ptr_derived : source_vector) {
+        if (auto ptr = dynamic_cast<to*>(ptr_derived.release())) {
+            target_vector.emplace_back(ptr);
+        } else {
+            dmz_unreachable("unexpected error, cannot convert in move_vector_ptr");
+        }
+    }
+
+    source_vector.clear();
+    return target_vector;
+}
+
 }  // namespace DMZ

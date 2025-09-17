@@ -5,7 +5,7 @@ fn main() -> void {}
 fn noInsertPoint() -> void {
     return;
 }
-// CHECK: define void @noInsertPoint() {
+// CHECK: define void @return.noInsertPoint() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
@@ -18,7 +18,7 @@ fn insertPointEmptyBlock() -> void {
         return;
     }
 }
-// CHECK: define void @insertPointEmptyBlock() {
+// CHECK: define void @return.insertPointEmptyBlock() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   br i1 true, label %if.true, label %if.exit
 // CHECK-NEXT: 
@@ -37,7 +37,7 @@ fn insertPointEmptyBlock2() -> void {
         return;
     }
 }
-// CHECK: define void @insertPointEmptyBlock2() {
+// CHECK: define void @return.insertPointEmptyBlock2() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 
@@ -61,7 +61,7 @@ fn insertPointNonEmptyBlock() -> void {
 
     let x: i32 = 1;
 }
-// CHECK: define void @insertPointNonEmptyBlock() {
+// CHECK: define void @return.insertPointNonEmptyBlock() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
@@ -85,7 +85,7 @@ fn insertPointNonEmptyBlock2() -> void {
 
     let x: i32 = 1;
 }
-// CHECK: define void @insertPointNonEmptyBlock2() {
+// CHECK: define void @return.insertPointNonEmptyBlock2() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)

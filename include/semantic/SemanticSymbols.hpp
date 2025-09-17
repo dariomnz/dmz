@@ -616,11 +616,13 @@ struct ResolvedOrElseErrorExpr : public ResolvedExpr {
 };
 
 struct ResolvedModuleDecl : public ResolvedDependencies {
+    std::filesystem::path module_path;
     std::vector<ptr<ResolvedDecl>> declarations;
 
-    ResolvedModuleDecl(SourceLocation location, std::string_view identifier,
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::filesystem::path module_path,
                        std::vector<ptr<ResolvedDecl>> declarations)
         : ResolvedDependencies(location, identifier, makePtr<ResolvedTypeModule>(location, this), false),
+          module_path(std::move(module_path)),
           declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;

@@ -535,17 +535,20 @@ ptr<ResolvedModuleDecl> Sema::resolve_module(const ModuleDecl &moduleDecl) {
         }
     }
     if (error) return nullptr;
-    auto modDecl = makePtr<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, std::move(declarations));
+    auto modDecl = makePtr<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, moduleDecl.module_path,
+                                               std::move(declarations));
 
     return modDecl;
 }
 
 bool Sema::resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl) {
+    debug_func(moduleDecl.location);
     auto prevModule = m_currentModule;
     m_currentModule = &resolvedModuleDecl;
     defer([&]() { m_currentModule = prevModule; });
     // println("resolve_module_decl New actual module: "<<m_currentModule->identifier);
     auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations, std::move(resolvedModuleDecl.declarations));
+    if (resolvedDecls.size() == 0) return false;
     resolvedModuleDecl.declarations = std::move(resolvedDecls);
 
     return true;
@@ -562,8 +565,9 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
 
 std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
                                                             std::vector<ptr<ResolvedDecl>> alreadyResolved) {
-    debug_func("Decls " << decls.size() << " Already resolved " << alreadyResolved.size());
     bool error = false;
+    debug_func("Decls " << decls.size() << " Already resolved " << alreadyResolved.size() << " error "
+                        << (error ? "true" : "false"));
     std::vector<ptr<ResolvedDecl>> resolvedTree;
     std::unordered_map<ModuleDecl *, ResolvedModuleDecl *> map_modules;
     ScopeRAII moduleScope(*this);
@@ -647,8 +651,8 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
     {
         for (auto &&decl : decls) {
             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
-                if (auto resolvedDecl = resolve_function_decl(*fn);
-                    resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
+                auto resolvedDecl = resolve_function_decl(*fn);
+                if (resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
                     if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(resolvedDecl.get())) {
                         m_tests.emplace_back(test);
                     }
@@ -831,7 +835,7 @@ void Sema::resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl) {
     auto elseBlock = makePtr<ResolvedBlock>(loc, std::move(retBlockStmts), std::vector<ptr<ResolvedDeferRefStmt>>{});
     std::vector<ptr<ResolvedCaseStmt>> cases;
     for (size_t i = 0; i < m_tests.size(); i++) {
-        auto test_name = makePtr<ResolvedStringLiteral>(loc, m_tests[i]->identifier);
+        auto test_name = makePtr<ResolvedStringLiteral>(loc, m_tests[i]->name());
         auto retStmt = makePtr<ResolvedReturnStmt>(loc, std::move(test_name), std::vector<ptr<ResolvedDeferRefStmt>>{});
         std::vector<ptr<ResolvedStmt>> retBlockStmts;
         retBlockStmts.emplace_back(std::move(retStmt));

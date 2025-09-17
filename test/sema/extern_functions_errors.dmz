@@ -13,5 +13,4 @@ extern fn argvar1(a:i32, ... , ...) -> void;
 extern fn argvar2(a:i32, ..., b:i32) -> void;
 
 fn main() -> void {}
-// CHECK: ResolvedModuleDecl extern_functions_errors.dmz
 // CHECK-NOT: {{.*}}

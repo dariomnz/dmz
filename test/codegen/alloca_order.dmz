@@ -10,7 +10,7 @@ fn foo(x: i32, y: i32, z: i32) -> void {
     println(y1);
     println(z1);
 }
-// CHECK: define void @foo(i32 %x, i32 %y, i32 %z) {
+// CHECK: define void @alloca_order.foo(i32 %x, i32 %y, i32 %z) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x1 = alloca i32, align 4
 // CHECK-NEXT:   %y1 = alloca i32, align 4
@@ -22,11 +22,11 @@ fn foo(x: i32, y: i32, z: i32) -> void {
 // CHECK-NEXT:   store i32 %y, ptr %y1, align 4
 // CHECK-NEXT:   store i32 %z, ptr %z1, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   call void @println(i32 %0)
+// CHECK-NEXT:   call void @alloca_order.println(i32 %0)
 // CHECK-NEXT:   %1 = load i32, ptr %y1, align 4
-// CHECK-NEXT:   call void @println(i32 %1)
+// CHECK-NEXT:   call void @alloca_order.println(i32 %1)
 // CHECK-NEXT:   %2 = load i32, ptr %z1, align 4
-// CHECK-NEXT:   call void @println(i32 %2)
+// CHECK-NEXT:   call void @alloca_order.println(i32 %2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

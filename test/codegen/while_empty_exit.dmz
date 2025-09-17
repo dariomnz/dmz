@@ -5,7 +5,7 @@ fn foo(x: i32) -> void {
         return;
     }
 }
-// CHECK: define void @foo(i32 %x) {
+// CHECK: define void @while_empty_exit.foo(i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 

@@ -1,9 +1,8 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
 const ops = import("module_ops.dmz");
-// CHECK: ResolvedDeclStmt
-// CHECK-NEXT:   ResolvedVarDecl:const ops ops
-// CHECK-NEXT:     ResolvedImportExpr ops
+// CHECK:   ResolvedVarDecl:const module_ops ops
+// CHECK-NEXT:     ResolvedImportExpr module_ops
 
 fn main() -> void {
     let x = 1;

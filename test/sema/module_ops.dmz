@@ -1,51 +1,25 @@
 // RUN: compiler %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
-    struct str_ops {
-        x:i32,
-        y:i32,
-        z:i32,
-    }
+struct str_ops {
+    x:i32,
+    y:i32,
+    z:i32,
+}
 
-    fn print(x:i32) -> void {
-        println(x);
-    }
+fn print(x:i32) -> void {
+    println(x);
+}
 
-    extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;
 
-    fn println(n:i32) -> void {
-        printf("%d\n", n);
-    }
+fn println(n:i32) -> void {
+    printf("%d\n", n);
+}
 
-    module integer {
-        fn add(x:i32, y:i32) -> i32 {
-            return x + y;
-        }
-
-        fn sub(x:i32, y:i32) -> i32 {
-            return x - y;
-        }
-    }
-// CHECK: ResolvedModuleDecl ops
-// CHECK-NEXT:   ResolvedStructDecl  ops.str_ops
+const integer = import("module_ops_integer.dmz");
+// CHECK:   ResolvedStructDecl module_ops.str_ops
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
 // CHECK-NEXT:     ResolvedFieldDecl:i32 z
-// CHECK-NEXT:   ResolvedModuleDecl integer
-// CHECK-NEXT:     ResolvedFunctionDecl add -> i32
-// CHECK-NEXT:       ResolvedParamDecl:i32 x
-// CHECK-NEXT:       ResolvedParamDecl:i32 y
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:     ResolvedFunctionDecl sub -> i32
-// CHECK-NEXT:       ResolvedParamDecl:i32 x
-// CHECK-NEXT:       ResolvedParamDecl:i32 y
-// CHECK-NEXT:       ResolvedBlock
-// CHECK-NEXT:         ResolvedReturnStmt
-// CHECK-NEXT:           ResolvedBinaryOperator:i32 '-'
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:   ResolvedFunctionDecl print -> void
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock

@@ -37,18 +37,9 @@ class Driver {
     std::vector<ptr<llvm::orc::ThreadSafeModule>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
-    struct imported_module {
-        enum class kind {
-            IMPORT_BY_PATH,
-            IMPORT_BY_MODULE,
-        };
-        kind type = kind::IMPORT_BY_PATH;
-        std::filesystem::path path = {};
-        std::string identifier = {};
-        ptr<ModuleDecl> decl = nullptr;
-    };
+
    public:
-    std::vector<imported_module> imported_modules;
+    std::unordered_map<std::filesystem::path, ptr<ModuleDecl>> imported_modules;
 
    public:
     CompilerOptions m_options;
@@ -71,8 +62,9 @@ class Driver {
     //                           const std::unordered_set<std::string_view>& importedModuleIDs);
     void import_pass(Type_Ast& asts);
     // ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
-    static std::string register_import(const std::filesystem::path& source, std::string_view imported);
-    static imported_module* get_import(std::string_view imported);
+    static std::pair<std::string, std::filesystem::path> register_import(const std::filesystem::path& source,
+                                                                         std::string_view imported);
+    // static imported_module* get_import(std::string_view imported);
     // bool all_imported();
     // ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
 

@@ -1,5 +1,6 @@
-// RUN: compiler %s -I %S/../../std -res-dump -module -test 2>&1 | filecheck %s
+// RUN: compiler %s -I std %S/../../std/std.dmz -res-dump -module -test 2>&1 | filecheck %s
 const std = import("std");
+const ops = import("module_ops.dmz");
 
 fn add(x:i32, y:i32) -> i32 {
     return x + y;

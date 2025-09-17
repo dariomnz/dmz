@@ -7,13 +7,13 @@ fn print<T>(param:T) -> void {
     printf("One integer %d\n", param);
 }
 
-// CHECK: define void @"print<i32>"(i32 %param) {
+// CHECK: define void @"generic_func.print<i32>"(i32 %param) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %param)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK: define void @"print<i64>"(i64 %param) {
+// CHECK: define void @"generic_func.print<i64>"(i64 %param) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %param)
 // CHECK-NEXT:   ret void
@@ -23,7 +23,7 @@ fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
     printf("Integers %d %d %d\n", param1, param2, param3);
 }
 
-// CHECK: define void @"foo<i16, i32, i64>"(i16 %param1, i32 %param2, i64 %param3) {
+// CHECK: define void @"generic_func.foo<i16, i32, i64>"(i16 %param1, i32 %param2, i64 %param3) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i16 %param1, i32 %param2, i64 %param3)
 // CHECK-NEXT:   ret void
@@ -37,8 +37,8 @@ fn main() -> void {
 
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   call void @"print<i32>"(i32 1)
-// CHECK-NEXT:   call void @"print<i64>"(i32 2)
-// CHECK-NEXT:   call void @"foo<i16, i32, i64>"(i32 123, i32 1234, i32 12345)
+// CHECK-NEXT:   call void @"generic_func.print<i32>"(i32 1)
+// CHECK-NEXT:   call void @"generic_func.print<i64>"(i32 2)
+// CHECK-NEXT:   call void @"generic_func.foo<i16, i32, i64>"(i32 123, i32 1234, i32 12345)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

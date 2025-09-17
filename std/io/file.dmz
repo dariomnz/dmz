@@ -1,15 +1,3 @@
 
-module std {
-    module file {
-        extern fn open(buffer:*u8, flags:i32, ...) -> i32;
-        extern fn printf(fmt:*u8, ...) -> i32;
-    }
-}
-
-// struct File {
-//     fd: int,
-// }
-
-// fn open() -> File! {
-//     return 
-// }
+extern fn open(buffer:*u8, flags:i32, ...) -> i32;
+extern fn printf(fmt:*u8, ...) -> i32;

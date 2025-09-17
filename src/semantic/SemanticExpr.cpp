@@ -78,8 +78,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     bool isMemberCall = false;
     ptr<ResolvedExpr> resolvedBase = nullptr;
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(call.callee.get())) {
-        auto resolvedMemberExpr = resolve_member_expr(*memberExpr);
-        if (!resolvedMemberExpr) return nullptr;
+        varOrReturn(resolvedMemberExpr, resolve_member_expr(*memberExpr));
         resolvedBase = std::move(resolvedMemberExpr->base);
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
@@ -87,8 +86,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
             isMemberCall = !memFunc->isStatic;
         }
     } else if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(call.callee.get())) {
-        auto resolvedMemberExpr = resolve_self_member_expr(*memberExpr);
-        if (!resolvedMemberExpr) return nullptr;
+        varOrReturn(resolvedMemberExpr, resolve_self_member_expr(*memberExpr));
         resolvedBase = std::move(resolvedMemberExpr->base);
 
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
@@ -111,7 +109,9 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
     }
 
-    if (!resolvedFuncDecl) return report(call.location, "calling non-function symbol");
+    if (!resolvedFuncDecl) {
+        return report(call.location, "calling non-function symbol");
+    }
 
     if (dynamic_cast<const ResolvedGenericFunctionDecl *>(resolvedFuncDecl)) {
         return report(call.location, "try to call a generic function without specialization");
@@ -393,9 +393,10 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
         // moduleDecl->dump();
         decl = lookup_in_module(*moduleDecl, memberExpr.field);
-        if (!decl)
+        if (!decl) {
             return report(memberExpr.location, "module \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
+        }
 
     } else if (auto modType = dynamic_cast<const ResolvedTypeErrorGroup *>(baseType)) {
         auto errorGroupDecl = modType->decl;
@@ -612,12 +613,11 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
 
     auto it = m_modules_for_import.find(importExpr.module_path);
     if (it == m_modules_for_import.end()) {
-        dmz_unreachable("unexpected error module module '" + importExpr.identifier + "' not found");
+        return report(importExpr.location, "not resolved module '" + importExpr.identifier + "'");
     }
 
     auto im = (*it).second;
-
-    add_dependency(im);
+    im->symbolName = importExpr.module_id;
 
     return makePtr<ResolvedImportExpr>(importExpr.location, *im);
 }

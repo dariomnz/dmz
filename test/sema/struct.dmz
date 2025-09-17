@@ -4,7 +4,7 @@ struct Color {
   g: i32,
   b: i32,
 }
-// CHECK: ResolvedStructDecl  Color
+// CHECK: ResolvedStructDecl  struct.Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
 // CHECK-NEXT:   ResolvedFieldDecl:i32 g
 // CHECK-NEXT:   ResolvedFieldDecl:i32 b
@@ -19,8 +19,8 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:Color{} x
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:Color
+// CHECK-NEXT:       ResolvedVarDecl:struct.Color{} x
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:struct.Color
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:             | value: 0

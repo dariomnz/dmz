@@ -14,7 +14,7 @@ fn foo(x: i32) -> i32 {
 
     return 52;
 }
-// CHECK: define i32 @foo(i32 %x) {
+// CHECK: define i32 @multiple_return_if.foo(i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 4, i1 false)

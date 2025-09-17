@@ -1,20 +1,5 @@
-module std {
-    module io {
-        extern fn printf(fmt: *u8, ...) -> i32;
 
-        fn println(n:i32) -> i32 {
-            return printf("%d\n", n);
-        }
-        // fn printf16(n:f16, digits:i32) -> i32 {
-        //     let var:f64 = n;
-        //     return printf("%.*f\n", digits, var);
-        // }
-        // fn printf32(n:f32, digits:i32) -> i32 {
-        //     let var:f64 = n;
-        //     return printf("%.*f\n", digits, var);
-        // }
-        // fn printf64(n:f64, digits:i32) -> i32 {
-        //     return printf("%.*f\n", digits, n);
-        // }
-    }
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n:i32) -> i32 {
+    return printf("%d\n", n);
 }

@@ -8,7 +8,7 @@ fn foo(n:*i32) -> void {
         printf("is null\n");
     }
 }
-// CHECK: define void @foo(ptr byref(i32) %n) {
+// CHECK: define void @null.foo(ptr byref(i32) %n) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = ptrtoint ptr %n to i64
 // CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %0, 0
@@ -37,8 +37,8 @@ fn main() -> void {
 // CHECK-NEXT:   %i = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 42, ptr %i, align 4
-// CHECK-NEXT:   call void @foo(ptr byref(i32) null)
-// CHECK-NEXT:   call void @foo(ptr byref(i32) %i)
+// CHECK-NEXT:   call void @null.foo(ptr byref(i32) null)
+// CHECK-NEXT:   call void @null.foo(ptr byref(i32) %i)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

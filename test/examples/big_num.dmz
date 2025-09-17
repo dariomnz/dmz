@@ -1,4 +1,4 @@
-// RUN: compiler %s -I %S/../../std -run | filecheck %s
+// RUN: compiler %s -I std %S/../../std/std.dmz -run | filecheck %s
 
 // CHECK: 123456789123456789123456789123456789123456789123456789123456789123456789
 

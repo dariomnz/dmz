@@ -751,10 +751,12 @@ struct OrElseErrorExpr : public Expr {
 };
 
 struct ModuleDecl : public Decl {
+    std::filesystem::path module_path;
     std::vector<ptr<Decl>> declarations;
 
-    ModuleDecl(SourceLocation location, std::string_view identifier, std::vector<ptr<Decl>> declarations = {})
-        : Decl(location, identifier), declarations(std::move(declarations)) {}
+    ModuleDecl(SourceLocation location, std::string_view identifier, std::filesystem::path module_path,
+               std::vector<ptr<Decl>> declarations)
+        : Decl(location, identifier), module_path(std::move(module_path)), declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -762,9 +764,11 @@ struct ModuleDecl : public Decl {
 
 struct ImportExpr : public Expr {
     std::string identifier;
-    std::string module_path;
-    ImportExpr(SourceLocation location, std::string_view identifier, std::string_view module_path)
-        : Expr(location), identifier(identifier), module_path(module_path) {}
+    std::string module_id;
+    std::filesystem::path module_path;
+    ImportExpr(SourceLocation location, std::string_view identifier, std::string module_id,
+               std::filesystem::path module_path)
+        : Expr(location), identifier(identifier), module_id(std::move(module_id)), module_path(std::move(module_path)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

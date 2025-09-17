@@ -10,5 +10,4 @@ fn bar(x: i32, y: customType) -> void {}
 fn redeclaredParam(x: i32, x: i32) -> void {}
 
 fn main() -> void {}
-// CHECK: ResolvedModuleDecl
 // CHECK-NOT: {{.*}}

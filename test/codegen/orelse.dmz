@@ -44,7 +44,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse2, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp5, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse6, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 0)
+// CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 0)
 // CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %2 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
@@ -55,7 +55,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.orelse, label %if.exit.orelse
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.orelse:                                   ; preds = %entry
-// CHECK-NEXT:   %5 = call i32 @bar(i32 10)
+// CHECK-NEXT:   %5 = call i32 @orelse.bar(i32 10)
 // CHECK-NEXT:   store i32 %5, ptr %tmp.orelse, align 4
 // CHECK-NEXT:   br label %if.exit.orelse
 // CHECK-NEXT: 
@@ -64,7 +64,7 @@ fn main() -> void {
 // CHECK-NEXT:   store i32 %6, ptr %a, align 4
 // CHECK-NEXT:   %7 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %8 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i32 %7)
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 0)
+// CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 0)
 // CHECK-NEXT:   %9 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 1
 // CHECK-NEXT:   %10 = load ptr, ptr %9, align 8
 // CHECK-NEXT:   %11 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 0
@@ -75,7 +75,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %ptr.to.bool3, label %if.true.orelse4, label %if.exit.orelse10
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.orelse4:                                  ; preds = %if.exit.orelse
-// CHECK-NEXT:   call void @foo(ptr sret(%error.struct.i32) %struct.ret.tmp5, i32 1)
+// CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp5, i32 1)
 // CHECK-NEXT:   %14 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 1
 // CHECK-NEXT:   %15 = load ptr, ptr %14, align 8
 // CHECK-NEXT:   %16 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 0
@@ -86,7 +86,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %ptr.to.bool7, label %if.true.orelse8, label %if.exit.orelse9
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.orelse8:                                  ; preds = %if.true.orelse4
-// CHECK-NEXT:   %19 = call i32 @bar(i32 20)
+// CHECK-NEXT:   %19 = call i32 @orelse.bar(i32 20)
 // CHECK-NEXT:   store i32 %19, ptr %tmp.orelse6, align 4
 // CHECK-NEXT:   br label %if.exit.orelse9
 // CHECK-NEXT: 

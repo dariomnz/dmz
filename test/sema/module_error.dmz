@@ -1,17 +1,16 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
 const ops = import("module_ops.dmz");
-const ops2 = import("module_ops.dmz");
 
 fn main() -> void {
     let x = 1;
     let y = 2;
 
-    // CHECK: [[# @LINE + 1 ]]:10: error: symbol 'prints' not found
+    // CHECK: [[# @LINE + 1 ]]:8: error: module 'module_ops' has no member called 'prints'
     ops.prints(x);
 
     let result = ops.integer.add(x, y);
-    // CHECK: [[# @LINE + 1 ]]:10: error: module 'ops::float::' not imported
+    // CHECK: [[# @LINE + 1 ]]:8: error: module 'module_ops' has no member called 'float'
     ops.float.add(x, y);
     
     ops.print(result);

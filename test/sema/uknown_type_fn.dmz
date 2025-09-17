@@ -4,5 +4,4 @@
 fn foo() -> userDefinedType {}
 
 fn main() -> void {}
-// CHECK: ResolvedModuleDecl uknown_type_fn.dmz
 // CHECK-NOT: {{.*}}

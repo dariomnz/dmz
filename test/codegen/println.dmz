@@ -10,7 +10,7 @@ fn main() -> void {
 }
 // CHECK: declare i32 @printf(ptr byref(i8) %0, ...)
 
-// CHECK: define void @println(i32 %n) {
+// CHECK: define void @println.println(i32 %n) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %n)
 // CHECK-NEXT:   ret void

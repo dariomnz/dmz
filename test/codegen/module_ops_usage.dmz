@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s %S/module_ops.dmz -run 2>&1) <(echo -n -e '1\n2\n3\n')
+// RUN: compiler %s -I ops %S/module_ops.dmz -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -I ops %S/module_ops.dmz -run 2>&1) <(echo -n -e '1\n2\n3\n')
 
 const ops = import("ops");
 
@@ -10,7 +10,7 @@ fn main() -> void {
     ops.print(x);
     ops.print(y);
 
-    let result = ops.integer.add(x, y);
+    let result = ops.add(x, y);
     
     ops.print(result);
 }
@@ -30,7 +30,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @ops.print(i32 %1)
 // CHECK-NEXT:   %2 = load i32, ptr %x, align 4
 // CHECK-NEXT:   %3 = load i32, ptr %y, align 4
-// CHECK-NEXT:   %4 = call i32 @ops.integer.add(i32 %2, i32 %3)
+// CHECK-NEXT:   %4 = call i32 @ops.add(i32 %2, i32 %3)
 // CHECK-NEXT:   store i32 %4, ptr %result, align 4
 // CHECK-NEXT:   %5 = load i32, ptr %result, align 4
 // CHECK-NEXT:   call void @ops.print(i32 %5)

@@ -8,5 +8,4 @@ fn main(x:i32) -> void {}
 
 // CHECK: [[# @LINE + 1 ]]:1: error: 'main' function is expected to have 'void' type
 fn main() -> i32 {}
-// CHECK: ResolvedModuleDecl function.dmz
 // CHECK-NOT: {{.*}}

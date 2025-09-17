@@ -1,34 +1,29 @@
 // RUN: compiler %s -module -ast-dump 2>&1 | filecheck %s
-module ops {
-    const std = import("asdf");
-    struct str_ops {
-        x:i32,
-        y:i32,
-        z:i32,
-    }
-
-    fn print(x:i32) -> void {
-        println(x);
-    }
-
-    extern fn printf(fmt:*u8, ...) -> i32;
-
-    fn println(n:i32) -> void {
-        printf(&"%d\n", n);
-    }
-
-    module integer {
-        fn add(x:i32, y:i32) -> i32 {
-            return x + y;
-        }
-
-        fn sub(x:i32, y:i32) -> i32 {
-            return x - y;
-        }
-    }
+const std = import("asdf");
+struct str_ops {
+    x:i32,
+    y:i32,
+    z:i32,
 }
-// CHECK: ModuleDecl ops
-// CHECK-NEXT:   DeclStmt
+
+fn print(x:i32) -> void {
+    println(x);
+}
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn println(n:i32) -> void {
+    printf(&"%d\n", n);
+}
+
+fn add(x:i32, y:i32) -> i32 {
+    return x + y;
+}
+
+fn sub(x:i32, y:i32) -> i32 {
+    return x - y;
+}
+// CHECK:   DeclStmt
 // CHECK-NEXT:     VarDecl:const  std
 // CHECK-NEXT:       ImportExpr asdf
 // CHECK-NEXT:   StructDecl str_ops
@@ -52,20 +47,19 @@ module ops {
 // CHECK-NEXT:         RefPtrExpr
 // CHECK-NEXT:           StringLiteral '"%d\n"'
 // CHECK-NEXT:         DeclRefExpr n
-// CHECK-NEXT:   ModuleDecl integer
-// CHECK-NEXT:     FunctionDecl add -> i32
-// CHECK-NEXT:       ParamDecl:i32 x
-// CHECK-NEXT:       ParamDecl:i32 y
-// CHECK-NEXT:       Block
-// CHECK-NEXT:         ReturnStmt
-// CHECK-NEXT:           BinaryOperator '+'
-// CHECK-NEXT:             DeclRefExpr x
-// CHECK-NEXT:             DeclRefExpr y
-// CHECK-NEXT:     FunctionDecl sub -> i32
-// CHECK-NEXT:       ParamDecl:i32 x
-// CHECK-NEXT:       ParamDecl:i32 y
-// CHECK-NEXT:       Block
-// CHECK-NEXT:         ReturnStmt
-// CHECK-NEXT:           BinaryOperator '-'
-// CHECK-NEXT:             DeclRefExpr x
-// CHECK-NEXT:             DeclRefExpr y
+// CHECK-NEXT:   FunctionDecl add -> i32
+// CHECK-NEXT:     ParamDecl:i32 x
+// CHECK-NEXT:     ParamDecl:i32 y
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         BinaryOperator '+'
+// CHECK-NEXT:           DeclRefExpr x
+// CHECK-NEXT:           DeclRefExpr y
+// CHECK-NEXT:   FunctionDecl sub -> i32
+// CHECK-NEXT:     ParamDecl:i32 x
+// CHECK-NEXT:     ParamDecl:i32 y
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         BinaryOperator '-'
+// CHECK-NEXT:           DeclRefExpr x
+// CHECK-NEXT:           DeclRefExpr y

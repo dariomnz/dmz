@@ -242,23 +242,24 @@ ptr<ErrorDecl> Parser::parse_error_decl() {
 
 ptr<ModuleDecl> Parser::parse_module_decl() {
     debug_func("");
-    auto location = m_nextToken.loc;
-    matchOrReturn(TokenType::kw_module, "expected 'module'");
-    eat_next_token();  // eat module
+    dmz_unreachable("TODO: think if permit declaration of modules");
+    // auto location = m_nextToken.loc;
+    // matchOrReturn(TokenType::kw_module, "expected 'module'");
+    // eat_next_token();  // eat module
 
-    matchOrReturn(TokenType::id, "expected identifier");
-    auto identifier = m_nextToken.str;
-    eat_next_token();  // eat identifier
+    // matchOrReturn(TokenType::id, "expected identifier");
+    // auto identifier = m_nextToken.str;
+    // eat_next_token();  // eat identifier
 
-    matchOrReturn(TokenType::block_l, "expected '{'");
-    eat_next_token();  // eat {
+    // matchOrReturn(TokenType::block_l, "expected '{'");
+    // eat_next_token();  // eat {
 
-    auto declarations = parse_in_module_decl();
+    // auto declarations = parse_in_module_decl();
 
-    matchOrReturn(TokenType::block_r, "expected '}'");
-    eat_next_token();  // eat {
+    // matchOrReturn(TokenType::block_r, "expected '}'");
+    // eat_next_token();  // eat {
 
-    return makePtr<ModuleDecl>(location, identifier, std::move(declarations));
+    // return makePtr<ModuleDecl>(location, identifier, std::move(declarations));
 }
 
 std::vector<ptr<Decl>> Parser::parse_in_module_decl() {

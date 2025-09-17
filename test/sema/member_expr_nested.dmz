@@ -13,27 +13,27 @@ fn main() -> void {
 
   let x = s.n.x;
 }
-// CHECK: ResolvedStructDecl  S
+// CHECK: ResolvedStructDecl member_expr_nested.S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
-// CHECK-NEXT:   ResolvedFieldDecl:S2{} n
-// CHECK-NEXT: ResolvedStructDecl  S2
+// CHECK-NEXT:   ResolvedFieldDecl:member_expr_nested.S2{} n
+// CHECK-NEXT: ResolvedStructDecl  member_expr_nested.S2
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 
 // CHECK-NEXT: ResolvedFunctionDecl main -> void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:S{} s
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:S{}
+// CHECK-NEXT:       ResolvedVarDecl:member_expr_nested.S{} s
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:member_expr_nested.S{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:             | value: 0
-// CHECK-NEXT:           ResolvedFieldInitStmt:S2{} n
-// CHECK-NEXT:             ResolvedStructInstantiationExpr:S2{}
+// CHECK-NEXT:           ResolvedFieldInitStmt:member_expr_nested.S2{} n
+// CHECK-NEXT:             ResolvedStructInstantiationExpr:member_expr_nested.S2{}
 // CHECK-NEXT:               ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32 x
 // CHECK-NEXT:         ResolvedMemberExpr:i32 x
-// CHECK-NEXT:           ResolvedMemberExpr:S2{} n
-// CHECK-NEXT:             ResolvedDeclRefExpr:S{} s
+// CHECK-NEXT:           ResolvedMemberExpr:member_expr_nested.S2{} n
+// CHECK-NEXT:             ResolvedDeclRefExpr:member_expr_nested.S{} s

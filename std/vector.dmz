@@ -1,62 +1,60 @@
-module std {
-    const vector_error = error {
-        IndexOutOfLenght,
-        OutOfMemory,
-    };
-    struct vec<T> {
-        buf: *T,
-        len: u64,
-        capacity: u64,
+const vector_error = error {
+    IndexOutOfLenght,
+    OutOfMemory,
+};
+struct vec<T> {
+    buf: *T,
+    len: u64,
+    capacity: u64,
 
-        static fn init() -> @This {
-            return @This {
-                buf: null,
-                len: 0,
-                capacity: 0,
-            };
-        }
-
-        fn deinit() -> void {
-            std.mem.free(.buf);
-        }
-
-        fn add(v: T) -> void! {
-            if (.len >= .capacity) {
-                if (.capacity == 0) {
-                    .capacity = 8;
-                    .buf = std.mem.malloc(.capacity * @sizeof(T));
-                } else {
-                    .capacity = .capacity * 2;
-                    .buf = std.mem.realloc(.buf, .capacity * @sizeof(T));
-                }
-                if (!.buf) {
-                    return vector_error.OutOfMemory;
-                }
-            }
-            .buf[.len] = v;
-            .len = .len + 1;
-        }
-
-        fn get(index: u64) -> T! {
-            if (index > .len) { return vector_error.IndexOutOfLenght; }
-            let ret:T = .buf[index];
-            return ret;
-        }
-
-        fn remove(index: u64) -> void! {
-            if (index >= .len) { return vector_error.IndexOutOfLenght; }
-
-            if (index < .len - 1) {
-                const num_bytes = (.len - index - 1) * @sizeof(T);
-                std.mem.memmove(&.buf[index], &.buf[index + 1], num_bytes);
-            }
-
-            .len = .len - 1;
-        }
-
-        fn size() -> u64 {
-            return .len;
-        }
-
+    static fn init() -> @This {
+        return @This {
+            buf: null,
+            len: 0,
+            capacity: 0,
+        };
     }
+
+    fn deinit() -> void {
+        std.mem.free(.buf);
+    }
+
+    fn add(v: T) -> void! {
+        if (.len >= .capacity) {
+            if (.capacity == 0) {
+                .capacity = 8;
+                .buf = std.mem.malloc(.capacity * @sizeof(T));
+            } else {
+                .capacity = .capacity * 2;
+                .buf = std.mem.realloc(.buf, .capacity * @sizeof(T));
+            }
+            if (!.buf) {
+                return vector_error.OutOfMemory;
+            }
+        }
+        .buf[.len] = v;
+        .len = .len + 1;
+    }
+
+    fn get(index: u64) -> T! {
+        if (index > .len) { return vector_error.IndexOutOfLenght; }
+        let ret:T = .buf[index];
+        return ret;
+    }
+
+    fn remove(index: u64) -> void! {
+        if (index >= .len) { return vector_error.IndexOutOfLenght; }
+
+        if (index < .len - 1) {
+            const num_bytes = (.len - index - 1) * @sizeof(T);
+            std.mem.memmove(&.buf[index], &.buf[index + 1], num_bytes);
+        }
+
+        .len = .len - 1;
+    }
+
+    fn size() -> u64 {
+        return .len;
+    }
+
 }

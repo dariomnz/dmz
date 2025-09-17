@@ -437,7 +437,7 @@ void ResolvedModuleDecl::dump_dependencies(size_t level) const {
 }
 
 void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedImportExpr " << moduleDecl.identifier << '\n';
+    std::cerr << indent(level) << "ResolvedImportExpr " << moduleDecl.name() << '\n';
     if (onlySelf) return;
 }
 
