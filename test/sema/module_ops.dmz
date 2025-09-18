@@ -20,19 +20,19 @@ const integer = import("module_ops_integer.dmz");
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
 // CHECK-NEXT:     ResolvedFieldDecl:i32 z
-// CHECK-NEXT:   ResolvedFunctionDecl print -> void
+// CHECK-NEXT:   ResolvedFunctionDecl print fn(i32)->void
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println -> void
+// CHECK-NEXT:         ResolvedFunctionDecl println fn(i32)->void
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
-// CHECK-NEXT:   ResolvedFunctionDecl println -> void
+// CHECK-NEXT:   ResolvedFunctionDecl println fn(i32)->void
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 '%d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 n

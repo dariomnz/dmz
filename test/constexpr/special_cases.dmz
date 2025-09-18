@@ -36,7 +36,7 @@ fn call() -> void {
 // CHECK:    ResolvedIfStmt
 // CHECK-NEXT:      ResolvedUnaryOperator:bool '!'
 // CHECK-NEXT:        ResolvedCallExpr:i32 
-// CHECK-NEXT:          ResolvedFunctionDecl ret -> i32
+// CHECK-NEXT:          ResolvedFunctionDecl ret fn()->i32
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
 

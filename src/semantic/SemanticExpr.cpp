@@ -171,7 +171,11 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         ++idx;
         resolvedArguments.emplace_back(std::move(resolvedArg));
     }
-    return makePtr<ResolvedCallExpr>(call.location, *resolvedFuncDecl, std::move(resolvedArguments));
+
+    auto fnType = resolvedFuncDecl->getFnType();
+
+    return makePtr<ResolvedCallExpr>(call.location, fnType->returnType->clone(), *resolvedFuncDecl,
+                                     std::move(resolvedArguments));
 }
 
 ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {

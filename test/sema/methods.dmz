@@ -11,12 +11,12 @@ struct Color {
         return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
 }
-// CHECK:       ResolvedMemberFunctionDecl print -> i32
+// CHECK:       ResolvedMemberFunctionDecl print fn()->i32
 // CHECK-NEXT:         ResolvedParamDecl:*methods.Color 
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
 // CHECK-NEXT:             ResolvedCallExpr:i32
-// CHECK-NEXT:               ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:               ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:               ResolvedSelfMemberExpr:i32 r
 // CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color 
@@ -29,7 +29,7 @@ fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};
     c.print(); 
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:methods.Color{} c
@@ -44,6 +44,6 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:             | value: 3
 // CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedMemberFunctionDecl print -> i32
+// CHECK-NEXT:       ResolvedMemberFunctionDecl print fn()->i32
 // CHECK-NEXT:       ResolvedRefPtrExpr:*methods.Color{}
 // CHECK-NEXT:         ResolvedDeclRefExpr:methods.Color{} c

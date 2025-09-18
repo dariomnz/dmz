@@ -1,4 +1,4 @@
-// RUN: compiler %s ../sema/module_ops.dmz -run | filecheck %s
+// RUN: compiler %s -I ops %S/../sema/module_ops.dmz -run | filecheck %s
 
 // CHECK: 1
 // CHECK-NEXT: 2

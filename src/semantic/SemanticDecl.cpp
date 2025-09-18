@@ -7,7 +7,12 @@ namespace DMZ {
 
 ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     debug_func(param.location);
-    auto type = resolve_type(*param.type);
+    ptr<ResolvedType> type = nullptr;
+    if (!param.isVararg) {
+        type = resolve_type(*param.type);
+    } else {
+        type = makePtr<ResolvedTypeVarArg>(param.location);
+    }
 
     if (!param.isVararg)
         if (!type || type->kind == ResolvedTypeKind::Void)
@@ -72,21 +77,22 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         }
     }
 
-    auto type = resolve_type(*function.type);
+    auto returnType = resolve_type(*function.type);
 
-    if (!type)
-        return report(function.location,
-                      "function '" + function.identifier + "' has invalid '" + function.type->to_str() + "' type");
+    if (!returnType)
+        return report(function.location, "function '" + function.identifier + "' has invalid '" +
+                                             function.type->to_str() + "' return type");
 
     if (function.identifier == "main") {
-        if (type->kind != ResolvedTypeKind::Void)
-            return report(function.location, "'main' function is expected to have 'void' type");
+        if (returnType->kind != ResolvedTypeKind::Void)
+            return report(function.location, "'main' function is expected to have 'void' return type");
 
         if (!function.params.empty())
             return report(function.location, "'main' function is expected to take no arguments");
     }
 
     std::vector<ptr<ResolvedParamDecl>> resolvedParams;
+    std::vector<ptr<ResolvedType>> resolvedParamsTypes;
 
     bool haveVararg = false;
     for (auto &&param : function.params) {
@@ -101,11 +107,15 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         if (resolvedParam->isVararg) {
             haveVararg = true;
         }
+        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
+    auto fnType =
+        makePtr<ResolvedTypeFunction>(function.location, std::move(returnType), std::move(resolvedParamsTypes));
+
     if (dynamic_cast<const ExternFunctionDecl *>(&function)) {
-        return makePtr<ResolvedExternFunctionDecl>(function.location, function.identifier, std::move(type),
+        return makePtr<ResolvedExternFunctionDecl>(function.location, function.identifier, std::move(fnType),
                                                    std::move(resolvedParams));
     }
     if (auto functionDecl = dynamic_cast<const FunctionDecl *>(&function)) {
@@ -113,11 +123,11 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             return makePtr<ResolvedTestDecl>(function.location, function.identifier, functionDecl, nullptr);
         }
         if (resolvedGenericTypeDecl.size() != 0) {
-            return makePtr<ResolvedGenericFunctionDecl>(function.location, function.identifier, std::move(type),
+            return makePtr<ResolvedGenericFunctionDecl>(function.location, function.identifier, std::move(fnType),
                                                         std::move(resolvedParams), functionDecl, nullptr,
                                                         std::move(resolvedGenericTypeDecl), std::move(collectedScope));
         } else {
-            return makePtr<ResolvedFunctionDecl>(function.location, function.identifier, std::move(type),
+            return makePtr<ResolvedFunctionDecl>(function.location, function.identifier, std::move(fnType),
                                                  std::move(resolvedParams), functionDecl, nullptr);
         }
     }
@@ -172,13 +182,14 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
 
     ScopeRAII functionScope(*this);
 
-    auto type = resolve_type(*funcDecl.functionDecl->type);
+    auto returnType = resolve_type(*funcDecl.functionDecl->type);
 
-    if (!type)
-        return report(funcDecl.location,
-                      "function '" + funcDecl.identifier + "' has invalid '" + funcDecl.type->to_str() + "' type");
+    if (!returnType)
+        return report(funcDecl.location, "function '" + funcDecl.identifier + "' has invalid '" +
+                                             funcDecl.type->to_str() + "' return type");
 
     std::vector<ptr<ResolvedParamDecl>> resolvedParams;
+    std::vector<ptr<ResolvedType>> resolvedParamsTypes;
 
     bool haveVararg = false;
     for (auto &&param : funcDecl.functionDecl->params) {
@@ -193,11 +204,15 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         if (resolvedParam->isVararg) {
             haveVararg = true;
         }
+        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
+    auto fnType =
+        makePtr<ResolvedTypeFunction>(funcDecl.location, std::move(returnType), std::move(resolvedParamsTypes));
+
     auto resolvedFunc = makePtr<ResolvedSpecializedFunctionDecl>(
-        funcDecl.location, funcDecl.identifier, std::move(type), std::move(resolvedParams), funcDecl.functionDecl,
+        funcDecl.location, funcDecl.identifier, std::move(fnType), std::move(resolvedParams), funcDecl.functionDecl,
         nullptr, castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
     // auto &retFunc = resolvedFunc;
     auto &retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc));
@@ -866,10 +881,14 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
     std::vector<ptr<ResolvedCaseStmt>> cases;
     for (size_t i = 0; i < m_tests.size(); i++) {
         add_dependency(const_cast<ResolvedTestDecl *>(m_tests[i]));
-        auto test_call = makePtr<ResolvedCallExpr>(loc, *m_tests[i], std::vector<ptr<ResolvedExpr>>{});
-        auto funcType = dynamic_cast<const ResolvedTypeOptional *>(m_tests[i]->type.get());
-        if (!funcType) dmz_unreachable("internal error, test type is not optional");
-        auto tryExpr = makePtr<ResolvedTryErrorExpr>(loc, funcType->optionalType->clone(), std::move(test_call),
+
+        auto testType = m_tests[i]->getFnType();
+
+        auto test_call = makePtr<ResolvedCallExpr>(loc, testType->returnType->clone(), *m_tests[i],
+                                                   std::vector<ptr<ResolvedExpr>>{});
+        auto returnOptType = dynamic_cast<const ResolvedTypeOptional *>(testType->returnType.get());
+        if (!returnOptType) dmz_unreachable("internal error, test return type is not optional");
+        auto tryExpr = makePtr<ResolvedTryErrorExpr>(loc, returnOptType->optionalType->clone(), std::move(test_call),
                                                      std::vector<ptr<ResolvedDeferRefStmt>>{});
 
         std::vector<ptr<ResolvedStmt>> caseBlockStmts;

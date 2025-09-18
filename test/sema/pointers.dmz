@@ -11,7 +11,7 @@ fn main() -> void {
     *i_ptr = 12;
     printf("%d\n", i);
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32 i
@@ -25,7 +25,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedVarDecl:*i32 i_ptr2
 // CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
 // CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 '%d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:     ResolvedAssignment
@@ -34,6 +34,6 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '12'
 // CHECK-NEXT:       | value: 12
 // CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 '%d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 i

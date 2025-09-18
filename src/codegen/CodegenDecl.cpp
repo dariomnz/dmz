@@ -92,11 +92,13 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
-    llvm::Type *retType = generate_type(*functionDecl.type);
+    auto fnType = functionDecl.getFnType();
+
+    llvm::Type *retType = generate_type(*fnType->returnType);
     std::vector<llvm::Type *> paramTypes;
 
-    if (dynamic_cast<ResolvedTypeStruct *>(functionDecl.type.get()) ||
-        dynamic_cast<ResolvedTypeOptional *>(functionDecl.type.get())) {
+    if (fnType->returnType->kind == ResolvedTypeKind::Struct ||
+        fnType->returnType->kind == ResolvedTypeKind::Optional) {
         paramTypes.emplace_back(llvm::PointerType::get(retType, 0));
         retType = m_builder.getVoidTy();
     }
@@ -122,13 +124,16 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
 
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
     debug_func(fn.name());
+
+    auto fnType = fn.getFnType();
+
     bool isReturningStruct =
-        dynamic_cast<ResolvedTypeStruct *>(fn.type.get()) || dynamic_cast<ResolvedTypeOptional *>(fn.type.get());
+        fnType->returnType->kind == ResolvedTypeKind::Struct || fnType->returnType->kind == ResolvedTypeKind::Optional;
     std::vector<llvm::AttributeSet> argsAttrSets;
 
     if (isReturningStruct) {
         llvm::AttrBuilder retAttrs(*m_context);
-        retAttrs.addStructRetAttr(generate_type(*fn.type));
+        retAttrs.addStructRetAttr(generate_type(*fnType->returnType));
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, retAttrs));
     }
 
@@ -153,7 +158,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
 }
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
-    debug_func(functionDecl.symbolName);
+    debug_func(functionDecl.symbolName << " " << functionDecl.type->to_str());
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
@@ -165,6 +170,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         }
         return;
     }
+
+    auto fnType = functionDecl.getFnType();
+
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
@@ -178,12 +186,13 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
 
-    bool returnsVoid = functionDecl.type->kind == ResolvedTypeKind::Struct ||
-                       functionDecl.type->kind == ResolvedTypeKind::Void ||
-                       functionDecl.type->kind == ResolvedTypeKind::Optional;
+    bool returnsVoid = fnType->returnType->kind == ResolvedTypeKind::Struct ||
+                       fnType->returnType->kind == ResolvedTypeKind::Void ||
+                       fnType->returnType->kind == ResolvedTypeKind::Optional;
 
     if (!returnsVoid) {
-        retVal = allocate_stack_variable("retval", *functionDecl.type);
+        debug_msg("retVal is not null");
+        retVal = allocate_stack_variable("retval", *fnType->returnType);
     }
     retBB = llvm::BasicBlock::Create(*m_context, "return");
 
@@ -191,6 +200,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     for (auto &&arg : function->args()) {
         if (arg.hasStructRetAttr()) {
             arg.setName("ret");
+            debug_msg("retVal is in a arg");
             retVal = &arg;
             continue;
         }
@@ -239,7 +249,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
-    m_builder.CreateRet(load_value(retVal, *functionDecl.type));
+    m_builder.CreateRet(load_value(retVal, *fnType->returnType));
 
     m_currentFunction = nullptr;
 }

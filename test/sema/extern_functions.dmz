@@ -1,14 +1,14 @@
 // RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s
 
 extern fn foo() -> void;
-// CHECK: ResolvedExternFunctionDecl foo -> void
+// CHECK: ResolvedExternFunctionDecl foo fn()->void
 
 extern fn bar(a:i32) -> void;
-// CHECK: ResolvedExternFunctionDecl bar -> void
+// CHECK: ResolvedExternFunctionDecl bar fn(i32)->void
 // CHECK-NEXT:  ResolvedParamDecl:i32 a
 
 extern fn dprintf(fd:i32, format: *u8, ...) -> i32;
-// CHECK: ResolvedExternFunctionDecl dprintf -> i32
+// CHECK: ResolvedExternFunctionDecl dprintf fn(i32, *u8, ...)->i32
 // CHECK-NEXT:  ResolvedParamDecl:i32 fd
 // CHECK-NEXT:  ResolvedParamDecl:*u8 format
 // CHECK-NEXT:  ResolvedParamDecl:vararg ...

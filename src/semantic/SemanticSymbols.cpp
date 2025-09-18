@@ -122,7 +122,7 @@ void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << identifier << " -> " << type->to_str() << '\n';
+    std::cerr << indent(level) << "ResolvedExternFunctionDecl " << identifier << " " << type->to_str() << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1, onlySelf);
@@ -140,7 +140,7 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     } else {
         std::cerr << indent(level) << "ResolvedFunctionDecl ";
     }
-    std::cerr << identifier << " -> " << type->to_str() << '\n';
+    std::cerr << identifier << " " << type->to_str() << '\n';
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1, onlySelf);
 
@@ -148,7 +148,7 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedGenericFunctionDecl " << identifier << " -> " << type->to_str() << '\n';
+    std::cerr << indent(level) << "ResolvedGenericFunctionDecl " << identifier << " " << type->to_str() << '\n';
     for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
 
     if (onlySelf) return;
@@ -173,7 +173,7 @@ void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
 
 void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << identifier << specializedTypes->to_str()
-              << " -> " << type->to_str() << '\n';
+              << " " << type->to_str() << '\n';
 
     if (onlySelf) return;
     for (auto &&param : params) param->dump(level + 1, onlySelf);

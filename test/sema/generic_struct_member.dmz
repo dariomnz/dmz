@@ -13,7 +13,7 @@ struct Point<T> {
 // CHECK: ResolvedSpecializedStructDecl generic_struct_member.Point<i32>
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
-// CHECK-NEXT:   ResolvedMemberFunctionDecl add -> void
+// CHECK-NEXT:   ResolvedMemberFunctionDecl add fn(i32)->void
 // CHECK-NEXT:     ResolvedParamDecl:*generic_struct_member.Point 
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock

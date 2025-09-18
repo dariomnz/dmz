@@ -20,6 +20,8 @@ enum class ResolvedTypeKind {
     Optional,
     Pointer,
     Array,
+    Function,
+    VarArg,
 };
 
 struct ResolvedType {
@@ -192,6 +194,33 @@ struct ResolvedTypeArray : public ResolvedType {
         : ResolvedType(ResolvedTypeKind::Array, std::move(location)),
           arrayType(std::move(arrayType)),
           arraySize(std::move(arraySize)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeFunction : public ResolvedType {
+    ptr<ResolvedType> returnType;
+    std::vector<ptr<ResolvedType>> paramsTypes;
+
+    ResolvedTypeFunction(SourceLocation location, ptr<ResolvedType> returnType,
+                         std::vector<ptr<ResolvedType>> paramsTypes)
+        : ResolvedType(ResolvedTypeKind::Function, std::move(location)),
+          returnType(std::move(returnType)),
+          paramsTypes(std::move(paramsTypes)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeVarArg : public ResolvedType {
+    ResolvedTypeVarArg(SourceLocation location) : ResolvedType(ResolvedTypeKind::VarArg, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

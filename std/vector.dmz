@@ -1,3 +1,5 @@
+const std = import("std");
+
 const vector_error = error {
     IndexOutOfLenght,
     OutOfMemory,

@@ -1,11 +1,11 @@
 // RUN: compiler %s -res-dump 2>&1 | filecheck %s
 
-// CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'customType' type
+// CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'customType' return type
 fn foo() -> customType {}
 
 // CHECK: [[# @LINE + 1 ]]:1: error: 'main' function is expected to take no arguments
 fn main(x:i32) -> void {}
 
-// CHECK: [[# @LINE + 1 ]]:1: error: 'main' function is expected to have 'void' type
+// CHECK: [[# @LINE + 1 ]]:1: error: 'main' function is expected to have 'void' return type
 fn main() -> i32 {}
 // CHECK-NOT: {{.*}}

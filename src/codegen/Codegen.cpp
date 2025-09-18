@@ -108,6 +108,22 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             fieldTypes.emplace_back(llvm::PointerType::get(*m_context, 0));
             static_cast<llvm::StructType *>(ret)->setBody(fieldTypes);
         }
+    } else if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
+        debug_msg(fnType->to_str());
+        std::vector<llvm::Type *> paramsTypes;
+        paramsTypes.reserve(fnType->paramsTypes.size());
+        bool isVarArg = false;
+        for (auto &&t : fnType->paramsTypes) {
+            debug_msg(t->to_str());
+            if (t->kind == ResolvedTypeKind::VarArg) {
+                isVarArg = true;
+                continue;
+            }
+            paramsTypes.emplace_back(generate_type(*t));
+        }
+        debug_msg(fnType->returnType->to_str());
+        auto returnType = generate_type(*fnType->returnType);
+        ret = llvm::FunctionType::get(returnType, paramsTypes, isVarArg);
     }
     if (ret == nullptr) {
         type.dump();

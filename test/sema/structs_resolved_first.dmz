@@ -15,7 +15,7 @@ struct S2 { x: i32, y:i32}
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-// CHECK-NEXT: ResolvedFunctionDecl foo -> structs_resolved_first.S2
+// CHECK-NEXT: ResolvedFunctionDecl foo fn(structs_resolved_first.S{})->structs_resolved_first.S2{}
 // CHECK-NEXT:   ResolvedParamDecl:structs_resolved_first.S{} s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt
@@ -27,5 +27,5 @@ struct S2 { x: i32, y:i32}
 // CHECK-NEXT:           ResolvedMemberExpr:i32 y
 // CHECK-NEXT:             ResolvedDeclRefExpr:structs_resolved_first.S{} s
 
-// CHECK-NEXT: ResolvedFunctionDecl main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock

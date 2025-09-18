@@ -6,7 +6,7 @@
 
 const std = import("std");
 
-fn printVector<T>(v: *std.vec<T>) -> void {
+fn printVector<T>(v: *std.vec.vec<T>) -> void {
     std.io.printf("vector [");
     let i = 0;
     while (i < v.size()) {
@@ -21,7 +21,7 @@ fn printVector<T>(v: *std.vec<T>) -> void {
 }
 
 fn main() -> void {
-    let v = std.vec<i32>.init();
+    let v = std.vec.vec<i32>.init();
     defer v.deinit();
 
     let i = 0;

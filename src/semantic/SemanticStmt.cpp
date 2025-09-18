@@ -42,12 +42,13 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
     if (!m_currentFunction) {
         return report(returnStmt.location, "unexpected return stmt outside a function");
     }
+    auto fnType = m_currentFunction->getFnType();
 
-    if (m_currentFunction->type->kind == ResolvedTypeKind::Void && returnStmt.expr)
-        if (m_currentFunction->type->kind != ResolvedTypeKind::Optional)
+    if (fnType->returnType->kind == ResolvedTypeKind::Void && returnStmt.expr)
+        if (fnType->returnType->kind != ResolvedTypeKind::Optional)
             return report(returnStmt.location, "unexpected return value in void function");
 
-    if (m_currentFunction->type->kind != ResolvedTypeKind::Void && !returnStmt.expr)
+    if (fnType->returnType->kind != ResolvedTypeKind::Void && !returnStmt.expr)
         return report(returnStmt.location, "expected a return value");
 
     ptr<ResolvedExpr> resolvedExpr;
@@ -55,10 +56,9 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
         resolvedExpr = resolve_expr(*returnStmt.expr);
         if (!resolvedExpr) return nullptr;
 
-        if (!m_currentFunction->type->compare(*resolvedExpr->type))
-            return report(resolvedExpr->location, "unexpected return type, expected '" +
-                                                      m_currentFunction->type->to_str() + "' actual '" +
-                                                      resolvedExpr->type->to_str() + "'");
+        if (!fnType->returnType->compare(*resolvedExpr->type))
+            return report(resolvedExpr->location, "unexpected return type, expected '" + fnType->returnType->to_str() +
+                                                      "' actual '" + resolvedExpr->type->to_str() + "'");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }

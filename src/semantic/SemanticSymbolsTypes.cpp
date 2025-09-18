@@ -415,10 +415,6 @@ bool ResolvedTypeArray::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << location);
     if (equal(other)) return true;
     return false;
-
-    dump();
-    other.dump();
-    dmz_unreachable("TODO");
 }
 
 ptr<ResolvedType> ResolvedTypeArray::clone() const {
@@ -431,4 +427,78 @@ void ResolvedTypeArray::dump(size_t level) const {
 }
 
 std::string ResolvedTypeArray::to_str() const { return arrayType->to_str() + "[" + std::to_string(arraySize) + "]"; }
+
+bool ResolvedTypeFunction::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeFunction " << location);
+    if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&other)) {
+        if (!returnType->equal(*fnType->returnType)) return false;
+        if (paramsTypes.size() != fnType->paramsTypes.size()) return false;
+        for (size_t i = 0; i < paramsTypes.size(); i++) {
+            if (paramsTypes[i]->equal(*fnType->paramsTypes[i])) return false;
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeFunction::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeFunction " << location);
+    if (equal(other)) return true;
+    return false;
+}
+
+ptr<ResolvedType> ResolvedTypeFunction::clone() const {
+    debug_func("ResolvedTypeFunction " << location);
+    std::vector<ptr<ResolvedType>> clonedparams;
+    clonedparams.reserve(paramsTypes.size());
+    for (auto &&param : paramsTypes) {
+        clonedparams.emplace_back(param->clone());
+    }
+    return makePtr<ResolvedTypeFunction>(location, returnType->clone(), std::move(clonedparams));
+}
+
+void ResolvedTypeFunction::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeFunction " << to_str() << "\n";
+}
+
+std::string ResolvedTypeFunction::to_str() const {
+    std::stringstream out;
+    out << "fn(";
+    for (size_t i = 0; i < paramsTypes.size(); i++) {
+        out << paramsTypes[i]->to_str();
+        if (i != paramsTypes.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ")->";
+    out << returnType->to_str();
+    return out.str();
+}
+
+bool ResolvedTypeVarArg::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeVarArg " << location);
+    if (other.kind == ResolvedTypeKind::VarArg) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ResolvedTypeVarArg::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeVarArg " << location);
+    if (equal(other)) return true;
+    return false;
+}
+
+ptr<ResolvedType> ResolvedTypeVarArg::clone() const {
+    debug_func("ResolvedTypeVarArg " << location);
+    return makePtr<ResolvedTypeVarArg>(location);
+}
+
+void ResolvedTypeVarArg::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeVarArg " << to_str() << "\n";
+}
+
+std::string ResolvedTypeVarArg::to_str() const { return "..."; }
 }  // namespace DMZ

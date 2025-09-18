@@ -19,7 +19,7 @@ fn main() -> void {
 // CHECK-NEXT: ResolvedStructDecl  member_expr_nested.S2
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 
-// CHECK-NEXT: ResolvedFunctionDecl main -> void
+// CHECK-NEXT: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:member_expr_nested.S{} s

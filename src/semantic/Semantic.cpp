@@ -560,8 +560,10 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
 
 bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg) {
     debug_func(fn.location);
-    auto optType = dynamic_cast<const ResolvedTypeOptional *>(fn.type.get());
-    if (fn.type->kind == ResolvedTypeKind::Void || (optType && optType->optionalType->kind == ResolvedTypeKind::Void))
+    auto fnType = fn.getFnType();
+    auto optType = dynamic_cast<const ResolvedTypeOptional *>(fnType->returnType.get());
+    if (fnType->returnType->kind == ResolvedTypeKind::Void ||
+        (optType && optType->optionalType->kind == ResolvedTypeKind::Void))
         return false;
 
     int returnCount = 0;

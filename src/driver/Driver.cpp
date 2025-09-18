@@ -11,7 +11,7 @@ void Driver::display_help() {
     println("  compiler [options] <source_file>\n");
     println("Options:");
     println("  -h, -help          display this message");
-    println("  -I <module> <path> include <module> <path>");
+    println("  -I <module> <path> include <module> <path> to search for modules");
     println("  -o <file>          write executable to <file>");
     println("  -lexer-dump        print the lexer dump");
     println("  -ast-dump          print the abstract syntax tree");

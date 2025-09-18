@@ -27,7 +27,7 @@ fn main() -> void {
     p: Point { x: 3 + 4, y: 4 * 9 },
   };
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:struct_with_struct_field.Color{} x

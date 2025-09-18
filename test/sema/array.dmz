@@ -9,7 +9,7 @@ fn main() -> void {
     array2[0] = '9';
     array2[4] = array2[0];
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:u8[5] array

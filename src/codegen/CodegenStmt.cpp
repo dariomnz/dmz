@@ -51,16 +51,18 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
-    debug_func("");
+    debug_func(stmt.expr->type->to_str());
     if (stmt.expr) {
+        auto retType = m_currentFunction->getFnType()->returnType.get();
         if (stmt.expr->type->kind == ResolvedTypeKind::Error) {
-            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*m_currentFunction->type), retVal, 1);
+            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
             store_value(generate_expr(*stmt.expr), dst, *stmt.expr->type, *stmt.expr->type);
         } else {
-            if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(m_currentFunction->type.get())) {
+            if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(retType)) {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *fnTypeOptional->optionalType);
             } else {
-                store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *m_currentFunction->type);
+                store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type,
+                            *m_currentFunction->getFnType()->returnType);
             }
         }
     }

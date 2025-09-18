@@ -18,7 +18,7 @@ fn main() -> void {
     num = num + cnum;
     printf("Num %d cnum %d\n", num, cnum);
 }
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedAssignment
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
@@ -31,7 +31,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 cnum
 // CHECK-NEXT:         | value: 100
 // CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:       ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 'Num %d cnum %d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 cnum

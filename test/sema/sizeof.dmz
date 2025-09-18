@@ -15,7 +15,7 @@ fn main() -> void {
     printf("Sizeof *void %d\n", size_void_ptr);
 }
 
-// CHECK: ResolvedFunctionDecl main -> void
+// CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:u64 size_bool
@@ -38,22 +38,22 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedSizeofExpr:u64
 // CHECK-NEXT:             *void
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof bool %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:u64 size_bool
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof i32 %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:u64 size_i32
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof i64 %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:u64 size_i64
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof f16 %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:u64 size_f16
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf -> i32
+// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof *void %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:u64 size_void_ptr

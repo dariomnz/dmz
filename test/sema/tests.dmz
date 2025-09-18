@@ -15,12 +15,12 @@ test "add test 2" {
     try std.testing.expect(add(2, 1) == 3);
 }
 
-// CHECK: ResolvedFunctionDecl @builtin_test_num -> i32
+// CHECK: ResolvedFunctionDecl @builtin_test_num fn()->i32
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 
-// CHECK:       ResolvedFunctionDecl @builtin_test_run -> void!
+// CHECK:       ResolvedFunctionDecl @builtin_test_run fn(i32)->void!
 // CHECK-NEXT:         ResolvedParamDecl:i32 n
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedSwitchStmt
@@ -40,7 +40,7 @@ test "add test 2" {
 // CHECK-NEXT:             ElseBlock
 // CHECK-NEXT:             ResolvedBlock
 
-// CHECK:       ResolvedFunctionDecl @builtin_test_name -> *u8
+// CHECK:       ResolvedFunctionDecl @builtin_test_name fn(i32)->*u8
 // CHECK-NEXT:         ResolvedParamDecl:i32 n
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedSwitchStmt
@@ -64,10 +64,10 @@ test "add test 2" {
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedTryErrorExpr:void
 // CHECK-NEXT:           ResolvedCallExpr:void!
-// CHECK-NEXT:             ResolvedFunctionDecl expect -> void!
+// CHECK-NEXT:             ResolvedFunctionDecl expect fn(i1)->void!
 // CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
 // CHECK-NEXT:               ResolvedCallExpr:i32
-// CHECK-NEXT:                 ResolvedFunctionDecl add -> i32
+// CHECK-NEXT:                 ResolvedFunctionDecl add fn(i32, i32)->i32
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
@@ -75,10 +75,10 @@ test "add test 2" {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedTryErrorExpr:void
 // CHECK-NEXT:           ResolvedCallExpr:void!
-// CHECK-NEXT:             ResolvedFunctionDecl expect -> void!
+// CHECK-NEXT:             ResolvedFunctionDecl expect fn(i1)->void!
 // CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
 // CHECK-NEXT:               ResolvedCallExpr:i32
-// CHECK-NEXT:                 ResolvedFunctionDecl add -> i32
+// CHECK-NEXT:                 ResolvedFunctionDecl add fn(i32, i32)->i32
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'

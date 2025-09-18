@@ -1,11 +1,11 @@
 // RUN: compiler -h 2>&1 | filecheck %s --strict-whitespace
 
 // CHECK: Usage:
-// CHECK-NEXT:   compiler [options] <source_files...>
+// CHECK-NEXT:   compiler [options] <source_file>
 // CHECK-NEXT: 
 // CHECK-NEXT: Options:
 // CHECK-NEXT:   -h, -help          display this message
-// CHECK-NEXT:   -I <dir path>      include <dir path> to search for modules
+// CHECK-NEXT:   -I <module> <path> include <module> <path> to search for modules
 // CHECK-NEXT:   -o <file>          write executable to <file>
 // CHECK-NEXT:   -lexer-dump        print the lexer dump
 // CHECK-NEXT:   -ast-dump          print the abstract syntax tree

@@ -3,7 +3,7 @@
 namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
-    debug_func("");
+    debug_func(expr.location);
     if (auto val = expr.get_constant_value()) {
         if (auto nt = dynamic_cast<ResolvedTypeNumber *>(expr.type.get())) {
             return m_builder.getIntN(nt->bitSize, *val);
@@ -94,13 +94,15 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
         }
     }
 
-    bool isReturningStruct = dynamic_cast<ResolvedTypeStruct *>(calleeDecl.type.get()) ||
-                             dynamic_cast<ResolvedTypeOptional *>(calleeDecl.type.get());
-    llvm::Value *retVal = nullptr;
+    auto fnType = calleeDecl.getFnType();
+
+    bool isReturningStruct =
+        fnType->returnType->kind == ResolvedTypeKind::Struct || fnType->returnType->kind == ResolvedTypeKind::Optional;
+    llvm::Value *callRetVal = nullptr;
     std::vector<llvm::Value *> args;
 
     if (isReturningStruct) {
-        retVal = args.emplace_back(allocate_stack_variable("struct.ret.tmp", *calleeDecl.type));
+        callRetVal = args.emplace_back(allocate_stack_variable("struct.ret.tmp", *fnType->returnType));
     }
 
     size_t argIdx = 0;
@@ -120,7 +122,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     llvm::CallInst *callInst = m_builder.CreateCall(callee, args);
     callInst->setAttributes(construct_attr_list(calleeDecl));
 
-    return isReturningStruct ? retVal : callInst;
+    return isReturningStruct ? callRetVal : callInst;
 }
 
 llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop) {
@@ -492,8 +494,9 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         generate_block(*d->resolvedDefer.block);
     }
 
-    if (m_currentFunction->type->kind == ResolvedTypeKind::Optional) {
-        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*m_currentFunction->type), retVal, 1);
+    auto retType = m_currentFunction->getFnType()->returnType.get();
+    if (retType->kind == ResolvedTypeKind::Optional) {
+        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
         store_value(error_value, dst, ResolvedTypeError{SourceLocation{}}, ResolvedTypeError{SourceLocation{}});
 
         assert(retBB && "function with return stmt doesn't have a return block");

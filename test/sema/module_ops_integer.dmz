@@ -8,7 +8,7 @@ fn sub(x:i32, y:i32) -> i32 {
     return x - y;
 }
 // CHECK: ResolvedModuleDecl 
-// CHECK-NEXT:     ResolvedFunctionDecl add -> i32
+// CHECK-NEXT:     ResolvedFunctionDecl add fn(i32, i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 x
 // CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock
@@ -16,7 +16,7 @@ fn sub(x:i32, y:i32) -> i32 {
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:     ResolvedFunctionDecl sub -> i32
+// CHECK-NEXT:     ResolvedFunctionDecl sub fn(i32, i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 x
 // CHECK-NEXT:       ResolvedParamDecl:i32 y
 // CHECK-NEXT:       ResolvedBlock

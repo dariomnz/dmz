@@ -186,6 +186,11 @@ struct ResolvedFuncDecl : public ResolvedDependencies {
     ResolvedFuncDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
                      std::vector<ptr<ResolvedParamDecl>> params)
         : ResolvedDependencies(location, std::move(identifier), std::move(type), false), params(std::move(params)) {}
+
+    ResolvedTypeFunction *getFnType() const {
+        if (type->kind != ResolvedTypeKind::Function) dmz_unreachable("unexpected type in function " + type->to_str());
+        return static_cast<ResolvedTypeFunction *>(type.get());
+    }
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
@@ -398,8 +403,9 @@ struct ResolvedCallExpr : public ResolvedExpr {
     const ResolvedFuncDecl &callee;
     std::vector<ptr<ResolvedExpr>> arguments;
 
-    ResolvedCallExpr(SourceLocation location, const ResolvedFuncDecl &callee, std::vector<ptr<ResolvedExpr>> arguments)
-        : ResolvedExpr(location, callee.type->clone()), callee(callee), arguments(std::move(arguments)) {}
+    ResolvedCallExpr(SourceLocation location, ptr<ResolvedType> type, const ResolvedFuncDecl &callee,
+                     std::vector<ptr<ResolvedExpr>> arguments)
+        : ResolvedExpr(location, std::move(type)), callee(callee), arguments(std::move(arguments)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -641,9 +647,12 @@ struct ResolvedImportExpr : public ResolvedExpr {
 struct ResolvedTestDecl : public ResolvedFunctionDecl {
     ResolvedTestDecl(SourceLocation location, std::string_view identifier, const FunctionDecl *functionDecl,
                      ptr<ResolvedBlock> body)
-        : ResolvedFunctionDecl(location, identifier,
-                               makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)), {},
-                               functionDecl, std::move(body)) {}
+        : ResolvedFunctionDecl(
+              location, identifier,
+              makePtr<ResolvedTypeFunction>(
+                  location, makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)),
+                  std::vector<ptr<ResolvedType>>{}),
+              {}, functionDecl, std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
