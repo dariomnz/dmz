@@ -98,23 +98,33 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
     return nullptr;
 }
 
-ResolvedDecl *Sema::lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id) {
+ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
+                                     const std::string_view id) {
     debug_func("Module: " << moduleDecl.identifier << " id: " << id);
     add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
         if (id != declPtr->identifier) continue;
+        if (&moduleDecl != m_currentModule && !decl->isPublic) {
+            report(loc, "cannot access private member '" + std::string(id) + "'");
+            return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
+        }
         add_dependency(declPtr);
         return declPtr;
     }
     return nullptr;
 }
 
-ResolvedDecl *Sema::lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id) {
+ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
+                                     const std::string_view id) {
     debug_func("Struct " << structDecl.identifier << " " << id);
     add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
     for (auto &&decl : structDecl.functions) {
         if (id != decl->identifier) continue;
+        if (&structDecl != m_currentStruct && !decl->isPublic) {
+            report(loc, "cannot access private member '" + std::string(id) + "'");
+            return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
+        }
         add_dependency(decl.get());
         return decl.get();
     }

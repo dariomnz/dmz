@@ -33,9 +33,15 @@ struct ResolvedDecl {
     std::string symbolName;
     ptr<ResolvedType> type;
     bool isMutable;
+    bool isPublic;
 
-    ResolvedDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable)
-        : location(location), identifier(std::move(identifier)), type(std::move(type)), isMutable(isMutable) {}
+    ResolvedDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
+                 bool isPublic)
+        : location(location),
+          identifier(std::move(identifier)),
+          type(std::move(type)),
+          isMutable(isMutable),
+          isPublic(isPublic) {}
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
@@ -50,8 +56,9 @@ struct ResolvedDependencies : public ResolvedDecl {
     std::unordered_set<ResolvedDependencies *> dependsOn;
     std::unordered_set<ResolvedDependencies *> isUsedBy;
 
-    ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable)
-        : ResolvedDecl(location, identifier, std::move(type), isMutable) {}
+    ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
+                         bool isPublic)
+        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {}
     virtual ~ResolvedDependencies() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
@@ -62,7 +69,7 @@ struct ResolvedGenericTypeDecl : public ResolvedDecl {
     ptr<ResolvedType> specializedType;
 
     ResolvedGenericTypeDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeGeneric>(location, this), false) {}
+        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeGeneric>(location, this), false, false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const;
 };
@@ -155,7 +162,7 @@ struct ResolvedParamDecl : public ResolvedDecl {
 
     ResolvedParamDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                       bool isVararg = false)
-        : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable), isVararg(isVararg) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable, false), isVararg(isVararg) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -164,7 +171,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     unsigned index;
 
     ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, unsigned index)
-        : ResolvedDecl(location, std::move(identifier), std::move(type), false), index(index) {}
+        : ResolvedDecl(location, std::move(identifier), std::move(type), false, true), index(index) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -172,9 +179,9 @@ struct ResolvedFieldDecl : public ResolvedDecl {
 struct ResolvedVarDecl : public ResolvedDependencies {
     ptr<ResolvedExpr> initializer;
 
-    ResolvedVarDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
-                    ptr<ResolvedExpr> initializer = nullptr)
-        : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable),
+    ResolvedVarDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
+                    bool isMutable, ptr<ResolvedExpr> initializer = nullptr)
+        : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable, isPublic),
           initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -183,9 +190,10 @@ struct ResolvedVarDecl : public ResolvedDependencies {
 struct ResolvedFuncDecl : public ResolvedDependencies {
     std::vector<ptr<ResolvedParamDecl>> params;
 
-    ResolvedFuncDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
+    ResolvedFuncDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
                      std::vector<ptr<ResolvedParamDecl>> params)
-        : ResolvedDependencies(location, std::move(identifier), std::move(type), false), params(std::move(params)) {}
+        : ResolvedDependencies(location, std::move(identifier), std::move(type), false, isPublic),
+          params(std::move(params)) {}
 
     ResolvedTypeFunction *getFnType() const {
         if (type->kind != ResolvedTypeKind::Function) dmz_unreachable("unexpected type in function " + type->to_str());
@@ -194,9 +202,9 @@ struct ResolvedFuncDecl : public ResolvedDependencies {
 };
 
 struct ResolvedExternFunctionDecl : public ResolvedFuncDecl {
-    ResolvedExternFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                               std::vector<ptr<ResolvedParamDecl>> params)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(type), std::move(params)) {}
+    ResolvedExternFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                               ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params)
+        : ResolvedFuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -205,10 +213,10 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     const FunctionDecl *functionDecl;
     ptr<ResolvedBlock> body;
 
-    ResolvedFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
+    ResolvedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
                          std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
                          ptr<ResolvedBlock> body)
-        : ResolvedFuncDecl(location, std::move(identifier), std::move(type), std::move(params)),
+        : ResolvedFuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)),
           functionDecl(functionDecl),
           body(std::move(body)) {}
 
@@ -217,10 +225,12 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
 
 struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
     ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
-    ResolvedSpecializedFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                                    std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
-                                    ptr<ResolvedBlock> body, ptr<ResolvedTypeSpecialized> specializedTypes)
-        : ResolvedFunctionDecl(location, identifier, std::move(type), std::move(params), functionDecl, std::move(body)),
+    ResolvedSpecializedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                    ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
+                                    const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
+                                    ptr<ResolvedTypeSpecialized> specializedTypes)
+        : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
+                               std::move(body)),
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -231,11 +241,13 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
     std::vector<ptr<ResolvedSpecializedFunctionDecl>> specializations = {};  // List of specializations
     std::vector<ResolvedDecl *> scopeToSpecialize;                           // Scope use to specialize
 
-    ResolvedGenericFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                                std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
-                                ptr<ResolvedBlock> body, std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
+    ResolvedGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
+                                const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
+                                std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                                 std::vector<ResolvedDecl *> scopeToSpecialize)
-        : ResolvedFunctionDecl(location, identifier, std::move(type), std::move(params), functionDecl, std::move(body)),
+        : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
+                               std::move(body)),
           genericTypeDecls(std::move(genericTypeDecls)),
           scopeToSpecialize(std::move(scopeToSpecialize)) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -248,10 +260,12 @@ struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
     const ResolvedStructDecl *structDecl;
     bool isStatic;
 
-    ResolvedMemberFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                               std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
-                               ptr<ResolvedBlock> body, const ResolvedStructDecl *structDecl, bool isStatic)
-        : ResolvedFunctionDecl(location, identifier, std::move(type), std::move(params), functionDecl, std::move(body)),
+    ResolvedMemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                               ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
+                               const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
+                               const ResolvedStructDecl *structDecl, bool isStatic)
+        : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
+                               std::move(body)),
           structDecl(structDecl),
           isStatic(isStatic) {}
 
@@ -260,13 +274,13 @@ struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
 
 struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
     const ResolvedStructDecl *structDecl;
-    ResolvedMemberGenericFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                                      std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
-                                      ptr<ResolvedBlock> body,
+    ResolvedMemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                      ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
+                                      const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
                                       std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                                       std::vector<ResolvedDecl *> scopeToSpecialize,
                                       const ResolvedStructDecl *structDecl)
-        : ResolvedGenericFunctionDecl(location, identifier, std::move(type), std::move(params), functionDecl,
+        : ResolvedGenericFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
                                       std::move(body), std::move(genericTypeDecls), std::move(scopeToSpecialize)),
           structDecl(structDecl) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -275,12 +289,13 @@ struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
 
 struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctionDecl {
     const ResolvedStructDecl *structDecl;
-    ResolvedMemberSpecializedFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                                          std::vector<ptr<ResolvedParamDecl>> params, const FunctionDecl *functionDecl,
-                                          ptr<ResolvedBlock> body, ptr<ResolvedTypeSpecialized> specializedTypes,
+    ResolvedMemberSpecializedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                          ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
+                                          const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
+                                          ptr<ResolvedTypeSpecialized> specializedTypes,
                                           const ResolvedStructDecl *structDecl)
-        : ResolvedSpecializedFunctionDecl(location, identifier, std::move(type), std::move(params), functionDecl,
-                                          std::move(body), std::move(specializedTypes)),
+        : ResolvedSpecializedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params),
+                                          functionDecl, std::move(body), std::move(specializedTypes)),
           structDecl(structDecl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -292,10 +307,11 @@ struct ResolvedStructDecl : public ResolvedDependencies {
     std::vector<ptr<ResolvedFieldDecl>> fields;
     std::vector<ptr<ResolvedMemberFunctionDecl>> functions;
 
-    ResolvedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                       bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+    ResolvedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                       const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                        std::vector<ptr<ResolvedMemberFunctionDecl>> functions)
-        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeStructDecl>(location, this), false),
+        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeStructDecl>(location, this), false,
+                               isPublic),
           structDecl(structDecl),
           isPacked(isPacked),
           fields(std::move(fields)),
@@ -307,11 +323,13 @@ struct ResolvedStructDecl : public ResolvedDependencies {
 
 struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
     ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
-    ResolvedSpecializedStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                                  bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+    ResolvedSpecializedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                  const StructDecl *structDecl, bool isPacked,
+                                  std::vector<ptr<ResolvedFieldDecl>> fields,
                                   std::vector<ptr<ResolvedMemberFunctionDecl>> functions,
                                   ptr<ResolvedTypeSpecialized> specializedTypes)
-        : ResolvedStructDecl(location, identifier, structDecl, isPacked, std::move(fields), std::move(functions)),
+        : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
+                             std::move(functions)),
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -322,12 +340,13 @@ struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     std::vector<ptr<ResolvedSpecializedStructDecl>> specializations = {};  // List of specializations
     std::vector<ResolvedDecl *> scopeToSpecialize;                         // Scope use to specialize
 
-    ResolvedGenericStructDecl(SourceLocation location, std::string_view identifier, const StructDecl *structDecl,
-                              bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+    ResolvedGenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                              const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                               std::vector<ptr<ResolvedMemberFunctionDecl>> functions,
                               std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                               std::vector<ResolvedDecl *> scopeToSpecialize)
-        : ResolvedStructDecl(location, identifier, structDecl, isPacked, std::move(fields), std::move(functions)),
+        : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
+                             std::move(functions)),
           genericTypeDecls(std::move(genericTypeDecls)),
           scopeToSpecialize(std::move(scopeToSpecialize)) {}
 
@@ -507,7 +526,7 @@ struct ResolvedDeclStmt : public ResolvedDependencies, public ResolvedStmt {
     ptr<ResolvedVarDecl> varDecl;
 
     ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl)
-        : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable),
+        : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
           ResolvedStmt(location),
           location(location),
           varDecl(std::move(varDecl)) {}
@@ -570,7 +589,7 @@ struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
 
 struct ResolvedErrorDecl : public ResolvedDecl {
     ResolvedErrorDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeError>(location), false) {}
+        : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeError>(location), false, true) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -581,7 +600,7 @@ struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDependen
 
     ResolvedErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ResolvedErrorDecl>> errors)
         : ResolvedExpr(location, makePtr<ResolvedTypeErrorGroup>(location, this)),
-          ResolvedDependencies(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false),
+          ResolvedDependencies(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false, true),
           location(location),
           errors(std::move(errors)) {}
 
@@ -627,7 +646,7 @@ struct ResolvedModuleDecl : public ResolvedDependencies {
 
     ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::filesystem::path module_path,
                        std::vector<ptr<ResolvedDecl>> declarations)
-        : ResolvedDependencies(location, identifier, makePtr<ResolvedTypeModule>(location, this), false),
+        : ResolvedDependencies(location, identifier, makePtr<ResolvedTypeModule>(location, this), false, true),
           module_path(std::move(module_path)),
           declarations(std::move(declarations)) {}
 
@@ -648,7 +667,7 @@ struct ResolvedTestDecl : public ResolvedFunctionDecl {
     ResolvedTestDecl(SourceLocation location, std::string_view identifier, const FunctionDecl *functionDecl,
                      ptr<ResolvedBlock> body)
         : ResolvedFunctionDecl(
-              location, identifier,
+              location, true, identifier,
               makePtr<ResolvedTypeFunction>(
                   location, this, makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)),
                   std::vector<ptr<ResolvedType>>{}),

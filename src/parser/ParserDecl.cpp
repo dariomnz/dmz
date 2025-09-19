@@ -29,8 +29,13 @@ ptr<FuncDecl> Parser::parse_function_decl() {
     debug_func("");
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
+    bool isPublic = false;
     bool isExtern = false;
 
+    if (m_nextToken.type == TokenType::kw_pub) {
+        eat_next_token();  // eat pub
+        isPublic = true;
+    }
     if (m_nextToken.type == TokenType::kw_extern) {
         isExtern = true;
         eat_next_token();  // eat extern
@@ -61,17 +66,18 @@ ptr<FuncDecl> Parser::parse_function_decl() {
         if (m_nextToken.type == TokenType::block_l) return report(m_nextToken.loc, "extern fn cannot have a body");
         matchOrReturn(TokenType::semicolon, "expected ';'");
         eat_next_token();
-        return makePtr<ExternFunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList));
+        return makePtr<ExternFunctionDecl>(loc, isPublic, functionIdentifier, std::move(type),
+                                           std::move(*parameterList));
     }
 
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
     if (genericTypes.size() != 0) {
-        return makePtr<GenericFunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList),
-                                            std::move(block), std::move(genericTypes));
+        return makePtr<GenericFunctionDecl>(loc, isPublic, functionIdentifier, std::move(type),
+                                            std::move(*parameterList), std::move(block), std::move(genericTypes));
     } else {
-        return makePtr<FunctionDecl>(loc, functionIdentifier, std::move(type), std::move(*parameterList),
+        return makePtr<FunctionDecl>(loc, isPublic, functionIdentifier, std::move(type), std::move(*parameterList),
                                      std::move(block));
     }
 }
@@ -101,7 +107,7 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false);
 }
 
-ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
+ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
 
@@ -117,13 +123,13 @@ ptr<VarDecl> Parser::parse_var_decl(bool isConst) {
     }
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return makePtr<VarDecl>(location, identifier, std::move(type), !isConst);
+        return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst);
     }
     eat_next_token();  // eat '='
 
     varOrReturn(initializer, parse_expr());
 
-    return makePtr<VarDecl>(location, identifier, std::move(type), !isConst, std::move(initializer));
+    return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, std::move(initializer));
 }
 
 // <structDecl>
@@ -135,6 +141,12 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     bool isPacked = false;
+    bool isPublic = false;
+    if (m_nextToken.type == TokenType::kw_pub) {
+        eat_next_token();  // eat pub
+        isPublic = true;
+    }
+
     if (m_nextToken.type == TokenType::kw_packed) {
         eat_next_token();  // eat packet
         isPacked = true;
@@ -157,11 +169,11 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     std::vector<ptr<MemberFunctionDecl>> funcList;
     ptr<StructDecl> structDecl;
     if (genericTypes.size() != 0) {
-        structDecl = makePtr<GenericStructDecl>(location, structIdentifier, isPacked, std::move(fieldList),
+        structDecl = makePtr<GenericStructDecl>(location, isPublic, structIdentifier, isPacked, std::move(fieldList),
                                                 std::move(funcList), std::move(genericTypes));
     } else {
-        structDecl =
-            makePtr<StructDecl>(location, structIdentifier, isPacked, std::move(fieldList), std::move(funcList));
+        structDecl = makePtr<StructDecl>(location, isPublic, structIdentifier, isPacked, std::move(fieldList),
+                                         std::move(funcList));
     }
 
     while (true) {
@@ -172,15 +184,20 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             fieldList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
             eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_static) {
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_static ||
+                   m_nextToken.type == TokenType::kw_pub) {
             bool isStatic = m_nextToken.type == TokenType::kw_static;
             if (isStatic) {
                 eat_next_token();  // eat static
             }
+            bool isPublic = m_nextToken.type == TokenType::kw_pub;
+            if (isPublic) {
+                eat_next_token();  // eat pub
+            }
             varOrReturn(init, parse_function_decl());
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
             auto memberFunc =
-                makePtr<MemberFunctionDecl>(func->location, func->identifier, std::move(func->type),
+                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
                                             std::move(func->params), std::move(func->body), structDecl.get(), isStatic);
             funcList.emplace_back(std::move(memberFunc));
         } else {
@@ -267,27 +284,33 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
     std::vector<ptr<Decl>> declarations;
 
     while (m_nextToken.type != TokenType::eof && m_nextToken.type != TokenType::block_r) {
-        if (m_nextToken.type == TokenType::kw_extern || m_nextToken.type == TokenType::kw_fn) {
+        TokenType ttype;
+        if (m_nextToken.type == TokenType::kw_pub) {
+            ttype = peek_token(0).type;
+        } else {
+            ttype = m_nextToken.type;
+        }
+        if (ttype == TokenType::kw_extern || ttype == TokenType::kw_fn) {
             if (auto fn = parse_function_decl()) {
                 declarations.emplace_back(std::move(fn));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_const || m_nextToken.type == TokenType::kw_let) {
+        } else if (ttype == TokenType::kw_const || ttype == TokenType::kw_let) {
             if (auto st = parse_decl_stmt()) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_packed) {
+        } else if (ttype == TokenType::kw_struct || ttype == TokenType::kw_packed) {
             if (auto st = parse_struct_decl()) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_module) {
+        } else if (ttype == TokenType::kw_module) {
             if (auto st = parse_module_decl()) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
-        } else if (m_nextToken.type == TokenType::kw_test) {
+        } else if (ttype == TokenType::kw_test) {
             if (auto test = parse_test_decl()) {
                 declarations.emplace_back(std::move(test));
                 continue;

@@ -131,7 +131,7 @@ class Parser {
     ptr<IfStmt> parse_if_stmt();
     ptr<WhileStmt> parse_while_stmt();
     ptr<DeclStmt> parse_decl_stmt();
-    ptr<VarDecl> parse_var_decl(bool isLet);
+    ptr<VarDecl> parse_var_decl(bool isPublic, bool isConst);
     ptr<Stmt> parse_assignment_or_expr(bool expectSemicolon = true);
     ptr<Assignment> parse_assignment_rhs(ptr<AssignableExpr> lhs);
     ptr<StructDecl> parse_struct_decl();

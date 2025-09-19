@@ -1,5 +1,5 @@
 // RUN: compiler %s -module -llvm-dump -no-remove-unused 2>&1 | filecheck %s
-fn add(x:i32, y:i32) -> i32 {
+pub fn add(x:i32, y:i32) -> i32 {
     return x + y;
 }
 // CHECK: define i32 @module_ops.add(i32 %x, i32 %y) {
@@ -15,7 +15,7 @@ fn add(x:i32, y:i32) -> i32 {
 // CHECK-NEXT:   ret i32 %1
 // CHECK-NEXT: }
 
-fn sub(x:i32, y:i32) -> i32 {
+pub fn sub(x:i32, y:i32) -> i32 {
     return x - y;
 }
 // CHECK: define i32 @module_ops.sub(i32 %x, i32 %y) {
@@ -31,7 +31,7 @@ fn sub(x:i32, y:i32) -> i32 {
 // CHECK-NEXT:   ret i32 %1
 // CHECK-NEXT: }
 
-fn print(x:i32) -> void {
+pub fn print(x:i32) -> void {
     println(x);
 }
 // CHECK: define void @module_ops.print(i32 %x) {

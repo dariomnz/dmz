@@ -1,6 +1,6 @@
-const mem = import("mem.dmz");
-const vec = import("vector.dmz").vec;
-const testing = import("testing.dmz");
-const builtin = import("builtin.dmz");
-const errno = import("errno.dmz");
-const io = import("io/io.dmz");
+pub const mem = import("mem.dmz");
+pub const vec = import("vector.dmz").vec;
+pub const testing = import("testing.dmz");
+pub const builtin = import("builtin.dmz");
+pub const errno = import("errno.dmz");
+pub const io = import("io/io.dmz");

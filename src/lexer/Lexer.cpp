@@ -81,6 +81,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_static);
         CASE_TYPE(kw_sizeof);
         CASE_TYPE(kw_packed);
+        CASE_TYPE(kw_pub);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }

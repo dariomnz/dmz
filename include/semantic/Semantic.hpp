@@ -55,8 +55,10 @@ class Sema {
 
    private:
     ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true);
-    ResolvedDecl *lookup_in_module(const ResolvedModuleDecl &moduleDecl, const std::string_view id);
-    ResolvedDecl *lookup_in_struct(const ResolvedStructDecl &structDecl, const std::string_view id);
+    ResolvedDecl *lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
+                                   const std::string_view id);
+    ResolvedDecl *lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
+                                   const std::string_view id);
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
     std::vector<ResolvedDecl *> collect_scope();

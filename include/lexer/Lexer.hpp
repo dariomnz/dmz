@@ -77,6 +77,7 @@ enum class TokenType {
     kw_static,
     kw_sizeof,
     kw_packed,
+    kw_pub,
     unknown,
     eof,
 };
@@ -106,6 +107,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
     {"static", TokenType::kw_static},
     {"@sizeof", TokenType::kw_sizeof},
     {"packed", TokenType::kw_packed},
+    {"pub", TokenType::kw_pub},
     // Types
     {"void", TokenType::ty_void},
     {"f16", TokenType::ty_f16},
@@ -136,9 +138,7 @@ class Lexer {
         return p.filename().string();
     }
 
-    std::filesystem::path get_file_path() {
-        return std::filesystem::path(m_file_name);
-    }
+    std::filesystem::path get_file_path() { return std::filesystem::path(m_file_name); }
 
    private:
     std::string read_file();

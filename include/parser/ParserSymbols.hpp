@@ -195,10 +195,11 @@ class ConstantValueContainer {
 
 struct Decl {
     SourceLocation location;
+    bool isPublic;
     std::string identifier;
 
-    Decl(SourceLocation location, std::string_view identifier)
-        : location(location), identifier(std::move(identifier)) {}
+    Decl(SourceLocation location, bool isPublic, std::string_view identifier)
+        : location(location), isPublic(isPublic), identifier(std::move(identifier)) {}
     virtual ~Decl() = default;
 
     virtual void dump(size_t level = 0) const = 0;
@@ -206,7 +207,7 @@ struct Decl {
 };
 
 struct GenericTypeDecl : public Decl {
-    GenericTypeDecl(SourceLocation location, std::string_view identifier) : Decl(location, identifier) {}
+    GenericTypeDecl(SourceLocation location, std::string_view identifier) : Decl(location, true, identifier) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -537,7 +538,10 @@ struct ParamDecl : public Decl {
 
     ParamDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type, bool isMutable,
               bool isVararg = false)
-        : Decl(location, std::move(identifier)), type(std::move(type)), isMutable(isMutable), isVararg(isVararg) {}
+        : Decl(location, true, std::move(identifier)),
+          type(std::move(type)),
+          isMutable(isMutable),
+          isVararg(isVararg) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -548,9 +552,9 @@ struct VarDecl : public Decl {
     ptr<Expr> initializer;
     bool isMutable;
 
-    VarDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type, bool isMutable,
+    VarDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type, bool isMutable,
             ptr<Expr> initializer = nullptr)
-        : Decl(location, std::move(identifier)),
+        : Decl(location, isPublic, std::move(identifier)),
           type(std::move(type)),
           initializer(std::move(initializer)),
           isMutable(isMutable) {}
@@ -563,14 +567,15 @@ struct FuncDecl : public Decl {
     ptr<Expr> type;
     std::vector<ptr<ParamDecl>> params;
 
-    FuncDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type, std::vector<ptr<ParamDecl>> params)
-        : Decl(location, std::move(identifier)), type(std::move(type)), params(std::move(params)) {}
+    FuncDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
+             std::vector<ptr<ParamDecl>> params)
+        : Decl(location, isPublic, std::move(identifier)), type(std::move(type)), params(std::move(params)) {}
 };
 
 struct ExternFunctionDecl : public FuncDecl {
-    ExternFunctionDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type,
+    ExternFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                        std::vector<ptr<ParamDecl>> params)
-        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)) {}
+        : FuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -579,9 +584,10 @@ struct ExternFunctionDecl : public FuncDecl {
 struct FunctionDecl : public FuncDecl {
     ptr<Block> body;
 
-    FunctionDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type,
+    FunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                  std::vector<ptr<ParamDecl>> params, ptr<Block> body)
-        : FuncDecl(location, std::move(identifier), std::move(type), std::move(params)), body(std::move(body)) {}
+        : FuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)),
+          body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -590,10 +596,10 @@ struct FunctionDecl : public FuncDecl {
 struct GenericFunctionDecl : public FunctionDecl {
     std::vector<ptr<GenericTypeDecl>> genericTypes;
 
-    GenericFunctionDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type,
+    GenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                         std::vector<ptr<ParamDecl>> params, ptr<Block> body,
                         std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
+        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
@@ -606,9 +612,9 @@ struct MemberFunctionDecl : public FunctionDecl {
     StructDecl* structBase;
     bool isStatic;
 
-    MemberFunctionDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type,
+    MemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                        std::vector<ptr<ParamDecl>> params, ptr<Block> body, StructDecl* structBase, bool isStatic)
-        : FunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body)),
+        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           structBase(structBase),
           isStatic(isStatic) {}
 
@@ -619,11 +625,11 @@ struct MemberFunctionDecl : public FunctionDecl {
 struct MemberGenericFunctionDecl : public GenericFunctionDecl {
     StructDecl* structBase;
 
-    MemberGenericFunctionDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type,
+    MemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                               std::vector<ptr<ParamDecl>> params, ptr<Block> body,
                               std::vector<ptr<GenericTypeDecl>> genericTypes, StructDecl* structBase)
-        : GenericFunctionDecl(location, std::move(identifier), std::move(type), std::move(params), std::move(body),
-                              std::move(genericTypes)),
+        : GenericFunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params),
+                              std::move(body), std::move(genericTypes)),
           structBase(structBase) {}
 
     void dump(size_t level = 0) const override;
@@ -634,7 +640,7 @@ struct FieldDecl : public Decl {
     ptr<Expr> type;
 
     FieldDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type)
-        : Decl(location, std::move(identifier)), type(std::move(type)) {}
+        : Decl(location, true, std::move(identifier)), type(std::move(type)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -645,9 +651,9 @@ struct StructDecl : public Decl {
     std::vector<ptr<FieldDecl>> fields;
     std::vector<ptr<MemberFunctionDecl>> functions;
 
-    StructDecl(SourceLocation location, std::string_view identifier, bool isPacked, std::vector<ptr<FieldDecl>> fields,
-               std::vector<ptr<MemberFunctionDecl>> functions)
-        : Decl(location, std::move(identifier)),
+    StructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
+               std::vector<ptr<FieldDecl>> fields, std::vector<ptr<MemberFunctionDecl>> functions)
+        : Decl(location, isPublic, std::move(identifier)),
           isPacked(isPacked),
           fields(std::move(fields)),
           functions(std::move(functions)) {}
@@ -659,10 +665,10 @@ struct StructDecl : public Decl {
 struct GenericStructDecl : public StructDecl {
     std::vector<ptr<GenericTypeDecl>> genericTypes;
 
-    GenericStructDecl(SourceLocation location, std::string_view identifier, bool isPacked,
+    GenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
                       std::vector<ptr<FieldDecl>> fields, std::vector<ptr<MemberFunctionDecl>> functions,
                       std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : StructDecl(location, std::move(identifier), isPacked, std::move(fields), std::move(functions)),
+        : StructDecl(location, isPublic, std::move(identifier), isPacked, std::move(fields), std::move(functions)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
@@ -674,7 +680,10 @@ struct DeclStmt : public Decl, public Stmt {
     ptr<VarDecl> varDecl;
 
     DeclStmt(SourceLocation location, ptr<VarDecl> varDecl)
-        : Decl(location, varDecl->identifier), Stmt(location), location(location), varDecl(std::move(varDecl)) {}
+        : Decl(location, varDecl->isPublic, varDecl->identifier),
+          Stmt(location),
+          location(location),
+          varDecl(std::move(varDecl)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -703,7 +712,7 @@ struct DeferStmt : public Stmt {
 };
 
 struct ErrorDecl : public Decl {
-    ErrorDecl(SourceLocation location, std::string_view identifier) : Decl(location, std::move(identifier)) {}
+    ErrorDecl(SourceLocation location, std::string_view identifier) : Decl(location, true, std::move(identifier)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -714,7 +723,7 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
     std::vector<ptr<ErrorDecl>> errs;
 
     ErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ErrorDecl>> errs)
-        : Expr(location), Decl(location, ""), errs(std::move(errs)) {}
+        : Expr(location), Decl(location, true, ""), errs(std::move(errs)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -756,7 +765,9 @@ struct ModuleDecl : public Decl {
 
     ModuleDecl(SourceLocation location, std::string_view identifier, std::filesystem::path module_path,
                std::vector<ptr<Decl>> declarations)
-        : Decl(location, identifier), module_path(std::move(module_path)), declarations(std::move(declarations)) {}
+        : Decl(location, true, identifier),
+          module_path(std::move(module_path)),
+          declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -768,7 +779,10 @@ struct ImportExpr : public Expr {
     std::filesystem::path module_path;
     ImportExpr(SourceLocation location, std::string_view identifier, std::string module_id,
                std::filesystem::path module_path)
-        : Expr(location), identifier(identifier), module_id(std::move(module_id)), module_path(std::move(module_path)) {}
+        : Expr(location),
+          identifier(identifier),
+          module_id(std::move(module_id)),
+          module_path(std::move(module_path)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -776,7 +790,7 @@ struct ImportExpr : public Expr {
 
 struct TestDecl : public FunctionDecl {
     TestDecl(SourceLocation location, std::string_view identifier, ptr<Block> body)
-        : FunctionDecl(location, identifier,
+        : FunctionDecl(location, true, identifier,
                        makePtr<UnaryOperator>(location, makePtr<TypeVoid>(location), TokenType::op_excla_mark), {},
                        std::move(body)) {}
 

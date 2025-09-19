@@ -6,7 +6,7 @@ struct Point<T> {
     x:T,
     y:T,
 
-    fn add(n: T) -> void {
+    pub fn add(n: T) -> void {
         .x = .x + n;
         .y = .y + n;
     }

@@ -1,5 +1,5 @@
 
-extern fn printf(fmt: *u8, ...) -> i32;
+pub extern fn printf(fmt: *u8, ...) -> i32;
 fn println(n:i32) -> i32 {
     return printf("%d\n", n);
 }

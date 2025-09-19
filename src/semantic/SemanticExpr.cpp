@@ -414,7 +414,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     }
 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
-        decl = lookup_in_struct(*struType->decl, memberExpr.field);
+        decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -425,7 +425,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
         }
     } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
-        decl = lookup_in_struct(*struType->decl, memberExpr.field);
+        decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -441,7 +441,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (!moduleDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a module decl");
         // moduleDecl->dump();
-        decl = lookup_in_module(*moduleDecl, memberExpr.field);
+        decl = lookup_in_module(memberExpr.location, *moduleDecl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "module \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
@@ -468,7 +468,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
 
 ptr<ResolvedSelfMemberExpr> Sema::resolve_self_member_expr(const SelfMemberExpr &memberExpr) {
     if (!m_currentStruct) return report(memberExpr.location, "unexpected use of self member outside a struct");
-    auto decl = lookup_in_struct(*m_currentStruct, memberExpr.field);
+    auto decl = lookup_in_struct(memberExpr.location, *m_currentStruct, memberExpr.field);
     if (!decl) {
         m_currentStruct->dump();
         return report(memberExpr.location, "struct \'" + m_currentStruct->type->to_str() +

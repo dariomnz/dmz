@@ -1,10 +1,10 @@
 // RUN: compiler %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
 
-fn add(x:i32, y:i32) -> i32 {
+pub fn add(x:i32, y:i32) -> i32 {
     return x + y;
 }
 
-fn sub(x:i32, y:i32) -> i32 {
+pub fn sub(x:i32, y:i32) -> i32 {
     return x - y;
 }
 // CHECK: ResolvedModuleDecl 

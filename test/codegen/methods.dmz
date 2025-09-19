@@ -8,10 +8,10 @@ struct Color {
     g: i32,
     b: i32,
     
-    fn print() -> i32 {
+    pub fn print() -> i32 {
         return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
-    fn add(n:i32) -> void {
+    pub fn add(n:i32) -> void {
         .r = .r + n;
         .g = .g + n;
         .b = .b + n;

@@ -7,7 +7,7 @@ struct Color {
     g: i32,
     b: i32,
     
-    fn print() -> i32 {
+    pub fn print() -> i32 {
         return printf("Color{%d, %d, %d}\n", .r, .g, .b);
     }
 }

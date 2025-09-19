@@ -131,11 +131,16 @@ ptr<WhileStmt> Parser::parse_while_stmt() {
 ptr<DeclStmt> Parser::parse_decl_stmt() {
     debug_func("");
     Token tok = m_nextToken;
+    bool isPublic = false;
+    if (m_nextToken.type == TokenType::kw_pub) {
+        eat_next_token();  // eat 'pub'
+        isPublic = true;
+    }
     bool isConst = m_nextToken.type == TokenType::kw_const;
     eat_next_token();  // eat 'let' or 'const'
 
     matchOrReturn(TokenType::id, "expected identifier");
-    varOrReturn(varDecl, parse_var_decl(isConst));
+    varOrReturn(varDecl, parse_var_decl(isPublic, isConst));
 
     matchOrReturn(TokenType::semicolon, "expected ';' after declaration");
     eat_next_token();  // eat ';'

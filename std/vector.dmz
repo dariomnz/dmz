@@ -4,12 +4,12 @@ const vector_error = error {
     IndexOutOfLenght,
     OutOfMemory,
 };
-struct vec<T> {
+pub struct vec<T> {
     buf: *T,
     len: u64,
     capacity: u64,
 
-    static fn init() -> @This {
+    static pub fn init() -> @This {
         return @This {
             buf: null,
             len: 0,
@@ -17,11 +17,11 @@ struct vec<T> {
         };
     }
 
-    fn deinit() -> void {
+    pub fn deinit() -> void {
         std.mem.free(.buf);
     }
 
-    fn add(v: T) -> void! {
+    pub fn add(v: T) -> void! {
         if (.len >= .capacity) {
             if (.capacity == 0) {
                 .capacity = 8;
@@ -38,13 +38,13 @@ struct vec<T> {
         .len = .len + 1;
     }
 
-    fn get(index: u64) -> T! {
+    pub fn get(index: u64) -> T! {
         if (index > .len) { return vector_error.IndexOutOfLenght; }
         let ret:T = .buf[index];
         return ret;
     }
 
-    fn remove(index: u64) -> void! {
+    pub fn remove(index: u64) -> void! {
         if (index >= .len) { return vector_error.IndexOutOfLenght; }
 
         if (index < .len - 1) {
@@ -55,7 +55,7 @@ struct vec<T> {
         .len = .len - 1;
     }
 
-    fn size() -> u64 {
+    pub fn size() -> u64 {
         return .len;
     }
 

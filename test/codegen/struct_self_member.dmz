@@ -5,7 +5,7 @@ struct Point {
     x: i32,
     y: i32,
 
-    fn addOne() -> void {
+    pub fn addOne() -> void {
         .x = .x + 1;
         .y = .y + 1;
     }
