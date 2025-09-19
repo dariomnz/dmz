@@ -1,5 +1,5 @@
 const mem = import("mem.dmz");
-const vec = import("vector.dmz");
+const vec = import("vector.dmz").vec;
 const testing = import("testing.dmz");
 const builtin = import("builtin.dmz");
 const errno = import("errno.dmz");

@@ -1,4 +1,3 @@
 const file = import("file.dmz");
 const print = import("print.dmz");
-
-extern fn printf(fmt: *u8, ...) -> i32;
+const printf = import("print.dmz").printf;

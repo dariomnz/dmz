@@ -361,7 +361,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
 }
 
 llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer) {
-    debug_func("");
+    debug_func(memberExpr.location);
     if (auto member = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr.member)) {
         llvm::Value *base = generate_expr(*memberExpr.base, true);
         ResolvedType *typeToGenerate = memberExpr.base->type.get();

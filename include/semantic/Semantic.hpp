@@ -47,7 +47,7 @@ class Sema {
     // std::vector<ref<ResolvedDecl>> resolve_ast();
     std::vector<ptr<ResolvedDecl>> resolve_ast_decl();
     std::vector<ptr<ResolvedModuleDecl>> resolve_import_modules();
-    bool resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls, bool noRemoveUnused);
+    bool resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
     void remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest);
     bool recurse_needed(ResolvedDependencies &deps, bool buildTest,

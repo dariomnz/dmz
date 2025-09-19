@@ -28,17 +28,38 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
         dmz_unreachable(resolvedBase->location.to_string() + " unexpected base expresion in generic expresion");
     }
 
+    if (declToGeneric && (declToGeneric->type->kind == ResolvedTypeKind::StructDecl ||
+                          declToGeneric->type->kind == ResolvedTypeKind::Function)) {
+        if (auto strType = dynamic_cast<ResolvedTypeStructDecl *>(declToGeneric->type.get())) {
+            declToGeneric = strType->decl;
+        } else if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(declToGeneric->type.get())) {
+            declToGeneric = fnType->fnDecl;
+        }
+    }
+
+    if (!declToGeneric) {
+        resolvedBase->dump();
+        genericExpr.dump();
+        specializedType->dump();
+        dmz_unreachable("unexpected there are no decl to specialize");
+    }
+
     if (auto structDecl = dynamic_cast<ResolvedGenericStructDecl *>(declToGeneric)) {
         decl = specialize_generic_struct(genericExpr.location, *structDecl, *specializedType);
         if (!decl) {
             decl = structDecl;
         }
-    }
-    if (auto functionDecl = dynamic_cast<ResolvedGenericFunctionDecl *>(declToGeneric)) {
+    } else if (auto functionDecl = dynamic_cast<ResolvedGenericFunctionDecl *>(declToGeneric)) {
         decl = specialize_generic_function(genericExpr.location, *functionDecl, *specializedType);
         if (!decl) {
             decl = functionDecl;
         }
+    } else {
+        declToGeneric->type->dump();
+        declToGeneric->dump();
+        resolvedBase->dump();
+        return report(genericExpr.location, "cannot specialize a non generic decl '" + resolvedBase->type->to_str() +
+                                                "' with " + genericExpr.to_str());
     }
 
     if (!decl) {
@@ -81,7 +102,15 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         varOrReturn(resolvedMemberExpr, resolve_member_expr(*memberExpr));
         resolvedBase = std::move(resolvedMemberExpr->base);
 
-        resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(resolvedMemberExpr->member.type.get())) {
+            if (fnType->fnDecl) {
+                resolvedFuncDecl = fnType->fnDecl;
+            }
+        }
+        if (!resolvedFuncDecl) {
+            resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
+        }
+
         if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
             isMemberCall = !memFunc->isStatic;
         }
@@ -89,7 +118,14 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         varOrReturn(resolvedMemberExpr, resolve_self_member_expr(*memberExpr));
         resolvedBase = std::move(resolvedMemberExpr->base);
 
-        resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(resolvedMemberExpr->member.type.get())) {
+            if (fnType->fnDecl) {
+                resolvedFuncDecl = fnType->fnDecl;
+            }
+        }
+        if (!resolvedFuncDecl) {
+            resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedMemberExpr->member);
+        }
 
         if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(resolvedFuncDecl)) {
             isMemberCall = !memFunc->isStatic;
@@ -106,10 +142,19 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         if (!dre) return report(call.location, "expression cannot be called as a function");
 
         varOrReturn(resolvedCallee, resolve_decl_ref_expr(*dre));
-        resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
+
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(resolvedCallee->decl.type.get())) {
+            if (fnType->fnDecl) {
+                resolvedFuncDecl = fnType->fnDecl;
+            }
+        }
+        if (!resolvedFuncDecl) {
+            resolvedFuncDecl = dynamic_cast<const ResolvedFuncDecl *>(&resolvedCallee->decl);
+        }
     }
 
     if (!resolvedFuncDecl) {
+        call.dump();
         return report(call.location, "calling non-function symbol");
     }
 

@@ -169,12 +169,12 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedVarDecl : public ResolvedDecl {
+struct ResolvedVarDecl : public ResolvedDependencies {
     ptr<ResolvedExpr> initializer;
 
     ResolvedVarDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                     ptr<ResolvedExpr> initializer = nullptr)
-        : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable),
+        : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable),
           initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -502,12 +502,12 @@ struct ResolvedDerefPtrExpr : public ResolvedAssignableExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedDeclStmt : public ResolvedDecl, public ResolvedStmt {
+struct ResolvedDeclStmt : public ResolvedDependencies, public ResolvedStmt {
     SourceLocation location;
     ptr<ResolvedVarDecl> varDecl;
 
     ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl)
-        : ResolvedDecl(location, varDecl->identifier, std::move(type), varDecl->isMutable),
+        : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable),
           ResolvedStmt(location),
           location(location),
           varDecl(std::move(varDecl)) {}
@@ -575,13 +575,13 @@ struct ResolvedErrorDecl : public ResolvedDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDecl {
+struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDependencies {
     SourceLocation location;
     std::vector<ptr<ResolvedErrorDecl>> errors;
 
     ResolvedErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ResolvedErrorDecl>> errors)
         : ResolvedExpr(location, makePtr<ResolvedTypeErrorGroup>(location, this)),
-          ResolvedDecl(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false),
+          ResolvedDependencies(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false),
           location(location),
           errors(std::move(errors)) {}
 
@@ -650,7 +650,7 @@ struct ResolvedTestDecl : public ResolvedFunctionDecl {
         : ResolvedFunctionDecl(
               location, identifier,
               makePtr<ResolvedTypeFunction>(
-                  location, makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)),
+                  location, this, makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)),
                   std::vector<ptr<ResolvedType>>{}),
               {}, functionDecl, std::move(body)) {}
 

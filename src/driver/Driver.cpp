@@ -329,7 +329,7 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     resolvedTree = sema.resolve_ast_decl();
     if (resolvedTree.empty()) m_haveError = true;
 
-    if (!m_haveError && !sema.resolve_ast_body(resolvedTree, m_options.noRemoveUnused)) m_haveError = true;
+    if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
     if (!m_haveError && !m_options.noRemoveUnused) sema.remove_unused(resolvedTree, m_options.test);
 
     if (m_options.depsDump) {

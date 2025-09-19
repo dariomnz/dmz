@@ -129,9 +129,8 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
-    debug_func("");
+    debug_func(stmt.type->to_str());
     const auto *decl = stmt.varDecl.get();
-    // if (!decl->type.isRef) {
     llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, *decl->type);
 
     if (const auto &init = decl->initializer) {
@@ -141,19 +140,6 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     }
     m_declarations[decl] = var;
     return var;
-    // } else {
-    //     // Only permit ref with a unary operator
-    //     if (const auto init = dynamic_cast<ResolvedRefPtrExpr *>(decl->initializer.get())) {
-    //         if (const auto operand = dynamic_cast<ResolvedDeclRefExpr *>(init->expr.get())) {
-    //             m_declarations[decl] = m_declarations[&operand->decl];
-    //             return m_declarations[&operand->decl];
-    //         }
-    //     }
-    //     stmt.dump();
-    //     dmz_unreachable("Only permit ref with a '&' operator");
-    // }
-
-    // return nullptr;
 }
 
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {

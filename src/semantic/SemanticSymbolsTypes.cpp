@@ -455,7 +455,7 @@ ptr<ResolvedType> ResolvedTypeFunction::clone() const {
     for (auto &&param : paramsTypes) {
         clonedparams.emplace_back(param->clone());
     }
-    return makePtr<ResolvedTypeFunction>(location, returnType->clone(), std::move(clonedparams));
+    return makePtr<ResolvedTypeFunction>(location, fnDecl, returnType->clone(), std::move(clonedparams));
 }
 
 void ResolvedTypeFunction::dump(size_t level) const {

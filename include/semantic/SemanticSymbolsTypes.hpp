@@ -202,13 +202,16 @@ struct ResolvedTypeArray : public ResolvedType {
     std::string to_str() const override;
 };
 
+struct ResolvedFuncDecl;  // Forward declaration
 struct ResolvedTypeFunction : public ResolvedType {
+    ResolvedFuncDecl *fnDecl;
     ptr<ResolvedType> returnType;
     std::vector<ptr<ResolvedType>> paramsTypes;
 
-    ResolvedTypeFunction(SourceLocation location, ptr<ResolvedType> returnType,
+    ResolvedTypeFunction(SourceLocation location, ResolvedFuncDecl *fnDecl, ptr<ResolvedType> returnType,
                          std::vector<ptr<ResolvedType>> paramsTypes)
         : ResolvedType(ResolvedTypeKind::Function, std::move(location)),
+          fnDecl(fnDecl),
           returnType(std::move(returnType)),
           paramsTypes(std::move(paramsTypes)) {}
 

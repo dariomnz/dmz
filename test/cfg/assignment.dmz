@@ -16,7 +16,7 @@ fn main() -> void {
 // CHECK-NEXT: [1]
 // CHECK-NEXT:   preds: 2 
 // CHECK-NEXT:   succs: 0 
-// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedDeclStmt i32
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:   ResolvedAssignment
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '3'

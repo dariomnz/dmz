@@ -57,10 +57,13 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
         resolvedFunctionDecl->params.insert(resolvedFunctionDecl->params.begin(), std::move(selfParam));
     }
 
-    return makePtr<ResolvedMemberFunctionDecl>(
+    auto ret = makePtr<ResolvedMemberFunctionDecl>(
         resolvedFunctionDecl->location, resolvedFunctionDecl->identifier, std::move(resolvedFunctionDecl->type),
         std::move(resolvedFunctionDecl->params), resolvedFunctionDecl->functionDecl,
         std::move(resolvedFunctionDecl->body), &structDecl, function.isStatic);
+    ret->getFnType()->fnDecl = ret.get();
+
+    return ret;
 }
 
 ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
@@ -111,24 +114,32 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto fnType =
-        makePtr<ResolvedTypeFunction>(function.location, std::move(returnType), std::move(resolvedParamsTypes));
+    auto fnType = makePtr<ResolvedTypeFunction>(function.location, nullptr, std::move(returnType),
+                                                std::move(resolvedParamsTypes));
 
     if (dynamic_cast<const ExternFunctionDecl *>(&function)) {
-        return makePtr<ResolvedExternFunctionDecl>(function.location, function.identifier, std::move(fnType),
-                                                   std::move(resolvedParams));
+        auto ret = makePtr<ResolvedExternFunctionDecl>(function.location, function.identifier, std::move(fnType),
+                                                       std::move(resolvedParams));
+        ret->getFnType()->fnDecl = ret.get();
+        return ret;
     }
     if (auto functionDecl = dynamic_cast<const FunctionDecl *>(&function)) {
         if (dynamic_cast<const TestDecl *>(&function)) {
-            return makePtr<ResolvedTestDecl>(function.location, function.identifier, functionDecl, nullptr);
+            auto ret = makePtr<ResolvedTestDecl>(function.location, function.identifier, functionDecl, nullptr);
+            ret->getFnType()->fnDecl = ret.get();
+            return ret;
         }
         if (resolvedGenericTypeDecl.size() != 0) {
-            return makePtr<ResolvedGenericFunctionDecl>(function.location, function.identifier, std::move(fnType),
-                                                        std::move(resolvedParams), functionDecl, nullptr,
-                                                        std::move(resolvedGenericTypeDecl), std::move(collectedScope));
+            auto ret = makePtr<ResolvedGenericFunctionDecl>(
+                function.location, function.identifier, std::move(fnType), std::move(resolvedParams), functionDecl,
+                nullptr, std::move(resolvedGenericTypeDecl), std::move(collectedScope));
+            ret->getFnType()->fnDecl = ret.get();
+            return ret;
         } else {
-            return makePtr<ResolvedFunctionDecl>(function.location, function.identifier, std::move(fnType),
-                                                 std::move(resolvedParams), functionDecl, nullptr);
+            auto ret = makePtr<ResolvedFunctionDecl>(function.location, function.identifier, std::move(fnType),
+                                                     std::move(resolvedParams), functionDecl, nullptr);
+            ret->getFnType()->fnDecl = ret.get();
+            return ret;
         }
     }
     function.dump();
@@ -208,12 +219,13 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto fnType =
-        makePtr<ResolvedTypeFunction>(funcDecl.location, std::move(returnType), std::move(resolvedParamsTypes));
+    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, nullptr, std::move(returnType),
+                                                std::move(resolvedParamsTypes));
 
     auto resolvedFunc = makePtr<ResolvedSpecializedFunctionDecl>(
         funcDecl.location, funcDecl.identifier, std::move(fnType), std::move(resolvedParams), funcDecl.functionDecl,
         nullptr, castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
+    resolvedFunc->getFnType()->fnDecl = resolvedFunc.get();
     // auto &retFunc = resolvedFunc;
     auto &retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc));
 

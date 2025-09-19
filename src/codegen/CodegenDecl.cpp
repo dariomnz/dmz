@@ -414,7 +414,9 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
 
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
-    if (stmt.type->kind == ResolvedTypeKind::Module) return;
+    if (stmt.type->kind == ResolvedTypeKind::Module || stmt.type->kind == ResolvedTypeKind::Function ||
+        stmt.type->kind == ResolvedTypeKind::StructDecl)
+        return;
 
     if (stmt.type->kind == ResolvedTypeKind::ErrorGroup) {
         if (auto errorGroup = dynamic_cast<ResolvedErrorGroupExprDecl *>(stmt.varDecl->initializer.get())) {
