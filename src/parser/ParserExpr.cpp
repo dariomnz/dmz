@@ -25,7 +25,7 @@ ptr<Expr> Parser::parse_primary() {
         return literal;
     }
     if (m_nextToken.type == TokenType::id) {
-        std::string_view identifier = m_nextToken.str;
+        auto identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
 
         return makePtr<DeclRefExpr>(location, std::move(identifier));

@@ -39,7 +39,6 @@ enum class TokenType {
     bracket_l,
     bracket_r,
     colon,
-    coloncolon,
     semicolon,
     comma,
     dot,
@@ -83,7 +82,7 @@ enum class TokenType {
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
 
-const static std::unordered_map<std::string_view, TokenType> keywords = {
+const static std::unordered_map<std::string, TokenType> keywords = {
     {"fn", TokenType::kw_fn},
     {"if", TokenType::kw_if},
     {"else", TokenType::kw_else},
@@ -121,7 +120,7 @@ const static std::unordered_map<std::string_view, TokenType> keywords = {
 
 struct Token {
     TokenType type = TokenType::invalid;
-    std::string_view str = {};
+    std::string str = {};
     SourceLocation loc = {};
 };
 
@@ -130,24 +129,21 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t);
 
 class Lexer {
    public:
-    Lexer(const char* file_name);
+    Lexer(std::filesystem::path file_path);
     std::vector<Token> tokenize_file();
+    bool next_line();
     Token next_token();
-    std::string get_file_name() {
-        std::filesystem::path p(m_file_name);
-        return p.filename().string();
-    }
+    std::string get_file_name() { return m_file_path.filename().string(); }
 
-    std::filesystem::path get_file_path() { return std::filesystem::path(m_file_name); }
+    std::filesystem::path get_file_path() { return m_file_path; }
 
    private:
-    std::string read_file();
-    void advance(int num = 1);
+    bool advance(int num = 1);
 
    private:
-    std::string m_file_name;
-    std::string m_file_content;
-    size_t m_position = 0;
+    std::filesystem::path m_file_path = {};
+    std::ifstream m_file = {};
+    std::string m_line_buffer = "";
     size_t m_line = 0;
     size_t m_col = 0;
 };

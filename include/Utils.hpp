@@ -35,7 +35,7 @@ struct SourceLocation {
     }
 
     friend std::ostream& operator<<(std::ostream& os, const SourceLocation& s) {
-        os << s.file_name.data() << ":" << s.line + 1 << ":" << s.col + 1;
+        os << s.file_name.data() << ":" << s.line << ":" << s.col + 1;
         return os;
     }
 };

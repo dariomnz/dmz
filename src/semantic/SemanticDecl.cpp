@@ -407,7 +407,7 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
 
 ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) {
     debug_func(structDecl.location);
-    std::set<std::string_view> identifiers;
+    std::set<std::string> identifiers;
 
     ScopeRAII fieldScope(*this);
     ptr<ResolvedStructDecl> resStructDecl;

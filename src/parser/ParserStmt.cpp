@@ -195,7 +195,7 @@ ptr<FieldInitStmt> Parser::parse_field_init_stmt() {
     SourceLocation location = m_nextToken.loc;
     // assert(m_nextToken.value && "identifier token without value");
 
-    std::string_view identifier = m_nextToken.str;
+    auto identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
     matchOrReturn(TokenType::colon, "expected ':'");

@@ -1,5 +1,9 @@
 #include "lexer/Lexer.hpp"
 
+#include <fcntl.h>
+
+#include <cstring>
+
 #include "Debug.hpp"
 
 namespace DMZ {
@@ -43,7 +47,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(bracket_l);
         CASE_TYPE(bracket_r);
         CASE_TYPE(colon);
-        CASE_TYPE(coloncolon);
         CASE_TYPE(semicolon);
         CASE_TYPE(comma);
         CASE_TYPE(dot);
@@ -102,81 +105,122 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t) {
     return os;
 }
 
-Lexer::Lexer(const char* file_name) : m_file_name(file_name), m_file_content(read_file()) {}
+Lexer::Lexer(std::filesystem::path file_path) : m_file_path(file_path) {}
 
-std::string Lexer::read_file() {
-    debug_msg("Begin");
-    auto size = std::filesystem::file_size(m_file_name);
-    std::string content(size, '\0');
-    std::ifstream in{m_file_name};
-    in.read(&content[0], size);
-    debug_msg("End");
-    return content;
+// inline int readAll(int fd, char* data, int len) {
+//     int ret = 0;
+//     int r;
+//     int l = len;
+//     char* buffer = static_cast<char*>(data);
+
+//     do {
+//         r = read(fd, buffer, l);
+//         if (r <= 0) { /* fail */
+//             if (ret == 0) ret = r;
+//             break;
+//         }
+//         l = l - r;
+//         buffer = buffer + r;
+//         ret = ret + r;
+//     } while ((l > 0) && (r >= 0));
+
+//     return ret;
+// }
+static inline bool isSpace(const std::string_view& c) {
+    return c.size() > 0 &&
+           (c[0] == ' ' || c[0] == '\f' || c[0] == '\n' || c[0] == '\r' || c[0] == '\t' || c[0] == '\v');
 }
+static inline bool isAlpha(const std::string_view& c) {
+    return c.size() > 0 && (('a' <= c[0] && c[0] <= 'z') || ('A' <= c[0] && c[0] <= 'Z'));
+}
+static inline bool isDigit(const std::string_view& c) { return c.size() > 0 && '0' <= c[0] && c[0] <= '9'; }
 
-void Lexer::advance(int num) {
-    if (num <= 0) return;
-    if (m_file_content[m_position] == '\n') {
-        m_col = 0;
-    }
-    for (int i = 0; i < num; i++) {
-        m_col++;
-        if (m_file_content[m_position + i] == '\n') {
-            m_line++;
-            m_col = 0;
+static inline bool isAlnum(const std::string_view& c) { return isDigit(c) || isAlpha(c); }
+
+bool Lexer::next_line() {
+    if (!m_file.is_open()) {
+        m_file.open(m_file_path);
+        if (!m_file.is_open()) {
+            dmz_unreachable("unexpected cannot open " + m_file_path.string() + " " + std::strerror(errno));
         }
     }
-    m_position += num;
+    m_line_buffer.clear();
+    if (!std::getline(m_file, m_line_buffer)) {
+        debug_msg("no more lines");
+        return false;
+    }
+    debug_msg("read line " << m_line << " '" + m_line_buffer + "'");
+    m_line++;
+    m_col = 0;
+    return true;
 }
-Token Lexer::next_token() {
-    if (m_position >= m_file_content.size())
-        return Token{.type = TokenType::eof, .loc = {.file_name = m_file_name, .line = m_line, .col = m_col}};
 
-    std::string_view file_content(m_file_content);
-    file_content = file_content.substr(m_position);
+bool Lexer::advance(int num) {
+    if (num <= 0) return true;
+    debug_msg("m_col " << m_col << " new m_col " << m_col + num);
+    m_col += num;
+    return m_col < m_line_buffer.size();
+}
+
+Token Lexer::next_token() {
+    debug_msg("m_col " << m_col << " m_line_buffer.size() " << m_line_buffer.size());
+    if (m_line_buffer.size() == 0 || m_col == m_line_buffer.size()) {
+        if (!next_line()) {
+            return Token{.type = TokenType::eof, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
+        }
+    }
+    std::string_view line_content(m_line_buffer);
+    line_content = line_content.substr(m_col);
+    debug_msg("current line: " << m_line << " current col: " << m_col << " content '" << line_content << "'");
     size_t space_count = 0;
     // Consume spaces
-    while (std::isspace(file_content[space_count])) {
+    while (isSpace(line_content.substr(space_count, 1))) {
         space_count++;
     }
     advance(space_count);
-    file_content = file_content.substr(space_count);
 
-    Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_name, .line = m_line, .col = m_col}};
-    if (file_content[0] == '\0') {
+    line_content = line_content.substr(space_count);
+    if (line_content.empty()) {
+        return next_token();
+    }
+
+    Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
+    defer([&]() { debug_msg(t); });
+    if (line_content.substr(0, 1) == "\0") {
         t.type = TokenType::eof;
-    } else if (std::isdigit(file_content[0])) {
+    } else if (isDigit(line_content.substr(0, 1))) {
         size_t digit_count = 1;
-        while (std::isdigit(file_content[digit_count])) {
+        while (isDigit(line_content.substr(digit_count, 1))) {
             digit_count++;
         }
-        if (file_content[digit_count] != '.') {
+        if (line_content.substr(digit_count, 1) != ".") {
             t.type = TokenType::lit_int;
-            t.str = file_content.substr(0, digit_count);
+            t.str = line_content.substr(0, digit_count);
             advance(digit_count);
             return t;
         }
         digit_count++;  // the '.'
-        if (!std::isdigit(file_content[digit_count])) {
+        if (!isDigit(line_content.substr(digit_count, 1))) {
             t.type = TokenType::unknown;
-            t.str = file_content.substr(0, digit_count);
+            t.str = line_content.substr(0, digit_count);
             advance(digit_count);
             return t;
         }
-        while (std::isdigit(file_content[digit_count])) {
+        while (isDigit(line_content.substr(digit_count, 1))) {
             digit_count++;
         }
         t.type = TokenType::lit_float;
-        t.str = file_content.substr(0, digit_count);
+        t.str = line_content.substr(0, digit_count);
         advance(digit_count);
 
-    } else if (std::isalpha(file_content[0]) || file_content[0] == '_' || file_content[0] == '@') {
+    } else if (isAlpha(line_content.substr(0, 1)) || line_content.substr(0, 1) == "_" ||
+               line_content.substr(0, 1) == "@") {
         size_t alpha_count = 1;
-        while (std::isalnum(file_content[alpha_count]) || file_content[alpha_count] == '_') {
+        while (isAlnum(line_content.substr(alpha_count, 1)) || line_content.substr(alpha_count, 1) == "_") {
             alpha_count++;
         }
         t.type = TokenType::id;
-        t.str = file_content.substr(0, alpha_count);
+        t.str = line_content.substr(0, alpha_count);
         advance(alpha_count);
         auto it = keywords.find(t.str);
         if (it != keywords.end()) {
@@ -187,181 +231,172 @@ Token Lexer::next_token() {
             for (size_t i = 1; i < t.str.size(); i++) {
                 if (!std::isdigit(t.str[i])) {
                     isInteger = false;
+                    break;
                 }
             }
             if (isInteger && t.str[0] == 'i') t.type = TokenType::ty_iN;
             if (isInteger && t.str[0] == 'u') t.type = TokenType::ty_uN;
         }
 
-    } else if (file_content.substr(0, 2) == "//") {
-        size_t comment_count = 2;
-        // For the //
-        advance(2);
-        while (comment_count < file_content.size() && file_content[comment_count] != '\n') {
-            comment_count++;
-            advance();
-        }
+    } else if (line_content.substr(0, 2) == "//") {
         t.type = TokenType::comment;
-        t.str = file_content.substr(0, comment_count);
-    } else if (file_content[0] == '{') {
+        t.str = line_content;
+        advance(line_content.size());
+    } else if (line_content.substr(0, 1) == "{") {
         t.type = TokenType::block_l;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '}') {
+    } else if (line_content.substr(0, 1) == "}") {
         t.type = TokenType::block_r;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '(') {
+    } else if (line_content.substr(0, 1) == "(") {
         t.type = TokenType::par_l;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == ')') {
+    } else if (line_content.substr(0, 1) == ")") {
         t.type = TokenType::par_r;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '[') {
+    } else if (line_content.substr(0, 1) == "[") {
         t.type = TokenType::bracket_l;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == ']') {
+    } else if (line_content.substr(0, 1) == "]") {
         t.type = TokenType::bracket_r;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content.substr(0, 2) == "::") {
-        t.type = TokenType::coloncolon;
-        t.str = file_content.substr(0, 2);
-        advance(2);
-    } else if (file_content[0] == ':') {
+    } else if (line_content.substr(0, 1) == ":") {
         t.type = TokenType::colon;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == ';') {
+    } else if (line_content.substr(0, 1) == ";") {
         t.type = TokenType::semicolon;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == ',') {
+    } else if (line_content.substr(0, 1) == ",") {
         t.type = TokenType::comma;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '\"') {
+    } else if (line_content.substr(0, 1) == "\"") {
         size_t str_count = 1;
-        advance();
-        while (file_content[str_count] != '\"' && file_content[str_count] != '\n') {
+        if (!advance()) return t;
+        while (line_content.substr(str_count, 1) != "\"" && line_content.substr(str_count, 1) != "\n") {
             str_count++;
-            advance();
+            if (!advance()) return t;
         }
         // For last "
         str_count++;
         advance();
         t.type = TokenType::lit_string;
-        t.str = file_content.substr(0, str_count);
-    } else if (file_content[0] == '\'') {
+        t.str = line_content.substr(0, str_count);
+    } else if (line_content.substr(0, 1) == "\'") {
         int char_size = 1;
-        if (file_content[char_size] == '\\') {
+        if (line_content.substr(char_size, 1) == "\\") {
             char_size++;
         }
         char_size++;
-        advance(char_size);
-        if (file_content[char_size] != '\'') {
+        if (!advance(char_size)) return t;
+        if (line_content.substr(char_size, 1) != "\'") {
             t.type = TokenType::unknown;
-            t.str = file_content.substr(1, char_size);
+            t.str = line_content.substr(1, char_size);
             return t;
         }
         advance();
         char_size++;
         t.type = TokenType::lit_char;
-        t.str = file_content.substr(0, char_size);
-    } else if (file_content.substr(0, 2) == "->") {
+        t.str = line_content.substr(0, char_size);
+    } else if (line_content.substr(0, 2) == "->") {
         t.type = TokenType::return_arrow;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content.substr(0, 2) == "=>") {
+    } else if (line_content.substr(0, 2) == "=>") {
         t.type = TokenType::switch_arrow;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content[0] == '+') {
+    } else if (line_content.substr(0, 1) == "+") {
         t.type = TokenType::op_plus;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '-') {
+    } else if (line_content.substr(0, 1) == "-") {
         t.type = TokenType::op_minus;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '*') {
+    } else if (line_content.substr(0, 1) == "*") {
         t.type = TokenType::asterisk;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '/') {
+    } else if (line_content.substr(0, 1) == "/") {
         t.type = TokenType::op_div;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '%') {
+    } else if (line_content.substr(0, 1) == "%") {
         t.type = TokenType::op_percent;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content.substr(0, 2) == "&&") {
+    } else if (line_content.substr(0, 2) == "&&") {
         t.type = TokenType::ampamp;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content.substr(0, 2) == "||") {
+    } else if (line_content.substr(0, 2) == "||") {
         t.type = TokenType::pipepipe;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content.substr(0, 2) == "==") {
+    } else if (line_content.substr(0, 2) == "==") {
         t.type = TokenType::op_equal;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content[0] == '=') {
+    } else if (line_content.substr(0, 1) == "=") {
         t.type = TokenType::op_assign;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content.substr(0, 2) == "!=") {
+    } else if (line_content.substr(0, 2) == "!=") {
         t.type = TokenType::op_not_equal;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content.substr(0, 2) == "<=") {
+    } else if (line_content.substr(0, 2) == "<=") {
         t.type = TokenType::op_less_eq;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content.substr(0, 2) == ">=") {
+    } else if (line_content.substr(0, 2) == ">=") {
         t.type = TokenType::op_more_eq;
-        t.str = file_content.substr(0, 2);
+        t.str = line_content.substr(0, 2);
         advance(2);
-    } else if (file_content[0] == '<') {
+    } else if (line_content.substr(0, 1) == "<") {
         t.type = TokenType::op_less;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '>') {
+    } else if (line_content.substr(0, 1) == ">") {
         t.type = TokenType::op_more;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content.substr(0, 3) == "...") {
+    } else if (line_content.substr(0, 3) == "...") {
         t.type = TokenType::dotdotdot;
-        t.str = file_content.substr(0, 3);
+        t.str = line_content.substr(0, 3);
         advance(3);
-    } else if (file_content[0] == '.') {
+    } else if (line_content.substr(0, 1) == ".") {
         t.type = TokenType::dot;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '|') {
+    } else if (line_content.substr(0, 1) == "|") {
         t.type = TokenType::pipe;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '&') {
+    } else if (line_content.substr(0, 1) == "&") {
         t.type = TokenType::amp;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '?') {
+    } else if (line_content.substr(0, 1) == "?") {
         t.type = TokenType::op_quest_mark;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
-    } else if (file_content[0] == '!') {
+    } else if (line_content.substr(0, 1) == "!") {
         t.type = TokenType::op_excla_mark;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
     } else {
         t.type = TokenType::unknown;
-        t.str = file_content.substr(0, 1);
+        t.str = line_content.substr(0, 1);
         advance();
     }
     debug_msg(t);
@@ -372,7 +407,6 @@ std::vector<Token> Lexer::tokenize_file() {
     debug_msg("Begin");
     std::vector<Token> v_tokens;
 
-    m_position = 0;
     m_line = 0;
     m_col = 0;
 

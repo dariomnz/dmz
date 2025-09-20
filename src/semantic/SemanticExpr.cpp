@@ -525,9 +525,9 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     }
 
     std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
-    std::map<std::string_view, const ResolvedFieldInitStmt *> inits;
+    std::map<std::string, const ResolvedFieldInitStmt *> inits;
 
-    std::map<std::string_view, const ResolvedFieldDecl *> fields;
+    std::map<std::string, const ResolvedFieldDecl *> fields;
     for (auto &&fieldDecl : st->fields) fields[fieldDecl->identifier] = fieldDecl.get();
 
     bool error = false;

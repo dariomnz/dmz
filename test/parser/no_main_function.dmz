@@ -1,2 +1,2 @@
 // RUN: compiler %s -ast-dump 2>&1 | filecheck %s
-// CHECK: [[# @LINE + 1 ]]:1: error: main function not found in global module
+// CHECK: [[# @LINE ]]:75: error: main function not found in global module

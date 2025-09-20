@@ -3,6 +3,6 @@ fn main() -> void {
     
     // CHECK: [[# @LINE + 1 ]]:17: error: expected expression
     let e: u8 = 'c;
+    // CHECK: [[# @LINE + 1 ]]:18: error: expected expression
     let e: *u8 = "Hello error
-    // CHECK: [[# @LINE + 1 ]]:1: error: expected ';' after declaration
 }

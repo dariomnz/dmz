@@ -674,7 +674,7 @@ bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg)
 bool Sema::check_variable_initialization(const CFG &cfg) {
     debug_func("");
     enum class State { Bottom, Unassigned, Assigned, Top };
-    std::unordered_map<State, std::string_view> state_to_string = {
+    static std::unordered_map<State, std::string> state_to_string = {
         {State::Bottom, "Bottom"},
         {State::Unassigned, "Unassigned"},
         {State::Assigned, "Assigned"},

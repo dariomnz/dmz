@@ -47,7 +47,7 @@ ptr<FuncDecl> Parser::parse_function_decl() {
 
     matchOrReturn(TokenType::id, "expected identifier");
 
-    std::string_view functionIdentifier = m_nextToken.str;
+    auto functionIdentifier = m_nextToken.str;
     structLocation = m_nextToken.loc;
     eat_next_token();  // eat identifier
 
@@ -89,14 +89,14 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::dotdotdot) {
-        std::string_view identifier = m_nextToken.str;
+        auto identifier = m_nextToken.str;
         eat_next_token();  // eat '...'
         return makePtr<ParamDecl>(location, std::move(identifier), makePtr<TypeVoid>(location), false, true);
     }
 
     matchOrReturn(TokenType::id, "expected parameter declaration");
 
-    std::string_view identifier = m_nextToken.str;
+    auto identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
     matchOrReturn(TokenType::colon, "expected ':'");
@@ -111,7 +111,7 @@ ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
 
-    std::string_view identifier = m_nextToken.str;
+    auto identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
     ptr<Expr> type = nullptr;
@@ -157,7 +157,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
 
     matchOrReturn(TokenType::id, "expected identifier");
 
-    std::string_view structIdentifier = m_nextToken.str;
+    auto structIdentifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
     auto genericTypes = parse_generic_types_decl();
@@ -223,7 +223,7 @@ ptr<FieldDecl> Parser::parse_field_decl() {
     // assert(nextToken.value && "identifier token without value");
 
     matchOrReturn(TokenType::id, "expected field declaration");
-    std::string_view identifier = m_nextToken.str;
+    auto identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
     matchOrReturn(TokenType::colon, "expected ':'");
@@ -332,7 +332,7 @@ ptr<TestDecl> Parser::parse_test_decl() {
     eat_next_token();  // eat test
 
     matchOrReturn(TokenType::lit_string, "expected string literal");
-    std::string_view name = m_nextToken.str;
+    auto name = m_nextToken.str;
     name = name.substr(1, name.size() - 2);
     eat_next_token();  // eat name
 
