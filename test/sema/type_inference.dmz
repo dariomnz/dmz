@@ -41,7 +41,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedVarDecl:i32 y
 // CHECK-NEXT:     ResolvedBinaryOperator:i32 '+'
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedFunctionDecl foo fn()->i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn()->i32 foo
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 
 // CHECK:      ResolvedVarDecl:*u8 str1
@@ -49,7 +49,7 @@ fn main() -> void {
 // CHECK-NEXT:    ResolvedDeclStmt *u8
 // CHECK-NEXT:      ResolvedVarDecl:*u8 str2
 // CHECK-NEXT:        ResolvedCallExpr:*u8
-// CHECK-NEXT:          ResolvedFunctionDecl str fn()->*u8
+// CHECK-NEXT:          ResolvedDeclRefExpr:fn()->*u8 str
 
 // CHECK:   ResolvedVarDecl:bool bool1
 // CHECK-NEXT:     ResolvedBoolLiteral:bool 'true'
@@ -61,4 +61,4 @@ fn main() -> void {
 // CHECK-NEXT: ResolvedDeclStmt bool
 // CHECK-NEXT:   ResolvedVarDecl:bool bool3
 // CHECK-NEXT:     ResolvedCallExpr:bool
-// CHECK-NEXT:       ResolvedFunctionDecl fnBool fn()->bool
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn()->bool fnBool

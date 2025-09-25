@@ -21,7 +21,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedVarDecl:const i32 a
 // CHECK-NEXT:           ResolvedOrElseErrorExpr:i32
 // CHECK-NEXT:             ResolvedCallExpr:i32!
-// CHECK-NEXT:               ResolvedFunctionDecl foo fn(i32)->i32!
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32! foo
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:               | value: 10
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
@@ -29,12 +29,12 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedVarDecl:const i32 b
 // CHECK-NEXT:           ResolvedOrElseErrorExpr:i32
 // CHECK-NEXT:             ResolvedCallExpr:i32!
-// CHECK-NEXT:               ResolvedFunctionDecl foo fn(i32)->i32!
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32! foo
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:               | value: 0
 // CHECK-NEXT:             ResolvedOrElseErrorExpr:i32
 // CHECK-NEXT:               ResolvedCallExpr:i32!
-// CHECK-NEXT:                 ResolvedFunctionDecl foo fn(i32)->i32!
+// CHECK-NEXT:                 ResolvedDeclRefExpr:fn(i32)->i32! foo
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '0'

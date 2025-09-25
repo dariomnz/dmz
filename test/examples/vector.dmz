@@ -1,5 +1,6 @@
 // RUN: compiler %s -I std %S/../../std/std.dmz -run | filecheck %s
 
+// CHECK: vector []
 // CHECK: vector [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 // CHECK: vector [4, 5, 6, 7, 8, 9]
 // CHECK-NOT: {{.*}}
@@ -23,6 +24,8 @@ fn printVector<T>(v: *std.vec<T>) -> void {
 fn main() -> void {
     let v = std.vec<i32>.init();
     defer v.deinit();
+
+    printVector<i32>(&v);
 
     let i = 0;
     while (i < 10) {

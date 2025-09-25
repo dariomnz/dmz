@@ -16,11 +16,11 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedParamDecl:i32 x
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void 
-// CHECK-NEXT:       ResolvedFunctionDecl foo fn(i32)->void
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn(i32)->void foo
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:void 
-// CHECK-NEXT:       ResolvedFunctionDecl bar fn(i32)->void
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn(i32)->void bar
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1

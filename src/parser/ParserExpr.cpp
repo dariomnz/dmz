@@ -24,32 +24,26 @@ ptr<Expr> Parser::parse_primary() {
         eat_next_token();  // eat number
         return literal;
     }
+    if (m_nextToken.type == TokenType::kw_fn && peek_token().type == TokenType::par_l) {
+        eat_next_token();  // eat fn
+        varOrReturn(paramsList,
+                    (parse_expr_list_with_trailing_comma(
+                        {TokenType::par_l, "expected '('"},
+                        [&]() { return with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }); },
+                        {TokenType::par_r, "expected ')'"})));
+
+        matchOrReturn(TokenType::return_arrow, "expected '->'");
+        eat_next_token();  // eat '->'
+
+        varOrReturn(returnType, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+
+        return makePtr<TypeFunction>(location, std::move(*paramsList), std::move(returnType));
+    }
     if (m_nextToken.type == TokenType::id) {
         auto identifier = m_nextToken.str;
         eat_next_token();  // eat identifier
 
         return makePtr<DeclRefExpr>(location, std::move(identifier));
-
-        // if (!(restrictions & (StructNotAllowed | OnlyTypeExpr)) &&
-        //     (m_nextToken.type == TokenType::block_l || nextToken_is_generic())) {
-        //     // auto genericTypes = parse_generic_types();
-        //     debug_msg("now parse list");
-        //     auto fieldInitList = parse_list_with_trailing_comma<FieldInitStmt>({TokenType::block_l, "expected '{'"},
-        //                                                                        &Parser::parse_field_init_stmt,
-        //                                                                        {TokenType::block_r, "expected '}'"});
-
-        //     if (!fieldInitList) {
-        //         synchronize_on({TokenType::block_r});
-        //         eat_next_token();  // eat '}'
-        //         return nullptr;
-        //     }
-
-        //     // GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
-        //     GenericTypes genTypes = GenericTypes{{}};
-        //     expr = makePtr<StructInstantiationExpr>(location, std::move(expr), std::move(genTypes),
-        //                                             std::move(*fieldInitList));
-        // }
-        // return expr;
     }
     if (!(restrictions & OnlyTypeExpr)) {
         if (m_nextToken.type == TokenType::par_l) {

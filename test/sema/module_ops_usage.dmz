@@ -25,14 +25,18 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         | value: 2
 // CHECK-NEXT:     ResolvedCallExpr:void
-// CHECK-NEXT:       ResolvedFunctionDecl print fn(i32)->void
+// CHECK-NEXT:       ResolvedMemberExpr:fn(i32)->void print
+// CHECK-NEXT:         ResolvedDeclRefExpr:module_ops ops
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32 result
 // CHECK-NEXT:         ResolvedCallExpr:i32
-// CHECK-NEXT:           ResolvedFunctionDecl add fn(i32, i32)->i32
+// CHECK-NEXT:           ResolvedMemberExpr:fn(i32, i32)->i32 add
+// CHECK-NEXT:             ResolvedMemberExpr:module_ops_integer integer
+// CHECK-NEXT:               ResolvedDeclRefExpr:module_ops ops
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:     ResolvedCallExpr:void
-// CHECK-NEXT:       ResolvedFunctionDecl print fn(i32)->void
+// CHECK-NEXT:       ResolvedMemberExpr:fn(i32)->void print
+// CHECK-NEXT:         ResolvedDeclRefExpr:module_ops ops
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 result

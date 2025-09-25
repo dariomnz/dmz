@@ -24,7 +24,7 @@ pub const integer = import("module_ops_integer.dmz");
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println fn(i32)->void
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
@@ -33,6 +33,6 @@ pub const integer = import("module_ops_integer.dmz");
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 '%d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 n

@@ -50,10 +50,10 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
     resolvedFunc.release();
     ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunction);
 
-    SourceLocation loc{};
     if (!function.isStatic) {
-        auto selfParam =
-            makePtr<ResolvedParamDecl>(loc, "", makePtr<ResolvedTypePointer>(loc, structDecl.type->clone()), false);
+        auto type = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(&structDecl));
+        auto selfParam = makePtr<ResolvedParamDecl>(
+            function.location, "", makePtr<ResolvedTypePointer>(function.location, std::move(type)), false);
         resolvedFunctionDecl->params.insert(resolvedFunctionDecl->params.begin(), std::move(selfParam));
     }
 
@@ -61,7 +61,11 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
         resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
         std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
         resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &structDecl, function.isStatic);
-    ret->getFnType()->fnDecl = ret.get();
+    auto fnType = ret->getFnType();
+    fnType->fnDecl = ret.get();
+    if (!function.isStatic) {
+        fnType->paramsTypes.insert(fnType->paramsTypes.begin(), ret->params.begin()->get()->type->clone());
+    }
 
     return ret;
 }
@@ -114,8 +118,8 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto fnType = makePtr<ResolvedTypeFunction>(function.location, nullptr, std::move(returnType),
-                                                std::move(resolvedParamsTypes));
+    auto fnType = makePtr<ResolvedTypeFunction>(function.location, nullptr, std::move(resolvedParamsTypes),
+                                                std::move(returnType));
 
     if (dynamic_cast<const ExternFunctionDecl *>(&function)) {
         auto ret = makePtr<ResolvedExternFunctionDecl>(function.location, function.isPublic, function.identifier,
@@ -220,8 +224,8 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, nullptr, std::move(returnType),
-                                                std::move(resolvedParamsTypes));
+    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, nullptr, std::move(resolvedParamsTypes),
+                                                std::move(returnType));
 
     auto resolvedFunc = makePtr<ResolvedSpecializedFunctionDecl>(
         funcDecl.location, funcDecl.isPublic, funcDecl.identifier, std::move(fnType), std::move(resolvedParams),
@@ -383,8 +387,8 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
             }
             if (shouldCheckType) {
                 if (!resolvedvarType->compare(*resolvedInitializer->type)) {
-                    resolvedvarType->dump();
-                    resolvedInitializer->type->dump();
+                    // resolvedvarType->dump();
+                    // resolvedInitializer->type->dump();
                     return report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                                      resolvedvarType->to_str() + "' actual '" +
                                                                      resolvedInitializer->type->to_str() + "'");
@@ -682,7 +686,7 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<pt
             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
                 auto resolvedDecl = resolve_function_decl(*fn);
                 if (resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
-                    if (const auto *test = dynamic_cast<const ResolvedTestDecl *>(resolvedDecl.get())) {
+                    if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
                         m_tests.emplace_back(test);
                     }
                     resolvedTree.emplace_back(std::move(resolvedDecl));
@@ -897,8 +901,8 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
         add_dependency(const_cast<ResolvedTestDecl *>(m_tests[i]));
 
         auto testType = m_tests[i]->getFnType();
-
-        auto test_call = makePtr<ResolvedCallExpr>(loc, testType->returnType->clone(), *m_tests[i],
+        auto test_ref = makePtr<ResolvedDeclRefExpr>(loc, *m_tests[i], testType->clone());
+        auto test_call = makePtr<ResolvedCallExpr>(loc, testType->returnType->clone(), std::move(test_ref),
                                                    std::vector<ptr<ResolvedExpr>>{});
         auto returnOptType = dynamic_cast<const ResolvedTypeOptional *>(testType->returnType.get());
         if (!returnOptType) dmz_unreachable("internal error, test return type is not optional");

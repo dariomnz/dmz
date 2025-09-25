@@ -5,16 +5,16 @@ namespace DMZ {
 bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << location);
     if (other.kind == ResolvedTypeKind::Void) {
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeVoid::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeVoid::clone() const {
@@ -31,22 +31,22 @@ std::string ResolvedTypeVoid::to_str() const { return "void"; }
 bool ResolvedTypeNumber::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << location);
     if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
-        return numberKind == numType->numberKind && bitSize == numType->bitSize;
+        return debug_ret(numberKind == numType->numberKind && bitSize == numType->bitSize);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << location);
-    if (equal(other)) return true;
+    if (equal(other)) return debug_ret(true);
 
     if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
         // TODO think if is ok to ignore size
-        // return numberKind == numType->numberKind;
-        return true;
+        // return debug_ret(numberKind == numType->numberKind);
+        return debug_ret(true);
     }
-    return false;
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::clone() const {
@@ -79,22 +79,23 @@ std::string ResolvedTypeNumber::to_str() const {
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
     if (other.kind == ResolvedTypeKind::Bool) {
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeBool::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
-    if (equal(other)) return true;
+    if (equal(other)) return debug_ret(true);
 
     if (other.kind == ResolvedTypeKind::Error || other.kind == ResolvedTypeKind::Pointer) {
-        return true;
+        return debug_ret(true);
     } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
-        return numType->numberKind == ResolvedNumberKind::Int || numType->numberKind == ResolvedNumberKind::UInt;
+        return debug_ret(numType->numberKind == ResolvedNumberKind::Int ||
+                         numType->numberKind == ResolvedNumberKind::UInt);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
@@ -112,17 +113,17 @@ std::string ResolvedTypeBool::to_str() const { return "bool"; }
 bool ResolvedTypeStructDecl::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeStructDecl " << location);
     if (auto strType = dynamic_cast<const ResolvedTypeStructDecl *>(&other)) {
-        return decl == strType->decl;
+        return debug_ret(decl == strType->decl);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStructDecl " << location);
-    if (equal(other)) return true;
+    if (equal(other)) return debug_ret(true);
 
-    return false;
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeStructDecl::clone() const {
@@ -150,17 +151,17 @@ std::string ResolvedTypeStructDecl::to_str() const {
 bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeStruct " << location);
     if (auto strType = dynamic_cast<const ResolvedTypeStruct *>(&other)) {
-        return decl == strType->decl;
+        return debug_ret(decl == strType->decl);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStruct " << location);
-    if (equal(other)) return true;
+    if (equal(other)) return debug_ret(true);
 
-    return false;
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeStruct::clone() const {
@@ -188,16 +189,16 @@ std::string ResolvedTypeStruct::to_str() const {
 bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << location);
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&other)) {
-        return decl == genType->decl;
+        return debug_ret(decl == genType->decl);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeGeneric::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeGeneric::clone() const {
@@ -214,22 +215,22 @@ std::string ResolvedTypeGeneric::to_str() const { return decl->name(); }
 bool ResolvedTypeSpecialized::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeSpecialized " << location);
     if (auto specType = dynamic_cast<const ResolvedTypeSpecialized *>(&other)) {
-        if (specializedTypes.size() != specType->specializedTypes.size()) return false;
+        if (specializedTypes.size() != specType->specializedTypes.size()) return debug_ret(false);
 
         for (size_t i = 0; i < specializedTypes.size(); i++) {
-            if (!specializedTypes[i]->equal(*specType->specializedTypes[i])) return false;
+            if (!specializedTypes[i]->equal(*specType->specializedTypes[i])) return debug_ret(false);
         }
 
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeSpecialized::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSpecialized " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeSpecialized::clone() const {
@@ -263,16 +264,16 @@ std::string ResolvedTypeSpecialized::to_str() const {
 bool ResolvedTypeError::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeError " << location);
     if (other.kind == ResolvedTypeKind::Error) {
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeError::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeError " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeError::clone() const {
@@ -289,16 +290,16 @@ std::string ResolvedTypeError::to_str() const { return "error"; }
 bool ResolvedTypeErrorGroup::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeErrorGroup " << location);
     if (auto egType = dynamic_cast<const ResolvedTypeErrorGroup *>(&other)) {
-        return decl == egType->decl;
+        return debug_ret(decl == egType->decl);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeErrorGroup::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeErrorGroup " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeErrorGroup::clone() const {
@@ -315,16 +316,16 @@ std::string ResolvedTypeErrorGroup::to_str() const { return "errorGroup"; }
 bool ResolvedTypeModule::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeModule " << location);
     if (auto modType = dynamic_cast<const ResolvedTypeModule *>(&other)) {
-        return moduleDecl == modType->moduleDecl;
+        return debug_ret(moduleDecl == modType->moduleDecl);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeModule::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeModule " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeModule::clone() const {
@@ -340,21 +341,21 @@ std::string ResolvedTypeModule::to_str() const { return moduleDecl->name(); }
 bool ResolvedTypeOptional::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeOptional " << location);
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
-        return optionalType->equal(*optType->optionalType);
+        return debug_ret(optionalType->equal(*optType->optionalType));
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeOptional::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeOptional " << location);
-    if (other.kind == ResolvedTypeKind::Error) return true;
-    if (equal(other)) return true;
+    if (other.kind == ResolvedTypeKind::Error) return debug_ret(true);
+    if (equal(other)) return debug_ret(true);
 
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
-        return optionalType->compare(*optType->optionalType);
+        return debug_ret(optionalType->compare(*optType->optionalType));
     } else {
-        return optionalType->compare(other);
+        return debug_ret(optionalType->compare(other));
     }
 }
 
@@ -372,23 +373,23 @@ std::string ResolvedTypeOptional::to_str() const { return optionalType->to_str()
 bool ResolvedTypePointer::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << location);
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
-        return pointerType->equal(*ptrType->pointerType);
+        return debug_ret(pointerType->equal(*ptrType->pointerType));
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypePointer::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << location);
-    if (equal(other)) return true;
+    if (equal(other)) return debug_ret(true);
 
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
-        if (pointerType->compare(*ptrType->pointerType)) return true;
-        if (pointerType->kind == ResolvedTypeKind::Void) return true;
-        if (ptrType->pointerType->kind == ResolvedTypeKind::Void) return true;
+        if (pointerType->compare(*ptrType->pointerType)) return debug_ret(true);
+        if (pointerType->kind == ResolvedTypeKind::Void) return debug_ret(true);
+        if (ptrType->pointerType->kind == ResolvedTypeKind::Void) return debug_ret(true);
     }
 
-    return false;
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypePointer::clone() const {
@@ -405,16 +406,16 @@ std::string ResolvedTypePointer::to_str() const { return "*" + pointerType->to_s
 bool ResolvedTypeArray::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << location);
     if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&other)) {
-        return arraySize == arrType->arraySize && arrayType->equal(*arrType->arrayType);
+        return debug_ret(arraySize == arrType->arraySize && arrayType->equal(*arrType->arrayType));
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeArray::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeArray::clone() const {
@@ -431,21 +432,30 @@ std::string ResolvedTypeArray::to_str() const { return arrayType->to_str() + "["
 bool ResolvedTypeFunction::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeFunction " << location);
     if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&other)) {
-        if (!returnType->equal(*fnType->returnType)) return false;
-        if (paramsTypes.size() != fnType->paramsTypes.size()) return false;
+        if (!returnType->equal(*fnType->returnType)) return debug_ret(false);
+        if (paramsTypes.size() != fnType->paramsTypes.size()) return debug_ret(false);
         for (size_t i = 0; i < paramsTypes.size(); i++) {
-            if (paramsTypes[i]->equal(*fnType->paramsTypes[i])) return false;
+            if (!paramsTypes[i]->equal(*fnType->paramsTypes[i])) return debug_ret(false);
         }
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeFunction::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeFunction " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&other)) {
+        if (!returnType->compare(*fnType->returnType)) return debug_ret(false);
+        if (paramsTypes.size() != fnType->paramsTypes.size()) return debug_ret(false);
+        for (size_t i = 0; i < paramsTypes.size(); i++) {
+            if (!paramsTypes[i]->compare(*fnType->paramsTypes[i])) return debug_ret(false);
+        }
+        return debug_ret(true);
+    } else {
+        return debug_ret(false);
+    }
 }
 
 ptr<ResolvedType> ResolvedTypeFunction::clone() const {
@@ -455,7 +465,7 @@ ptr<ResolvedType> ResolvedTypeFunction::clone() const {
     for (auto &&param : paramsTypes) {
         clonedparams.emplace_back(param->clone());
     }
-    return makePtr<ResolvedTypeFunction>(location, fnDecl, returnType->clone(), std::move(clonedparams));
+    return makePtr<ResolvedTypeFunction>(location, fnDecl, std::move(clonedparams), returnType->clone());
 }
 
 void ResolvedTypeFunction::dump(size_t level) const {
@@ -479,16 +489,16 @@ std::string ResolvedTypeFunction::to_str() const {
 bool ResolvedTypeVarArg::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeVarArg " << location);
     if (other.kind == ResolvedTypeKind::VarArg) {
-        return true;
+        return debug_ret(true);
     } else {
-        return false;
+        return debug_ret(false);
     }
 }
 
 bool ResolvedTypeVarArg::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeVarArg " << location);
-    if (equal(other)) return true;
-    return false;
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeVarArg::clone() const {

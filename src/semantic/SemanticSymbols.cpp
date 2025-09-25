@@ -93,9 +93,9 @@ void ResolvedDeclRefExpr::dump(size_t level, bool onlySelf) const {
 
 void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCallExpr:" << type->to_str() << '\n';
-    callee.dump(level + 1, true);
 
     if (onlySelf) return;
+    callee->dump(level + 1, onlySelf);
     dump_constant_value(level);
 
     for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);

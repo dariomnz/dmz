@@ -1,0 +1,78 @@
+// RUN: compiler %s -I std %S/../../std/std.dmz -run | filecheck %s
+
+// CHECK: Square h: 1 w: 2
+// CHECK: Triangle h: 2 b: 4
+// CHECK: Square h: 1 w: 2
+// CHECK: Triangle h: 2 b: 4
+// CHECK: Square h: 1 w: 2
+// CHECK: Triangle h: 2 b: 4
+// CHECK-NOT: {{.*}}
+
+const std = import("std");
+pub extern fn printf(fmt: *u8, ...) -> i32;
+
+struct Shape {
+    shape: *void,
+    drawOpaquePtr: *fn(*void)->void,
+
+    pub fn draw() -> void {
+        .drawOpaquePtr(.shape);
+    }
+}
+
+struct Square {
+    h: u32,
+    w: u32,
+    pub fn draw() -> void {
+        printf("Square h: %d w: %d\n", .h, .w);
+    }
+    pub fn Shape() -> Shape {
+        return Shape{
+            shape: .@This,
+            drawOpaquePtr: &.draw,
+        };
+    }
+}
+struct Triangle {
+    h: u32,
+    b: u32,
+    pub fn draw() -> void {
+        printf("Triangle h: %d b: %d\n", .h, .b);
+    }
+    pub fn Shape() -> Shape {
+        return Shape{
+            shape: .@This,
+            drawOpaquePtr: &.draw,
+        };
+    }
+}
+
+fn main() -> void {
+
+    let s = Square{h:1, w:2};
+    let sh = s.Shape();
+
+    sh.draw();
+
+    let t = Triangle{h:2, b:4};
+    let sh2 = t.Shape();
+
+    sh2.draw();
+
+    let s_array:Shape[2] = {sh, sh2};
+    
+    s_array[0].draw();
+    s_array[1].draw();
+
+    let vector = std.vec<Shape>.init();
+    defer vector.deinit();
+    try vector.add(sh);
+    try vector.add(sh2);
+    
+    let i = 0;
+    while (i < vector.size()) {
+        let aux_shape = try vector.get(i);
+        aux_shape.draw();
+        i = i + 1;
+    }
+}

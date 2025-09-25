@@ -32,7 +32,7 @@ class Codegen {
     ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     std::string generate_decl_name(const ResolvedDecl &decl);
-    void generate_function_decl(const ResolvedFuncDecl &functionDecl);
+    llvm::Function *generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const ResolvedType &type);
     void generate_block(const ResolvedBlock &block);
@@ -41,7 +41,7 @@ class Codegen {
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
     void generate_main_wrapper(bool runTest);
-    llvm::AttributeList construct_attr_list(const ResolvedFuncDecl &fn);
+    llvm::AttributeList construct_attr_list(const ResolvedTypeFunction &fnType);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);
     llvm::Value *generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr);
     llvm::Value *generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr, bool keepPointer = false);
@@ -63,15 +63,16 @@ class Codegen {
     llvm::Value *generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer);
     llvm::Value *generate_temporary_struct(const ResolvedStructInstantiationExpr &sie);
     llvm::Value *generate_temporary_array(const ResolvedArrayInstantiationExpr &aie);
-    llvm::Type *generate_struct_decl(const ResolvedStructDecl &structDecl);
+    llvm::StructType *get_struct_decl(const ResolvedStructDecl &structDecl);
+    llvm::StructType *generate_struct_decl(const ResolvedStructDecl &structDecl);
     void generate_struct_fields(const ResolvedStructDecl &structDecl);
     void generate_struct_functions(const ResolvedStructDecl &structDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);
-    llvm::Value *generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr);
-    llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr);
-    llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr);
+    llvm::Value *generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer);
+    llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr, bool keepPointer);
+    llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr, bool keepPointer);
     void generate_module_decl(const ResolvedModuleDecl &moduleDecl);
     void generate_module_body(const ResolvedModuleDecl &moduleDecl);
     void generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &declarations);

@@ -74,19 +74,15 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         }
         std::string name = generate_decl_name(*decl);
         debug_msg("struct '" << name << "'");
-        auto structType = llvm::StructType::getTypeByName(*m_context, name);
+        auto structType = get_struct_decl(*decl);
         ret = structType;
         if (!ret) {
             dmz_unreachable("cannot get type '" + name + "'");
         }
         if (noOpaque && structType->isOpaque()) {
-            if (auto structDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
-                generate_struct_fields(*structDecl);
-                ret = llvm::StructType::getTypeByName(*m_context, name);
-                if (!ret) dmz_unreachable("unexpected error generating struct decl");
-            } else {
-                dmz_unreachable("expected resolved struct decl");
-            }
+            generate_struct_fields(*decl);
+            ret = llvm::StructType::getTypeByName(*m_context, name);
+            if (!ret) dmz_unreachable("unexpected error generating struct decl");
         }
     } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
         ret = generate_type(*typeArray->arrayType, true);
@@ -122,7 +118,14 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             paramsTypes.emplace_back(generate_type(*t));
         }
         debug_msg(fnType->returnType->to_str());
-        auto returnType = generate_type(*fnType->returnType);
+        bool isReturningStruct = fnType->returnType->kind == ResolvedTypeKind::Struct ||
+                                 fnType->returnType->kind == ResolvedTypeKind::Optional;
+        llvm::Type *returnType = nullptr;
+        if (isReturningStruct) {
+            returnType = m_builder.getVoidTy();
+        } else {
+            returnType = generate_type(*fnType->returnType);
+        }
         ret = llvm::FunctionType::get(returnType, paramsTypes, isVarArg);
     }
     if (ret == nullptr) {
@@ -202,7 +205,7 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                    if (v)
                        v->print(llvm::errs());
                    else
-                       std::cerr << "null";
+                       std::cerr << "nullptr";
                }) << "'");
     // m_module->dump();
     // v->dump();
@@ -278,7 +281,19 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from,
                                   const ResolvedType &to) {
-    debug_func("from " << from.to_str() << " to " << to.to_str());
+    debug_func("From: '" << from.to_str() << "' to: '" << to.to_str() << "' " << Dumper([&]() {
+                   std::cerr << "val: '";
+                   if (val)
+                       val->print(llvm::errs());
+                   else
+                       std::cerr << "nullptr";
+                   std::cerr << "' ptr: '";
+                   if (ptr)
+                       ptr->print(llvm::errs());
+                   else
+                       std::cerr << "nullptr";
+                   std::cerr << "'";
+               }));
     if (from.kind != ResolvedTypeKind::Pointer) {
         if (from.kind == ResolvedTypeKind::Struct || from.kind == ResolvedTypeKind::Optional) {
             const llvm::DataLayout &dl = m_module->getDataLayout();

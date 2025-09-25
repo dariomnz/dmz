@@ -10,7 +10,7 @@ fn foo(x: *i32) -> void {
 // CHECK-NEXT:    ResolvedParamDecl:*i32 x
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedCallExpr:void
-// CHECK-NEXT:        ResolvedFunctionDecl println fn(i32)->void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:        ResolvedDerefPtrExpr:i32
 // CHECK-NEXT:          ResolvedDeclRefExpr:*i32 x
 // CHECK-NEXT:      ResolvedAssignment
@@ -19,7 +19,7 @@ fn foo(x: *i32) -> void {
 // CHECK-NEXT:        ResolvedIntLiteral:i32 '20'
 // CHECK-NEXT:        | value: 20
 // CHECK-NEXT:      ResolvedCallExpr:void
-// CHECK-NEXT:        ResolvedFunctionDecl println fn(i32)->void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:        ResolvedDerefPtrExpr:i32
 // CHECK-NEXT:          ResolvedDeclRefExpr:*i32 x
 
@@ -44,12 +44,12 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedRefPtrExpr:*i32
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println fn(i32)->void
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:         ResolvedDerefPtrExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:*i32 i_ptr
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl foo fn(*i32)->void
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*i32)->void foo
 // CHECK-NEXT:         ResolvedDeclRefExpr:*i32 i_ptr
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedFunctionDecl println fn(i32)->void
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 i

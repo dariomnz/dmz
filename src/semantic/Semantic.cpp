@@ -175,6 +175,18 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return ret;
     }
+    if (auto fnType = dynamic_cast<const TypeFunction *>(&type)) {
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        for (auto &&param : fnType->paramsTypes) {
+            varOrReturn(paramType, resolve_type(*param));
+            paramsTypes.emplace_back(std::move(paramType));
+        }
+        varOrReturn(returnType, resolve_type(*fnType->returnType));
+
+        ret = makePtr<ResolvedTypeFunction>(type.location, nullptr, std::move(paramsTypes), std::move(returnType));
+        retPtr = ret.get();
+        return ret;
+    }
     if (auto ptrType = dynamic_cast<const DerefPtrExpr *>(&type)) {
         varOrReturn(pointerType, resolve_type(*ptrType->expr));
 
@@ -276,7 +288,8 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
-        type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error) {
+        type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||
+        type.kind == ResolvedTypeKind::Function) {
         return type.clone();
     }
     type.dump();
@@ -420,16 +433,24 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDe
 bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
                           std::unordered_set<ResolvedDependencies *> &recurse_check) {
     bool ret = false;
+    bool isReasonRecurse = false;
     debug_func(resolvedDeps.name() << " " << (ret ? "true" : "false"));
-    if (!recurse_check.emplace(&resolvedDeps).second) {
-        debug_msg(resolvedDeps.name() << " is not needed recurse check");
-        ret = false;
-        return ret;
-    }
-    defer([&]() { recurse_check.erase(&resolvedDeps); });
+    defer([&]() {
+        recurse_check.erase(&resolvedDeps);
+        if (ret == false && isReasonRecurse == false) {
+            debug_msg(resolvedDeps.name() << " cached not needed");
+            resolvedDeps.cachedIsNotNeeded = true;
+        }
+    });
 
     if (m_removed_decls.find(&resolvedDeps) != m_removed_decls.end()) {
         debug_msg("ResolvedDecl is already removed");
+        ret = false;
+        return ret;
+    }
+
+    if (resolvedDeps.cachedIsNotNeeded) {
+        debug_msg("ResolvedDecl cached is not needed");
         ret = false;
         return ret;
     }
@@ -440,45 +461,46 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
-    if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(&resolvedDeps)) {
-        if (!declStmt->isMutable) {
-            if (declStmt->type->kind == ResolvedTypeKind::Module ||
-                declStmt->type->kind == ResolvedTypeKind::StructDecl ||
-                declStmt->type->kind == ResolvedTypeKind::Function) {
-                debug_msg("ResolvedDecl is a const declaration of a module, function or struct");
-                ret = false;
-                return ret;
-            }
-        }
-    }
+    // if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(&resolvedDeps)) {
+    //     if (!declStmt->isMutable) {
+    //         if (declStmt->type->kind == ResolvedTypeKind::Module ||
+    //             declStmt->type->kind == ResolvedTypeKind::StructDecl ||
+    //             declStmt->type->kind == ResolvedTypeKind::Function) {
+    //             debug_msg("ResolvedDecl is a const declaration of a module, function or struct");
+    //             ret = false;
+    //             return ret;
+    //         }
+    //     }
+    // }
     if (auto modDecl = dynamic_cast<ResolvedModuleDecl *>(&resolvedDeps)) {
         if (modDecl->declarations.size() == 0) {
             debug_msg("ResolvedModuleDecl is empty");
             ret = false;
             return ret;
-        } else {
-            size_t declStmtSize = 0;
-            for (auto &&decl : modDecl->declarations) {
-                if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
-                    if (!declStmt->isMutable) {
-                        if (declStmt->type->kind == ResolvedTypeKind::Module ||
-                            declStmt->type->kind == ResolvedTypeKind::StructDecl ||
-                            declStmt->type->kind == ResolvedTypeKind::Function) {
-                            declStmtSize++;
-                        }
-                    }
-                } else {
-                    break;
-                }
-            }
-            debug_msg("declStmtSize " << declStmtSize << " modDecl->declarations.size() "
-                                      << modDecl->declarations.size());
-            if (declStmtSize == modDecl->declarations.size()) {
-                debug_msg("ResolvedModuleDecl only contains decl");
-                ret = false;
-                return ret;
-            }
         }
+        // else {
+        //     size_t declStmtSize = 0;
+        //     for (auto &&decl : modDecl->declarations) {
+        //         if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
+        //             if (!declStmt->isMutable) {
+        //                 if (declStmt->type->kind == ResolvedTypeKind::Module ||
+        //                     declStmt->type->kind == ResolvedTypeKind::StructDecl ||
+        //                     declStmt->type->kind == ResolvedTypeKind::Function) {
+        //                     declStmtSize++;
+        //                 }
+        //             }
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        //     debug_msg("declStmtSize " << declStmtSize << " modDecl->declarations.size() "
+        //                               << modDecl->declarations.size());
+        //     if (declStmtSize == modDecl->declarations.size()) {
+        //         debug_msg("ResolvedModuleDecl only contains decl");
+        //         ret = false;
+        //         return ret;
+        //     }
+        // }
     }
 
     if (resolvedDeps.identifier == "main") {
@@ -493,13 +515,22 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
+    size_t reasonRecurse = 0;
     for (auto &&decl : resolvedDeps.isUsedBy) {
         debug_msg(decl->name() << " in isUsedBy " << resolvedDeps.name());
+        if (!recurse_check.emplace(decl).second) {
+            debug_msg(resolvedDeps.name() << " is not needed recurse check");
+            reasonRecurse += 1;
+            continue;
+        }
         if (recurse_needed(*decl, buildTest, recurse_check)) {
             debug_msg(decl->name() << " is needed recurse");
             ret = true;
             return ret;
         }
+    }
+    if (reasonRecurse > 0) {
+        isReasonRecurse = true;
     }
 
     debug_msg(resolvedDeps.name() << " is not needed");

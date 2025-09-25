@@ -38,7 +38,7 @@ class Sema {
     ptr<ScopeRAII> m_globalScope;
     ResolvedModuleDecl *m_currentModule = nullptr;
 
-    std::vector<const ResolvedTestDecl *> m_tests;
+    std::vector<ResolvedTestDecl *> m_tests;
 
     std::unordered_set<ResolvedDecl *> m_removed_decls;
 

@@ -8,7 +8,7 @@ struct Point {
         .x = .x + 1;
         .y = .y + 1;
     }
-// CHECK:  ResolvedMemberFunctionDecl addOne fn()->void
+// CHECK:  ResolvedMemberFunctionDecl addOne fn(*struct_self_member.Point{})->void
 // CHECK-NEXT:    ResolvedParamDecl:*struct_self_member.Point 
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedAssignment
@@ -32,7 +32,8 @@ fn main() -> void {
     p.addOne();
 }
 
-// CHECK:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedMemberFunctionDecl addOne fn()->void
-// CHECK-NEXT:         ResolvedRefPtrExpr:*struct_self_member.Point{}
-// CHECK-NEXT:           ResolvedDeclRefExpr:struct_self_member.Point{} p
+// CHECK: ResolvedCallExpr:void
+// CHECK-NEXT:   ResolvedMemberExpr:fn(*struct_self_member.Point{})->void addOne
+// CHECK-NEXT:     ResolvedDeclRefExpr:struct_self_member.Point{} p
+// CHECK-NEXT:   ResolvedRefPtrExpr:*struct_self_member.Point{}
+// CHECK-NEXT:     ResolvedDeclRefExpr:struct_self_member.Point{} p

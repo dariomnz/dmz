@@ -40,8 +40,7 @@ pub struct vec<T> {
 
     pub fn get(index: u64) -> T! {
         if (index > .len) { return vector_error.IndexOutOfLenght; }
-        let ret:T = .buf[index];
-        return ret;
+        return .buf[index];
     }
 
     pub fn remove(index: u64) -> void! {

@@ -1,3 +1,2 @@
 
 extern fn open(buffer:*u8, flags:i32, ...) -> i32;
-extern fn printf(fmt:*u8, ...) -> i32;

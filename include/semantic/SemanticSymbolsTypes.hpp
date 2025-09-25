@@ -205,15 +205,15 @@ struct ResolvedTypeArray : public ResolvedType {
 struct ResolvedFuncDecl;  // Forward declaration
 struct ResolvedTypeFunction : public ResolvedType {
     ResolvedFuncDecl *fnDecl;
-    ptr<ResolvedType> returnType;
     std::vector<ptr<ResolvedType>> paramsTypes;
+    ptr<ResolvedType> returnType;
 
-    ResolvedTypeFunction(SourceLocation location, ResolvedFuncDecl *fnDecl, ptr<ResolvedType> returnType,
-                         std::vector<ptr<ResolvedType>> paramsTypes)
+    ResolvedTypeFunction(SourceLocation location, ResolvedFuncDecl *fnDecl, std::vector<ptr<ResolvedType>> paramsTypes,
+                         ptr<ResolvedType> returnType)
         : ResolvedType(ResolvedTypeKind::Function, std::move(location)),
           fnDecl(fnDecl),
-          returnType(std::move(returnType)),
-          paramsTypes(std::move(paramsTypes)) {}
+          paramsTypes(std::move(paramsTypes)),
+          returnType(std::move(returnType)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

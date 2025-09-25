@@ -142,6 +142,30 @@ template ptr<std::vector<ptr<Expr>>> Parser::parse_list_with_trailing_comma(std:
 template ptr<std::vector<ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, ptr<GenericTypeDecl> (Parser::*)(), std::pair<TokenType, const char *>);
 
+ptr<std::vector<ptr<Expr>>> Parser::parse_expr_list_with_trailing_comma(
+    std::pair<TokenType, const char *> openingToken, std::function<ptr<Expr>()> parser,
+    std::pair<TokenType, const char *> closingToken) {
+    debug_func("");
+    matchOrReturn(openingToken.first, openingToken.second);
+    eat_next_token();  // eat openingToken
+
+    std::vector<ptr<Expr>> list;
+    while (true) {
+        if (m_nextToken.type == closingToken.first) break;
+
+        varOrReturn(init, parser());
+        list.emplace_back(std::move(init));
+
+        if (m_nextToken.type != TokenType::comma) break;
+        eat_next_token();  // eat ','
+    }
+
+    matchOrReturn(closingToken.first, closingToken.second);
+    eat_next_token();  // eat closingToken
+
+    return makePtr<std::vector<ptr<Expr>>>(std::move(list));
+}
+
 bool Parser::nextToken_is_generic() {
     bool ret = false;
     debug_func(" ret: " << (ret ? "true" : "false"));

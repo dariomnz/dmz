@@ -20,6 +20,22 @@ void TypeBool::dump(size_t level) const { std::cerr << indent(level) << "TypeBoo
 
 std::string TypeBool::to_str() const { return "bool"; }
 
+void TypeFunction::dump(size_t level) const { std::cerr << indent(level) << "TypeFunction " << to_str() << '\n'; }
+
+std::string TypeFunction::to_str() const {
+    std::stringstream out;
+    out << "fn(";
+    for (size_t i = 0; i < paramsTypes.size(); i++) {
+        out << paramsTypes[i]->to_str();
+        if (i != paramsTypes.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ")->";
+    out << returnType->to_str();
+    return out.str();
+}
+
 void FunctionDecl::dump(size_t level) const {
     if (auto member = dynamic_cast<const MemberFunctionDecl *>(this)) {
         if (member->isStatic) {

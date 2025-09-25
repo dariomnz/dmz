@@ -30,159 +30,6 @@ namespace DMZ {
 // Forward declaration
 struct Expr;
 
-// struct GenericTypes {
-//     std::vector<ptr<Expr>> types;
-
-//     GenericTypes(std::vector<ptr<Expr>> types) noexcept;
-
-//     GenericTypes(const GenericTypes& other);
-//     GenericTypes& operator=(const GenericTypes& other);
-//     GenericTypes(GenericTypes&& other) noexcept;
-
-//     void dump() const;
-//     std::string to_str() const;
-// };
-
-// Forward declaration
-// struct ResolvedDecl;
-// struct Type {
-//     enum class Kind { Void, Bool, Int, UInt, Float, Struct, Custom, Generic, Error, Module, ErrorGroup };
-
-//     static std::string KindString(Kind k) {
-//         switch (k) {
-//             case Kind::Void:
-//                 return "Void";
-//             case Kind::Bool:
-//                 return "Bool";
-//             case Kind::Int:
-//                 return "Int";
-//             case Kind::UInt:
-//                 return "UInt";
-//             case Kind::Float:
-//                 return "Float";
-//             case Kind::Struct:
-//                 return "Struct";
-//             case Kind::Custom:
-//                 return "Custom";
-//             case Kind::Generic:
-//                 return "Generic";
-//             case Kind::Error:
-//                 return "Error";
-//             case Kind::Module:
-//                 return "Module";
-//             case Kind::ErrorGroup:
-//                 return "ErrorGroup";
-//         }
-//         dmz_unreachable("unexpected kind " + std::to_string(static_cast<int>(k)));
-//     }
-
-//     Kind kind = Kind::Void;
-//     std::string name = "";
-//     int size = 0;
-//     std::optional<int> isArray = std::nullopt;
-//     std::optional<int> isPointer = std::nullopt;
-//     bool isOptional = false;
-//     std::optional<GenericTypes> genericTypes = std::nullopt;
-//     ResolvedDecl* decl = nullptr;  // For user defined types
-//     SourceLocation location = {};
-
-//     static Type builtinVoid() { return {Kind::Void, "void"}; }
-//     static Type builtinBool() { return {Kind::Bool}; }
-//     static Type builtinIN(const std::string_view& name) {
-//         auto num = name.substr(1);
-//         int result = 0;
-//         auto res = std::from_chars(num.data(), num.data() + num.size(), result);
-//         if (result == 0 || res.ec != std::errc()) {
-//             dmz_unreachable("unexpected size of 0 in i type");
-//         }
-//         return {Kind::Int, std::string(name), result};
-//     }
-//     static Type builtinUN(const std::string_view& name) {
-//         auto num = name.substr(1);
-//         int result = 0;
-//         auto res = std::from_chars(num.data(), num.data() + num.size(), result);
-//         if (result == 0 || res.ec != std::errc()) {
-//             dmz_unreachable("unexpected size of 0 in u type");
-//         }
-//         return {Kind::UInt, std::string(name), result};
-//     }
-//     static Type builtinF16() { return {Kind::Float, "f16", 16}; }
-//     static Type builtinF32() { return {Kind::Float, "f32", 32}; }
-//     static Type builtinF64() { return {Kind::Float, "f64", 64}; }
-//     static Type builtinString(int size) { return Type{.kind = Kind::UInt, .name = "u8", .size = 8, .isPointer = 1}; }
-//     static Type moduleType(const std::string_view& name, ResolvedDecl* decl) {
-//         return Type{.kind = Kind::Module, .name = std::string(name), .decl = decl};
-//     }
-//     static Type errorGroupType(ResolvedDecl* decl) { return Type{.kind = Kind::ErrorGroup, .decl = decl}; }
-//     static Type customType(const std::string_view& name) { return {Kind::Custom, std::string(name)}; }
-//     static Type structType(const std::string_view& name, ResolvedDecl* decl) {
-//         return Type{.kind = Kind::Struct, .name = std::string(name), .decl = decl};
-//     }
-//     static Type structType(Type t, ResolvedDecl* decl) {
-//         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to struct");
-//         t.kind = Kind::Struct;
-//         t.decl = decl;
-//         return t;
-//     }
-//     static Type genericType(Type t) {
-//         if (t.kind != Kind::Custom) dmz_unreachable("expected custom type to convert to generic");
-//         t.kind = Kind::Generic;
-//         return t;
-//     }
-//     static Type specializeType(Type genType, Type t) {
-//         if (genType.kind == Kind::Generic) dmz_unreachable("expected generic type to convert to specialized");
-//         if (t.kind == Kind::Custom) {
-//             dmz_unreachable("expected resolved type to convert to specialized");
-//         }
-
-//         genType.name = t.name;
-//         genType.kind = t.kind;
-//         genType.decl = t.decl;
-//         genType.size = t.size;
-//         return genType;
-//     }
-//     static Type builtinError(const std::string_view& name) { return {Kind::Error, std::string(name)}; }
-
-//     bool operator==(const Type& otro) const {
-//         return (kind == otro.kind && name == otro.name && isArray == otro.isArray && isOptional == otro.isOptional &&
-//                 isPointer == otro.isPointer);
-//     }
-
-//     static bool can_convert(const Type& to, const Type& from);
-//     static bool compare(const Type& lhs, const Type& rhs);
-
-//     void dump() const;
-//     std::string to_str(bool removeKind = true) const;
-//     Type withoutOptional() const {
-//         Type t = *this;
-//         t.isOptional = false;
-//         return t;
-//     }
-//     Type withoutArray() const {
-//         Type t = *this;
-//         t.isArray = std::nullopt;
-//         return t;
-//     }
-//     Type pointer() const {
-//         Type t = *this;
-//         t.isPointer = t.isPointer.has_value() ? *t.isPointer + 1 : 1;
-//         return t;
-//     }
-//     Type remove_pointer() const {
-//         Type t = *this;
-//         if (t.isPointer) {
-//             if (*t.isPointer == 1) {
-//                 t.isPointer = std::nullopt;
-//             } else {
-//                 t.isPointer = *t.isPointer - 1;
-//             }
-//         }
-//         return t;
-//     }
-
-//     friend std::ostream& operator<<(std::ostream& os, const Type& t);
-// };
-
 template <typename Ty>
 class ConstantValueContainer {
    protected:
@@ -248,6 +95,16 @@ struct TypeNumber : public Type {
 
 struct TypeBool : public Type {
     TypeBool(SourceLocation location) : Type(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct TypeFunction : public Type {
+    std::vector<ptr<Expr>> paramsTypes;
+    ptr<Expr> returnType;
+    TypeFunction(SourceLocation location, std::vector<ptr<Expr>> paramsTypes, ptr<Expr> returnType)
+        : Type(location), paramsTypes(std::move(paramsTypes)), returnType(std::move(returnType)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

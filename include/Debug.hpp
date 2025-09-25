@@ -69,6 +69,12 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
     os << "]";
     return os;
 }
+#define debug_ret(ret)                                          \
+    ({                                                          \
+        auto return_value = ret;                                \
+        debug_msg_func(__func__, "Returning " << return_value); \
+        return_value;                                           \
+    })
 #define debug_msg(out_format) debug_msg_func(__func__, out_format)
 #define debug_msg_func(func, out_format)                                                                             \
     {                                                                                                                \
@@ -85,6 +91,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
         debug_msg_func(____func_name, "END " << ____func_name << " " << out_format); \
     });
 #else
+#define debug_ret(ret) ret
 #define debug_msg(out_format)
 #define debug_msg_func(func, out_format)
 #define debug_func(out_format)

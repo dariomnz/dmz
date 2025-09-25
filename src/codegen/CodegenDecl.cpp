@@ -26,59 +26,10 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
         name = decl.identifier;
     }
 
-    // if (auto structDecl = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
-    //     if (structDecl->type.genericTypes) {
-    //         std::stringstream out;
-    //         out << name << *structDecl->type.genericTypes;
-    //         name = out.str();
-    //     }
-    // }
-    // debug_msg(name);
-    // println(decl.symbolName << " " << name);
-    // decl.dump();
     return name;
 }
 
-// std::string Codegen::generate_struct_name(const ResolvedStructDecl &structDecl) {
-//     std::string name = "struct." + structDecl.type.to_str();
-//     debug_func(name);
-//     name = generate_symbol_name(name);
-//     return name;
-// }
-
-// std::string Codegen::generate_function_name(const ResolvedFuncDecl &functionDecl) {
-//     std::string name;
-//     debug_func(name);
-//     if (functionDecl.parent) {
-//         name += generate_function_name(*functionDecl.parent);
-//         if (dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) return name;
-//     }
-
-//     if (auto memberFunction = dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-//         name += generate_struct_name(*memberFunction->structDecl);
-//         name += ".";
-//     }
-
-//     if (dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)) {
-//         name += std::string(functionDecl.identifier);
-//     } else if (dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl) ||
-//                dynamic_cast<const ResolvedMemberFunctionDecl *>(&functionDecl)) {
-//         name += std::string(functionDecl.identifier);
-//         // name += functionDecl.moduleID.to_string() + std::string(functionDecl.identifier);
-//     }
-
-//     if (auto specializedFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
-//         name += specializedFunc->genericTypes.to_str();
-//     }
-
-//     if (functionDecl.identifier == "main") {
-//         return "__builtin_main";
-//     }
-
-//     return generate_symbol_name(name);
-// }
-
-void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
+llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     debug_func(functionDecl.symbolName);
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
@@ -89,8 +40,11 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
             }
             generate_function_decl(*cast_func);
         }
-        return;
+        return nullptr;
     }
+
+    auto llvmFnDecl = m_module->getFunction(generate_decl_name(functionDecl));
+    if (llvmFnDecl) return llvmFnDecl;
 
     auto fnType = functionDecl.getFnType();
 
@@ -119,37 +73,32 @@ void Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
     std::string funcName = generate_decl_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
-    fn->setAttributes(construct_attr_list(functionDecl));
+    fn->setAttributes(construct_attr_list(*fnType));
+    return fn;
 }
 
-llvm::AttributeList Codegen::construct_attr_list(const ResolvedFuncDecl &fn) {
-    debug_func(fn.name());
-
-    auto fnType = fn.getFnType();
+llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnType) {
+    debug_func(fnType.to_str());
 
     bool isReturningStruct =
-        fnType->returnType->kind == ResolvedTypeKind::Struct || fnType->returnType->kind == ResolvedTypeKind::Optional;
+        fnType.returnType->kind == ResolvedTypeKind::Struct || fnType.returnType->kind == ResolvedTypeKind::Optional;
     std::vector<llvm::AttributeSet> argsAttrSets;
 
     if (isReturningStruct) {
         llvm::AttrBuilder retAttrs(*m_context);
-        retAttrs.addStructRetAttr(generate_type(*fnType->returnType));
+        retAttrs.addStructRetAttr(generate_type(*fnType.returnType));
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, retAttrs));
     }
 
-    for (auto &&param : fn.params) {
-        debug_msg("Param: " << param->type);
+    for (auto &&param : fnType.paramsTypes) {
+        debug_msg("Param: " << param->to_str());
         llvm::AttrBuilder paramAttrs(*m_context);
-        if (auto typePrt = dynamic_cast<ResolvedTypePointer *>(param->type.get())) {
+        if (auto typePrt = dynamic_cast<ResolvedTypePointer *>(param.get())) {
             if (!dynamic_cast<ResolvedTypeVoid *>(typePrt->pointerType.get())) {
                 paramAttrs.addByRefAttr(generate_type(*typePrt->pointerType));
             }
-        } else if (dynamic_cast<ResolvedTypeStruct *>(param->type.get())) {
-            if (param->isMutable) {
-                paramAttrs.addByValAttr(generate_type(*param->type));
-            } else {
-                paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
-            }
+        } else if (param->kind == ResolvedTypeKind::Struct) {
+            paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
         }
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, paramAttrs));
     }
@@ -254,7 +203,17 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_currentFunction = nullptr;
 }
 
-llvm::Type *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
+llvm::StructType *Codegen::get_struct_decl(const ResolvedStructDecl &structDecl) {
+    auto name = generate_decl_name(structDecl);
+    auto structType = llvm::StructType::getTypeByName(*m_context, name);
+    if (structType) return structType;
+
+    auto ret = generate_struct_decl(structDecl);
+    generate_struct_fields(structDecl);
+    return ret;
+}
+
+llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {

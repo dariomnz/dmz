@@ -3,7 +3,7 @@
 namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
-    debug_func(expr.location);
+    debug_func(expr.location << " keepPointer " << (keepPointer ? "true" : "false"));
     if (auto val = expr.get_constant_value()) {
         if (auto nt = dynamic_cast<ResolvedTypeNumber *>(expr.type.get())) {
             return m_builder.getIntN(nt->bitSize, *val);
@@ -47,7 +47,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return generate_deref_ptr_expr(*ptrExpr, keepPointer);
     }
     if (auto *grouping = dynamic_cast<const ResolvedGroupingExpr *>(&expr)) {
-        return generate_expr(*grouping->expr);
+        return generate_expr(*grouping->expr, keepPointer);
     }
     if (auto *me = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
         return generate_member_expr(*me, keepPointer);
@@ -65,13 +65,13 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return generate_temporary_array(*aie);
     }
     if (auto *catchErr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
-        return generate_catch_error_expr(*catchErr);
+        return generate_catch_error_expr(*catchErr, keepPointer);
     }
     if (auto *tryErr = dynamic_cast<const ResolvedTryErrorExpr *>(&expr)) {
-        return generate_try_error_expr(*tryErr);
+        return generate_try_error_expr(*tryErr, keepPointer);
     }
     if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
-        return generate_orelse_error_expr(*orelseErr);
+        return generate_orelse_error_expr(*orelseErr, keepPointer);
     }
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
@@ -82,19 +82,23 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     debug_func("");
-    const ResolvedFuncDecl &calleeDecl = call.callee;
-    auto symbolName = generate_decl_name(call.callee);
-    llvm::Function *callee = m_module->getFunction(symbolName);
-    if (!callee) {
-        generate_function_decl(call.callee);
-        callee = m_module->getFunction(symbolName);
-        if (!callee) {
-            println("Cannot generate declaration of " << symbolName);
-            dmz_unreachable("Cannot generate declaration of func");
+    llvm::Value *callee = generate_expr(*call.callee);
+    ResolvedTypeFunction *fnType = dynamic_cast<ResolvedTypeFunction *>(call.callee->type.get());
+    if (!fnType) {
+        if (auto ptrType = dynamic_cast<ResolvedTypePointer *>(call.callee->type.get())) {
+            if (auto funcType = dynamic_cast<ResolvedTypeFunction *>(ptrType->pointerType.get())) {
+                fnType = funcType;
+            } else {
+                dmz_unreachable("unexpected type '" + ptrType->pointerType->to_str() + "', expected function");
+            }
+        } else {
+            dmz_unreachable("unexpected type '" + call.callee->type->to_str() + "', expected pointer to function");
         }
     }
 
-    auto fnType = calleeDecl.getFnType();
+    if (!fnType) {
+        dmz_unreachable("unexpected type in callee '" + call.callee->type->to_str() + "'");
+    }
 
     bool isReturningStruct =
         fnType->returnType->kind == ResolvedTypeKind::Struct || fnType->returnType->kind == ResolvedTypeKind::Optional;
@@ -105,22 +109,15 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
         callRetVal = args.emplace_back(allocate_stack_variable("struct.ret.tmp", *fnType->returnType));
     }
 
-    size_t argIdx = 0;
     for (auto &&arg : call.arguments) {
         llvm::Value *val = generate_expr(*arg);
-        if (dynamic_cast<ResolvedTypeStruct *>(arg->type.get()) &&
-            !dynamic_cast<ResolvedTypePointer *>(arg->type.get()) && calleeDecl.params[argIdx]->isMutable) {
-            llvm::Value *tmpVar = allocate_stack_variable("struct.arg.tmp", *arg->type);
-            store_value(val, tmpVar, *arg->type, *arg->type);
-            val = tmpVar;
-        }
 
         args.emplace_back(val);
-        ++argIdx;
     }
 
-    llvm::CallInst *callInst = m_builder.CreateCall(callee, args);
-    callInst->setAttributes(construct_attr_list(calleeDecl));
+    llvm::FunctionType *llvmType = static_cast<llvm::FunctionType *>(generate_type(*fnType));
+    llvm::CallInst *callInst = m_builder.CreateCall(llvmType, callee, args);
+    callInst->setAttributes(construct_attr_list(*fnType));
 
     return isReturningStruct ? callRetVal : callInst;
 }
@@ -150,8 +147,14 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
 }
 
 llvm::Value *Codegen::generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr) {
-    debug_func("");
-    auto v = generate_expr(*expr.expr, true);
+    llvm::Value *v = nullptr;
+    debug_func(Dumper([&]() {
+        if (v)
+            v->print(llvm::errs());
+        else
+            std::cerr << "nullptr";
+    }));
+    v = generate_expr(*expr.expr, true);
     return v;
 }
 
@@ -349,11 +352,19 @@ void Codegen::generate_conditional_operator(const ResolvedExpr &op, llvm::BasicB
 }
 
 llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer) {
-    debug_func("");
-    const ResolvedDecl &decl = dre.decl;
-    llvm::Value *val = m_declarations[&decl];
+    debug_func(dre.location << " keepPointer " << (keepPointer ? "true" : "false"));
 
-    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&decl) && !decl.isMutable;
+    llvm::Value *val = nullptr;
+    if (auto funcDecl = dynamic_cast<const ResolvedFuncDecl *>(&dre.decl)) {
+        std::string funcName = generate_decl_name(*funcDecl);
+        val = m_module->getFunction(funcName);
+        if (!val) dmz_unreachable("internal error no function '" + funcName + "'");
+        return val;
+    } else {
+        val = m_declarations[&dre.decl];
+    }
+
+    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&dre.decl) && !dre.decl.isMutable;
     keepPointer |= dre.type->kind == ResolvedTypeKind::Struct;
     keepPointer |= dre.type->kind == ResolvedTypeKind::Array;
 
@@ -373,8 +384,21 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
         return keepPointer ? field : load_value(field, *member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
+    } else if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&memberExpr.member)) {
+        return generate_function_decl(*fnDecl);
+    } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&memberExpr.member)) {
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(declStmt->type.get())) {
+            if (fnType->fnDecl) {
+                return generate_function_decl(*fnType->fnDecl);
+            } else {
+                dmz_unreachable("TODO");
+            }
+        } else {
+            dmz_unreachable("TODO");
+        }
     } else {
         memberExpr.member.dump();
+        report(memberExpr.location, "unexpected member expresion");
         dmz_unreachable("Unexpected member expresion");
     }
     return nullptr;
@@ -391,9 +415,12 @@ llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &me
         llvm::Type *type = generate_type(*typeToGenerate);
         llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
         return keepPointer ? field : load_value(field, *member->type);
-    } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
-        return m_declarations[errDecl];
+    } else if (auto paramDecl = dynamic_cast<const ResolvedParamDecl *>(&memberExpr.member)) {
+        return generate_expr(*memberExpr.base, true);
+    } else if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&memberExpr.member)) {
+        return generate_function_decl(*fnDecl);
     } else {
+        memberExpr.dump();
         memberExpr.member.dump();
         dmz_unreachable("Unexpected member expresion");
     }
@@ -401,8 +428,11 @@ llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &me
 }
 
 llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer) {
-    debug_func("");
-    bool isPointer = dynamic_cast<const ResolvedTypePointer *>(arrayAtExpr.array->type.get());
+    llvm::Value *ret = nullptr;
+    debug_func(Dumper([&]() {
+        if (ret) ret->print(llvm::errs());
+    }));
+    bool isPointer = arrayAtExpr.array->type->kind == ResolvedTypeKind::Pointer;
     llvm::Value *base = generate_expr(*arrayAtExpr.array, !isPointer);
     llvm::Type *type = nullptr;
     std::vector<llvm::Value *> idxs;
@@ -414,8 +444,9 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
         idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
     }
     llvm::Value *field = m_builder.CreateGEP(type, base, idxs);
-
-    return keepPointer ? field : load_value(field, *arrayAtExpr.type);
+    keepPointer |= arrayAtExpr.type->kind == ResolvedTypeKind::Struct;
+    ret = keepPointer ? field : load_value(field, *arrayAtExpr.type);
+    return ret;
 }
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
@@ -462,17 +493,24 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
     return tmp;
 }
 
-llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr) {
-    debug_func("");
+llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer) {
+    llvm::Value *ret = nullptr;
+    debug_func(Dumper([&]() {
+        if (ret) ret->print(llvm::errs());
+    }));
     llvm::Value *error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
     ResolvedType *error_type = catchErrorExpr.errorToCatch->type.get();
     llvm::Value *error_value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 1);
 
-    return load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
+    ret = keepPointer ? error_value_ptr : load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
+    return ret;
 }
 
-llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr) {
-    debug_func("");
+llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr, bool keepPointer) {
+    llvm::Value *ret = nullptr;
+    debug_func(Dumper([&]() {
+        if (ret) ret->print(llvm::errs());
+    }));
     llvm::Function *function = get_current_function();
 
     auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.try");
@@ -519,11 +557,16 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
     if (tryErrorExpr.type->kind == ResolvedTypeKind::Void) return nullptr;
 
     auto tryValue = m_builder.CreateStructGEP(generate_type(*tryErrorExpr.errorToTry->type), error_struct, 0);
-    return load_value(tryValue, *tryErrorExpr.type);
+    keepPointer |= tryErrorExpr.type->kind == ResolvedTypeKind::Struct;
+    ret = keepPointer ? tryValue : load_value(tryValue, *tryErrorExpr.type);
+    return ret;
 }
 
-llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr) {
-    debug_func("");
+llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr, bool keepPointer) {
+    llvm::Value *ret = nullptr;
+    debug_func(Dumper([&]() {
+        if (ret) ret->print(llvm::errs());
+    }));
     llvm::Function *function = get_current_function();
 
     auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.orelse");
@@ -559,7 +602,9 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
 
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
-    return load_value(return_value, *orelseErrorExpr.type);
+    keepPointer |= orelseErrorExpr.type->kind == ResolvedTypeKind::Struct;
+    ret = keepPointer ? return_value : load_value(return_value, *orelseErrorExpr.type);
+    return ret;
 }
 
 llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr) {

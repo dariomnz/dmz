@@ -55,6 +55,7 @@ struct ResolvedDecl {
 struct ResolvedDependencies : public ResolvedDecl {
     std::unordered_set<ResolvedDependencies *> dependsOn;
     std::unordered_set<ResolvedDependencies *> isUsedBy;
+    bool cachedIsNotNeeded = false;
 
     ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                          bool isPublic)
@@ -419,12 +420,12 @@ struct ResolvedSizeofExpr : public ResolvedExpr {
 };
 
 struct ResolvedCallExpr : public ResolvedExpr {
-    const ResolvedFuncDecl &callee;
+    ptr<ResolvedExpr> callee;
     std::vector<ptr<ResolvedExpr>> arguments;
 
-    ResolvedCallExpr(SourceLocation location, ptr<ResolvedType> type, const ResolvedFuncDecl &callee,
+    ResolvedCallExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> callee,
                      std::vector<ptr<ResolvedExpr>> arguments)
-        : ResolvedExpr(location, std::move(type)), callee(callee), arguments(std::move(arguments)) {}
+        : ResolvedExpr(location, std::move(type)), callee(std::move(callee)), arguments(std::move(arguments)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -666,12 +667,11 @@ struct ResolvedImportExpr : public ResolvedExpr {
 struct ResolvedTestDecl : public ResolvedFunctionDecl {
     ResolvedTestDecl(SourceLocation location, std::string_view identifier, const FunctionDecl *functionDecl,
                      ptr<ResolvedBlock> body)
-        : ResolvedFunctionDecl(
-              location, true, identifier,
-              makePtr<ResolvedTypeFunction>(
-                  location, this, makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location)),
-                  std::vector<ptr<ResolvedType>>{}),
-              {}, functionDecl, std::move(body)) {}
+        : ResolvedFunctionDecl(location, true, identifier,
+                               makePtr<ResolvedTypeFunction>(
+                                   location, this, std::vector<ptr<ResolvedType>>{},
+                                   makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location))),
+                               {}, functionDecl, std::move(body)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

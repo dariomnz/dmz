@@ -52,7 +52,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:       | value: 2
 // CHECK-NEXT:     ResolvedCallExpr:i32
-// CHECK-NEXT:       ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 'Point %d %d\n'
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
 // CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.Point<i32>{} p

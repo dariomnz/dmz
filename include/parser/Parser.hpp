@@ -123,6 +123,9 @@ class Parser {
     template <typename T, typename F>
     ptr<std::vector<ptr<T>>> parse_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken, F parser,
                                                             std::pair<TokenType, const char *> closingToken);
+    ptr<std::vector<ptr<Expr>>> parse_expr_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken,
+                                                               std::function<ptr<Expr>()> parser,
+                                                               std::pair<TokenType, const char *> closingToken);
     ptr<Expr> parse_prefix_expr();
     ptr<Expr> parse_expr();
     ptr<Expr> parse_expr_rhs(ptr<Expr> lhs, int precedence);
