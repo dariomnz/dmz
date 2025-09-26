@@ -1,3 +1,3 @@
 pub const file = import("file.dmz");
 pub const print = import("print.dmz");
-pub const printf = import("print.dmz").printf;
+pub const printf = print.printf;

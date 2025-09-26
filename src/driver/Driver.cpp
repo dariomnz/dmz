@@ -324,7 +324,7 @@ void Driver::import_pass(Type_Ast &ast) {
 Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     debug_func("");
     ScopedTimer(StatType::Semantic);
-    std::vector<ptr<ResolvedDecl>> resolvedTree;
+    std::vector<ptr<ResolvedModuleDecl>> resolvedTree;
     Sema sema(std::move(asts));
     resolvedTree = sema.resolve_ast_decl();
     if (resolvedTree.empty()) m_haveError = true;
@@ -373,10 +373,10 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     return resolvedTree;
 }
 
-Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree &resolvedTree) {
+Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree resolvedTree) {
     debug_func("");
     ptr<llvm::orc::ThreadSafeModule> module;
-    Codegen codegen(resolvedTree, m_options.source.c_str());
+    Codegen codegen(std::move(resolvedTree), m_options.source.c_str());
     module = codegen.generate_ir(m_options.test);
 
     if (m_options.llvmDump) {
@@ -522,7 +522,7 @@ int Driver::main() {
     auto resolvedTrees = semantic_pass(asts);
     if (need_exit()) return 0;
 
-    auto module = codegen_pass(resolvedTrees);
+    auto module = codegen_pass(std::move(resolvedTrees));
     if (need_exit()) return 0;
 
     // auto module = linker_pass(modules);

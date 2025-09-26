@@ -4,8 +4,8 @@
 #include "Stats.hpp"
 
 namespace DMZ {
-Codegen::Codegen(const std::vector<ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath)
-    : m_resolvedTree(resolvedTree),
+Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath)
+    : m_resolvedTree(move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(resolvedTree)),
       m_context(get_shared_context().getContext()),
       m_builder(*m_context),
       m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)) {

@@ -36,3 +36,4 @@ build
 !.vscode/extensions
 .antlr
 coverage_report
+.cache

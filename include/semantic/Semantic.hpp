@@ -45,10 +45,12 @@ class Sema {
    public:
     explicit Sema(std::vector<ptr<ModuleDecl>> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
-    std::vector<ptr<ResolvedDecl>> resolve_ast_decl();
-    std::vector<ptr<ResolvedModuleDecl>> resolve_import_modules();
-    bool resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls);
+    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl();
+    bool resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules);
+    bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
+    void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
+    void remove_unused(std::vector<ptr<ResolvedModuleDecl>> &decls, bool buildTest);
     void remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest);
     bool recurse_needed(ResolvedDependencies &deps, bool buildTest,
                         std::unordered_set<ResolvedDependencies *> &recurse_check);
@@ -61,6 +63,7 @@ class Sema {
                                    const std::string_view id);
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl);
+    bool insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl);
     std::vector<ResolvedDecl *> collect_scope();
     // bool insert_decl_to_modules(ResolvedDecl &decl);
     // ref<ResolvedFunctionDecl> create_builtin_println();
@@ -97,7 +100,9 @@ class Sema {
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
+    bool resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt);
     ptr<ResolvedVarDecl> resolve_var_decl(const VarDecl &varDecl);
+    bool resolve_var_decl_initialize(ResolvedVarDecl &varDecl);
     ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
     ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
@@ -116,17 +121,24 @@ class Sema {
     ptr<ResolvedCatchErrorExpr> resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr);
     ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
-    ptr<ResolvedModuleDecl> resolve_module(const ModuleDecl &moduleDecl);
-    bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
+
+    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules);
+    ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
+    bool resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_decl_stmts(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl);
+
+    // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
-    std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
-                                                          std::vector<ptr<ResolvedDecl>> alreadyResolved = {});
-    bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);
+    // std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
+    //                                                       std::vector<ptr<ResolvedDecl>> alreadyResolved = {});
+    // bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
-    void resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declarations);
+    void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
     bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);

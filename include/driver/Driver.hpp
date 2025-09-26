@@ -52,7 +52,7 @@ class Driver {
     using Type_Source = std::filesystem::path;
     using Type_Lexers = std::vector<ptr<Lexer>>;
     using Type_Ast = std::vector<ptr<ModuleDecl>>;
-    using Type_ResolvedTree = std::vector<ptr<ResolvedDecl>>;
+    using Type_ResolvedTree = std::vector<ptr<ResolvedModuleDecl>>;
     using Type_Module = ptr<llvm::orc::ThreadSafeModule>;
 
     void check_sources_pass(Type_Source& source);
@@ -69,7 +69,7 @@ class Driver {
     // ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
 
     Type_ResolvedTree semantic_pass(Type_Ast& asts);
-    Type_Module codegen_pass(Type_ResolvedTree& resolvedTrees);
+    Type_Module codegen_pass(Type_ResolvedTree resolvedTrees);
     // Type_Module linker_pass(Type_Module& modules);
     int jit_pass(Type_Module& module);
     int generate_exec_pass(Type_Module& module);

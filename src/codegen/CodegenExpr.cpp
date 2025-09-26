@@ -1,3 +1,4 @@
+#include "Debug.hpp"
 #include "codegen/Codegen.hpp"
 
 namespace DMZ {

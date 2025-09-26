@@ -1,10 +1,8 @@
 #pragma once
 
-#include <execinfo.h>  // Para backtrace() y backtrace_symbols()
-
-#include <cstdlib>     // Para free()
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <sstream>

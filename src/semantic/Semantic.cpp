@@ -1,7 +1,11 @@
 // #define DEBUG
 #include "semantic/Semantic.hpp"
 
+#include "Debug.hpp"
 #include "Stats.hpp"
+#include "Utils.hpp"
+#include "parser/ParserSymbols.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 // #define DEBUG_SCOPES
 // #ifdef DEBUG
@@ -52,6 +56,19 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     return true;
 }
 
+bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl) {
+    [[maybe_unused]] auto declPtr = decl.get();
+    debug_func(declPtr->identifier << " " << declPtr->location);
+    auto it = std::find_if(moduleDecl.declarations.begin(), moduleDecl.declarations.end(),
+                           [&](const ptr<ResolvedDecl> &d) { return decl->identifier == d->identifier; });
+    if (it != moduleDecl.declarations.end()) {
+        report(decl->location, "redeclaration of '" + decl->identifier + '\'');
+        return false;
+    }
+    moduleDecl.declarations.emplace_back(std::move(decl));
+    return true;
+}
+
 std::vector<ResolvedDecl *> Sema::collect_scope() {
     debug_func("");
     std::vector<ResolvedDecl *> out;
@@ -91,10 +108,21 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
     for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
         auto it_decl = (*it).find(identifier);
         if (it_decl != (*it).end()) {
+            // Delayed initialization if it was not initialized
+            if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(it_decl->second)) {
+                if (!declStmt->type) {
+                    if (!resolve_decl_stmt_initialize(*declStmt)) return nullptr;
+                }
+            }
             if (needAddDeps) add_dependency(it_decl->second);
             return it_decl->second;
         }
     }
+
+    if (m_currentModule) {
+        return lookup_in_module(loc, *m_currentModule, id);
+    }
+
     return nullptr;
 }
 
@@ -108,6 +136,12 @@ ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedMo
         if (&moduleDecl != m_currentModule && !decl->isPublic) {
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
+        }
+        // Delayed initialization if it was not initialized
+        if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(declPtr)) {
+            if (!declStmt->type) {
+                if (!resolve_decl_stmt_initialize(*declStmt)) return nullptr;
+            }
         }
         add_dependency(declPtr);
         return declPtr;
@@ -222,7 +256,10 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     }
     if (auto declRefType = dynamic_cast<const DeclRefExpr *>(&type)) {
         auto decl = lookup(type.location, declRefType->identifier);
-        if (!decl) return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
+        if (!decl) {
+            dump_scopes();
+            return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
+        }
         if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
             ret = makePtr<ResolvedTypeStruct>(type.location, struDecl);
             retPtr = ret.get();
@@ -239,6 +276,8 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                 return ret;
             }
         }
+        decl->dump();
+        dmz_unreachable("TODO");
     }
     if (auto genType = dynamic_cast<const GenericExpr *>(&type)) {
         varOrReturn(specExpr, resolve_generic_expr(*genType));
@@ -246,6 +285,16 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             ret = makePtr<ResolvedTypeStruct>(type.location, struDecl->decl);
         } else {
             ret = specExpr->type->clone();
+        }
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto memType = dynamic_cast<const MemberExpr *>(&type)) {
+        varOrReturn(resolvedMem, resolve_member_expr(*memType));
+        if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(resolvedMem->type.get())) {
+            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl->decl);
+        } else {
+            ret = resolvedMem->type->clone();
         }
         retPtr = ret.get();
         return ret;
@@ -296,58 +345,43 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable("TODO");
 }
 
-std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_import_modules() {
+bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules) {
     debug_func("");
     auto &imported_modules = Driver::instance().imported_modules;
-    std::vector<ptr<ResolvedModuleDecl>> resolvedDecl;
-    std::unordered_map<ModuleDecl *, ResolvedModuleDecl *> module_map;
-    resolvedDecl.reserve(imported_modules.size());
-    bool error = false;
+    std::vector<ptr<ModuleDecl>> moduleDecls;
+    std::vector<std::filesystem::path> moduleDeclsPaths;
     for (auto &&[k, v] : imported_modules) {
-        auto d = resolve_module(*v);
-        if (!d) {
-            error = true;
-            continue;
-        }
-        module_map[v.get()] = d.get();
-        auto &resDecl = resolvedDecl.emplace_back(std::move(d));
-        m_modules_for_import.emplace(k, resDecl.get());
+        moduleDeclsPaths.emplace_back(std::move(k));
+        moduleDecls.emplace_back(std::move(v));
     }
-    if (error) return {};
+    imported_modules.clear();
 
-    for (auto &&[k, v] : imported_modules) {
-        auto resMod = module_map[v.get()];
-        if (!v || !resMod || !resolve_module_decl(*v, *resMod)) {
-            error = true;
-            continue;
-        }
+    auto resolvedModuleDecl = resolve_modules_decls(moduleDecls);
+    for (size_t i = 0; i < moduleDecls.size(); i++) {
+        imported_modules.emplace(std::move(moduleDeclsPaths[i]), std::move(moduleDecls[i]));
     }
-    if (error) return {};
 
-    return resolvedDecl;
+    if (resolvedModuleDecl.size() != moduleDecls.size()) return false;
+    for (size_t i = 0; i < resolvedModuleDecl.size(); i++) {
+        debug_msg("register module " << moduleDeclsPaths[i] << " " << resolvedModuleDecl[i]->name());
+        m_modules_for_import.emplace(moduleDeclsPaths[i], resolvedModuleDecl[i].get());
+    }
+    out_resolvedModules = std::move(resolvedModuleDecl);
+    return true;
 }
 
-std::vector<ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl() {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
-    std::vector<ptr<Decl>> decls;
-    decls.reserve(m_ast.size());
+    std::vector<ptr<ResolvedModuleDecl>> imported_mods;
+    bool error = false;
+    error = !resolve_import_modules(imported_mods);
 
-    for (auto &moduleDeclPtr : m_ast) {
-        decls.emplace_back(std::move(moduleDeclPtr));
-    }
-    m_ast.clear();
+    auto declarations = resolve_modules_decls(m_ast);
 
-    auto imported_mods = resolve_import_modules();
+    if (error) return {};
 
-    auto declarations = resolve_in_module_decl(decls);
-
-    for (auto &moduleDeclPtr : decls) {
-        m_ast.emplace_back(static_cast<ModuleDecl *>(moduleDeclPtr.release()));
-    }
-    decls.clear();
-
-    std::vector<ptr<ResolvedDecl>> resolvedDecls;
+    std::vector<ptr<ResolvedModuleDecl>> resolvedDecls;
     resolvedDecls.reserve(imported_mods.size() + declarations.size());
 
     for (auto &i : imported_mods) {
@@ -360,15 +394,29 @@ std::vector<ptr<ResolvedDecl>> Sema::resolve_ast_decl() {
     return resolvedDecls;
 }
 
-bool Sema::resolve_ast_body(std::vector<ptr<ResolvedDecl>> &decls) {
+bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Body);
-    auto ret = resolve_in_module_body(decls);
-    if (ret) {
-        resolve_symbol_names(decls);
-        fill_depends(nullptr, decls);
+    bool error = false;
+    for (auto &&module : moduleDecls) {
+        auto ret = resolve_module_body(*module);
+        if (!ret) {
+            error = true;
+        }
     }
-    return ret;
+    if (!error) {
+        resolve_symbol_names(moduleDecls);
+        fill_depends(moduleDecls);
+    }
+    return !error;
+}
+
+void Sema::fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls) {
+    debug_func("");
+    for (auto &&decl : decls) {
+        debug_msg("ResolvedModuleDecl " << decl->name());
+        fill_depends(decl.get(), decl->declarations);
+    }
 }
 
 void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls) {
@@ -461,46 +509,12 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
-    // if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(&resolvedDeps)) {
-    //     if (!declStmt->isMutable) {
-    //         if (declStmt->type->kind == ResolvedTypeKind::Module ||
-    //             declStmt->type->kind == ResolvedTypeKind::StructDecl ||
-    //             declStmt->type->kind == ResolvedTypeKind::Function) {
-    //             debug_msg("ResolvedDecl is a const declaration of a module, function or struct");
-    //             ret = false;
-    //             return ret;
-    //         }
-    //     }
-    // }
     if (auto modDecl = dynamic_cast<ResolvedModuleDecl *>(&resolvedDeps)) {
         if (modDecl->declarations.size() == 0) {
             debug_msg("ResolvedModuleDecl is empty");
             ret = false;
             return ret;
         }
-        // else {
-        //     size_t declStmtSize = 0;
-        //     for (auto &&decl : modDecl->declarations) {
-        //         if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
-        //             if (!declStmt->isMutable) {
-        //                 if (declStmt->type->kind == ResolvedTypeKind::Module ||
-        //                     declStmt->type->kind == ResolvedTypeKind::StructDecl ||
-        //                     declStmt->type->kind == ResolvedTypeKind::Function) {
-        //                     declStmtSize++;
-        //                 }
-        //             }
-        //         } else {
-        //             break;
-        //         }
-        //     }
-        //     debug_msg("declStmtSize " << declStmtSize << " modDecl->declarations.size() "
-        //                               << modDecl->declarations.size());
-        //     if (declStmtSize == modDecl->declarations.size()) {
-        //         debug_msg("ResolvedModuleDecl only contains decl");
-        //         ret = false;
-        //         return ret;
-        //     }
-        // }
     }
 
     if (resolvedDeps.identifier == "main") {
@@ -536,6 +550,12 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
     debug_msg(resolvedDeps.name() << " is not needed");
     ret = false;
     return ret;
+}
+
+void Sema::remove_unused(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool buildTest) {
+    for (auto &&module : moduleDecls) {
+        remove_unused(module->declarations, buildTest);
+    }
 }
 
 void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) {
@@ -803,7 +823,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
     return !pendingErrors.empty();
 }
 
-void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declarations) {
+void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations) {
     debug_func("");
     struct elem {
         ResolvedDecl *decl;
@@ -882,10 +902,10 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedDecl>> &declaratio
 }
 
 void Sema::add_dependency(ResolvedDecl *decl) {
-    debug_func("Adding " << decl->identifier);
+    debug_func("Adding " << decl->identifier << " " << decl);
     ResolvedDependencies *declDep = nullptr;
-    auto dep = dynamic_cast<ResolvedDependencies *>(decl);
-    if (!dep) return;
+    if (!decl->isDependency) return;
+    auto dep = static_cast<ResolvedDependencies *>(decl);
 
     if (!decl->isMutable &&
         (decl->type->kind == ResolvedTypeKind::Module || decl->type->kind == ResolvedTypeKind::StructDecl ||

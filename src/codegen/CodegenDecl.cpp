@@ -1,4 +1,5 @@
 // #define DEBUG
+#include "Debug.hpp"
 #include "codegen/Codegen.hpp"
 
 namespace DMZ {
@@ -395,6 +396,6 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
         new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
                                  llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.identifier);
     m_module->insertGlobalVariable(globalVar);
-    m_declarations[stmt.varDecl.get()] = globalVar;
+    m_declarations[&stmt] = globalVar;
 }
 }  // namespace DMZ

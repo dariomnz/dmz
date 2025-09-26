@@ -8,27 +8,29 @@ pub struct vec<T> {
     buf: *T,
     len: u64,
     capacity: u64,
+    alloc: std.mem.Allocator,
 
-    static pub fn init() -> @This {
+    static pub fn init(allocator: std.mem.Allocator) -> @This {
         return @This {
             buf: null,
             len: 0,
             capacity: 0,
+            alloc: allocator
         };
     }
 
     pub fn deinit() -> void {
-        std.mem.free(.buf);
+        .alloc.free(.buf);
     }
 
     pub fn add(v: T) -> void! {
         if (.len >= .capacity) {
             if (.capacity == 0) {
                 .capacity = 8;
-                .buf = std.mem.malloc(.capacity * @sizeof(T));
+                .buf = .alloc.malloc(.capacity * @sizeof(T));
             } else {
                 .capacity = .capacity * 2;
-                .buf = std.mem.realloc(.buf, .capacity * @sizeof(T));
+                .buf = .alloc.realloc(.buf, .capacity * @sizeof(T));
             }
             if (!.buf) {
                 return vector_error.OutOfMemory;

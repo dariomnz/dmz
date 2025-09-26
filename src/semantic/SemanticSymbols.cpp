@@ -269,14 +269,14 @@ void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ") << type->to_str() << " "
-              << identifier << '\n';
+    std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ")
+              << (type ? type->to_str() : "nullptr") << " " << identifier << '\n';
     if (onlySelf) return;
     if (initializer) initializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeclStmt::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedDeclStmt " << type->to_str() << "\n";
+    std::cerr << indent(level) << "ResolvedDeclStmt " << (type ? type->to_str() : "nullptr") << "\n";
     if (onlySelf) return;
     varDecl->dump(level + 1, onlySelf);
 }

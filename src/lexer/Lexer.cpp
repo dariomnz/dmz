@@ -157,7 +157,7 @@ bool Lexer::next_line() {
 
 bool Lexer::advance(int num) {
     if (num <= 0) return true;
-    debug_msg("m_col " << m_col << " new m_col " << m_col + num);
+    // debug_msg("m_col " << m_col << " new m_col " << m_col + num);
     m_col += num;
     return m_col < m_line_buffer.size();
 }

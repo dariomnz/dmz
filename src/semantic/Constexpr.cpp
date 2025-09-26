@@ -1,5 +1,9 @@
 #include "semantic/Constexpr.hpp"
 
+#include <optional>
+
+#include "semantic/SemanticSymbols.hpp"
+
 namespace DMZ {
 
 std::optional<bool> ConstantExpressionEvaluator::to_bool(std::optional<int> &d) {
@@ -115,9 +119,14 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
                                                                        bool allowSideEffects) {
-    const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl);
-    if (!rvd || rvd->isMutable || !rvd->initializer) return std::nullopt;
+    if (const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
+        if (rvd->isMutable || !rvd->varDecl->initializer) return std::nullopt;
+        return evaluate(*rvd->initializer, allowSideEffects);
+    } else if (const auto *rvd = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
+        if (!rvd->varDecl || rvd->isMutable || !rvd->varDecl->initializer) return std::nullopt;
+        return evaluate(*rvd->varDecl->initializer, allowSideEffects);
+    }
 
-    return evaluate(*rvd->initializer, allowSideEffects);
+    return std::nullopt;
 }
 }  // namespace DMZ

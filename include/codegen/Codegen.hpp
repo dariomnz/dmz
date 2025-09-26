@@ -11,7 +11,7 @@ class Codegen {
         static llvm::orc::ThreadSafeContext tsc(makePtr<llvm::LLVMContext>());
         return tsc;
     }
-    const std::vector<ptr<ResolvedDecl>> &m_resolvedTree;
+    std::vector<ptr<ResolvedDecl>> m_resolvedTree;
 
     llvm::LLVMContext *m_context;
     llvm::IRBuilder<> m_builder;
@@ -27,7 +27,7 @@ class Codegen {
     llvm::BasicBlock *retBB = nullptr;
 
    public:
-    Codegen(const std::vector<ptr<ResolvedDecl>> &resolvedTree, std::string_view sourcePath);
+    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath);
 
     ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);

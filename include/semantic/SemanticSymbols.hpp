@@ -34,6 +34,7 @@ struct ResolvedDecl {
     ptr<ResolvedType> type;
     bool isMutable;
     bool isPublic;
+    bool isDependency = false;
 
     ResolvedDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                  bool isPublic)
@@ -59,7 +60,9 @@ struct ResolvedDependencies : public ResolvedDecl {
 
     ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                          bool isPublic)
-        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {}
+        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {
+        isDependency = true;
+    }
     virtual ~ResolvedDependencies() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
@@ -178,11 +181,13 @@ struct ResolvedFieldDecl : public ResolvedDecl {
 };
 
 struct ResolvedVarDecl : public ResolvedDependencies {
+    const VarDecl *varDecl;
     ptr<ResolvedExpr> initializer;
 
-    ResolvedVarDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
-                    bool isMutable, ptr<ResolvedExpr> initializer = nullptr)
+    ResolvedVarDecl(SourceLocation location, const VarDecl *varDecl, bool isPublic, std::string_view identifier,
+                    ptr<ResolvedType> type, bool isMutable, ptr<ResolvedExpr> initializer = nullptr)
         : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable, isPublic),
+          varDecl(varDecl),
           initializer(std::move(initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -241,16 +246,21 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
     std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};         // The types used for lookup
     std::vector<ptr<ResolvedSpecializedFunctionDecl>> specializations = {};  // List of specializations
     std::vector<ResolvedDecl *> scopeToSpecialize;                           // Scope use to specialize
+    ResolvedModuleDecl *saveCurrentModule;
+    ResolvedStructDecl *saveCurrentStruct;
 
     ResolvedGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                 ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                 const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
                                 std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
-                                std::vector<ResolvedDecl *> scopeToSpecialize)
+                                std::vector<ResolvedDecl *> scopeToSpecialize, ResolvedModuleDecl *saveCurrentModule,
+                                ResolvedStructDecl *saveCurrentStruct)
         : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
                                std::move(body)),
           genericTypeDecls(std::move(genericTypeDecls)),
-          scopeToSpecialize(std::move(scopeToSpecialize)) {}
+          scopeToSpecialize(std::move(scopeToSpecialize)),
+          saveCurrentModule(saveCurrentModule),
+          saveCurrentStruct(saveCurrentStruct) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     void dump_dependencies(size_t level = 0) const override;
 };
@@ -280,9 +290,11 @@ struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
                                       const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
                                       std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                                       std::vector<ResolvedDecl *> scopeToSpecialize,
+                                      ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct,
                                       const ResolvedStructDecl *structDecl)
         : ResolvedGenericFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
-                                      std::move(body), std::move(genericTypeDecls), std::move(scopeToSpecialize)),
+                                      std::move(body), std::move(genericTypeDecls), std::move(scopeToSpecialize),
+                                      saveCurrentModule, saveCurrentStruct),
           structDecl(structDecl) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     void dump_dependencies(size_t level = 0) const override;
@@ -340,16 +352,18 @@ struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};       // The types used for lookup
     std::vector<ptr<ResolvedSpecializedStructDecl>> specializations = {};  // List of specializations
     std::vector<ResolvedDecl *> scopeToSpecialize;                         // Scope use to specialize
+    ResolvedModuleDecl *saveCurrentModule;
 
     ResolvedGenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                               const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                               std::vector<ptr<ResolvedMemberFunctionDecl>> functions,
                               std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
-                              std::vector<ResolvedDecl *> scopeToSpecialize)
+                              std::vector<ResolvedDecl *> scopeToSpecialize, ResolvedModuleDecl *saveCurrentModule)
         : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
                              std::move(functions)),
           genericTypeDecls(std::move(genericTypeDecls)),
-          scopeToSpecialize(std::move(scopeToSpecialize)) {}
+          scopeToSpecialize(std::move(scopeToSpecialize)),
+          saveCurrentModule(saveCurrentModule) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     void dump_dependencies(size_t level = 0) const override;
@@ -525,6 +539,7 @@ struct ResolvedDerefPtrExpr : public ResolvedAssignableExpr {
 struct ResolvedDeclStmt : public ResolvedDependencies, public ResolvedStmt {
     SourceLocation location;
     ptr<ResolvedVarDecl> varDecl;
+    bool initialized = false;
 
     ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl)
         : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
@@ -642,12 +657,14 @@ struct ResolvedOrElseErrorExpr : public ResolvedExpr {
 };
 
 struct ResolvedModuleDecl : public ResolvedDependencies {
+    const ModuleDecl &moduleDecl;
     std::filesystem::path module_path;
     std::vector<ptr<ResolvedDecl>> declarations;
 
-    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, std::filesystem::path module_path,
-                       std::vector<ptr<ResolvedDecl>> declarations)
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, const ModuleDecl &moduleDecl,
+                       std::filesystem::path module_path, std::vector<ptr<ResolvedDecl>> declarations)
         : ResolvedDependencies(location, identifier, makePtr<ResolvedTypeModule>(location, this), false, true),
+          moduleDecl(moduleDecl),
           module_path(std::move(module_path)),
           declarations(std::move(declarations)) {}
 

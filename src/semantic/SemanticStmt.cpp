@@ -1,5 +1,7 @@
 // #define DEBUG
+#include "DMZPCH.hpp"
 #include "semantic/Semantic.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
 
@@ -15,7 +17,9 @@ ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
         return resolve_assignment(*assignment);
     }
     if (auto *declStmt = dynamic_cast<const DeclStmt *>(&stmt)) {
-        return resolve_decl_stmt(*declStmt);
+        auto ret = resolve_decl_stmt(*declStmt);
+        if (ret && !resolve_decl_stmt_initialize(*ret)) return nullptr;
+        return ret;
     }
     if (auto *whileStmt = dynamic_cast<const WhileStmt *>(&stmt)) {
         return resolve_while_stmt(*whileStmt);
@@ -147,7 +151,17 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    return makePtr<ResolvedDeclStmt>(declStmt.location, resolvedVarDecl->type->clone(), std::move(resolvedVarDecl));
+    return makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl));
+}
+
+bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
+    debug_func(declStmt.location);
+    if (declStmt.initialized) return true;
+
+    if (!resolve_var_decl_initialize(*declStmt.varDecl)) return false;
+    declStmt.type = declStmt.varDecl->type->clone();
+    declStmt.initialized = true;
+    return true;
 }
 
 ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {

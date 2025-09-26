@@ -64,7 +64,8 @@ fn main() -> void {
     s_array[0].draw();
     s_array[1].draw();
 
-    let vector = std.vec<Shape>.init();
+    let libc_alloc = std.mem.libc_allocator.init();
+    let vector = std.vec<Shape>.init(libc_alloc.Allocator());
     defer vector.deinit();
     try vector.add(sh);
     try vector.add(sh2);
