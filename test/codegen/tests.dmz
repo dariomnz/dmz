@@ -42,14 +42,14 @@ test "add test 3" {
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case:                                      ; preds = %entry
 // CHECK-NEXT:   call void @"tests.add test 2"(ptr sret(%error.struct.void) %struct.ret.tmp)
-// CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %0 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %2 = ptrtoint ptr %1 to i64
 // CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %2, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.try, label %if.exit.try
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.try:                                      ; preds = %switch.case
-// CHECK-NEXT:   %3 = getelementptr inbounds %error.struct.void, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
 // CHECK-NEXT:   store ptr %1, ptr %3, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
@@ -58,14 +58,14 @@ test "add test 3" {
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case1:                                     ; preds = %entry
 // CHECK-NEXT:   call void @"tests.add test 3"(ptr sret(%error.struct.void) %struct.ret.tmp2)
-// CHECK-NEXT:   %4 = getelementptr inbounds %error.struct.void, ptr %struct.ret.tmp2, i32 0, i32 1
+// CHECK-NEXT:   %4 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp2, i32 0, i32 1
 // CHECK-NEXT:   %5 = load ptr, ptr %4, align 8
 // CHECK-NEXT:   %6 = ptrtoint ptr %5 to i64
 // CHECK-NEXT:   %ptr.to.bool3 = icmp ne i64 %6, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool3, label %if.true.try4, label %if.exit.try5
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.try4:                                     ; preds = %switch.case1
-// CHECK-NEXT:   %7 = getelementptr inbounds %error.struct.void, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   %7 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
 // CHECK-NEXT:   store ptr %5, ptr %7, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
@@ -146,7 +146,7 @@ test "add test 3" {
 // CHECK-NEXT:   store ptr %7, ptr %test_name, align 8
 // CHECK-NEXT:   %8 = load i32, ptr %i, align 4
 // CHECK-NEXT:   call void @"std.builtin.@builtin_test_run"(ptr sret(%error.struct.void) %struct.ret.tmp, i32 %8)
-// CHECK-NEXT:   %9 = getelementptr inbounds %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %10 = load ptr, ptr %9, align 8
 // CHECK-NEXT:   store ptr %10, ptr %err, align 8
 // CHECK-NEXT:   %11 = load ptr, ptr %err, align 8

@@ -45,9 +45,9 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp5, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.orelse6, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 0)
-// CHECK-NEXT:   %0 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %0 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
-// CHECK-NEXT:   %2 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
 // CHECK-NEXT:   %3 = load i32, ptr %2, align 4
 // CHECK-NEXT:   store i32 %3, ptr %tmp.orelse, align 4
 // CHECK-NEXT:   %4 = ptrtoint ptr %1 to i64
@@ -65,9 +65,9 @@ fn main() -> void {
 // CHECK-NEXT:   %7 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %8 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i32 %7)
 // CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 0)
-// CHECK-NEXT:   %9 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 1
+// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 1
 // CHECK-NEXT:   %10 = load ptr, ptr %9, align 8
-// CHECK-NEXT:   %11 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 0
+// CHECK-NEXT:   %11 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp1, i32 0, i32 0
 // CHECK-NEXT:   %12 = load i32, ptr %11, align 4
 // CHECK-NEXT:   store i32 %12, ptr %tmp.orelse2, align 4
 // CHECK-NEXT:   %13 = ptrtoint ptr %10 to i64
@@ -76,9 +76,9 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.orelse4:                                  ; preds = %if.exit.orelse
 // CHECK-NEXT:   call void @orelse.foo(ptr sret(%error.struct.i32) %struct.ret.tmp5, i32 1)
-// CHECK-NEXT:   %14 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 1
+// CHECK-NEXT:   %14 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 1
 // CHECK-NEXT:   %15 = load ptr, ptr %14, align 8
-// CHECK-NEXT:   %16 = getelementptr inbounds %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 0
+// CHECK-NEXT:   %16 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp5, i32 0, i32 0
 // CHECK-NEXT:   %17 = load i32, ptr %16, align 4
 // CHECK-NEXT:   store i32 %17, ptr %tmp.orelse6, align 4
 // CHECK-NEXT:   %18 = ptrtoint ptr %15 to i64

@@ -41,7 +41,7 @@ bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << location);
     if (equal(other)) return debug_ret(true);
 
-    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
+    if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Bool) {
         // TODO think if is ok to ignore size
         // return debug_ret(numberKind == numType->numberKind);
         return debug_ret(true);

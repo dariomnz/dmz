@@ -454,7 +454,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 
             if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get())) {
                 if (auto arrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get())) {
-                    if (auto arrInnerType = dynamic_cast<ResolvedTypeVoid *>(arrType->arrayType.get())) {
+                    if (arrType->arrayType->kind == ResolvedTypeKind::Void) {
                         resolvedInitializer->type = varDecl.type->clone();
                         auto rarrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get());
                         if (!rarrType) dmz_unreachable("unexpected error");

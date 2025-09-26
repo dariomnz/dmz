@@ -14,11 +14,11 @@ fn bar(c: *Color) -> void {
 }
 // CHECK: define void @var_ref.bar(ptr byref(%var_ref.Color) %c) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 0
+// CHECK-NEXT:   %0 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 0
 // CHECK-NEXT:   store i32 10, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 1
+// CHECK-NEXT:   %1 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 1
 // CHECK-NEXT:   store i32 10, ptr %1, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 2
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 2
 // CHECK-NEXT:   store i32 10, ptr %2, align 4
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
@@ -28,11 +28,11 @@ fn printColor(c: *Color) -> void {
 }
 // CHECK: define void @var_ref.printColor(ptr byref(%var_ref.Color) %c) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 0
+// CHECK-NEXT:   %0 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 0
 // CHECK-NEXT:   %1 = load i32, ptr %0, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 1
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 1
 // CHECK-NEXT:   %3 = load i32, ptr %2, align 4
-// CHECK-NEXT:   %4 = getelementptr inbounds %var_ref.Color, ptr %c, i32 0, i32 2
+// CHECK-NEXT:   %4 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 2
 // CHECK-NEXT:   %5 = load i32, ptr %4, align 4
 // CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str, i32 %1, i32 %3, i32 %5)
 // CHECK-NEXT:   ret void
@@ -90,11 +90,11 @@ fn main() -> void {
 // CHECK-NEXT:   %3 = load ptr, ptr %i_ptr, align 8
 // CHECK-NEXT:   %4 = load i32, ptr %3, align 4
 // CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.4, i32 %4)
-// CHECK-NEXT:   %6 = getelementptr inbounds %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 0
+// CHECK-NEXT:   %6 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 0
 // CHECK-NEXT:   store i32 1, ptr %6, align 4
-// CHECK-NEXT:   %7 = getelementptr inbounds %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 1
+// CHECK-NEXT:   %7 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 1
 // CHECK-NEXT:   store i32 1, ptr %7, align 4
-// CHECK-NEXT:   %8 = getelementptr inbounds %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 2
+// CHECK-NEXT:   %8 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 2
 // CHECK-NEXT:   store i32 1, ptr %8, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %col, ptr align 4 %tmp.struct.var_ref.Color, i64 12, i1 false)
 // CHECK-NEXT:   store ptr %col, ptr %col_ptr, align 8

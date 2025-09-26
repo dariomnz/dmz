@@ -416,7 +416,7 @@ llvm::Value *Codegen::generate_self_member_expr(const ResolvedSelfMemberExpr &me
         llvm::Type *type = generate_type(*typeToGenerate);
         llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
         return keepPointer ? field : load_value(field, *member->type);
-    } else if (auto paramDecl = dynamic_cast<const ResolvedParamDecl *>(&memberExpr.member)) {
+    } else if (dynamic_cast<const ResolvedParamDecl *>(&memberExpr.member)) {
         return generate_expr(*memberExpr.base, true);
     } else if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&memberExpr.member)) {
         return generate_function_decl(*fnDecl);
@@ -545,9 +545,9 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
                                                 ": Aborted: Try catch an error value of '%s' in the function '" +
                                                 m_currentFunction->identifier + "' that not return an optional\n");
         auto printf_func = m_module->getOrInsertFunction(
-            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getInt8Ty()->getPointerTo(), true));
+            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getPtrTy(), true));
         m_builder.CreateCall(printf_func, {fmt, error_value});
-        llvm::Function *trapIntrinsic = llvm::Intrinsic::getDeclaration(m_module.get(), llvm::Intrinsic::trap);
+        llvm::Function *trapIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trap);
         m_builder.CreateCall(trapIntrinsic, {});
     }
     break_into_bb(exitBB);

@@ -516,7 +516,7 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
 
-    if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(st)) {
+    if (dynamic_cast<ResolvedGenericStructDecl *>(st)) {
         return report(structInstantiation.location, "'" + st->identifier + "' is a generic and need specialization");
     }
 
