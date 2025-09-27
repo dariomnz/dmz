@@ -67,7 +67,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.types.dmz",
-					"match": "\\b(void|f16|f32|f64|bool|true|false|null|[iu]\\d+)\\b"
+					"match": "\\b(void|f16|f32|f64|bool|usize|isize|true|false|null|[iu]\\d+)\\b"
 				}
 			]
 		},

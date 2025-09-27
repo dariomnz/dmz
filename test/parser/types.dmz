@@ -23,4 +23,12 @@ fn main() -> void {
     let b2: i1 = false;
     // CHECK: VarDecl:i1 b2
     // CHECK-NEXT:   BoolLiteral 'false'
+
+    let s1: usize = 32;
+    // CHECK: VarDecl:usize s1
+    // CHECK-NEXT:   IntLiteral '32'
+
+    let s2: isize = 32;
+    // CHECK: VarDecl:isize s2
+    // CHECK-NEXT:   IntLiteral '32'
 }

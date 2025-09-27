@@ -503,6 +503,12 @@ int Driver::generate_exec_pass(Type_Module &module) {
     }
 }
 
+int Driver::ptrBitSize() {
+    llvm::LLVMContext context;
+    llvm::Module module("tmp", context);
+    return module.getDataLayout().getPointerSizeInBits();
+}
+
 int Driver::main() {
     defer([&] {
         if (m_options.printStats) Stats::instance().dump();

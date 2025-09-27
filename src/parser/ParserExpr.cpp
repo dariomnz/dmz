@@ -19,7 +19,8 @@ ptr<Expr> Parser::parse_primary() {
     }
     if (m_nextToken.type == TokenType::ty_iN || m_nextToken.type == TokenType::ty_uN ||
         m_nextToken.type == TokenType::ty_f16 || m_nextToken.type == TokenType::ty_f32 ||
-        m_nextToken.type == TokenType::ty_f64) {
+        m_nextToken.type == TokenType::ty_f64 || m_nextToken.type == TokenType::ty_isize ||
+        m_nextToken.type == TokenType::ty_usize) {
         auto literal = makePtr<TypeNumber>(location, m_nextToken.str);
         eat_next_token();  // eat number
         return literal;

@@ -4,6 +4,7 @@
 #include "Debug.hpp"
 #include "Stats.hpp"
 #include "Utils.hpp"
+#include "driver/Driver.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
@@ -187,9 +188,13 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     if (auto numType = dynamic_cast<const TypeNumber *>(&type)) {
         auto num = numType->name.substr(1);
         int bitSize = 0;
-        auto res = std::from_chars(num.data(), num.data() + num.size(), bitSize);
-        if (bitSize == 0 || res.ec != std::errc()) {
-            return report(type.location, "unexpected size of 0 in i type");
+        if (num == "size") {
+            bitSize = Driver::instance().ptrBitSize();
+        } else {
+            auto res = std::from_chars(num.data(), num.data() + num.size(), bitSize);
+            if (bitSize == 0 || res.ec != std::errc()) {
+                return report(type.location, "unexpected size of 0 in i type");
+            }
         }
         ResolvedNumberKind kind;
         switch (numType->name[0]) {

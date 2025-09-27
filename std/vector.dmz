@@ -6,8 +6,8 @@ const vector_error = error {
 };
 pub struct vec<T> {
     buf: *T,
-    len: u64,
-    capacity: u64,
+    len: usize,
+    capacity: usize,
     alloc: std.mem.Allocator,
 
     static pub fn init(allocator: std.mem.Allocator) -> @This {
@@ -40,12 +40,12 @@ pub struct vec<T> {
         .len++;
     }
 
-    pub fn get(index: u64) -> T! {
+    pub fn get(index: usize) -> T! {
         if (index > .len) { return vector_error.IndexOutOfLenght; }
         return .buf[index];
     }
 
-    pub fn remove(index: u64) -> void! {
+    pub fn remove(index: usize) -> void! {
         if (index >= .len) { return vector_error.IndexOutOfLenght; }
 
         if (index < (.len - 1)) {
@@ -56,7 +56,7 @@ pub struct vec<T> {
         .len--;
     }
 
-    pub fn size() -> u64 {
+    pub fn size() -> usize {
         return .len;
     }
 

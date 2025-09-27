@@ -74,6 +74,8 @@ class Driver {
     int jit_pass(Type_Module& module);
     int generate_exec_pass(Type_Module& module);
 
+    int ptrBitSize();
+
    private:
     static ptr<Driver> driver_instance;
 

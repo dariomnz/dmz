@@ -19,5 +19,5 @@
 - [x] test
 - [ ] formater
 - [ ] benckmark
-- [ ] add ops += ++
-- [X] add error. inplace
+- [x] add ops += ++
+- [x] add error. inplace
