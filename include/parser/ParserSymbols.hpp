@@ -81,6 +81,14 @@ struct TypeBool : public Type {
     std::string to_str() const override;
 };
 
+struct TypeSlice : public Type {
+    ptr<Expr> sliceType;
+    TypeSlice(SourceLocation location, ptr<Expr> sliceType) : Type(location), sliceType(std::move(sliceType)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct TypeFunction : public Type {
     std::vector<ptr<Expr>> paramsTypes;
     ptr<Expr> returnType;
@@ -238,6 +246,16 @@ struct StringLiteral : public Expr {
 
 struct NullLiteral : public Expr {
     NullLiteral(SourceLocation location) : Expr(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct RangeExpr : public Expr {
+    ptr<Expr> startExpr;
+    ptr<Expr> endExpr;
+    RangeExpr(SourceLocation location, ptr<Expr> startExpr, ptr<Expr> endExpr)
+        : Expr(location), startExpr(std::move(startExpr)), endExpr(std::move(endExpr)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

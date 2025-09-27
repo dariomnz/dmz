@@ -403,6 +403,63 @@ void ResolvedTypePointer::dump(size_t level) const {
 
 std::string ResolvedTypePointer::to_str() const { return "*" + pointerType->to_str(); }
 
+bool ResolvedTypeSlice::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeSlice " << location);
+    if (auto ptrType = dynamic_cast<const ResolvedTypeSlice *>(&other)) {
+        return debug_ret(sliceType->equal(*ptrType->sliceType));
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeSlice::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeSlice " << location);
+    if (equal(other)) return debug_ret(true);
+
+    if (auto ptrType = dynamic_cast<const ResolvedTypeSlice *>(&other)) {
+        if (sliceType->compare(*ptrType->sliceType)) return debug_ret(true);
+    }
+
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeSlice::clone() const {
+    debug_func("ResolvedTypeSlice " << location);
+    return makePtr<ResolvedTypeSlice>(location, sliceType->clone());
+}
+
+void ResolvedTypeSlice::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeSlice " << to_str() << "\n";
+}
+
+std::string ResolvedTypeSlice::to_str() const { return "[]" + sliceType->to_str(); }
+
+bool ResolvedTypeRange::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeRange " << location);
+    if (other.kind == kind) {
+        return debug_ret(true);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeRange::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeRange " << location);
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeRange::clone() const {
+    debug_func("ResolvedTypeRange " << location);
+    return makePtr<ResolvedTypeRange>(location);
+}
+
+void ResolvedTypeRange::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeRange " << to_str() << "\n";
+}
+
+std::string ResolvedTypeRange::to_str() const { return "range"; }
+
 bool ResolvedTypeArray::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << location);
     if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&other)) {

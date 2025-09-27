@@ -214,6 +214,12 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return ret;
     }
+    if (auto slcType = dynamic_cast<const TypeSlice *>(&type)) {
+        varOrReturn(sliceType, resolve_type(*slcType->sliceType));
+        ret = makePtr<ResolvedTypeSlice>(type.location, std::move(sliceType));
+        retPtr = ret.get();
+        return ret;
+    }
     if (auto fnType = dynamic_cast<const TypeFunction *>(&type)) {
         std::vector<ptr<ResolvedType>> paramsTypes;
         for (auto &&param : fnType->paramsTypes) {

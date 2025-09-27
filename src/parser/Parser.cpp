@@ -46,7 +46,7 @@ ptr<GenericExpr> Parser::parse_generic_expr(ptr<Expr> &prevExpr) {
     while (true) {
         if (m_nextToken.type == TokenType::op_more) break;
 
-        varOrReturn(init, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+        varOrReturn(init, parse_type());
         typesDeclList.emplace_back(std::move(init));
 
         if (m_nextToken.type != TokenType::comma) break;

@@ -1,3 +1,5 @@
+#include "DMZPCH.hpp"
+#include "Utils.hpp"
 #include "driver/Driver.hpp"
 #include "parser/Parser.hpp"
 
@@ -27,16 +29,14 @@ ptr<Expr> Parser::parse_primary() {
     }
     if (m_nextToken.type == TokenType::kw_fn && peek_token().type == TokenType::par_l) {
         eat_next_token();  // eat fn
-        varOrReturn(paramsList,
-                    (parse_expr_list_with_trailing_comma(
-                        {TokenType::par_l, "expected '('"},
-                        [&]() { return with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }); },
-                        {TokenType::par_r, "expected ')'"})));
+        varOrReturn(paramsList, (parse_expr_list_with_trailing_comma({TokenType::par_l, "expected '('"},
+                                                                     [&]() { return parse_type(); },
+                                                                     {TokenType::par_r, "expected ')'"})));
 
         matchOrReturn(TokenType::return_arrow, "expected '->'");
         eat_next_token();  // eat '->'
 
-        varOrReturn(returnType, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+        varOrReturn(returnType, parse_type());
 
         return makePtr<TypeFunction>(location, std::move(*paramsList), std::move(returnType));
     }
@@ -152,18 +152,18 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         return parse_postfix_expr(std::move(expr));
     }
 
+    if (m_nextToken.type == TokenType::dotdot) {
+        eat_next_token();  // eat '..'
+        varOrReturn(endRange, parse_expr());
+        return makePtr<RangeExpr>(expr->location, std::move(expr), std::move(endRange));
+    }
+
     if (m_nextToken.type == TokenType::op_less && nextToken_is_generic()) {
         varOrReturn(genericExpr, parse_generic_expr(expr));
         expr = std::move(genericExpr);
         return parse_postfix_expr(std::move(expr));
     }
 
-    // while (m_nextToken.type == TokenType::dot || m_nextToken.type == TokenType::par_l ||
-    //        m_nextToken.type == TokenType::block_l || nextToken_is_generic()) {
-    //     debug_msg(m_nextToken);
-    // if ((nextToken_is_generic())) {
-    //     genericTypes = parse_generic_expr();
-    // }
     if (!(restrictions & OnlyTypeExpr) && m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
         varOrReturn(argumentList,
@@ -174,7 +174,6 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         return parse_postfix_expr(std::move(expr));
     }
     if (!(restrictions & (StructNotAllowed | OnlyTypeExpr)) && m_nextToken.type == TokenType::block_l) {
-        // if ((restrictions & (StructNotAllowed | OnlyTypeExpr))) break;
         SourceLocation location = m_nextToken.loc;
         auto fieldInitList = parse_list_with_trailing_comma<FieldInitStmt>(
             {TokenType::block_l, "expected '{'"}, &Parser::parse_field_init_stmt, {TokenType::block_r, "expected '}'"});
@@ -184,18 +183,6 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
             eat_next_token();  // eat '}'
             return nullptr;
         }
-        // expr->dump();
-        // if (auto declRefExpr = dynamic_cast<DeclRefExpr*>(expr.get())) {
-        //     identifier = declRefExpr->identifier;
-        // } else if (auto memberExpr = dynamic_cast<MemberExpr*>(expr.get())) {
-        //     identifier = memberExpr->field;
-        // } else {
-        //     expr->dump();
-        //     return report(expr->location, "internal error struct instatiation");
-        // }
-        // Type t = Type::customType(identifier);
-        // GenericTypes genTypes = genericTypes ? *genericTypes : GenericTypes{{}};
-
         expr = makePtr<StructInstantiationExpr>(expr->location, std::move(expr), std::move(*fieldInitList));
         return parse_postfix_expr(std::move(expr));
     }
@@ -204,7 +191,6 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         eat_next_token();  // eat '.'
 
         matchOrReturn(TokenType::id, "expected field identifier");
-        // assert(m_nextToken.value && "identifier without value");
 
         expr = makePtr<MemberExpr>(location, std::move(expr), m_nextToken.str);
         eat_next_token();  // eat identifier
@@ -242,10 +228,7 @@ ptr<Expr> Parser::parse_prefix_expr() {
     debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'");
     Token tok = m_nextToken;
     std::unordered_set<TokenType> unaryOps = {
-        TokenType::op_minus,
-        TokenType::op_excla_mark,
-        TokenType::amp,
-        TokenType::asterisk,
+        TokenType::op_minus, TokenType::op_excla_mark, TokenType::amp, TokenType::asterisk, TokenType::ty_slice,
     };
 
     if (unaryOps.count(tok.type) == 0) {
@@ -256,6 +239,9 @@ ptr<Expr> Parser::parse_prefix_expr() {
 
     varOrReturn(rhs, parse_prefix_expr());
 
+    if (restrictions & OnlyTypeExpr && tok.type == TokenType::ty_slice) {
+        return makePtr<TypeSlice>(tok.loc, std::move(rhs));
+    }
     switch (tok.type) {
         case TokenType::asterisk:
             return makePtr<DerefPtrExpr>(tok.loc, std::move(rhs));
@@ -264,6 +250,11 @@ ptr<Expr> Parser::parse_prefix_expr() {
         default:
             return makePtr<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
     }
+}
+
+ptr<Expr> Parser::parse_type() {
+    debug_func("");
+    return with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); });
 }
 
 ptr<Expr> Parser::parse_expr() {
@@ -383,7 +374,7 @@ ptr<SizeofExpr> Parser::parse_sizeof_expr() {
     matchOrReturn(TokenType::par_l, "expected '('");
     eat_next_token();  // eat (
 
-    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+    varOrReturn(type, parse_type());
 
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )

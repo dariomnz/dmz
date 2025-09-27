@@ -56,6 +56,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(semicolon);
         CASE_TYPE(comma);
         CASE_TYPE(dot);
+        CASE_TYPE(dotdot);
         CASE_TYPE(dotdotdot);
         CASE_TYPE(ty_void);
         CASE_TYPE(ty_f16);
@@ -66,6 +67,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(ty_bool);
         CASE_TYPE(ty_isize);
         CASE_TYPE(ty_usize);
+        CASE_TYPE(ty_slice);
         CASE_TYPE(kw_fn);
         CASE_TYPE(kw_true);
         CASE_TYPE(kw_false);
@@ -201,7 +203,7 @@ Token Lexer::next_token() {
         while (isDigit(line_content.substr(digit_count, 1))) {
             digit_count++;
         }
-        if (line_content.substr(digit_count, 1) != ".") {
+        if (line_content.substr(digit_count, 1) != "." || line_content.substr(digit_count, 2) == "..") {
             t.type = TokenType::lit_int;
             t.str = line_content.substr(0, digit_count);
             advance(digit_count);
@@ -266,6 +268,10 @@ Token Lexer::next_token() {
         t.type = TokenType::par_r;
         t.str = line_content.substr(0, 1);
         advance();
+    } else if (line_content.substr(0, 2) == "[]") {
+        t.type = TokenType::ty_slice;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == "[") {
         t.type = TokenType::bracket_l;
         t.str = line_content.substr(0, 1);
@@ -406,6 +412,10 @@ Token Lexer::next_token() {
         t.type = TokenType::dotdotdot;
         t.str = line_content.substr(0, 3);
         advance(3);
+    } else if (line_content.substr(0, 2) == "..") {
+        t.type = TokenType::dotdot;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == ".") {
         t.type = TokenType::dot;
         t.str = line_content.substr(0, 1);

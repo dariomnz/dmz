@@ -603,6 +603,18 @@ struct ResolvedArrayInstantiationExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedRangeExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> startExpr;
+    ptr<ResolvedExpr> endExpr;
+
+    ResolvedRangeExpr(SourceLocation location, ptr<ResolvedExpr> startExpr, ptr<ResolvedExpr> endExpr)
+        : ResolvedExpr(location, makePtr<ResolvedTypeRange>(location)),
+          startExpr(std::move(startExpr)),
+          endExpr(std::move(endExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedErrorDecl : public ResolvedDecl {
     ResolvedErrorDecl(SourceLocation location, std::string_view identifier)
         : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeError>(location), false, true) {}

@@ -1,0 +1,18 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const str = "Hello, World\n";
+    const slice: []u8 = str[0..5];
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:const  str
+// CHECK-NEXT:         StringLiteral '"Hello, World\n"'
+// CHECK-NEXT:     DeclStmt
+// CHECK-NEXT:       VarDecl:const []u8 slice
+// CHECK-NEXT:         ArrayAtExpr
+// CHECK-NEXT:           DeclRefExpr str
+// CHECK-NEXT:           RangeExpr
+// CHECK-NEXT:             IntLiteral '0'
+// CHECK-NEXT:             IntLiteral '5'

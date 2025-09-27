@@ -1,7 +1,10 @@
 // #define DEBUG
+#include "DMZPCH.hpp"
+#include "Utils.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
 
@@ -287,6 +290,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *sizeofExpr = dynamic_cast<const SizeofExpr *>(&expr)) {
         return resolve_sizeof_expr(*sizeofExpr);
     }
+    if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
+        return resolve_range_expr(*rangeExpr);
+    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -493,16 +499,19 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
     if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer) {
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type->to_str() + '\'');
     }
-    ResolvedType *derefType = nullptr;
+    ptr<ResolvedType> derefType = nullptr;
     if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(resolvedBase->type.get())) {
-        derefType = arrType->arrayType.get();
+        derefType = arrType->arrayType->clone();
     } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
-        derefType = ptrType->pointerType.get();
+        derefType = ptrType->pointerType->clone();
     }
 
     varOrReturn(index, resolve_expr(*arrayAtExpr.index));
+    if (dynamic_cast<ResolvedRangeExpr *>(index.get())) {
+        derefType = makePtr<ResolvedTypeSlice>(index->location, std::move(derefType));
+    }
 
-    return makePtr<ResolvedArrayAtExpr>(arrayAtExpr.location, derefType->clone(), std::move(resolvedBase),
+    return makePtr<ResolvedArrayAtExpr>(arrayAtExpr.location, std::move(derefType), std::move(resolvedBase),
                                         std::move(index));
 }
 
@@ -679,5 +688,21 @@ ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) 
         return report(sizeofExpr.sizeofType->location, "cannot resolve type '" + sizeofExpr.sizeofType->to_str() + "'");
 
     return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type));
+}
+
+ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
+    debug_func(rangeExpr.location);
+
+    varOrReturn(startExpr, resolve_expr(*rangeExpr.startExpr));
+    if (startExpr->type->kind != ResolvedTypeKind::Number) {
+        return report(rangeExpr.location, "unexpected type in start of a range '" + startExpr->type->to_str() + "'");
+    }
+
+    varOrReturn(endExpr, resolve_expr(*rangeExpr.endExpr));
+    if (endExpr->type->kind != ResolvedTypeKind::Number) {
+        return report(rangeExpr.location, "unexpected type in end of a range '" + endExpr->type->to_str() + "'");
+    }
+
+    return makePtr<ResolvedRangeExpr>(rangeExpr.location, std::move(startExpr), std::move(endExpr));
 }
 }  // namespace DMZ

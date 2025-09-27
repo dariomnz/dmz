@@ -1,5 +1,7 @@
 #include "semantic/SemanticSymbols.hpp"
 
+#include <fcntl.h>
+
 namespace DMZ {
 
 void ResolvedExpr::dump_constant_value(size_t level) const {
@@ -372,6 +374,14 @@ void ResolvedArrayInstantiationExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     for (auto &&initializer : initializers) initializer->dump(level + 1, onlySelf);
+}
+
+void ResolvedRangeExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedRangeExpr" << "\n";
+
+    if (onlySelf) return;
+    if (startExpr) startExpr->dump(level + 1, onlySelf);
+    if (endExpr) endExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeferStmt::dump(size_t level, bool onlySelf) const {

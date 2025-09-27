@@ -19,6 +19,8 @@ enum class ResolvedTypeKind {
     Module,
     Optional,
     Pointer,
+    Slice,
+    Range,
     Array,
     Function,
     VarArg,
@@ -179,6 +181,29 @@ struct ResolvedTypePointer : public ResolvedType {
     ptr<ResolvedType> pointerType;
     ResolvedTypePointer(SourceLocation location, ptr<ResolvedType> pointerType)
         : ResolvedType(ResolvedTypeKind::Pointer, std::move(location)), pointerType(std::move(pointerType)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeSlice : public ResolvedType {
+    ptr<ResolvedType> sliceType;
+    ResolvedTypeSlice(SourceLocation location, ptr<ResolvedType> sliceType)
+        : ResolvedType(ResolvedTypeKind::Slice, std::move(location)), sliceType(std::move(sliceType)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeRange : public ResolvedType {
+    ResolvedTypeRange(SourceLocation location)
+        : ResolvedType(ResolvedTypeKind::Range, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

@@ -61,7 +61,7 @@ ptr<FuncDecl> Parser::parse_function_decl() {
     matchOrReturn(TokenType::return_arrow, "expected '->'");
     eat_next_token();  // eat '->'
 
-    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+    varOrReturn(type, parse_type());
 
     if (isExtern) {
         if (m_nextToken.type == TokenType::block_l) return report(m_nextToken.loc, "extern fn cannot have a body");
@@ -103,7 +103,7 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     matchOrReturn(TokenType::colon, "expected ':'");
     eat_next_token();  // eat :
 
-    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+    varOrReturn(type, parse_type());
 
     return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false);
 }
@@ -119,7 +119,7 @@ ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst) {
     if (m_nextToken.type == TokenType::colon) {
         eat_next_token();  // eat ':'
 
-        type = with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); });
+        type = parse_type();
         if (!type) return nullptr;
     }
 
@@ -230,7 +230,7 @@ ptr<FieldDecl> Parser::parse_field_decl() {
     matchOrReturn(TokenType::colon, "expected ':'");
     eat_next_token();  // eat :
 
-    varOrReturn(type, with_restrictions<ptr<Expr>>(OnlyTypeExpr, [&]() { return parse_expr(); }));
+    varOrReturn(type, parse_type());
 
     return makePtr<FieldDecl>(location, std::move(identifier), std::move(type));
 };

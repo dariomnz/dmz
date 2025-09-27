@@ -1,0 +1,19 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const str = "Hello, World\n";
+    const slice: []u8 = str[0..5];
+}
+// CHECK: ResolvedModuleDecl slice
+// CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt *u8
+// CHECK-NEXT:         ResolvedVarDecl:const *u8 str
+// CHECK-NEXT:           ResolvedStringLiteral:*u8 'Hello, World\n'
+// CHECK-NEXT:       ResolvedDeclStmt []u8
+// CHECK-NEXT:         ResolvedVarDecl:const []u8 slice
+// CHECK-NEXT:           ResolvedArrayAtExpr:[]u8
+// CHECK-NEXT:             ResolvedDeclRefExpr:*u8 str
+// CHECK-NEXT:             ResolvedRangeExpr
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '5'

@@ -20,6 +20,10 @@ void TypeBool::dump(size_t level) const { std::cerr << indent(level) << "TypeBoo
 
 std::string TypeBool::to_str() const { return "bool"; }
 
+void TypeSlice::dump(size_t level) const { std::cerr << indent(level) << "TypeSlice " << to_str() << '\n'; }
+
+std::string TypeSlice::to_str() const { return "[]" + sliceType->to_str(); }
+
 void TypeFunction::dump(size_t level) const { std::cerr << indent(level) << "TypeFunction " << to_str() << '\n'; }
 
 std::string TypeFunction::to_str() const {
@@ -126,14 +130,19 @@ void NullLiteral::dump(size_t level) const { std::cerr << indent(level) << "Null
 
 std::string NullLiteral::to_str() const { dmz_unreachable("TODO"); }
 
+void RangeExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "RangeExpr\n";
+    if (startExpr) startExpr->dump(level + 1);
+    if (endExpr) endExpr->dump(level + 1);
+}
+
+std::string RangeExpr::to_str() const { dmz_unreachable("TODO"); }
+
 void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType->to_str() << "\n"; }
 
 std::string SizeofExpr::to_str() const { dmz_unreachable("TODO"); }
 
-void DeclRefExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "DeclRefExpr ";
-    std::cerr << identifier << '\n';
-}
+void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
 std::string DeclRefExpr::to_str() const { return identifier; }
 
@@ -383,7 +392,9 @@ void ErrorDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrorD
 
 std::string ErrorDecl::to_str() const { dmz_unreachable("TODO"); }
 
-void ErrorInPlaceExpr::dump(size_t level) const { std::cerr << indent(level) << "ErrorInPlaceExpr " << identifier << '\n'; }
+void ErrorInPlaceExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ErrorInPlaceExpr " << identifier << '\n';
+}
 
 std::string ErrorInPlaceExpr::to_str() const { dmz_unreachable("TODO"); }
 

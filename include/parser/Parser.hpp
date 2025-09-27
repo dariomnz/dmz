@@ -127,6 +127,7 @@ class Parser {
                                                                     std::function<ptr<Expr>()> parser,
                                                                     std::pair<TokenType, const char *> closingToken);
     ptr<Expr> parse_prefix_expr();
+    ptr<Expr> parse_type();
     ptr<Expr> parse_expr();
     ptr<Expr> parse_expr_rhs(ptr<Expr> lhs, int precedence);
     ptr<ParamDecl> parse_param_decl();
