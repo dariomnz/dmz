@@ -107,7 +107,11 @@ ptr<Expr> Parser::parse_primary() {
             return parse_import_expr();
         }
         if (m_nextToken.type == TokenType::kw_error) {
-            return parse_error_group_expr_decl();
+            if (peek_token().type == TokenType::dot) {
+                return parse_error_in_place_expr();
+            } else {
+                return parse_error_group_expr_decl();
+            }
         }
         if (m_nextToken.type == TokenType::dot) {
             return parse_self_member_expr();

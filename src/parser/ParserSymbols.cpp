@@ -375,6 +375,10 @@ void ErrorDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrorD
 
 std::string ErrorDecl::to_str() const { dmz_unreachable("TODO"); }
 
+void ErrorInPlaceExpr::dump(size_t level) const { std::cerr << indent(level) << "ErrorInPlaceExpr " << identifier << '\n'; }
+
+std::string ErrorInPlaceExpr::to_str() const { dmz_unreachable("TODO"); }
+
 void ErrorGroupExprDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ErrorGroupExprDecl " << '\n';
 

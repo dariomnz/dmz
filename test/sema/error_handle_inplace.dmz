@@ -1,0 +1,36 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+fn foo(x:i32) -> i32! {
+    if (x == 1){
+        return error.ERROR_ONE;
+    }else if (x == 2){
+        return error.ERROR_TWO;
+    }
+    return 10;
+}
+// CHECK: ResolvedModuleDecl error_handle_inplace
+// CHECK-NEXT:   ResolvedFunctionDecl foo fn(i32)->i32!
+// CHECK-NEXT:     ResolvedParamDecl:i32 x
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedIfStmt
+// CHECK-NEXT:         ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedReturnStmt
+// CHECK-NEXT:             ResolvedErrorInPlaceExpr ERROR_ONE
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedIfStmt
+// CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:               ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:               ResolvedReturnStmt
+// CHECK-NEXT:                 ResolvedErrorInPlaceExpr ERROR_TWO
+// CHECK-NEXT:       ResolvedReturnStmt
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:         | value: 10
+
+fn main() -> void {
+    let result = try foo(10);
+}

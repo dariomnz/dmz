@@ -1,5 +1,7 @@
 // #define DEBUG
+#include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -278,6 +280,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *errorGroupExprDecl = dynamic_cast<const ErrorGroupExprDecl *>(&expr)) {
         return resolve_error_group_expr_decl(*errorGroupExprDecl);
+    }
+    if (const auto *errorInPlaceExpr = dynamic_cast<const ErrorInPlaceExpr *>(&expr)) {
+        return makePtr<ResolvedErrorInPlaceExpr>(errorInPlaceExpr->location, errorInPlaceExpr->identifier);
     }
     if (const auto *sizeofExpr = dynamic_cast<const SizeofExpr *>(&expr)) {
         return resolve_sizeof_expr(*sizeofExpr);

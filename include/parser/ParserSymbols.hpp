@@ -575,6 +575,14 @@ struct ErrorDecl : public Decl {
     std::string to_str() const override;
 };
 
+struct ErrorInPlaceExpr : public Expr {
+    std::string identifier;
+    ErrorInPlaceExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct ErrorGroupExprDecl : public Expr, public Decl {
     SourceLocation location;
     std::vector<ptr<ErrorDecl>> errs;

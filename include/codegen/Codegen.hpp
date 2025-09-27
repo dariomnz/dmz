@@ -3,6 +3,7 @@
 #include "DMZPCHLLVM.hpp"
 #include "DMZPCHSymbols.hpp"
 #include "Debug.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -70,6 +71,7 @@ class Codegen {
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);
+    llvm::Value *generate_error_in_place_expr(const ResolvedErrorInPlaceExpr &errorInPlaceExpr);
     llvm::Value *generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer);
     llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr, bool keepPointer);
     llvm::Value *generate_orelse_error_expr(const ResolvedOrElseErrorExpr &orelseErrorExpr, bool keepPointer);

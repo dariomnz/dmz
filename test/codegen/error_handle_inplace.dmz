@@ -1,0 +1,49 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e "Error 1 ERROR_ONE\nError 2 ERROR_TWO\n")
+
+fn foo(x:i32) -> i32! {
+    if (x == 1){
+        return error.ERROR_ONE;
+    }else if (x == 2){
+        return error.ERROR_TWO;
+    }
+    return 10;
+}
+// CHECK: define void @error_handle_inplace.foo(ptr sret(%error.struct.i32) %ret, i32 %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %0 = icmp eq i32 %x, 1
+// CHECK-NEXT:   br i1 %0, label %if.true, label %if.false
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true:                                          ; preds = %entry
+// CHECK-NEXT:   %1 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_ONE, ptr %1, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.false:                                         ; preds = %entry
+// CHECK-NEXT:   %2 = icmp eq i32 %x, 2
+// CHECK-NEXT:   br i1 %2, label %if.true1, label %if.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: if.true1:                                         ; preds = %if.false
+// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_TWO, ptr %3, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit:                                          ; preds = %if.false
+// CHECK-NEXT:   br label %if.exit2
+// CHECK-NEXT: 
+// CHECK-NEXT: if.exit2:                                         ; preds = %if.exit
+// CHECK-NEXT:   store i32 10, ptr %ret, align 4
+// CHECK-NEXT:   br label %return
+// CHECK-NEXT: 
+// CHECK-NEXT: return:                                           ; preds = %if.exit2, %if.true1, %if.true
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let err = catch foo(1);
+    printf("Error 1 %s\n", err);
+    let err2 = catch foo(2);
+    printf("Error 2 %s\n", err2);
+}

@@ -396,6 +396,11 @@ void ResolvedErrorDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
 }
 
+void ResolvedErrorInPlaceExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedErrorInPlaceExpr " << identifier << '\n';
+    if (onlySelf) return;
+}
+
 void ResolvedErrorGroupExprDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedErrorGroupExprDecl" << '\n';
 

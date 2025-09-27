@@ -201,7 +201,9 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
         auto directory = source.parent_path();
         module_path = directory.append(imported);
 
+        debug_msg("module_path " << module_path);
         if (!std::filesystem::exists(module_path)) {
+            debug_msg("error: doesnt exists module_path " << module_path);
             return {"", ""};
         }
         module_path = std::filesystem::canonical(module_path);
@@ -221,11 +223,14 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
         if (parent_path.empty()) {
             // if not in imports it need to be in the proyect dir
             std::filesystem::path proyect_path = d.m_options.source.parent_path();
+            proyect_path = std::filesystem::canonical(proyect_path);
+            debug_msg("proyect_path " << proyect_path << " module_path_str " << module_path_str);
             if (module_path_str.find(proyect_path) != std::string::npos) {
                 parent_path = proyect_path;
             }
         }
         if (parent_path.empty()) {
+            debug_msg("error: parent_path empty");
             return {"", ""};
         }
         // Extract the diferente, in other words the relative path
@@ -248,6 +253,7 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
     } else {
         auto it = d.m_options.imports.find(std::string(imported));
         if (it == d.m_options.imports.end()) {
+            debug_msg("error: not in imports");
             return {"", ""};
         }
         module_path = (*it).second;

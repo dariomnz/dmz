@@ -1,5 +1,6 @@
 #include "Debug.hpp"
 #include "codegen/Codegen.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -64,6 +65,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     }
     if (auto *aie = dynamic_cast<const ResolvedArrayInstantiationExpr *>(&expr)) {
         return generate_temporary_array(*aie);
+    }
+    if (auto *errorInPlace = dynamic_cast<const ResolvedErrorInPlaceExpr *>(&expr)) {
+        return generate_error_in_place_expr(*errorInPlace);
     }
     if (auto *catchErr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
         return generate_catch_error_expr(*catchErr, keepPointer);
@@ -492,6 +496,18 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
     }
 
     return tmp;
+}
+
+llvm::Value *Codegen::generate_error_in_place_expr(const ResolvedErrorInPlaceExpr &errorInPlaceExpr) {
+    std::string errName = "error.str." + errorInPlaceExpr.identifier;
+    auto global = m_module->getGlobalVariable(errName);
+    if (global) {
+        return global;
+    } else {
+        llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, errorInPlaceExpr.identifier, true);
+        return new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                        llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, errName);
+    }
 }
 
 llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer) {

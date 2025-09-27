@@ -124,8 +124,8 @@ class Parser {
     ptr<std::vector<ptr<T>>> parse_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken, F parser,
                                                             std::pair<TokenType, const char *> closingToken);
     ptr<std::vector<ptr<Expr>>> parse_expr_list_with_trailing_comma(std::pair<TokenType, const char *> openingToken,
-                                                               std::function<ptr<Expr>()> parser,
-                                                               std::pair<TokenType, const char *> closingToken);
+                                                                    std::function<ptr<Expr>()> parser,
+                                                                    std::pair<TokenType, const char *> closingToken);
     ptr<Expr> parse_prefix_expr();
     ptr<Expr> parse_expr();
     ptr<Expr> parse_expr_rhs(ptr<Expr> lhs, int precedence);
@@ -142,6 +142,7 @@ class Parser {
     ptr<FieldInitStmt> parse_field_init_stmt();
     ptr<DeferStmt> parse_defer_stmt();
     ptr<ErrorGroupExprDecl> parse_error_group_expr_decl();
+    ptr<ErrorInPlaceExpr> parse_error_in_place_expr();
     ptr<ErrorDecl> parse_error_decl();
     ptr<CatchErrorExpr> parse_catch_error_expr();
     ptr<TryErrorExpr> parse_try_error_expr();

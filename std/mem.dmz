@@ -29,18 +29,34 @@ pub struct Allocator {
 }
 
 pub struct libc_allocator {
+    allocated: u64,
+
     static pub fn init() -> @This {
-        return @This{};
+        return @This{
+            allocated: 0
+        };
     }
+
+    pub fn deinit() -> void! {
+        if (.allocated != 0) {
+            return error.LeakMemory;
+        }
+    }
+
     fn malloc(size: u64) -> *void {
+        .allocated = .allocated + 1;
         return malloc(size);
     }
+
     fn realloc(ptr: *void, size: u64) -> *void {
         return realloc(ptr, size);
     }
+
     fn free(ptr: *void) -> void {
+        .allocated = .allocated - 1;
         free(ptr);
     }
+
     pub fn Allocator() -> Allocator {
         return Allocator{
             allocator: .@This,
@@ -52,3 +68,12 @@ pub struct libc_allocator {
         };
     }
 }
+
+// test "leak" {
+//     let libc_alloc = libc_allocator.init();
+//     let allocator = libc_alloc.Allocator();
+
+//     allocator.malloc(4);
+
+//     try libc_alloc.deinit();
+// }

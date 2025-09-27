@@ -1,4 +1,5 @@
 #include "parser/Parser.hpp"
+#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -245,6 +246,22 @@ ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
                                                                   &Parser::parse_error_decl,
                                                                   {TokenType::block_r, "expected '}'"}));
     return makePtr<ErrorGroupExprDecl>(location, std::move(*errors));
+}
+
+ptr<ErrorInPlaceExpr> Parser::parse_error_in_place_expr() {
+    debug_func("");
+    auto location = m_nextToken.loc;
+    matchOrReturn(TokenType::kw_error, "expected error");
+    eat_next_token();  // eat error
+
+    matchOrReturn(TokenType::dot, "expected '.'");
+    eat_next_token();  // eat error
+
+    matchOrReturn(TokenType::id, "expected identifier");
+    auto id = m_nextToken.str;
+    eat_next_token();  // eat id
+
+    return makePtr<ErrorInPlaceExpr>(location, id);
 }
 
 ptr<ErrorDecl> Parser::parse_error_decl() {

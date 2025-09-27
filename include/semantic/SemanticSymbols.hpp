@@ -610,6 +610,14 @@ struct ResolvedErrorDecl : public ResolvedDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedErrorInPlaceExpr : public ResolvedExpr {
+    std::string identifier;
+    ResolvedErrorInPlaceExpr(SourceLocation location, std::string_view identifier)
+        : ResolvedExpr(location, makePtr<ResolvedTypeError>(location)), identifier(identifier) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDependencies {
     SourceLocation location;
     std::vector<ptr<ResolvedErrorDecl>> errors;

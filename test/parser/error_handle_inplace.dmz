@@ -1,0 +1,34 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn foo(x:i32) -> i32! {
+    if (x == 1){
+        return error.ERROR_ONE;
+    }else if (x == 2){
+        return error.ERROR_TWO;
+    }
+    return 10;
+}
+// CHECK: FunctionDecl foo -> i32!
+// CHECK-NEXT:     ParamDecl:i32 x
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       IfStmt
+// CHECK-NEXT:         BinaryOperator '=='
+// CHECK-NEXT:           DeclRefExpr x
+// CHECK-NEXT:           IntLiteral '1'
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           ReturnStmt
+// CHECK-NEXT:             ErrorInPlaceExpr ERROR_ONE
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           IfStmt
+// CHECK-NEXT:             BinaryOperator '=='
+// CHECK-NEXT:               DeclRefExpr x
+// CHECK-NEXT:               IntLiteral '2'
+// CHECK-NEXT:             Block
+// CHECK-NEXT:               ReturnStmt
+// CHECK-NEXT:                 ErrorInPlaceExpr ERROR_TWO
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         IntLiteral '10'
+
+fn main() -> void {
+    let result = try foo(10);
+}
