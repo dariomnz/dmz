@@ -1,4 +1,5 @@
 #include "codegen/Codegen.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -145,7 +146,26 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     debug_func("");
     llvm::Value *val = generate_expr(*stmt.expr);
-    return store_value(val, generate_expr(*stmt.assignee, true), *stmt.expr->type, *stmt.assignee->type);
+    llvm::Value *assignee =  generate_expr(*stmt.assignee, true);
+    // if (auto assigmentOperator = dynamic_cast<const ResolvedAssignmentOperator *>(&stmt)) {
+    //     if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(stmt.assignee->type.get())) {
+    //         llvm::Value *ret = nullptr;
+    //         auto rhs_value = load_value(rhs, *typeNum);
+    //         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt) {
+    //             ret = m_builder.CreateAdd(assignee, val);
+    //         } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
+    //             ret = m_builder.CreateFAdd(assignee, val);
+    //         } else {
+    //             dmz_unreachable("not expected type in op_plusplus");
+    //         }
+    //         store_value(ret, rhs, *typeNum, *typeNum);
+    //         return ret;
+    //     } else {
+    //         dmz_unreachable("not expected type in assigmentOperator " + stmt.assignee->type->to_str());
+    //     }
+    // } else {
+    // }
+    return store_value(val, assignee, *stmt.expr->type, *stmt.assignee->type);
 }
 
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {

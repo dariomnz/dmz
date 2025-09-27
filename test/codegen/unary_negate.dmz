@@ -7,7 +7,7 @@ fn negate(x: i32) -> i32 {
 }
 
 fn negate2(x: i32) -> i32 {
-    return --x;
+    return - -x;
 
     // CHECK: %0 = sub i32 0, %x
     // CHECK-NEXT: %1 = sub i32 0, %0

@@ -23,9 +23,15 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(lit_char);
         CASE_TYPE(lit_string);
         CASE_TYPE(op_plus);
+        CASE_TYPE(op_plusplus);
         CASE_TYPE(op_minus);
+        CASE_TYPE(op_minusminus);
         CASE_TYPE(asterisk);
         CASE_TYPE(op_div);
+        CASE_TYPE(op_plus_equal);
+        CASE_TYPE(op_minus_equal);
+        CASE_TYPE(op_asterisk_equal);
+        CASE_TYPE(op_div_equal);
         CASE_TYPE(op_percent);
         CASE_TYPE(ampamp);
         CASE_TYPE(pipepipe);
@@ -314,18 +320,42 @@ Token Lexer::next_token() {
         t.type = TokenType::switch_arrow;
         t.str = line_content.substr(0, 2);
         advance(2);
+    } else if (line_content.substr(0, 2) == "+=") {
+        t.type = TokenType::op_plus_equal;
+        t.str = line_content.substr(0, 2);
+        advance(2);
+    } else if (line_content.substr(0, 2) == "++") {
+        t.type = TokenType::op_plusplus;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == "+") {
         t.type = TokenType::op_plus;
         t.str = line_content.substr(0, 1);
         advance();
+    } else if (line_content.substr(0, 2) == "-=") {
+        t.type = TokenType::op_minus_equal;
+        t.str = line_content.substr(0, 2);
+        advance(2);
+    } else if (line_content.substr(0, 2) == "--") {
+        t.type = TokenType::op_minusminus;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == "-") {
         t.type = TokenType::op_minus;
         t.str = line_content.substr(0, 1);
         advance();
+    } else if (line_content.substr(0, 2) == "*=") {
+        t.type = TokenType::op_asterisk_equal;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == "*") {
         t.type = TokenType::asterisk;
         t.str = line_content.substr(0, 1);
         advance();
+    } else if (line_content.substr(0, 2) == "/=") {
+        t.type = TokenType::op_div_equal;
+        t.str = line_content.substr(0, 2);
+        advance(2);
     } else if (line_content.substr(0, 1) == "/") {
         t.type = TokenType::op_div;
         t.str = line_content.substr(0, 1);

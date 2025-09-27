@@ -1,0 +1,45 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    let a = 12;
+    a++;
+    a--;
+    a+=3;
+    a-=4;
+    a*=2;
+    a/=2;
+}
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt i32
+// CHECK-NEXT:         ResolvedVarDecl:i32 a
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '12'
+// CHECK-NEXT:           | value: 12
+// CHECK-NEXT:       ResolvedUnaryOperator:i32 '++'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:       ResolvedUnaryOperator:i32 '--'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:       ResolvedAssignment
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:           | value: 3
+// CHECK-NEXT:       ResolvedAssignment
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '-='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:           | value: 4
+// CHECK-NEXT:       ResolvedAssignment
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '*='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:       ResolvedAssignment
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '/='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:           | value: 2

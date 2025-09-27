@@ -1,4 +1,8 @@
+#include <unordered_set>
+
+#include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
+#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -152,7 +156,12 @@ ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     debug_func("");
     varOrReturn(lhs, parse_prefix_expr());
 
-    if (m_nextToken.type != TokenType::op_assign) {
+    std::unordered_set<TokenType> assing_ops = {
+        TokenType::op_assign,         TokenType::op_plus_equal, TokenType::op_minus_equal,
+        TokenType::op_asterisk_equal, TokenType::op_div_equal,
+    };
+
+    if (assing_ops.count(m_nextToken.type) == 0) {
         varOrReturn(expr, parse_expr_rhs(std::move(lhs), 0));
 
         if (expectSemicolon) {
@@ -179,11 +188,16 @@ ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
 ptr<Assignment> Parser::parse_assignment_rhs(ptr<AssignableExpr> lhs) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
-    eat_next_token();  // eat '='
+    auto type = m_nextToken.type;
+    eat_next_token();  // eat type
 
     varOrReturn(rhs, parse_expr());
 
-    return makePtr<Assignment>(location, std::move(lhs), std::move(rhs));
+    if (type == TokenType::op_assign) {
+        return makePtr<Assignment>(location, std::move(lhs), std::move(rhs));
+    } else {
+        return makePtr<AssignmentOperator>(location, std::move(lhs), std::move(rhs), type);
+    }
 }
 
 // <fieldInit>

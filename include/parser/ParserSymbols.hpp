@@ -1,32 +1,13 @@
 #pragma once
 
+#include <string>
+
 #include "DMZPCH.hpp"
 #include "Debug.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
 
-[[maybe_unused]] static inline std::string get_op_str(TokenType op) {
-    if (op == TokenType::op_plus) return "+";
-    if (op == TokenType::op_minus) return "-";
-    if (op == TokenType::asterisk) return "*";
-    if (op == TokenType::op_div) return "/";
-    if (op == TokenType::op_percent) return "%";
-    if (op == TokenType::amp) return "&";
-
-    if (op == TokenType::op_not_equal) return "!=";
-    if (op == TokenType::op_equal) return "==";
-    if (op == TokenType::ampamp) return "&&";
-    if (op == TokenType::pipepipe) return "||";
-    if (op == TokenType::op_less) return "<";
-    if (op == TokenType::op_less_eq) return "<=";
-    if (op == TokenType::op_more) return ">";
-    if (op == TokenType::op_more_eq) return ">=";
-    if (op == TokenType::op_excla_mark) return "!";
-    if (op == TokenType::op_quest_mark) return "?";
-
-    dmz_unreachable("unexpected operator");
-}
 // Forward declaration
 struct Expr;
 
@@ -552,6 +533,16 @@ struct Assignment : public Stmt {
 
     Assignment(SourceLocation location, ptr<AssignableExpr> assignee, ptr<Expr> expr)
         : Stmt(location), assignee(std::move(assignee)), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct AssignmentOperator : public Assignment {
+    TokenType op;
+
+    AssignmentOperator(SourceLocation location, ptr<AssignableExpr> assignee, ptr<Expr> expr, TokenType op)
+        : Assignment(location, std::move(assignee), std::move(expr)), op(op) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

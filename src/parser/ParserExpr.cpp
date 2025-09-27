@@ -209,6 +209,14 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         eat_next_token();  // eat identifier
         return parse_postfix_expr(std::move(expr));
     }
+    if (m_nextToken.type == TokenType::op_plusplus || m_nextToken.type == TokenType::op_minusminus) {
+        SourceLocation location = m_nextToken.loc;
+        auto type = m_nextToken.type;
+        eat_next_token();  // eat '++' '--'
+
+        expr = makePtr<UnaryOperator>(location, std::move(expr), type);
+        return parse_postfix_expr(std::move(expr));
+    }
 
     if (!(restrictions & OnlyTypeExpr) && m_nextToken.type == TokenType::kw_orelse) {
         eat_next_token();  // eat orelse

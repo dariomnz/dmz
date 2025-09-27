@@ -129,7 +129,8 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
 
 llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop) {
     debug_func("");
-    llvm::Value *rhs = generate_expr(*unop.operand);
+    bool keepPointer = unop.op == TokenType::op_plusplus || unop.op == TokenType::op_minusminus;
+    llvm::Value *rhs = generate_expr(*unop.operand, keepPointer);
 
     if (unop.op == TokenType::op_minus) {
         if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(unop.operand->type.get())) {
@@ -144,6 +145,40 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
         }
     }
 
+    if (unop.op == TokenType::op_plusplus) {
+        if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(unop.operand->type.get())) {
+            llvm::Value *ret = nullptr;
+            auto rhs_value = load_value(rhs, *typeNum);
+            if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt) {
+                ret = m_builder.CreateAdd(rhs_value, m_builder.getIntN(typeNum->bitSize, 1));
+            } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
+                ret = m_builder.CreateFAdd(rhs_value, llvm::ConstantFP::get(generate_type(*typeNum), 1));
+            } else {
+                dmz_unreachable("not expected type in op_plusplus");
+            }
+            store_value(ret, rhs, *typeNum, *typeNum);
+            return ret;
+        } else {
+            dmz_unreachable("not expected type in op_plusplus");
+        }
+    }
+    if (unop.op == TokenType::op_minusminus) {
+        if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(unop.operand->type.get())) {
+            llvm::Value *ret = nullptr;
+            auto rhs_value = load_value(rhs, *typeNum);
+            if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt) {
+                ret = m_builder.CreateSub(rhs_value, m_builder.getIntN(typeNum->bitSize, 1));
+            } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
+                ret = m_builder.CreateFSub(rhs_value, llvm::ConstantFP::get(generate_type(*typeNum), 1));
+            } else {
+                dmz_unreachable("not expected type in op_minusminus");
+            }
+            store_value(ret, rhs, *typeNum, *typeNum);
+            return ret;
+        } else {
+            dmz_unreachable("not expected type in op_minusminus");
+        }
+    }
     if (unop.op == TokenType::op_excla_mark) return m_builder.CreateNot(to_bool(rhs, *unop.operand->type));
 
     unop.dump();
@@ -222,7 +257,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         println(binop.location);
         dmz_unreachable("not expected type in binop");
     }
-    if (binop.op == TokenType::op_plus) {
+    if (binop.op == TokenType::op_plus || binop.op == TokenType::op_plus_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
             return m_builder.CreateAdd(lhs, rhs);
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
@@ -230,7 +265,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else
             dmz_unreachable("not expected type in op_plus");
     }
-    if (binop.op == TokenType::op_minus) {
+    if (binop.op == TokenType::op_minus || binop.op == TokenType::op_minus_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
             return m_builder.CreateSub(lhs, rhs);
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
@@ -238,7 +273,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else
             dmz_unreachable("not expected type in op_minus");
     }
-    if (binop.op == TokenType::asterisk) {
+    if (binop.op == TokenType::asterisk || binop.op == TokenType::op_asterisk_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
             return m_builder.CreateMul(lhs, rhs);
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
@@ -246,7 +281,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else
             dmz_unreachable("not expected type in asterisk");
     }
-    if (binop.op == TokenType::op_div) {
+    if (binop.op == TokenType::op_div || binop.op == TokenType::op_div_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
             return m_builder.CreateSDiv(lhs, rhs);
         else if (typeNum->numberKind == ResolvedNumberKind::UInt)

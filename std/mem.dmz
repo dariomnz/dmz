@@ -44,7 +44,7 @@ pub struct libc_allocator {
     }
 
     fn malloc(size: u64) -> *void {
-        .allocated = .allocated + 1;
+        .allocated++;
         return malloc(size);
     }
 
@@ -53,7 +53,7 @@ pub struct libc_allocator {
     }
 
     fn free(ptr: *void) -> void {
-        .allocated = .allocated - 1;
+        .allocated--;
         free(ptr);
     }
 

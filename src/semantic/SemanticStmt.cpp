@@ -1,6 +1,9 @@
 // #define DEBUG
 #include "DMZPCH.hpp"
+#include "Utils.hpp"
+#include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
+#include "semantic/SemanticSymbols.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
@@ -184,6 +187,15 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
 
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 
+    if (auto assigmentOperator = dynamic_cast<const AssignmentOperator *>(&assignment)) {
+        if (resolvedLHS->type->kind != ResolvedTypeKind::Number) {
+            return report(resolvedLHS->location, "cannot use operator '" + get_op_str(assigmentOperator->op) +
+                                                     "' in type '" + resolvedLHS->type->to_str() + "'");
+        }
+        varOrReturn(resolvedLHS2, resolve_assignable_expr(*assignment.assignee));
+        resolvedRHS = makePtr<ResolvedBinaryOperator>(assignment.location, assigmentOperator->op,
+                                                      std::move(resolvedLHS2), std::move(resolvedRHS));
+    }
     return makePtr<ResolvedAssignment>(assignment.location, std::move(resolvedLHS), std::move(resolvedRHS));
 }
 

@@ -15,9 +15,15 @@ enum class TokenType {
     lit_char,
     lit_string,
     op_plus,
+    op_plusplus,
     op_minus,
+    op_minusminus,
     asterisk,
     op_div,
+    op_plus_equal,
+    op_minus_equal,
+    op_asterisk_equal,
+    op_div_equal,
     op_percent,
     ampamp,
     pipepipe,
@@ -81,6 +87,34 @@ enum class TokenType {
     eof,
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
+
+[[maybe_unused]] static inline std::string get_op_str(TokenType op) {
+    if (op == TokenType::op_plus) return "+";
+    if (op == TokenType::op_plusplus) return "++";
+    if (op == TokenType::op_plus_equal) return "+=";
+    if (op == TokenType::op_minus) return "-";
+    if (op == TokenType::op_minusminus) return "--";
+    if (op == TokenType::op_minus_equal) return "-=";
+    if (op == TokenType::asterisk) return "*";
+    if (op == TokenType::op_asterisk_equal) return "*=";
+    if (op == TokenType::op_div) return "/";
+    if (op == TokenType::op_div_equal) return "/=";
+    if (op == TokenType::op_percent) return "%";
+    if (op == TokenType::amp) return "&";
+
+    if (op == TokenType::op_not_equal) return "!=";
+    if (op == TokenType::op_equal) return "==";
+    if (op == TokenType::ampamp) return "&&";
+    if (op == TokenType::pipepipe) return "||";
+    if (op == TokenType::op_less) return "<";
+    if (op == TokenType::op_less_eq) return "<=";
+    if (op == TokenType::op_more) return ">";
+    if (op == TokenType::op_more_eq) return ">=";
+    if (op == TokenType::op_excla_mark) return "!";
+    if (op == TokenType::op_quest_mark) return "?";
+
+    dmz_unreachable("unexpected operator " + std::to_string(static_cast<int>(op)));
+}
 
 const static std::unordered_map<std::string, TokenType> keywords = {
     {"fn", TokenType::kw_fn},

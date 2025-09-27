@@ -269,6 +269,14 @@ void Assignment::dump(size_t level) const {
 
 std::string Assignment::to_str() const { dmz_unreachable("TODO"); }
 
+void AssignmentOperator::dump(size_t level) const {
+    std::cerr << indent(level) << "AssignmentOperator '" << get_op_str(op) << '\'' << '\n';
+    assignee->dump(level + 1);
+    expr->dump(level + 1);
+}
+
+std::string AssignmentOperator::to_str() const { dmz_unreachable("TODO"); }
+
 void FieldDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FieldDecl:" << type->to_str() << " " << identifier << '\n';
 }

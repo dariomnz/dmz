@@ -1,0 +1,32 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const a = 12;
+    a++;
+    a--;
+    a+=3;
+    a-=4;
+    a*=2;
+    a/=2;
+}
+// CHECK:  FunctionDecl main -> void
+// CHECK-NEXT:    Block
+// CHECK-NEXT:      DeclStmt
+// CHECK-NEXT:        VarDecl:const  a
+// CHECK-NEXT:          IntLiteral '12'
+// CHECK-NEXT:      UnaryOperator '++'
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:      UnaryOperator '--'
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:      AssignmentOperator '+='
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:        IntLiteral '3'
+// CHECK-NEXT:      AssignmentOperator '-='
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:        IntLiteral '4'
+// CHECK-NEXT:      AssignmentOperator '*='
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:        IntLiteral '2'
+// CHECK-NEXT:      AssignmentOperator '/='
+// CHECK-NEXT:        DeclRefExpr a
+// CHECK-NEXT:        IntLiteral '2'
