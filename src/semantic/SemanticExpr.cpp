@@ -1,6 +1,7 @@
 // #define DEBUG
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
+#include "driver/Driver.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -391,6 +392,18 @@ ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &
 
 ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
     debug_func(memberExpr.location);
+    static ResolvedStructDecl sliceDecl = [] {
+        std::vector<ptr<ResolvedFieldDecl>> sliceFields;
+        sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
+            SourceLocation{}, "ptr",
+            makePtr<ResolvedTypePointer>(SourceLocation{}, makePtr<ResolvedTypeVoid>(SourceLocation{})), 0));
+        sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
+            SourceLocation{}, "len",
+            makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize()),
+            1));
+        return ResolvedStructDecl(SourceLocation{}, true, "slice", nullptr, false, std::move(sliceFields),
+                                  std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+    }();
     const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
     if (!resolvedBase) return nullptr;
@@ -414,6 +427,14 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
         if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
             return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
+        }
+    } else if (dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
+        if (memberExpr.field == "ptr") {
+            decl = sliceDecl.fields[0].get();
+        } else if (memberExpr.field == "len") {
+            decl = sliceDecl.fields[1].get();
+        } else {
+            return report(memberExpr.location, "slice only support 'len' and 'ptr' members");
         }
     } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);

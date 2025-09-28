@@ -1,0 +1,57 @@
+// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e "Slice len 5: 'Hello'\nSlice2 len 1: 'H'\n")
+
+extern fn printf(fmt:*u8, ...) -> i32;
+fn main() -> void {
+    const str = "Hello, World\n";
+    const slice: []u8 = str[0..5];
+
+    printf("Slice len %d: '%.*s'\n", slice.len, slice.len, slice.ptr);
+    
+    const slice2: []u8 = str[0..1];
+    
+    printf("Slice2 len %d: '%.*s'\n", slice2.len, slice2.len, slice2.ptr);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %str = alloca ptr, align 8
+// CHECK-NEXT:   %slice = alloca %slice.struct, align 8
+// CHECK-NEXT:   %tmp.slice = alloca %slice.struct, align 8
+// CHECK-NEXT:   %slice2 = alloca %slice.struct, align 8
+// CHECK-NEXT:   %tmp.slice1 = alloca %slice.struct, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %str, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice2, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   store ptr @global.str, ptr %str, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %str, align 8
+// CHECK-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 0
+// CHECK-NEXT:   %3 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 1
+// CHECK-NEXT:   store ptr %1, ptr %2, align 8
+// CHECK-NEXT:   store i64 5, ptr %3, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %slice, ptr align 8 %tmp.slice, i64 16, i1 false)
+// CHECK-NEXT:   %4 = getelementptr inbounds nuw %slice.struct, ptr %slice, i32 0, i32 1
+// CHECK-NEXT:   %5 = load i64, ptr %4, align 4
+// CHECK-NEXT:   %6 = getelementptr inbounds nuw %slice.struct, ptr %slice, i32 0, i32 1
+// CHECK-NEXT:   %7 = load i64, ptr %6, align 4
+// CHECK-NEXT:   %8 = getelementptr inbounds nuw %slice.struct, ptr %slice, i32 0, i32 0
+// CHECK-NEXT:   %9 = load ptr, ptr %8, align 8
+// CHECK-NEXT:   %10 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %5, i64 %7, ptr %9)
+// CHECK-NEXT:   %11 = load ptr, ptr %str, align 8
+// CHECK-NEXT:   %12 = getelementptr i8, ptr %11, i32 0
+// CHECK-NEXT:   %13 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice1, i32 0, i32 0
+// CHECK-NEXT:   %14 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice1, i32 0, i32 1
+// CHECK-NEXT:   store ptr %12, ptr %13, align 8
+// CHECK-NEXT:   store i64 1, ptr %14, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %slice2, ptr align 8 %tmp.slice1, i64 16, i1 false)
+// CHECK-NEXT:   %15 = getelementptr inbounds nuw %slice.struct, ptr %slice2, i32 0, i32 1
+// CHECK-NEXT:   %16 = load i64, ptr %15, align 4
+// CHECK-NEXT:   %17 = getelementptr inbounds nuw %slice.struct, ptr %slice2, i32 0, i32 1
+// CHECK-NEXT:   %18 = load i64, ptr %17, align 4
+// CHECK-NEXT:   %19 = getelementptr inbounds nuw %slice.struct, ptr %slice2, i32 0, i32 0
+// CHECK-NEXT:   %20 = load ptr, ptr %19, align 8
+// CHECK-NEXT:   %21 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i64 %16, i64 %18, ptr %20)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

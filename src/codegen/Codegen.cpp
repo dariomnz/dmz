@@ -2,6 +2,7 @@
 #include "codegen/Codegen.hpp"
 
 #include "Stats.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
 Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath)
@@ -127,6 +128,17 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             returnType = generate_type(*fnType->returnType);
         }
         ret = llvm::FunctionType::get(returnType, paramsTypes, isVarArg);
+    }
+    if (dynamic_cast<const ResolvedTypeSlice *>(&type)) {
+        std::string structName("slice.struct");
+        ret = llvm::StructType::getTypeByName(*m_context, structName);
+        if (!ret) {
+            ret = llvm::StructType::create(*m_context, structName);
+            std::vector<llvm::Type *> fieldTypes;
+            fieldTypes.emplace_back(llvm::PointerType::get(*m_context, 0));
+            fieldTypes.emplace_back(m_builder.getIntPtrTy(m_module->getDataLayout()));
+            static_cast<llvm::StructType *>(ret)->setBody(fieldTypes);
+        }
     }
     if (ret == nullptr) {
         type.dump();
@@ -295,7 +307,8 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
                    std::cerr << "'";
                }));
     if (from.kind != ResolvedTypeKind::Pointer) {
-        if (from.kind == ResolvedTypeKind::Struct || from.kind == ResolvedTypeKind::Optional) {
+        if (from.kind == ResolvedTypeKind::Struct || from.kind == ResolvedTypeKind::Optional ||
+            from.kind == ResolvedTypeKind::Slice) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
 

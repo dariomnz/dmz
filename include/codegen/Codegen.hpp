@@ -82,5 +82,7 @@ class Codegen {
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);
+    llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
+                                     const ResolvedRangeExpr &range);
 };
 }  // namespace DMZ

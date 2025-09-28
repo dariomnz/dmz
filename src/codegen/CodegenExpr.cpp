@@ -1,6 +1,11 @@
+#include <llvm-20/llvm/IR/Value.h>
+
+#include "DMZPCH.hpp"
 #include "Debug.hpp"
+#include "Utils.hpp"
 #include "codegen/Codegen.hpp"
 #include "semantic/SemanticSymbols.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
 
@@ -472,6 +477,9 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     debug_func(Dumper([&]() {
         if (ret) ret->print(llvm::errs());
     }));
+    if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(arrayAtExpr.index.get())) {
+        return generate_slice_expr(*arrayAtExpr.type, *arrayAtExpr.array, *rangeExpr);
+    }
     bool isPointer = arrayAtExpr.array->type->kind == ResolvedTypeKind::Pointer;
     llvm::Value *base = generate_expr(*arrayAtExpr.array, !isPointer);
     llvm::Type *type = nullptr;
@@ -663,5 +671,42 @@ llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr)
     auto type = generate_type(*sizeofExpr.sizeofType);
     auto size = llvm::ConstantExpr::getSizeOf(type);
     return size;
+}
+
+llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const ResolvedExpr &from,
+                                          const ResolvedRangeExpr &range) {
+    const ResolvedTypeSlice *sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type);
+    if (!sliceType) dmz_unreachable("unexpected type " + type.to_str());
+    llvm::Value *ptr = generate_expr(from, true);
+    if (from.type->kind == ResolvedTypeKind::Array) {
+        // ptr = ptr;
+    } else if (from.type->kind == ResolvedTypeKind::Pointer) {
+        ptr = load_value(ptr, *from.type);
+    } else {
+        return report(from.location, "unexpected type used in generate of slice '" + from.type->to_str() + "'");
+    }
+    auto tmpSlice = allocate_stack_variable("tmp.slice", *sliceType);
+
+    // ptr + sizeof(type)
+    if (!range.startExpr->type->equal(*range.endExpr->type)) {
+        dmz_unreachable("unexpected types in range '" + range.startExpr->type->to_str() + "' '" +
+                        range.endExpr->type->to_str() + "'");
+    }
+    auto startRange = generate_expr(*range.startExpr);
+    auto endRange = generate_expr(*range.endExpr);
+    ptr = m_builder.CreateGEP(generate_type(*sliceType->sliceType), ptr, startRange);
+    auto size = m_builder.CreateSub(endRange, startRange);
+
+    auto structSliceType = generate_type(*sliceType);
+    auto slicePtr = m_builder.CreateStructGEP(structSliceType, tmpSlice, 0);
+    auto sliceSize = m_builder.CreateStructGEP(structSliceType, tmpSlice, 1);
+
+    auto ptrType = ResolvedTypePointer{from.location, makePtr<ResolvedTypeVoid>(from.location)};
+    store_value(ptr, slicePtr, ptrType, ptrType);
+    auto sizeType = ResolvedTypeNumber{from.location, ResolvedNumberKind::UInt,
+                                       static_cast<int>(m_module->getDataLayout().getPointerSizeInBits())};
+    store_value(size, sliceSize, *range.startExpr->type, sizeType);
+
+    return tmpSlice;
 }
 }  // namespace DMZ
