@@ -1,4 +1,6 @@
 // #define DEBUG
+#include <llvm-20/llvm/IR/Attributes.h>
+
 #include "Debug.hpp"
 #include "codegen/Codegen.hpp"
 
@@ -52,8 +54,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     llvm::Type *retType = generate_type(*fnType->returnType);
     std::vector<llvm::Type *> paramTypes;
 
-    if (fnType->returnType->kind == ResolvedTypeKind::Struct ||
-        fnType->returnType->kind == ResolvedTypeKind::Optional) {
+    if (fnType->returnType->generate_struct()) {
         paramTypes.emplace_back(llvm::PointerType::get(retType, 0));
         retType = m_builder.getVoidTy();
     }
@@ -81,8 +82,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
 llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnType) {
     debug_func(fnType.to_str());
 
-    bool isReturningStruct =
-        fnType.returnType->kind == ResolvedTypeKind::Struct || fnType.returnType->kind == ResolvedTypeKind::Optional;
+    bool isReturningStruct = fnType.returnType->generate_struct();
     std::vector<llvm::AttributeSet> argsAttrSets;
 
     if (isReturningStruct) {
@@ -100,6 +100,8 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
             }
         } else if (param->kind == ResolvedTypeKind::Struct) {
             paramAttrs.addAttribute(llvm::Attribute::ReadOnly);
+        } else if (param->generate_struct()) {
+            paramAttrs.addByValAttr(generate_type(*param));
         }
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, paramAttrs));
     }
@@ -136,9 +138,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
 
-    bool returnsVoid = fnType->returnType->kind == ResolvedTypeKind::Struct ||
-                       fnType->returnType->kind == ResolvedTypeKind::Void ||
-                       fnType->returnType->kind == ResolvedTypeKind::Optional;
+    bool returnsVoid = fnType->returnType->generate_struct() || fnType->returnType->kind == ResolvedTypeKind::Void;
 
     if (!returnsVoid) {
         debug_msg("retVal is not null");
@@ -159,7 +159,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (paramDecl->type->kind != ResolvedTypeKind::Struct && paramDecl->isMutable) {
+        if (!paramDecl->type->generate_struct() && paramDecl->isMutable) {
             declVal = allocate_stack_variable(paramDecl->identifier, *paramDecl->type);
             store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
         }

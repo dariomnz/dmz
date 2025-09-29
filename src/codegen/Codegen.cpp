@@ -119,8 +119,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             paramsTypes.emplace_back(generate_type(*t));
         }
         debug_msg(fnType->returnType->to_str());
-        bool isReturningStruct = fnType->returnType->kind == ResolvedTypeKind::Struct ||
-                                 fnType->returnType->kind == ResolvedTypeKind::Optional;
+        bool isReturningStruct = fnType->returnType->generate_struct();
         llvm::Type *returnType = nullptr;
         if (isReturningStruct) {
             returnType = m_builder.getVoidTy();
@@ -307,8 +306,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
                    std::cerr << "'";
                }));
     if (from.kind != ResolvedTypeKind::Pointer) {
-        if (from.kind == ResolvedTypeKind::Struct || from.kind == ResolvedTypeKind::Optional ||
-            from.kind == ResolvedTypeKind::Slice) {
+        if (from.generate_struct()) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
 

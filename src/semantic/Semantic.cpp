@@ -346,6 +346,9 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&type)) {
         return makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
     }
+    if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
+        return makePtr<ResolvedTypeSlice>(sliceType->location, re_resolve_type(*sliceType->sliceType));
+    }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
         type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||

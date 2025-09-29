@@ -2,6 +2,10 @@
 
 namespace DMZ {
 
+bool ResolvedType::generate_struct() const {
+    return kind == ResolvedTypeKind::Struct || kind == ResolvedTypeKind::Optional || kind == ResolvedTypeKind::Slice;
+}
+
 bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << location);
     if (other.kind == ResolvedTypeKind::Void) {
@@ -40,7 +44,7 @@ bool ResolvedTypeNumber::equal(const ResolvedType &other) const {
 bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << location);
     if (equal(other)) return debug_ret(true);
-
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Bool) {
         // TODO think if is ok to ignore size
         // return debug_ret(numberKind == numType->numberKind);
@@ -88,7 +92,7 @@ bool ResolvedTypeBool::equal(const ResolvedType &other) const {
 bool ResolvedTypeBool::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
     if (equal(other)) return debug_ret(true);
-
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::Error || other.kind == ResolvedTypeKind::Pointer) {
         return debug_ret(true);
     } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
@@ -160,6 +164,7 @@ bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
 bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStruct " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
 
     return debug_ret(false);
 }
@@ -350,6 +355,7 @@ bool ResolvedTypeOptional::equal(const ResolvedType &other) const {
 bool ResolvedTypeOptional::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeOptional " << location);
     if (other.kind == ResolvedTypeKind::Error) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (equal(other)) return debug_ret(true);
 
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
@@ -382,6 +388,7 @@ bool ResolvedTypePointer::equal(const ResolvedType &other) const {
 bool ResolvedTypePointer::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
 
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
         if (pointerType->compare(*ptrType->pointerType)) return debug_ret(true);
@@ -415,6 +422,7 @@ bool ResolvedTypeSlice::equal(const ResolvedType &other) const {
 bool ResolvedTypeSlice::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSlice " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
 
     if (auto ptrType = dynamic_cast<const ResolvedTypeSlice *>(&other)) {
         if (sliceType->compare(*ptrType->sliceType)) return debug_ret(true);
@@ -472,6 +480,7 @@ bool ResolvedTypeArray::equal(const ResolvedType &other) const {
 bool ResolvedTypeArray::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -503,6 +512,7 @@ bool ResolvedTypeFunction::equal(const ResolvedType &other) const {
 bool ResolvedTypeFunction::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeFunction " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&other)) {
         if (!returnType->compare(*fnType->returnType)) return debug_ret(false);
         if (paramsTypes.size() != fnType->paramsTypes.size()) return debug_ret(false);
@@ -568,4 +578,30 @@ void ResolvedTypeVarArg::dump(size_t level) const {
 }
 
 std::string ResolvedTypeVarArg::to_str() const { return "..."; }
+
+bool ResolvedTypeDefaultInit::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeDefaultInit " << location);
+    if (other.kind == ResolvedTypeKind::DefaultInit) {
+        return debug_ret(true);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeDefaultInit::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeDefaultInit " << location);
+    if (equal(other)) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeDefaultInit::clone() const {
+    debug_func("ResolvedTypeDefaultInit " << location);
+    return makePtr<ResolvedTypeDefaultInit>(location);
+}
+
+void ResolvedTypeDefaultInit::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeDefaultInit " << to_str() << "\n";
+}
+
+std::string ResolvedTypeDefaultInit::to_str() const { return "{}"; }
 }  // namespace DMZ

@@ -517,7 +517,8 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
 
-    if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer) {
+    if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer &&
+        resolvedBase->type->kind != ResolvedTypeKind::Slice) {
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type->to_str() + '\'');
     }
     ptr<ResolvedType> derefType = nullptr;
@@ -525,6 +526,10 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
         derefType = arrType->arrayType->clone();
     } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
         derefType = ptrType->pointerType->clone();
+    } else if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(resolvedBase->type.get())) {
+        derefType = sliceType->sliceType->clone();
+    } else {
+        dmz_unreachable("TODO");
     }
 
     varOrReturn(index, resolve_expr(*arrayAtExpr.index));
@@ -620,7 +625,7 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
     std::vector<ptr<ResolvedExpr>> resolvedinitializers;
     resolvedinitializers.reserve(arrayInstantiation.initializers.size());
 
-    ptr<ResolvedType> type = makePtr<ResolvedTypeVoid>(SourceLocation{});
+    ptr<ResolvedType> type = makePtr<ResolvedTypeDefaultInit>(SourceLocation{});
     bool only_first = true;
     for (auto &&initializer : arrayInstantiation.initializers) {
         varOrReturn(resolvedExpr, resolve_expr(*initializer));
@@ -638,8 +643,9 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
                                                      resolved->type->to_str() + "' actual '" + type->to_str() + "'");
         }
     }
-    type = makePtr<ResolvedTypeArray>(SourceLocation{}, std::move(type), arrayInstantiation.initializers.size());
-
+    if (type->kind != ResolvedTypeKind::DefaultInit) {
+        type = makePtr<ResolvedTypeArray>(SourceLocation{}, std::move(type), arrayInstantiation.initializers.size());
+    }
     return makePtr<ResolvedArrayInstantiationExpr>(arrayInstantiation.location, std::move(type),
                                                    std::move(resolvedinitializers));
 }

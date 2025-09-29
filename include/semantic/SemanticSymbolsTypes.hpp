@@ -24,6 +24,7 @@ enum class ResolvedTypeKind {
     Array,
     Function,
     VarArg,
+    DefaultInit,
 };
 
 struct ResolvedType {
@@ -37,6 +38,8 @@ struct ResolvedType {
     virtual ptr<ResolvedType> clone() const = 0;
     virtual void dump(size_t level = 0) const = 0;
     virtual std::string to_str() const = 0;
+
+    bool generate_struct() const;
 };
 
 struct ResolvedTypeVoid : public ResolvedType {
@@ -202,8 +205,7 @@ struct ResolvedTypeSlice : public ResolvedType {
 };
 
 struct ResolvedTypeRange : public ResolvedType {
-    ResolvedTypeRange(SourceLocation location)
-        : ResolvedType(ResolvedTypeKind::Range, std::move(location)) {}
+    ResolvedTypeRange(SourceLocation location) : ResolvedType(ResolvedTypeKind::Range, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -249,6 +251,17 @@ struct ResolvedTypeFunction : public ResolvedType {
 
 struct ResolvedTypeVarArg : public ResolvedType {
     ResolvedTypeVarArg(SourceLocation location) : ResolvedType(ResolvedTypeKind::VarArg, std::move(location)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeDefaultInit : public ResolvedType {
+    ResolvedTypeDefaultInit(SourceLocation location)
+        : ResolvedType(ResolvedTypeKind::DefaultInit, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

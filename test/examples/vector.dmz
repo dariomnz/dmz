@@ -10,9 +10,10 @@ const std = import("std");
 fn printVector<T>(v: *std.vec<T>) -> void {
     std.io.printf("vector [");
     let i = 0;
-    while (i < v.size()) {
-        std.io.printf("%d", try v.get(i));
-        if (i != v.size() - 1) {
+    let slice = v.slice();
+    while (i < slice.len) {
+        std.io.printf("%d", slice[i]);
+        if (i != slice.len - 1) {
             std.io.printf(", ");
         }
 
@@ -34,7 +35,7 @@ fn main() -> void {
         try v.add(i);
         i = i + 1;
     }
-
+    std.io.printf("After adds\n");
     printVector<i32>(&v);
     
     i = 0;

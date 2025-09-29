@@ -5,34 +5,37 @@ const vector_error = error {
     OutOfMemory,
 };
 pub struct vec<T> {
-    buf: *T,
+    buf: []T,
     len: usize,
-    capacity: usize,
     alloc: std.mem.Allocator,
 
     static pub fn init(allocator: std.mem.Allocator) -> @This {
         return @This {
-            buf: null,
+            buf: {},
             len: 0,
-            capacity: 0,
             alloc: allocator
         };
     }
 
     pub fn deinit() -> void {
-        .alloc.free(.buf);
+        .alloc.free(.buf.ptr);
     }
 
     pub fn add(v: T) -> void! {
-        if (.len >= .capacity) {
-            if (.capacity == 0) {
-                .capacity = 8;
-                .buf = .alloc.malloc(.capacity * @sizeof(T));
+        if (.len >= .buf.len) {
+            if (.buf.len == 0) {
+                .buf.len = 8;
+                std.io.printf("Malloc %d\n", .buf.len);
+                .buf.ptr = .alloc.malloc(.buf.len * @sizeof(T));
+                std.io.printf("Malloc ret\n");
             } else {
-                .capacity *= 2;
-                .buf = .alloc.realloc(.buf, .capacity * @sizeof(T));
+                std.io.printf("realloc %d\n", .buf.len);
+                .buf.len *= 2;
+                std.io.printf("realloc %d\n", .buf.len);
+                .buf.ptr = .alloc.realloc(.buf.ptr, .buf.len * @sizeof(T));
+                std.io.printf("realloc ret\n");
             }
-            if (!.buf) {
+            if (!.buf.ptr) {
                 return vector_error.OutOfMemory;
             }
         }
@@ -60,4 +63,7 @@ pub struct vec<T> {
         return .len;
     }
 
+    pub fn slice() -> []T {
+        return .buf[0.. .len];
+    }
 }

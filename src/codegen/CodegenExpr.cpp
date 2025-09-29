@@ -110,8 +110,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
         dmz_unreachable("unexpected type in callee '" + call.callee->type->to_str() + "'");
     }
 
-    bool isReturningStruct =
-        fnType->returnType->kind == ResolvedTypeKind::Struct || fnType->returnType->kind == ResolvedTypeKind::Optional;
+    bool isReturningStruct = fnType->returnType->generate_struct();
     llvm::Value *callRetVal = nullptr;
     std::vector<llvm::Value *> args;
 
@@ -410,7 +409,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     }
 
     keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&dre.decl) && !dre.decl.isMutable;
-    keepPointer |= dre.type->kind == ResolvedTypeKind::Struct;
+    keepPointer |= dre.type->generate_struct();
     keepPointer |= dre.type->kind == ResolvedTypeKind::Array;
 
     return keepPointer ? val : load_value(val, *dre.type);
@@ -484,21 +483,33 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     llvm::Value *base = generate_expr(*arrayAtExpr.array, !isPointer);
     llvm::Type *type = nullptr;
     std::vector<llvm::Value *> idxs;
-    if (isPointer) {
+    if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Pointer) {
+        type = generate_type(*arrayAtExpr.type);
+        idxs = {generate_expr(*arrayAtExpr.index)};
+    } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Array) {
+        type = generate_type(*arrayAtExpr.array->type);
+        idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
+    } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Slice) {
+        auto slicetype = generate_type(*arrayAtExpr.array->type);
+        base = m_builder.CreateStructGEP(slicetype, base, 0);
+        base = load_value(base,
+                          ResolvedTypePointer{arrayAtExpr.location, makePtr<ResolvedTypeVoid>(arrayAtExpr.location)});
+
         type = generate_type(*arrayAtExpr.type);
         idxs = {generate_expr(*arrayAtExpr.index)};
     } else {
-        type = generate_type(*arrayAtExpr.array->type);
-        idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
+        dmz_unreachable("TODO");
     }
     llvm::Value *field = m_builder.CreateGEP(type, base, idxs);
-    keepPointer |= arrayAtExpr.type->kind == ResolvedTypeKind::Struct;
+    keepPointer |= arrayAtExpr.type->generate_struct();
     ret = keepPointer ? field : load_value(field, *arrayAtExpr.type);
     return ret;
 }
 
 llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiationExpr &sie) {
     debug_func("");
+    if (sie.type->kind == ResolvedTypeKind::DefaultInit) return nullptr;
+
     std::string tmpName = "tmp.struct.";
     if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(sie.type.get())) {
         tmpName += struType->decl->type->to_str();
@@ -508,12 +519,15 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     llvm::Value *tmp = allocate_stack_variable(tmpName, *sie.type);
 
     std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
-    for (auto &&initStmt : sie.fieldInitializers)
+    for (auto &&initStmt : sie.fieldInitializers) {
+        if (initStmt->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
         initializerVals[&initStmt->field] = generate_expr(*initStmt->initializer);
+    }
 
-    size_t idx = 0;
-    for (auto &&field : sie.structDecl.fields) {
-        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*sie.type), tmp, idx++);
+    for (size_t i = 0; i < sie.structDecl.fields.size(); i++) {
+        auto &field = sie.structDecl.fields[i];
+        if (sie.fieldInitializers[i]->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
+        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*sie.type), tmp, i);
         store_value(initializerVals[field.get()], dst, *field->type, *field->type);
     }
 
@@ -522,6 +536,7 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
 
 llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationExpr &aie) {
     debug_func("");
+    if (aie.type->kind == ResolvedTypeKind::DefaultInit) return nullptr;
     auto typeArray = dynamic_cast<const ResolvedTypeArray *>(aie.type.get());
     if (!typeArray) {
         aie.dump();
@@ -617,7 +632,7 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
     if (tryErrorExpr.type->kind == ResolvedTypeKind::Void) return nullptr;
 
     auto tryValue = m_builder.CreateStructGEP(generate_type(*tryErrorExpr.errorToTry->type), error_struct, 0);
-    keepPointer |= tryErrorExpr.type->kind == ResolvedTypeKind::Struct;
+    keepPointer |= tryErrorExpr.type->generate_struct();
     ret = keepPointer ? tryValue : load_value(tryValue, *tryErrorExpr.type);
     return ret;
 }
@@ -662,7 +677,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
 
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
-    keepPointer |= orelseErrorExpr.type->kind == ResolvedTypeKind::Struct;
+    keepPointer |= orelseErrorExpr.type->generate_struct();
     ret = keepPointer ? return_value : load_value(return_value, *orelseErrorExpr.type);
     return ret;
 }
@@ -682,20 +697,23 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
         // ptr = ptr;
     } else if (from.type->kind == ResolvedTypeKind::Pointer) {
         ptr = load_value(ptr, *from.type);
+    } else if (from.type->kind == ResolvedTypeKind::Slice) {
+        ptr = m_builder.CreateStructGEP(generate_type(*from.type), ptr, 0);
+        ptr = load_value(ptr, ResolvedTypePointer{type.location, makePtr<ResolvedTypeVoid>(type.location)});
     } else {
         return report(from.location, "unexpected type used in generate of slice '" + from.type->to_str() + "'");
     }
     auto tmpSlice = allocate_stack_variable("tmp.slice", *sliceType);
 
     // ptr + sizeof(type)
-    if (!range.startExpr->type->equal(*range.endExpr->type)) {
+    if (!range.startExpr->type->compare(*range.endExpr->type)) {
         dmz_unreachable("unexpected types in range '" + range.startExpr->type->to_str() + "' '" +
                         range.endExpr->type->to_str() + "'");
     }
     auto startRange = generate_expr(*range.startExpr);
     auto endRange = generate_expr(*range.endExpr);
     ptr = m_builder.CreateGEP(generate_type(*sliceType->sliceType), ptr, startRange);
-    auto size = m_builder.CreateSub(endRange, startRange);
+    auto size = m_builder.CreateSub(cast_to(endRange, *range.endExpr->type, *range.startExpr->type), startRange);
 
     auto structSliceType = generate_type(*sliceType);
     auto slicePtr = m_builder.CreateStructGEP(structSliceType, tmpSlice, 0);

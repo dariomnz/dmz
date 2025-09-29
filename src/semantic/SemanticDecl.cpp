@@ -360,12 +360,6 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     if (!varDecl.type && !varDecl.initializer)
         return report(varDecl.location, "an uninitialized variable is expected to have a type specifier");
 
-    // ptr<ResolvedExpr> resolvedInitializer = nullptr;
-    // if (varDecl.initializer) {
-    //     resolvedInitializer = resolve_expr(*varDecl.initializer);
-    //     if (!resolvedInitializer) return nullptr;
-    // }
-    // ResolvedType *type = nullptr;
     ptr<ResolvedType> resolvedvarType = nullptr;
     if (varDecl.type) {
         resolvedvarType = resolve_type(*varDecl.type);
@@ -374,44 +368,6 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
                           "variable '" + varDecl.identifier + "' has invalid '" + varDecl.type->to_str() + "' type");
         }
     }
-    // if (!resolvedInitializer) {
-    // type = resolvedvarType.get();
-    // } else {
-    //     type = resolvedInitializer->type.get();
-    //     if (!type) {
-    //         return report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +
-    //                                             resolvedInitializer->type->to_str() + "' type");
-    //     }
-
-    //     if (varDecl.type) {
-    //         bool shouldCheckType = true;
-
-    //         if (dynamic_cast<ResolvedArrayInstantiationExpr *>(resolvedInitializer.get())) {
-    //             if (auto arrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get())) {
-    //                 if (auto arrInnerType = dynamic_cast<ResolvedTypeVoid *>(arrType->arrayType.get())) {
-    //                     resolvedInitializer->type = resolvedvarType->clone();
-    //                     auto rarrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get());
-    //                     if (!rarrType) dmz_unreachable("unexpected error");
-    //                     rarrType->arraySize = 0;
-    //                     shouldCheckType = false;
-    //                 }
-    //             }
-    //         }
-    //         if (shouldCheckType) {
-    //             if (!resolvedvarType->compare(*resolvedInitializer->type)) {
-    //                 // resolvedvarType->dump();
-    //                 // resolvedInitializer->type->dump();
-    //                 return report(resolvedInitializer->location, "initializer type mismatch expected '" +
-    //                                                                  resolvedvarType->to_str() + "' actual '" +
-    //                                                                  resolvedInitializer->type->to_str() + "'");
-    //             }
-    //         }
-    //         type = resolvedvarType.get();
-    //     }
-
-    //     resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
-    // }
-
     if (resolvedvarType && resolvedvarType->kind == ResolvedTypeKind::Void) {
         return report(varDecl.location,
                       "variable '" + varDecl.identifier + "' has invalid '" + resolvedvarType->to_str() + "' type");
@@ -465,8 +421,8 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
             }
             if (shouldCheckType) {
                 if (!varDecl.type->compare(*resolvedInitializer->type)) {
-                    // resolvedvarType->dump();
-                    // resolvedInitializer->type->dump();
+                    varDecl.type->dump();
+                    resolvedInitializer->type->dump();
                     report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                               varDecl.type->to_str() + "' actual '" +
                                                               resolvedInitializer->type->to_str() + "'");

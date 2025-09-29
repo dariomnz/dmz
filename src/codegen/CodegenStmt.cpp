@@ -1,5 +1,6 @@
 #include "codegen/Codegen.hpp"
 #include "semantic/SemanticSymbols.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
 
@@ -135,8 +136,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, *decl->type);
 
     if (const auto &init = decl->initializer) {
-        auto tmpArray = dynamic_cast<ResolvedArrayInstantiationExpr *>(decl->initializer.get());
-        if (!tmpArray || (tmpArray && tmpArray->type->kind != ResolvedTypeKind::Void))
+        if (init->type->kind != ResolvedTypeKind::DefaultInit)
             store_value(generate_expr(*init), var, *init->type, *decl->type);
     }
     m_declarations[decl] = var;
@@ -146,7 +146,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
 llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     debug_func("");
     llvm::Value *val = generate_expr(*stmt.expr);
-    llvm::Value *assignee =  generate_expr(*stmt.assignee, true);
+    llvm::Value *assignee = generate_expr(*stmt.assignee, true);
     // if (auto assigmentOperator = dynamic_cast<const ResolvedAssignmentOperator *>(&stmt)) {
     //     if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(stmt.assignee->type.get())) {
     //         llvm::Value *ret = nullptr;
