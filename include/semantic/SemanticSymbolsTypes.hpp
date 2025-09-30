@@ -2,6 +2,7 @@
 
 #include "DMZPCH.hpp"
 #include "DMZPCHSymbols.hpp"
+#include "Utils.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -68,6 +69,8 @@ struct ResolvedTypeNumber : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+
+    static ptr<ResolvedType> isize(SourceLocation location);
 };
 
 struct ResolvedTypeBool : public ResolvedTypeNumber {

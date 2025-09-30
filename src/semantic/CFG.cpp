@@ -45,6 +45,9 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
         return insert_while_stmt(*whileStmt, block);
     }
+    if (auto *forStmt = dynamic_cast<const ResolvedForStmt *>(&stmt)) {
+        return insert_for_stmt(*forStmt, block);
+    }
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return insert_expr(*expr, block);
     }
@@ -191,6 +194,21 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
 
     cfg.insert_stmt(&stmt, header);
     insert_expr(*stmt.condition, header);
+
+    return header;
+}
+
+int CFGBuilder::insert_for_stmt(const ResolvedForStmt &stmt, int exit) {
+    int latch = cfg.insert_new_block();
+    int body = insert_block(*stmt.body, latch);
+
+    int header = cfg.insert_new_block();
+    cfg.insert_edge(latch, header, true);
+
+    cfg.insert_edge(header, body, true);
+    cfg.insert_edge(header, exit, true);
+
+    cfg.insert_stmt(&stmt, header);
 
     return header;
 }

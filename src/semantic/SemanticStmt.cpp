@@ -1,6 +1,10 @@
 // #define DEBUG
+#include <memory>
+#include <string>
+
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
+#include "driver/Driver.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -26,6 +30,9 @@ ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     }
     if (auto *whileStmt = dynamic_cast<const WhileStmt *>(&stmt)) {
         return resolve_while_stmt(*whileStmt);
+    }
+    if (auto *forStmt = dynamic_cast<const ForStmt *>(&stmt)) {
+        return resolve_for_stmt(*forStmt);
     }
     if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) {
         return resolve_return_stmt(*returnStmt);
@@ -146,6 +153,66 @@ ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     condition->set_constant_value(cee.evaluate(*condition, false));
 
     return makePtr<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
+}
+
+ptr<ResolvedForStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
+    debug_func(forStmt.location);
+
+    ScopeRAII forCapturesScope(*this);
+    std::vector<ptr<ResolvedExpr>> conditions;
+    std::vector<ptr<ResolvedCaptureDecl>> captures;
+
+    if (forStmt.conditions.size() != forStmt.captures.size()) {
+        return report(forStmt.location, "different number of conditions '" + std::to_string(forStmt.conditions.size()) +
+                                            "' and captures '" + std::to_string(forStmt.captures.size()) + "' in for");
+    }
+
+    bool error = false;
+    int size_of_forloop = -1;
+    for (size_t i = 0; i < forStmt.conditions.size(); i++) {
+        ptr<ResolvedType> captureType = nullptr;
+        varOrReturn(resolvedCond, resolve_expr(*forStmt.conditions[i]));
+        if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(resolvedCond.get())) {
+            auto startValue = rangeExpr->startExpr->get_constant_value();
+            auto endValue = rangeExpr->endExpr->get_constant_value();
+            if (startValue && endValue) {
+                auto currentSize = endValue.value() - startValue.value();
+                if (size_of_forloop != -1) {
+                    if (size_of_forloop != currentSize) {
+                        error = true;
+                        report(rangeExpr->location, "range length '" + std::to_string(currentSize) +
+                                                        "' not match with the others '" +
+                                                        std::to_string(size_of_forloop) + "'");
+                        continue;
+                    }
+                }
+                size_of_forloop = currentSize;
+            }
+            captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[i]->location, ResolvedNumberKind::Int,
+                                                      Driver::instance().ptrBitSize());
+        } else {
+            resolvedCond->dump();
+            resolvedCond->type->dump();
+            dmz_unreachable("TODO");
+        }
+
+        auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[i]->location,
+                                                            forStmt.captures[i]->identifier, std::move(captureType));
+
+        if (!insert_decl_to_current_scope(*resolvedCapture)) {
+            error = true;
+            continue;
+        }
+        conditions.emplace_back(std::move(resolvedCond));
+        captures.emplace_back(std::move(resolvedCapture));
+    }
+
+    if (error) return nullptr;
+
+    varOrReturn(resolvedBody, resolve_block(*forStmt.body));
+
+    return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
+                                    std::move(resolvedBody));
 }
 
 ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {

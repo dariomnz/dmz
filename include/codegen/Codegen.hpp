@@ -54,6 +54,7 @@ class Codegen {
     llvm::Function *get_current_function();
     llvm::Value *generate_if_stmt(const ResolvedIfStmt &stmt);
     llvm::Value *generate_while_stmt(const ResolvedWhileStmt &stmt);
+    llvm::Value *generate_for_stmt(const ResolvedForStmt &stmt);
     llvm::Value *generate_decl_stmt(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_assignment(const ResolvedAssignment &stmt);
     llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from, const ResolvedType &to);

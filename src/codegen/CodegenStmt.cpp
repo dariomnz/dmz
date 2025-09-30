@@ -1,3 +1,11 @@
+#include <llvm-20/llvm/IR/Constants.h>
+#include <llvm-20/llvm/IR/Value.h>
+
+#include <charconv>
+#include <string>
+
+#include "Debug.hpp"
+#include "Utils.hpp"
 #include "codegen/Codegen.hpp"
 #include "semantic/SemanticSymbols.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
@@ -31,6 +39,9 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     }
     if (auto *whileStmt = dynamic_cast<const ResolvedWhileStmt *>(&stmt)) {
         return generate_while_stmt(*whileStmt);
+    }
+    if (auto *forStmt = dynamic_cast<const ResolvedForStmt *>(&stmt)) {
+        return generate_for_stmt(*forStmt);
     }
     if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
         return generate_decl_stmt(*declStmt);
@@ -124,6 +135,99 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
     m_builder.SetInsertPoint(body);
     generate_block(*stmt.body);
+    break_into_bb(header);
+
+    m_builder.SetInsertPoint(exit);
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
+    debug_func("");
+    for (auto &&cond : stmt.conditions) {
+        if (cond->type->kind != ResolvedTypeKind::Range) {
+            dmz_unreachable("TODO");
+        }
+    }
+    llvm::Function *function = get_current_function();
+
+    auto *header = llvm::BasicBlock::Create(*m_context, "for.cond", function);
+    auto *increment = llvm::BasicBlock::Create(*m_context, "for.increment", function);
+    auto *body = llvm::BasicBlock::Create(*m_context, "for.body", function);
+    auto *exit = llvm::BasicBlock::Create(*m_context, "for.exit", function);
+
+    auto isize = ResolvedTypeNumber::isize(stmt.location);
+    auto llvmisize = generate_type(*isize);
+    llvm::Value *counter = allocate_stack_variable("for.counter", *isize);
+    std::vector<llvm::Value *> startCaptures(stmt.captures.size(), nullptr);
+    std::vector<llvm::Value *> endCaptures(stmt.captures.size(), nullptr);
+    std::vector<llvm::Value *> lenghtCaptures(stmt.captures.size(), nullptr);
+    for (size_t i = 0; i < stmt.captures.size(); i++) {
+        if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
+            startCaptures[i] =
+                allocate_stack_variable("for.capture." + stmt.captures[i]->name(), *stmt.captures[i]->type);
+            auto aux_start = cast_to(generate_expr(*rangeExpr->startExpr), *rangeExpr->startExpr->type, *isize);
+            store_value(aux_start, startCaptures[i], *isize, *stmt.captures[i]->type);
+            m_declarations[stmt.captures[i].get()] = startCaptures[i];
+
+            endCaptures[i] = cast_to(generate_expr(*rangeExpr->endExpr), *rangeExpr->endExpr->type, *isize);
+            lenghtCaptures[i] = m_builder.CreateSub(endCaptures[i], aux_start);
+        } else {
+            dmz_unreachable("TODO");
+        }
+    }
+
+    // Check lenghts
+    llvm::BasicBlock *check_length = nullptr;
+    if (stmt.captures.size() > 1) {
+        auto *not_equal_length = llvm::BasicBlock::Create(*m_context, "for.not.equal.length", function);
+        check_length = llvm::BasicBlock::Create(*m_context, "for.check_length", function);
+        break_into_bb(check_length);
+        for (size_t i = 1; i < stmt.captures.size(); i++) {
+            m_builder.SetInsertPoint(check_length);
+            auto cond = m_builder.CreateICmpNE(lenghtCaptures[0], lenghtCaptures[i]);
+            check_length = llvm::BasicBlock::Create(*m_context, "for.check_length", function);
+            m_builder.CreateCondBr(cond, not_equal_length, check_length);
+        }
+        m_builder.SetInsertPoint(check_length);
+        break_into_bb(header);
+
+        // In case not equal at run time
+        m_builder.SetInsertPoint(not_equal_length);
+        auto fmt = m_builder.CreateGlobalString(stmt.location.to_string() +
+                                                ": Aborted: for loop over objects with non-equal lengths\n");
+        auto printf_func = m_module->getOrInsertFunction(
+            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getPtrTy(), true));
+        m_builder.CreateCall(printf_func, {fmt});
+        llvm::Function *trapIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trap);
+        m_builder.CreateCall(trapIntrinsic, {});
+        break_into_bb(exit);
+    }
+
+    // Header to check exit
+    break_into_bb(header);
+    m_builder.SetInsertPoint(header);
+    auto loaded_counter = load_value(counter, *isize);
+    auto cond = m_builder.CreateICmpSLT(loaded_counter, lenghtCaptures[0]);
+    m_builder.CreateCondBr(cond, body, exit);
+
+    // Body
+    m_builder.SetInsertPoint(body);
+    generate_block(*stmt.body);
+    break_into_bb(increment);
+
+    // Increment counter
+    m_builder.SetInsertPoint(increment);
+    auto sum = m_builder.CreateAdd(load_value(counter, *isize), llvm::ConstantInt::get(llvmisize, 1));
+    store_value(sum, counter, *isize, *isize);
+    for (size_t i = 0; i < stmt.captures.size(); i++) {
+        if (dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
+            auto added_capture = m_builder.CreateAdd(load_value(startCaptures[i], *stmt.captures[i]->type),
+                                                     llvm::ConstantInt::get(llvmisize, 1));
+            store_value(added_capture, startCaptures[i], *isize, *stmt.captures[i]->type);
+        } else {
+            dmz_unreachable("TODO");
+        }
+    }
     break_into_bb(header);
 
     m_builder.SetInsertPoint(exit);

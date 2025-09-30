@@ -135,6 +135,26 @@ struct WhileStmt : public Stmt {
     std::string to_str() const override;
 };
 
+struct CaptureDecl : public Decl {
+    CaptureDecl(SourceLocation location, std::string_view identifier) : Decl(location, true, identifier) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ForStmt : public Stmt {
+    std::vector<ptr<Expr>> conditions;
+    std::vector<ptr<CaptureDecl>> captures;
+    ptr<Block> body;
+
+    ForStmt(SourceLocation location, std::vector<ptr<Expr>> conditions, std::vector<ptr<CaptureDecl>> captures,
+            ptr<Block> body)
+        : Stmt(location), conditions(std::move(conditions)), captures(std::move(captures)), body(std::move(body)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct CaseStmt : public Stmt {
     ptr<Expr> condition;
     ptr<Block> block;

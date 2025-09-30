@@ -134,6 +134,9 @@ template ptr<std::vector<ptr<FieldDecl>>> Parser::parse_list_with_trailing_comma
 template ptr<std::vector<ptr<ErrorDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
                                                                                  ptr<ErrorDecl> (Parser::*)(),
                                                                                  std::pair<TokenType, const char *>);
+template ptr<std::vector<ptr<CaptureDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
+                                                                                   ptr<CaptureDecl> (Parser::*)(),
+                                                                                   std::pair<TokenType, const char *>);
 template ptr<std::vector<ptr<FieldInitStmt>>> Parser::parse_list_with_trailing_comma(
     std::pair<TokenType, const char *>, ptr<FieldInitStmt> (Parser::*)(), std::pair<TokenType, const char *>);
 template ptr<std::vector<ptr<Expr>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,

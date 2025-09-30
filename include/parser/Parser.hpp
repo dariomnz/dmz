@@ -4,6 +4,7 @@
 #include "DMZPCHSymbols.hpp"
 #include "Debug.hpp"
 #include "lexer/Lexer.hpp"
+#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -134,6 +135,8 @@ class Parser {
     ptr<std::vector<ptr<ParamDecl>>> parse_parameter_list();
     ptr<IfStmt> parse_if_stmt();
     ptr<WhileStmt> parse_while_stmt();
+    ptr<CaptureDecl> parse_capture_decl();
+    ptr<ForStmt> parse_for_stmt();
     ptr<DeclStmt> parse_decl_stmt();
     ptr<VarDecl> parse_var_decl(bool isPublic, bool isConst);
     ptr<Stmt> parse_assignment_or_expr(bool expectSemicolon = true);

@@ -136,6 +136,28 @@ struct ResolvedWhileStmt : public ResolvedStmt {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedCaptureDecl : public ResolvedDecl {
+    ResolvedCaptureDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type)
+        : ResolvedDecl(location, identifier, std::move(type), false, true) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedForStmt : public ResolvedStmt {
+    std::vector<ptr<ResolvedExpr>> conditions;
+    std::vector<ptr<ResolvedCaptureDecl>> captures;
+    ptr<ResolvedBlock> body;
+
+    ResolvedForStmt(SourceLocation location, std::vector<ptr<ResolvedExpr>> conditions,
+                    std::vector<ptr<ResolvedCaptureDecl>> captures, ptr<ResolvedBlock> body)
+        : ResolvedStmt(location),
+          conditions(std::move(conditions)),
+          captures(std::move(captures)),
+          body(std::move(body)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedCaseStmt : public ResolvedStmt {
     ptr<ResolvedExpr> condition;
     ptr<ResolvedBlock> block;

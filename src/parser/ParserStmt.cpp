@@ -1,5 +1,6 @@
 #include <unordered_set>
 
+#include "Utils.hpp"
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
@@ -32,6 +33,7 @@ ptr<Stmt> Parser::parse_statement() {
     debug_func("");
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
+    if (m_nextToken.type == TokenType::kw_for) return parse_for_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
     if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
@@ -130,6 +132,24 @@ ptr<WhileStmt> Parser::parse_while_stmt() {
     varOrReturn(body, parse_block());
 
     return makePtr<WhileStmt>(location, std::move(cond), std::move(body));
+}
+
+ptr<ForStmt> Parser::parse_for_stmt() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'for'
+
+    varOrReturn(conditions,
+                parse_expr_list_with_trailing_comma({TokenType::par_l, "expected '('"}, [&]() { return parse_expr(); },
+                                                    {TokenType::par_r, "expected ')'"}));
+    varOrReturn(captures, parse_list_with_trailing_comma<CaptureDecl>({TokenType ::pipe, "expected '|'"},
+                                                                      &Parser::parse_capture_decl,
+                                                                      {TokenType ::pipe, "expected '|'"}));
+
+    matchOrReturn(TokenType::block_l, "expected 'for' body");
+    varOrReturn(body, parse_block());
+
+    return makePtr<ForStmt>(location, std::move(*conditions), std::move(*captures), std::move(body));
 }
 
 ptr<DeclStmt> Parser::parse_decl_stmt() {

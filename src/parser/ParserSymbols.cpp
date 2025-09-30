@@ -228,6 +228,24 @@ void WhileStmt::dump(size_t level) const {
 
 std::string WhileStmt::to_str() const { dmz_unreachable("TODO"); }
 
+void CaptureDecl::dump(size_t level) const { std::cerr << indent(level) << "CaptureDecl " << identifier << "\n"; }
+
+std::string CaptureDecl::to_str() const { dmz_unreachable("TODO"); }
+
+void ForStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "ForStmt\n";
+
+    for (auto &&cond : conditions) {
+        cond->dump(level + 1);
+    }
+    for (auto &&cap : captures) {
+        cap->dump(level + 1);
+    }
+    body->dump(level + 1);
+}
+
+std::string ForStmt::to_str() const { dmz_unreachable("TODO"); }
+
 void CaseStmt::dump(size_t level) const {
     std::cerr << indent(level) << "CaseStmt\n";
 

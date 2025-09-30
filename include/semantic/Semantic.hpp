@@ -97,6 +97,7 @@ class Sema {
     ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
     ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
     ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
+    ptr<ResolvedForStmt> resolve_for_stmt(const ForStmt &forStmt);
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);

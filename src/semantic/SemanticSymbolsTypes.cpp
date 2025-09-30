@@ -1,5 +1,7 @@
 #include "semantic/SemanticSymbolsTypes.hpp"
 
+#include "driver/Driver.hpp"
+
 namespace DMZ {
 
 bool ResolvedType::generate_struct() const {
@@ -78,6 +80,10 @@ std::string ResolvedTypeNumber::to_str() const {
 
     out << bitSize;
     return out.str();
+}
+
+ptr<ResolvedType> ResolvedTypeNumber::isize(SourceLocation location) {
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, Driver::instance().ptrBitSize());
 }
 
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {

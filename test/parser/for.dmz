@@ -1,0 +1,52 @@
+// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+fn main() -> void {
+    for (0..10) |x| {
+        printf("x: %d\n", x);
+    }
+    for (0..10, 5..10) |x, y| {
+        printf("x: %d y: %d\n", x, y);
+    }
+    for (0..2) |i| {
+        printf("a");
+    }
+    printf("\n");
+}
+// CHECK: FunctionDecl main -> void
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ForStmt
+// CHECK-NEXT:         RangeExpr
+// CHECK-NEXT:           IntLiteral '0'
+// CHECK-NEXT:           IntLiteral '10'
+// CHECK-NEXT:         CaptureDecl x
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             StringLiteral '"x: %d\n"'
+// CHECK-NEXT:             DeclRefExpr x
+// CHECK-NEXT:       ForStmt
+// CHECK-NEXT:         RangeExpr
+// CHECK-NEXT:           IntLiteral '0'
+// CHECK-NEXT:           IntLiteral '10'
+// CHECK-NEXT:         RangeExpr
+// CHECK-NEXT:           IntLiteral '5'
+// CHECK-NEXT:           IntLiteral '10'
+// CHECK-NEXT:         CaptureDecl x
+// CHECK-NEXT:         CaptureDecl y
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             StringLiteral '"x: %d y: %d\n"'
+// CHECK-NEXT:             DeclRefExpr x
+// CHECK-NEXT:             DeclRefExpr y
+// CHECK-NEXT:       ForStmt
+// CHECK-NEXT:         RangeExpr
+// CHECK-NEXT:           IntLiteral '0'
+// CHECK-NEXT:           IntLiteral '2'
+// CHECK-NEXT:           CaptureDecl i
+// CHECK-NEXT:         Block
+// CHECK-NEXT:           CallExpr
+// CHECK-NEXT:             DeclRefExpr printf
+// CHECK-NEXT:             StringLiteral '"a"'
+// CHECK-NEXT:       CallExpr
+// CHECK-NEXT:         DeclRefExpr printf
+// CHECK-NEXT:         StringLiteral '"\n"'

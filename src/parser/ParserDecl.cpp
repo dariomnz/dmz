@@ -1,3 +1,4 @@
+#include "DMZPCH.hpp"
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
 
@@ -357,5 +358,14 @@ ptr<TestDecl> Parser::parse_test_decl() {
     varOrReturn(block, parse_block());
 
     return makePtr<TestDecl>(location, name, std::move(block));
+}
+
+ptr<CaptureDecl> Parser::parse_capture_decl() {
+    auto location = m_nextToken.loc;
+    auto identifier = m_nextToken.str;
+    matchOrReturn(TokenType::id, "expected identifier");
+    eat_next_token();  // eat id
+
+    return makePtr<CaptureDecl>(location, identifier);
 }
 }  // namespace DMZ

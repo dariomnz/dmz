@@ -77,6 +77,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_let);
         CASE_TYPE(kw_const);
         CASE_TYPE(kw_while);
+        CASE_TYPE(kw_for);
         CASE_TYPE(kw_return);
         CASE_TYPE(kw_struct);
         CASE_TYPE(kw_extern);
@@ -117,25 +118,6 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t) {
 
 Lexer::Lexer(std::filesystem::path file_path) : m_file_path(file_path) {}
 
-// inline int readAll(int fd, char* data, int len) {
-//     int ret = 0;
-//     int r;
-//     int l = len;
-//     char* buffer = static_cast<char*>(data);
-
-//     do {
-//         r = read(fd, buffer, l);
-//         if (r <= 0) { /* fail */
-//             if (ret == 0) ret = r;
-//             break;
-//         }
-//         l = l - r;
-//         buffer = buffer + r;
-//         ret = ret + r;
-//     } while ((l > 0) && (r >= 0));
-
-//     return ret;
-// }
 static inline bool isSpace(const std::string_view& c) {
     return c.size() > 0 &&
            (c[0] == ' ' || c[0] == '\f' || c[0] == '\n' || c[0] == '\r' || c[0] == '\t' || c[0] == '\v');

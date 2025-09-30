@@ -725,10 +725,14 @@ ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
         return report(rangeExpr.location, "unexpected type in start of a range '" + startExpr->type->to_str() + "'");
     }
 
+    startExpr->set_constant_value(cee.evaluate(*startExpr, false));
+
     varOrReturn(endExpr, resolve_expr(*rangeExpr.endExpr));
     if (endExpr->type->kind != ResolvedTypeKind::Number) {
         return report(rangeExpr.location, "unexpected type in end of a range '" + endExpr->type->to_str() + "'");
     }
+
+    endExpr->set_constant_value(cee.evaluate(*endExpr, false));
 
     return makePtr<ResolvedRangeExpr>(rangeExpr.location, std::move(startExpr), std::move(endExpr));
 }
