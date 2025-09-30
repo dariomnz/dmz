@@ -4,8 +4,6 @@ extern fn free(ptr: *void) -> void;
 pub extern fn memmove(dest: *void, src: *void, size:u64) -> *void;
 pub extern fn memcpy(dest: *void, src: *void, size:u64) -> *void;
 
-const std = import("std");
-
 pub struct Allocator {
     allocator: *void,
     vtable_malloc: * fn(*void, u64)->*void,
@@ -13,7 +11,6 @@ pub struct Allocator {
     vtable_free: * fn(*void, *void)->void,
 
     pub fn malloc(size: u64) -> *void {
-        std.io.printf("malloc Allocator %d\n", size);
         return .vtable_malloc(.allocator, size);
     }
 
@@ -43,12 +40,10 @@ pub struct libc_allocator {
 
     fn malloc(size: u64) -> *void {
         .allocated++;
-        std.io.printf("Malloc %d\n", size);
         return malloc(size);
     }
 
     fn realloc(ptr: *void, size: u64) -> *void {
-        std.io.printf("realloc %d\n", size);
         return realloc(ptr, size);
     }
 
