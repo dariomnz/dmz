@@ -9,7 +9,7 @@ pub struct vec<T> {
     len: usize,
     alloc: std.mem.Allocator,
 
-    static pub fn init(allocator: std.mem.Allocator) -> @This {
+    pub fn init(allocator: std.mem.Allocator) -> @This {
         return @This {
             buf: {},
             len: 0,
@@ -17,48 +17,48 @@ pub struct vec<T> {
         };
     }
 
-    pub fn deinit() -> void {
-        .alloc.free(.buf.ptr);
+    pub fn deinit(self: *@This) -> void {
+        self.alloc.free(self.buf.ptr);
     }
 
-    pub fn add(v: T) -> void! {
-        if (.len >= .buf.len) {
-            if (.buf.len == 0) {
-                .buf.len = 8;
-                .buf.ptr = .alloc.malloc(.buf.len * @sizeof(T));
+    pub fn add(self: *@This, v: T) -> void! {
+        if (self.len >= self.buf.len) {
+            if (self.buf.len == 0) {
+                self.buf.len = 8;
+                self.buf.ptr = self.alloc.malloc(self.buf.len * @sizeof(T));
             } else {
-                .buf.len *= 2;
-                .buf.ptr = .alloc.realloc(.buf.ptr, .buf.len * @sizeof(T));
+                self.buf.len *= 2;
+                self.buf.ptr = self.alloc.realloc(self.buf.ptr, self.buf.len * @sizeof(T));
             }
-            if (!.buf.ptr) {
+            if (!self.buf.ptr) {
                 return vector_error.OutOfMemory;
             }
         }
-        .buf[.len] = v;
-        .len++;
+        self.buf[self.len] = v;
+        self.len++;
     }
 
-    pub fn get(index: usize) -> T! {
-        if (index > .len) { return vector_error.IndexOutOfLenght; }
-        return .buf[index];
+    pub fn get(self: *@This, index: usize) -> T! {
+        if (index > self.len) { return vector_error.IndexOutOfLenght; }
+        return self.buf[index];
     }
 
-    pub fn remove(index: usize) -> void! {
-        if (index >= .len) { return vector_error.IndexOutOfLenght; }
+    pub fn remove(self: *@This, index: usize) -> void! {
+        if (index >= self.len) { return vector_error.IndexOutOfLenght; }
 
-        if (index < (.len - 1)) {
-            const num_bytes = (.len - index - 1) * @sizeof(T);
-            std.mem.memmove(&.buf[index], &.buf[index + 1], num_bytes);
+        if (index < (self.len - 1)) {
+            const num_bytes = (self.len - index - 1) * @sizeof(T);
+            std.mem.memmove(&self.buf[index], &self.buf[index + 1], num_bytes);
         }
 
-        .len--;
+        self.len--;
     }
 
-    pub fn size() -> usize {
-        return .len;
+    pub fn size(self: *@This) -> usize {
+        return self.len;
     }
 
-    pub fn slice() -> []T {
-        return .buf[0.. .len];
+    pub fn slice(self: *@This) -> []T {
+        return self.buf[0..self.len];
     }
 }

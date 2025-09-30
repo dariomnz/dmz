@@ -41,12 +41,8 @@ std::string TypeFunction::to_str() const {
 }
 
 void FunctionDecl::dump(size_t level) const {
-    if (auto member = dynamic_cast<const MemberFunctionDecl *>(this)) {
-        if (member->isStatic) {
-            std::cerr << indent(level) << "StaticMemberFunctionDecl ";
-        } else {
-            std::cerr << indent(level) << "MemberFunctionDecl ";
-        }
+    if (dynamic_cast<const MemberFunctionDecl *>(this)) {
+        std::cerr << indent(level) << "MemberFunctionDecl ";
     } else if (dynamic_cast<const TestDecl *>(this)) {
         std::cerr << indent(level) << "TestDecl ";
     } else {
@@ -356,10 +352,6 @@ std::string GenericExpr::to_str() const {
     out << ">";
     return out.str();
 }
-
-void SelfMemberExpr::dump(size_t level) const { std::cerr << indent(level) << "SelfMemberExpr ." << field << '\n'; }
-
-std::string SelfMemberExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void ArrayAtExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ArrayAtExpr" << '\n';

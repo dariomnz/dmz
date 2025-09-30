@@ -4,26 +4,26 @@ struct Point {
     x: i32,
     y: i32,
 
-    pub fn addOne() -> void {
-        .x = .x + 1;
-        .y = .y + 1;
+    pub fn addOne(self: *@This) -> void {
+        self.x = self.x + 1;
+        self.y = self.y + 1;
     }
 // CHECK:  ResolvedMemberFunctionDecl addOne fn(*struct_self_member.Point{})->void
-// CHECK-NEXT:    ResolvedParamDecl:*struct_self_member.Point 
+// CHECK-NEXT:    ResolvedParamDecl:*struct_self_member.Point{} self
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedAssignment
-// CHECK-NEXT:        ResolvedSelfMemberExpr:i32 x
-// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point 
+// CHECK-NEXT:        ResolvedMemberExpr:i32 x
+// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
 // CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:          ResolvedSelfMemberExpr:i32 x
-// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point 
+// CHECK-NEXT:          ResolvedMemberExpr:i32 x
+// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
 // CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:      ResolvedAssignment
-// CHECK-NEXT:        ResolvedSelfMemberExpr:i32 y
-// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point 
+// CHECK-NEXT:        ResolvedMemberExpr:i32 y
+// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
 // CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:          ResolvedSelfMemberExpr:i32 y
-// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point 
+// CHECK-NEXT:          ResolvedMemberExpr:i32 y
+// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
 // CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
 }
 

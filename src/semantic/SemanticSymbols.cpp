@@ -358,13 +358,6 @@ void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     base->dump(level + 1, onlySelf);
 }
 
-void ResolvedSelfMemberExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSelfMemberExpr:" << type->to_str() << " " << member.identifier << '\n';
-
-    if (onlySelf) return;
-    base->dump(level + 1, onlySelf);
-}
-
 void ResolvedArrayAtExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedArrayAtExpr:" << type->to_str() << '\n';
 

@@ -6,30 +6,30 @@ struct Point<T> {
     x:T,
     y:T,
 
-    pub fn add(n: T) -> void {
-        .x = .x + n;
-        .y = .y + n;
+    pub fn add(self: *@This, n: T) -> void {
+        self.x += n;
+        self.y += n;
     }
 // CHECK: ResolvedSpecializedStructDecl generic_struct_member.Point<i32>
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 // CHECK-NEXT:   ResolvedMemberFunctionDecl add fn(*generic_struct_member.Point<i32>{}, i32)->void
-// CHECK-NEXT:     ResolvedParamDecl:*generic_struct_member.Point 
+// CHECK-NEXT:     ResolvedParamDecl:*generic_struct_member.Point<i32>{} self 
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedAssignment
-// CHECK-NEXT:         ResolvedSelfMemberExpr:i32 x
-// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point 
-// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:           ResolvedSelfMemberExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point 
+// CHECK-NEXT:         ResolvedMemberExpr:i32 x
+// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:           ResolvedMemberExpr:i32 x
+// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 // CHECK-NEXT:       ResolvedAssignment
-// CHECK-NEXT:         ResolvedSelfMemberExpr:i32 y
-// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point 
-// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:           ResolvedSelfMemberExpr:i32 y
-// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point 
+// CHECK-NEXT:         ResolvedMemberExpr:i32 y
+// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:           ResolvedMemberExpr:i32 y
+// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 }
 

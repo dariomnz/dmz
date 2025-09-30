@@ -489,16 +489,6 @@ struct ResolvedMemberExpr : public ResolvedAssignableExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedSelfMemberExpr : public ResolvedAssignableExpr {
-    ptr<ResolvedExpr> base;
-    const ResolvedDecl &member;
-
-    ResolvedSelfMemberExpr(SourceLocation location, ptr<ResolvedExpr> base, const ResolvedDecl &member)
-        : ResolvedAssignableExpr(location, member.type->clone()), base(std::move(base)), member(member) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
 struct ResolvedArrayAtExpr : public ResolvedAssignableExpr {
     ptr<ResolvedExpr> array;
     ptr<ResolvedExpr> index;

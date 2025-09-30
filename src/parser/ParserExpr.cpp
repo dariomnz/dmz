@@ -114,9 +114,6 @@ ptr<Expr> Parser::parse_primary() {
                 return parse_error_group_expr_decl();
             }
         }
-        if (m_nextToken.type == TokenType::dot) {
-            return parse_self_member_expr();
-        }
         if (m_nextToken.type == TokenType::kw_sizeof) {
             return parse_sizeof_expr();
         }
@@ -351,18 +348,6 @@ ptr<ImportExpr> Parser::parse_import_expr() {
 
     auto ids = Driver::register_import(m_lexer.get_file_path(), identifier);
     return makePtr<ImportExpr>(location, identifier, ids.first, ids.second);
-}
-
-ptr<SelfMemberExpr> Parser::parse_self_member_expr() {
-    debug_func("");
-    auto loc = m_nextToken.loc;
-    matchOrReturn(TokenType::dot, "expected '.'");
-    eat_next_token();  // eat .
-
-    auto identifier = m_nextToken.str;
-    eat_next_token();  // eat id
-
-    return makePtr<SelfMemberExpr>(loc, identifier);
 }
 
 ptr<SizeofExpr> Parser::parse_sizeof_expr() {

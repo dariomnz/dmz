@@ -4,22 +4,21 @@ struct Point {
     x: i32,
     y: i32,
 
-    fn addOne() -> void {
-        .x = .x + 1;
-        .y = .y + 1;
+    fn addOne(self: *@This) -> void {
+        self.x += 1;
+        self.y += 1;
     }
-// CHECK:   MemberFunctionDecl addOne -> void
-// CHECK-NEXT:     Block
-// CHECK-NEXT:       Assignment
-// CHECK-NEXT:         SelfMemberExpr .x
-// CHECK-NEXT:         BinaryOperator '+'
-// CHECK-NEXT:           SelfMemberExpr .x
-// CHECK-NEXT:           IntLiteral '1'
-// CHECK-NEXT:       Assignment
-// CHECK-NEXT:         SelfMemberExpr .y
-// CHECK-NEXT:         BinaryOperator '+'
-// CHECK-NEXT:           SelfMemberExpr .y
-// CHECK-NEXT:           IntLiteral '1'
+// CHECK: MemberFunctionDecl addOne -> void
+// CHECK-NEXT:   ParamDecl:*@This self
+// CHECK-NEXT:   Block
+// CHECK-NEXT:     AssignmentOperator '+='
+// CHECK-NEXT:       MemberExpr .x
+// CHECK-NEXT:         DeclRefExpr self
+// CHECK-NEXT:       IntLiteral '1'
+// CHECK-NEXT:     AssignmentOperator '+='
+// CHECK-NEXT:       MemberExpr .y
+// CHECK-NEXT:         DeclRefExpr self
+// CHECK-NEXT:       IntLiteral '1'
 }
 
 fn main() -> void {

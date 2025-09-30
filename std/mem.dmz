@@ -10,54 +10,54 @@ pub struct Allocator {
     vtable_realloc: * fn(*void, *void, u64)->*void,
     vtable_free: * fn(*void, *void)->void,
 
-    pub fn malloc(size: u64) -> *void {
-        return .vtable_malloc(.allocator, size);
+    pub fn malloc(self: *@This, size: u64) -> *void {
+        return self.vtable_malloc(self.allocator, size);
     }
 
-    pub fn realloc(ptr: *void, size: u64) -> *void {
-        return .vtable_realloc(.allocator, ptr, size);
+    pub fn realloc(self: *@This, ptr: *void, size: u64) -> *void {
+        return self.vtable_realloc(self.allocator, ptr, size);
     }
 
-    pub fn free(ptr: *void) -> void {
-        .vtable_free(.allocator, ptr);
+    pub fn free(self: *@This, ptr: *void) -> void {
+        self.vtable_free(self.allocator, ptr);
     }
 }
 
 pub struct libc_allocator {
     allocated: u64,
 
-    static pub fn init() -> @This {
+    pub fn init() -> @This {
         return @This{
             allocated: 0
         };
     }
 
-    pub fn deinit() -> void! {
-        if (.allocated != 0) {
+    pub fn deinit(self: *@This) -> void! {
+        if (self.allocated != 0) {
             return error.LeakMemory;
         }
     }
 
-    fn malloc(size: u64) -> *void {
-        .allocated++;
+    fn malloc(self: *@This, size: u64) -> *void {
+        self.allocated++;
         return malloc(size);
     }
 
-    fn realloc(ptr: *void, size: u64) -> *void {
+    fn realloc(self: *@This, ptr: *void, size: u64) -> *void {
         return realloc(ptr, size);
     }
 
-    fn free(ptr: *void) -> void {
-        .allocated--;
+    fn free(self: *@This, ptr: *void) -> void {
+        self.allocated--;
         free(ptr);
     }
 
-    pub fn Allocator() -> Allocator {
+    pub fn Allocator(self: *@This) -> Allocator {
         return Allocator{
-            allocator: .@This,
-            vtable_malloc: &.malloc,
-            vtable_realloc: &.realloc,
-            vtable_free: &.free,
+            allocator: self,
+            vtable_malloc: &self.malloc,
+            vtable_realloc: &self.realloc,
+            vtable_free: &self.free,
         };
     }
 }

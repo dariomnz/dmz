@@ -52,23 +52,22 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
     resolvedFunc.release();
     ptr<ResolvedFunctionDecl> resolvedFunctionDecl(resolvedFunction);
 
-    if (!function.isStatic) {
-        auto type = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(&structDecl));
-        auto selfParam = makePtr<ResolvedParamDecl>(
-            function.location, "", makePtr<ResolvedTypePointer>(function.location, std::move(type)), false);
-        resolvedFunctionDecl->params.insert(resolvedFunctionDecl->params.begin(), std::move(selfParam));
+    bool isStatic = true;
+
+    if (resolvedFunctionDecl->params.size() > 0) {
+        auto structType = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(&structDecl));
+        auto paramType = makePtr<ResolvedTypePointer>(function.location, std::move(structType));
+        if (resolvedFunctionDecl->params[0]->type->equal(*paramType)) {
+            isStatic = false;
+        }
     }
 
     auto ret = makePtr<ResolvedMemberFunctionDecl>(
         resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
         std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
-        resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &structDecl, function.isStatic);
+        resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &structDecl, isStatic);
     auto fnType = ret->getFnType();
     fnType->fnDecl = ret.get();
-    if (!function.isStatic) {
-        fnType->paramsTypes.insert(fnType->paramsTypes.begin(), ret->params.begin()->get()->type->clone());
-    }
-
     return ret;
 }
 

@@ -156,7 +156,6 @@ class Parser {
     ptr<SwitchStmt> parse_switch_stmt();
     ptr<CaseStmt> parse_case_stmt();
     ptr<TestDecl> parse_test_decl();
-    ptr<SelfMemberExpr> parse_self_member_expr();
     ptr<SizeofExpr> parse_sizeof_expr();
 };
 }  // namespace DMZ

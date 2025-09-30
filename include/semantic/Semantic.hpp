@@ -108,7 +108,6 @@ class Sema {
     bool check_variable_initialization(const CFG &cfg);
     ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
-    ptr<ResolvedSelfMemberExpr> resolve_self_member_expr(const SelfMemberExpr &memberExpr);
     ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
     ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);

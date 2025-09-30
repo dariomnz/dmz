@@ -7,8 +7,8 @@ struct Color {
     g: i32,
     b: i32,
     
-    pub fn print() -> i32 {
-        return printf("Color{%d, %d, %d}\n", .r, .g, .b);
+    pub fn print(self: *@This) -> i32 {
+        return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
     }
 }
 // CHECK:       ResolvedMemberFunctionDecl print fn(*methods.Color{})->i32
@@ -18,12 +18,12 @@ struct Color {
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 'Color{%d, %d, %d}\n'
-// CHECK-NEXT:               ResolvedSelfMemberExpr:i32 r
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color 
-// CHECK-NEXT:               ResolvedSelfMemberExpr:i32 g
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color 
-// CHECK-NEXT:               ResolvedSelfMemberExpr:i32 b
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color 
+// CHECK-NEXT:               ResolvedMemberExpr:i32 r
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
+// CHECK-NEXT:               ResolvedMemberExpr:i32 g
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
+// CHECK-NEXT:               ResolvedMemberExpr:i32 b
+// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
 
 fn main() -> void {
     let c:Color = Color{r:1, g:2, b:3};

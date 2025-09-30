@@ -186,12 +186,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             fieldList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
             eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_static ||
-                   m_nextToken.type == TokenType::kw_pub) {
-            bool isStatic = m_nextToken.type == TokenType::kw_static;
-            if (isStatic) {
-                eat_next_token();  // eat static
-            }
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
             bool isPublic = m_nextToken.type == TokenType::kw_pub;
             if (isPublic) {
                 eat_next_token();  // eat pub
@@ -200,7 +195,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
             auto memberFunc =
                 makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
-                                            std::move(func->params), std::move(func->body), structDecl.get(), isStatic);
+                                            std::move(func->params), std::move(func->body), structDecl.get());
             funcList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");

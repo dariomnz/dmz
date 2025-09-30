@@ -115,15 +115,6 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
                 resolvedCallee = resolve_expr(*call.callee);
             }
         }
-    } else if (auto memberExpr = dynamic_cast<ResolvedSelfMemberExpr *>(resolvedCallee.get())) {
-        if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(&memberExpr->member)) {
-            isMemberCall = !memFunc->isStatic;
-            if (isMemberCall) {
-                resolvedBase = std::move(memberExpr->base);
-                // Recreate resolvedCallee
-                resolvedCallee = resolve_expr(*call.callee);
-            }
-        }
     }
 
     ResolvedTypeFunction *fnType = nullptr;
@@ -377,9 +368,6 @@ ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &
     if (const auto *memberExpr = dynamic_cast<const MemberExpr *>(&assignableExpr))
         return resolve_member_expr(*memberExpr);
 
-    if (const auto *memberExpr = dynamic_cast<const SelfMemberExpr *>(&assignableExpr))
-        return resolve_self_member_expr(*memberExpr);
-
     if (const auto *arrayAtExpr = dynamic_cast<const ArrayAtExpr *>(&assignableExpr))
         return resolve_array_at_expr(*arrayAtExpr);
 
@@ -476,40 +464,6 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         return report(memberExpr.base->location, "cannot access member of '" + resolvedBase->type->to_str() + '\'');
     }
     return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
-}
-
-ptr<ResolvedSelfMemberExpr> Sema::resolve_self_member_expr(const SelfMemberExpr &memberExpr) {
-    if (!m_currentStruct) return report(memberExpr.location, "unexpected use of self member outside a struct");
-
-    ResolvedDecl *decl = nullptr;
-    bool isThis = false;
-    if (memberExpr.field == "@This") {
-        isThis = true;
-    } else {
-        decl = lookup_in_struct(memberExpr.location, *m_currentStruct, memberExpr.field);
-        if (!decl) {
-            m_currentStruct->dump();
-            return report(memberExpr.location, "struct \'" + m_currentStruct->type->to_str() +
-                                                   "' has no self member called '" + memberExpr.field + '\'');
-        }
-    }
-
-    if (!m_currentFunction) return report(memberExpr.location, "internal error resolve_self_member_expr");
-    if (auto memberFunc = dynamic_cast<ResolvedMemberFunctionDecl *>(m_currentFunction)) {
-        if (memberFunc->isStatic)
-            return report(memberExpr.location, "expected use of self member expresion in a static function");
-    } else {
-        return report(memberExpr.location, "expected use of self member expresion outside a member function");
-    }
-    if (m_currentFunction->params.size() == 0)
-        return report(memberExpr.location, "internal error resolve_self_member_expr params");
-    auto &param = m_currentFunction->params[0];
-    auto baseRef = makePtr<ResolvedDeclRefExpr>(param->location, *param, param->type->clone());
-    if (isThis) {
-        return makePtr<ResolvedSelfMemberExpr>(memberExpr.location, std::move(baseRef), *param);
-    } else {
-        return makePtr<ResolvedSelfMemberExpr>(memberExpr.location, std::move(baseRef), *decl);
-    }
 }
 
 ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {

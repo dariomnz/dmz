@@ -336,16 +336,6 @@ struct GenericExpr : public Expr {
     std::string to_str() const override;
 };
 
-struct SelfMemberExpr : public AssignableExpr {
-    std::string field;
-
-    SelfMemberExpr(SourceLocation location, std::string_view field)
-        : AssignableExpr(location), field(std::move(field)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-};
-
 struct ArrayAtExpr : public AssignableExpr {
     ptr<Expr> array;
     ptr<Expr> index;
@@ -486,13 +476,11 @@ struct GenericFunctionDecl : public FunctionDecl {
 struct StructDecl;
 struct MemberFunctionDecl : public FunctionDecl {
     StructDecl* structBase;
-    bool isStatic;
 
     MemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, StructDecl* structBase, bool isStatic)
+                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, StructDecl* structBase)
         : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
-          structBase(structBase),
-          isStatic(isStatic) {}
+          structBase(structBase) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
