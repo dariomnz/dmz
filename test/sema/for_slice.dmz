@@ -1,0 +1,37 @@
+// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let str = "Hello, World\n";
+    let slice: []u8 = str[0..5];
+    for (slice) |val| {
+        printf("%c", *val);
+    }
+    printf("\n");
+}
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt *u8
+// CHECK-NEXT:         ResolvedVarDecl:*u8 str
+// CHECK-NEXT:           ResolvedStringLiteral:*u8 'Hello, World\n'
+// CHECK-NEXT:       ResolvedDeclStmt []u8
+// CHECK-NEXT:         ResolvedVarDecl:[]u8 slice
+// CHECK-NEXT:           ResolvedArrayAtExpr:[]u8
+// CHECK-NEXT:             ResolvedDeclRefExpr:*u8 str
+// CHECK-NEXT:             ResolvedRangeExpr
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:               | value: 0
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:               | value: 5
+// CHECK-NEXT:       ResolvedForStmt
+// CHECK-NEXT:         ResolvedDeclRefExpr:[]u8 slice
+// CHECK-NEXT:         ResolvedCaptureDecl:*u8 val
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:             ResolvedStringLiteral:*u8 '%c'
+// CHECK-NEXT:             ResolvedDerefPtrExpr:u8
+// CHECK-NEXT:               ResolvedDeclRefExpr:*u8 val
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 '\n'

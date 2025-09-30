@@ -1,5 +1,7 @@
 #include "semantic/SemanticSymbolsTypes.hpp"
 
+#include "DMZPCH.hpp"
+#include "Utils.hpp"
 #include "driver/Driver.hpp"
 
 namespace DMZ {
@@ -415,6 +417,10 @@ void ResolvedTypePointer::dump(size_t level) const {
 }
 
 std::string ResolvedTypePointer::to_str() const { return "*" + pointerType->to_str(); }
+
+ptr<ResolvedType> ResolvedTypePointer::opaquePtr(SourceLocation location) {
+    return makePtr<ResolvedTypePointer>(location, makePtr<ResolvedTypeVoid>(location));
+}
 
 bool ResolvedTypeSlice::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeSlice " << location);

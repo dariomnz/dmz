@@ -144,7 +144,8 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     debug_func("");
     for (auto &&cond : stmt.conditions) {
-        if (cond->type->kind != ResolvedTypeKind::Range) {
+        if (cond->type->kind != ResolvedTypeKind::Range && cond->type->kind != ResolvedTypeKind::Slice) {
+            cond->type->dump();
             dmz_unreachable("TODO");
         }
     }
@@ -171,6 +172,19 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
             endCaptures[i] = cast_to(generate_expr(*rangeExpr->endExpr), *rangeExpr->endExpr->type, *isize);
             lenghtCaptures[i] = m_builder.CreateSub(endCaptures[i], aux_start);
+        } else if (auto sliceType = dynamic_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get())) {
+            startCaptures[i] = allocate_stack_variable("for.capture." + stmt.captures[i]->name(),
+                                                       *ResolvedTypePointer::opaquePtr(stmt.captures[i]->location));
+            m_declarations[stmt.captures[i].get()] = startCaptures[i];
+            auto generatedCond = generate_expr(*stmt.conditions[i], true);
+            auto ptrOfPtrInSlice = m_builder.CreateStructGEP(generate_type(*sliceType), generatedCond, 0);
+            auto opaquePtrType = ResolvedTypePointer::opaquePtr(sliceType->location);
+            auto ptrInSlice = load_value(ptrOfPtrInSlice, *opaquePtrType);
+            store_value(ptrInSlice, startCaptures[i], *opaquePtrType, *opaquePtrType);
+
+            auto ptrOfLenInSlice = m_builder.CreateStructGEP(generate_type(*sliceType), generatedCond, 1);
+            lenghtCaptures[i] = load_value(ptrOfLenInSlice, *isize);
+
         } else {
             dmz_unreachable("TODO");
         }
@@ -224,6 +238,12 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
             auto added_capture = m_builder.CreateAdd(load_value(startCaptures[i], *stmt.captures[i]->type),
                                                      llvm::ConstantInt::get(llvmisize, 1));
             store_value(added_capture, startCaptures[i], *isize, *stmt.captures[i]->type);
+        } else if (auto sliceType = dynamic_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get())) {
+            auto opaquePtrType = ResolvedTypePointer::opaquePtr(sliceType->location);
+            auto added_capture =
+                m_builder.CreateGEP(generate_type(*sliceType->sliceType), load_value(startCaptures[i], *opaquePtrType),
+                                    m_builder.getInt32(1));
+            store_value(added_capture, startCaptures[i], *opaquePtrType, *opaquePtrType);
         } else {
             dmz_unreachable("TODO");
         }
@@ -251,24 +271,6 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
     debug_func("");
     llvm::Value *val = generate_expr(*stmt.expr);
     llvm::Value *assignee = generate_expr(*stmt.assignee, true);
-    // if (auto assigmentOperator = dynamic_cast<const ResolvedAssignmentOperator *>(&stmt)) {
-    //     if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(stmt.assignee->type.get())) {
-    //         llvm::Value *ret = nullptr;
-    //         auto rhs_value = load_value(rhs, *typeNum);
-    //         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt) {
-    //             ret = m_builder.CreateAdd(assignee, val);
-    //         } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
-    //             ret = m_builder.CreateFAdd(assignee, val);
-    //         } else {
-    //             dmz_unreachable("not expected type in op_plusplus");
-    //         }
-    //         store_value(ret, rhs, *typeNum, *typeNum);
-    //         return ret;
-    //     } else {
-    //         dmz_unreachable("not expected type in assigmentOperator " + stmt.assignee->type->to_str());
-    //     }
-    // } else {
-    // }
     return store_value(val, assignee, *stmt.expr->type, *stmt.assignee->type);
 }
 

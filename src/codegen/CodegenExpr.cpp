@@ -492,8 +492,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Slice) {
         auto slicetype = generate_type(*arrayAtExpr.array->type);
         base = m_builder.CreateStructGEP(slicetype, base, 0);
-        base = load_value(base,
-                          ResolvedTypePointer{arrayAtExpr.location, makePtr<ResolvedTypeVoid>(arrayAtExpr.location)});
+        base = load_value(base, *ResolvedTypePointer::opaquePtr(arrayAtExpr.location));
 
         type = generate_type(*arrayAtExpr.type);
         idxs = {generate_expr(*arrayAtExpr.index)};

@@ -193,6 +193,8 @@ struct ResolvedTypePointer : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+
+    static ptr<ResolvedType> opaquePtr(SourceLocation location);
 };
 
 struct ResolvedTypeSlice : public ResolvedType {

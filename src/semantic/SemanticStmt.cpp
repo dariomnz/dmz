@@ -190,10 +190,11 @@ ptr<ResolvedForStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             }
             captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[i]->location, ResolvedNumberKind::Int,
                                                       Driver::instance().ptrBitSize());
+        } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
+            captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
         } else {
-            resolvedCond->dump();
-            resolvedCond->type->dump();
-            dmz_unreachable("TODO");
+            return report(resolvedCond->location,
+                          "not supported type of condition '" + resolvedCond->type->to_str() + "'");
         }
 
         auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[i]->location,
