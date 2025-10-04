@@ -1,2 +1,2 @@
-// RUN: (compiler ./non_existent.dmz || true) 2>&1 | filecheck %s
+// RUN: (dmz ./non_existent.dmz || true) 2>&1 | filecheck %s
 // CHECK: error: failed to open './non_existent.dmz'

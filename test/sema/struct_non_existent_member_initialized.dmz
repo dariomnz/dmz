@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 struct Color {
   r: i32,
   g: i32,

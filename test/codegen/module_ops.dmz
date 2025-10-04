@@ -1,4 +1,4 @@
-// RUN: compiler %s -module -llvm-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -module -llvm-dump -no-remove-unused 2>&1 | filecheck %s
 pub fn add(x:i32, y:i32) -> i32 {
     return x + y;
 }

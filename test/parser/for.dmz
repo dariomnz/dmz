@@ -1,4 +1,4 @@
-// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     for (0..10) |x| {
         printf("x: %d\n", x);

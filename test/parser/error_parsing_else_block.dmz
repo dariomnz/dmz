@@ -1,4 +1,4 @@
-// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     if (0) {}
     else {

@@ -12,6 +12,8 @@ ref<Node> Formatter::fmt_decl(const Decl& decl) {
         return fmt_decoration(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const FunctionDecl*>(&decl)) {
         return fmt_function_decl(*cast_decl);
+    } else if (auto cast_decl = dynamic_cast<const StructDecl*>(&decl)) {
+        return fmt_struct_decl(*cast_decl);
     }
 
     decl.dump();
@@ -23,6 +25,9 @@ ref<Node> Formatter::fmt_module_decl(const ModuleDecl& modDecl) {
     ref<Nodes> nodes = makeRef<Nodes>(vec<ref<Node>>{});
 
     for (auto&& decl : modDecl.declarations) {
+        // Ignore new_lines
+        if (dynamic_cast<const EmptyLine*>(decl.get())) continue;
+
         auto node = fmt_decl(*decl);
         nodes->nodes.emplace_back(node);
     }
@@ -43,9 +48,15 @@ ref<Node> Formatter::fmt_function_decl(const FunctionDecl& fnDecl) {
 
     return makeRef<Group>(
         build.new_id(),
-        vec<ref<Node>>{makeRef<Text>("fn"), makeRef<Space>(), makeRef<Text>(fnDecl.identifier),
+        vec<ref<Node>>{makeRef<Line>(), makeRef<Text>("fn"), makeRef<Space>(), makeRef<Text>(fnDecl.identifier),
                        build.comma_separated_list("(", ")", paramList), makeRef<Space>(), makeRef<Text>("->"),
-                       makeRef<Space>(), std::move(returnType), makeRef<Space>(), fmt_block(*fnDecl.body)});
+                       makeRef<Space>(), std::move(returnType), makeRef<Space>(), fmt_block(*fnDecl.body),
+                       makeRef<Line>()});
+}
+
+ref<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
+    dmz_unreachable("TODO");
+    // return makeRef<Nodes>(vec<ref<Node>>(makeRef<Line>(), makeRef<Text>("struct")))
 }
 }  // namespace fmt
 }  // namespace DMZ

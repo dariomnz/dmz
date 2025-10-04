@@ -1,2 +1,2 @@
-// RUN: compiler %s -run || test $? -eq 1
+// RUN: dmz %s -run || test $? -eq 1
 parser error

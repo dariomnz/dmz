@@ -1,4 +1,4 @@
-// RUN: compiler %s -cfg-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -cfg-dump -no-remove-unused 2>&1 | filecheck %s
 fn foo() -> i32 {
     if (0) {
 

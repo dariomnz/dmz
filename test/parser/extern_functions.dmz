@@ -1,4 +1,4 @@
-// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:8: error: expected 'fn'
 extern ;
@@ -18,7 +18,7 @@ extern fn f() -> ;
 // CHECK: [[# @LINE + 1 ]]:18: error: expected type expression
 extern fn f() -> 1;
 
-// CHECK: [[# @LINE + 3 ]]:1: error: expected ';'
+// CHECK: [[# @LINE + 2 ]]:1: error: expected ';'
 extern fn f() -> void
 
 // CHECK: [[# @LINE + 1 ]]:23: error: extern fn cannot have a body

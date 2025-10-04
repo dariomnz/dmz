@@ -10,7 +10,7 @@ ptr<Driver> Driver::driver_instance = nullptr;
 
 void Driver::display_help() {
     println("Usage:");
-    println("  compiler [options] <source_file>\n");
+    println("  dmz [options] <source_file>\n");
     println("Options:");
     println("  -h, -help          display this message");
     println("  -I <module> <path> include <module> <path> to search for modules");

@@ -31,9 +31,7 @@ void Generator::generate(const Node& node, Wrap& wrap) {
         }
     } else if (auto ind = dynamic_cast<const Indent*>(&node)) {
         debug_msg("Indent");
-        size += INDENT.size();
         indent += 1;
-        buffer << INDENT;
 
         for (auto&& n : ind->nodes) {
             generate(*n, wrap);
@@ -43,9 +41,7 @@ void Generator::generate(const Node& node, Wrap& wrap) {
         debug_msg("IndentIfWrap");
         bool wasWrapped = false;
         if (wrap == Wrap::Enable) {
-            size += INDENT.size();
             indent += 1;
-            buffer << INDENT;
             wasWrapped = true;
         }
 
@@ -92,18 +88,23 @@ void Generator::generate(const Node& node, Wrap& wrap) {
 
 void Generator::text(std::string_view value) {
     debug_func(value);
+    if (in_new_line) {
+        size = INDENT.size() * indent;
+        for (int i = 0; i < indent; i++) {
+            buffer << INDENT;
+        }
+        in_new_line = false;
+    }
     size += value.size();
     buffer << value;
 }
 
 void Generator::new_line() {
     debug_func("indent " << indent);
-    size = INDENT.size() * indent;
     buffer << '\n';
-    for (int i = 0; i < indent; i++) {
-        buffer << INDENT;
-    }
+    in_new_line = true;
 }
+
 void Generator::print() {
     debug_func("buffer size " << buffer.str().size());
 

@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'customType' return type
 fn foo() -> customType {}

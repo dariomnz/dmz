@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 struct S {}
 extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
 fn main() -> void {

@@ -1,2 +1,2 @@
-// RUN: compiler %s -run
+// RUN: dmz %s -run
 fn main() -> void {}

@@ -1,7 +1,7 @@
-// RUN: compiler -h 2>&1 | filecheck %s --strict-whitespace
+// RUN: dmz -h 2>&1 | filecheck %s --strict-whitespace
 
 // CHECK: Usage:
-// CHECK-NEXT:   compiler [options] <source_file>
+// CHECK-NEXT:   dmz [options] <source_file>
 // CHECK-NEXT: 
 // CHECK-NEXT: Options:
 // CHECK-NEXT:   -h, -help          display this message
@@ -9,6 +9,7 @@
 // CHECK-NEXT:   -o <file>          write executable to <file>
 // CHECK-NEXT:   -lexer-dump        print the lexer dump
 // CHECK-NEXT:   -ast-dump          print the abstract syntax tree
+// CHECK-NEXT:   -fmt-dump          print the fmt syntax tree
 // CHECK-NEXT:   -import-dump       print the abstract syntax tree after import
 // CHECK-NEXT:   -no-remove-unused  disable the removal of unused code
 // CHECK-NEXT:   -res-dump          print the resolved syntax tree
@@ -18,3 +19,5 @@
 // CHECK-NEXT:   -print-stats       print the time stats
 // CHECK-NEXT:   -module            compile a module to .o file
 // CHECK-NEXT:   -run               runs the program with lli (Just In Time)
+// CHECK-NEXT:   -test              runs the test with lli (Just In Time)
+// CHECK-NEXT:   -fmt               format the dmz source file

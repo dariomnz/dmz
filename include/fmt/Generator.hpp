@@ -18,6 +18,7 @@ class Generator {
     int indent = 0;
     int size = 0;
     int max_line = 0;
+    bool in_new_line = true;
     std::unordered_set<int> wrapped = {};
 
    public:
@@ -25,6 +26,9 @@ class Generator {
 
     void generate(const Node& node);
     void generate(const Node& node, Wrap& wrap);
+
+    void add_indent();
+    void sub_indent();
     void text(std::string_view value);
     void new_line();
 

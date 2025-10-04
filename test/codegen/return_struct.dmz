@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '0\n1\n2\n3\n10\n15\n')
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '0\n1\n2\n3\n10\n15\n')
 struct S {
   x: i32,
   s2: S2,

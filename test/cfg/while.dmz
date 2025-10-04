@@ -1,4 +1,4 @@
-// RUN: compiler %s -cfg-dump -no-remove-unused 2>&1 | filecheck %s --match-full-lines
+// RUN: dmz %s -cfg-dump -no-remove-unused 2>&1 | filecheck %s --match-full-lines
 fn main() -> void {
     5;
     while (4) {

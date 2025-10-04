@@ -1,4 +1,4 @@
-// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 fn error1(x: i32) -> void {
     
     // CHECK: [[# @LINE + 1 ]]:13: error: expected expression

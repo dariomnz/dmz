@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump -no-remove-unused 2>&1 | filecheck %s
-// RUN: compiler %s -run | ( ! grep ^ )
+// RUN: dmz %s -llvm-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -run | ( ! grep ^ )
 fn main() -> void {}
 
 fn noInsertPoint() -> void {

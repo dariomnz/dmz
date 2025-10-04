@@ -1,4 +1,4 @@
-// RUN: compiler %s -ast-dump 2>&1 | filecheck %s
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 fn main() -> void {
     let x = 10;
     // CHECK: [[# @LINE + 1 ]]:5: error: expected a else case

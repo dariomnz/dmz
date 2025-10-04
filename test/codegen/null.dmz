@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e 'is null\nis something 42\n')
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run) <(echo -n -e 'is null\nis something 42\n')
 
 fn foo(n:*i32) -> void {
     if (n) {

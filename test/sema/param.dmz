@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:8: error: parameter 'x' has invalid 'void' type
 fn foo(x: void, y: customType) -> void {}

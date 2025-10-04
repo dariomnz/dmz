@@ -13,6 +13,6 @@ add_custom_target(check
     "${CMAKE_CURRENT_SOURCE_DIR}/driver"
     "${CMAKE_CURRENT_SOURCE_DIR}/examples"
     "${CMAKE_CURRENT_SOURCE_DIR}/fmt"
-    DEPENDS compiler
+    DEPENDS dmz
     USES_TERMINAL
 )

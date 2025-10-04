@@ -1,4 +1,4 @@
-// RUN: compiler %s -I std %S/../../std/std.dmz -res-dump -module -test 2>&1 | filecheck %s
+// RUN: dmz %s -I std %S/../../std/std.dmz -res-dump -module -test 2>&1 | filecheck %s
 const std = import("std");
 const ops = import("module_ops.dmz");
 

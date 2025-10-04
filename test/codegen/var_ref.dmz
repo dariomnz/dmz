@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n')
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n')
 
 struct Color {
     r: i32,

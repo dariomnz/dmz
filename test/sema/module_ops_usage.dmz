@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump -no-remove-unused 2>&1 | filecheck %s
 
 const ops = import("module_ops.dmz");
 // CHECK:   ResolvedVarDecl:const module_ops ops

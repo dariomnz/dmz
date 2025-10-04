@@ -1,4 +1,4 @@
-// RUN: diff <(compiler %s -run 2>&1) <(echo -n -e '6\n8\n1\n2\n')
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '6\n8\n1\n2\n')
 struct S {
   x: i32,
   y: i32,

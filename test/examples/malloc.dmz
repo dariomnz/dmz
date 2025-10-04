@@ -1,4 +1,4 @@
-// RUN: compiler %s -run | filecheck %s
+// RUN: dmz %s -run | filecheck %s
 
 // CHECK: Memory successfully allocated for 5 integers.
 // CHECK-NEXT: Element 0: 1

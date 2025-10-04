@@ -30,17 +30,20 @@ class Formatter {
 
     // Decl
     ref<Node> fmt_decl(const Decl& decl);
-    ref<Node> fmt_module_decl(const ModuleDecl& modDecl);
-    ref<Node> fmt_function_decl(const FunctionDecl& fnDecl);
+    ref<Node> fmt_module_decl(const ModuleDecl& decl);
+    ref<Node> fmt_function_decl(const FunctionDecl& decl);
+    ref<Node> fmt_struct_decl(const StructDecl& decl);
 
     // Expr
     ref<Node> fmt_expr(const Expr& expr);
-    ref<Node> fmt_decl_ref_expr(const DeclRefExpr& declRefExpr);
-    ref<Node> fmt_call_expr(const CallExpr& callExpr);
+    ref<Node> fmt_decl_ref_expr(const DeclRefExpr& expr);
+    ref<Node> fmt_call_expr(const CallExpr& expr);
 
     // Stmt
     ref<Node> fmt_stmt(const Stmt& stmt);
     ref<Node> fmt_decl_stmt(const DeclStmt& stmt);
+    ref<Node> fmt_assignment_stmt(const Assignment& stmt);
+    ref<Node> fmt_return_stmt(const ReturnStmt& stmt);
 };
 }  // namespace fmt
 }  // namespace DMZ

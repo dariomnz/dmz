@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run | grep -Plzxe '-234\n456\n-12\n'
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: dmz %s -run | grep -Plzxe '-234\n456\n-12\n'
 fn negate(x: i32) -> i32 {
     return -x;
     

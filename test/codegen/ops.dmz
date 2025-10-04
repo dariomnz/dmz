@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e 'a = 12\na++ = 13\na-- = 12\na+=3 = 15\na-=4 = 11\na*=2 = 22\na/=2 = 11\n')
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run) <(echo -n -e 'a = 12\na++ = 13\na-- = 12\na+=3 = 15\na-=4 = 11\na*=2 = 22\na/=2 = 11\n')
 extern fn printf(fmt: *u8, ...) -> i32;
 fn main() -> void {
     let a = 12;

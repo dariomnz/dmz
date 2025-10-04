@@ -1,4 +1,4 @@
-// RUN: compiler %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
 struct str_ops {
     x:i32,
     y:i32,

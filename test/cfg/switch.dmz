@@ -1,4 +1,4 @@
-// RUN: compiler %s -cfg-dump 2>&1 | filecheck %s
+// RUN: dmz %s -cfg-dump 2>&1 | filecheck %s
 
 extern fn printf(fmt:*u8, ...) -> i32;
 

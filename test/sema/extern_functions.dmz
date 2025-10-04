@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump -no-remove-unused 2>&1 | filecheck %s
 
 extern fn foo() -> void;
 // CHECK: ResolvedExternFunctionDecl foo fn()->void

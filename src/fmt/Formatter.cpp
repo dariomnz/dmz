@@ -5,9 +5,6 @@ namespace fmt {
 
 ref<Node> Formatter::fmt_ast(const ModuleDecl& modDecl) {
     debug_func("");
-    // std::vector<ptr<Expr>> args;
-    // args.emplace_back(makePtr<IntLiteral>(SourceLocation{}, "100000000000000"));
-    // auto call = makePtr<CallExpr>(SourceLocation{}, makePtr<DeclRefExpr>(SourceLocation{}, "foo"), std::move(args));
     return fmt_decl(modDecl);
 }
 

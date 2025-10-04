@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump 2>&1 | filecheck %s --implicit-check-not error --match-full-lines
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s --implicit-check-not error --match-full-lines
 fn foo() -> i32 {
     return 1;
 }

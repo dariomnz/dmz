@@ -1,4 +1,4 @@
-// RUN: compiler %s -I std %S/../../std/std.dmz -run | filecheck %s
+// RUN: dmz %s -I std %S/../../std/std.dmz -run | filecheck %s
 
 // CHECK: Square h: 1 w: 2
 // CHECK: Triangle h: 2 b: 4

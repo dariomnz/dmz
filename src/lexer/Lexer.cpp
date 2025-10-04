@@ -177,8 +177,12 @@ Token Lexer::next_token() {
     line_content = line_content.substr(space_count);
     Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
     if (line_content.empty()) {
-        t.type = TokenType::empty_line;
-        return t;
+        if (m_col == 0) {
+            t.type = TokenType::empty_line;
+            return t;
+        } else {
+            return next_token();
+        }
     }
 
     defer([&]() { debug_msg(t); });

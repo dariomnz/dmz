@@ -1,4 +1,4 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 fn main() -> void {
     putchar(97); // a
     putchar(10); // \n

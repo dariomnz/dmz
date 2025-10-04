@@ -1,4 +1,4 @@
-// RUN: compiler %s -cfg-dump 2>&1 | filecheck %s --match-full-lines
+// RUN: dmz %s -cfg-dump 2>&1 | filecheck %s --match-full-lines
 struct S {
   x: i32,
   s2: S2

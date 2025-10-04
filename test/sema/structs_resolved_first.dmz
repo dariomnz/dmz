@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump -no-remove-unused 2>&1 | filecheck %s
 fn foo(s: S) -> S2 {
   return S2 { x: s.x, y: s.y };
 }

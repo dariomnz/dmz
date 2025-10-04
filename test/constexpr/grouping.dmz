@@ -1,4 +1,4 @@
-// RUN: compiler %s -res-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -res-dump -no-remove-unused 2>&1 | filecheck %s
 fn foo() -> i32 {
     const x: i32 = 2;
     const y: i32 = 5;

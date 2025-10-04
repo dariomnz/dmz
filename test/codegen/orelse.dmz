@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: diff <(compiler %s -run) <(echo -n -e 'foo called\nbar called\na = 10\nfoo called\nfoo called\nb = 1\n')
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run) <(echo -n -e 'foo called\nbar called\na = 10\nfoo called\nfoo called\nb = 1\n')
 
 const e = error {
     ERROR_ONE

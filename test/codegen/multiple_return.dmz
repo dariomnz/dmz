@@ -1,5 +1,5 @@
-// RUN: compiler %s -llvm-dump 2>&1 | filecheck %s
-// RUN: compiler %s -run
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: dmz %s -run
 fn main() -> void {
     return;
 
