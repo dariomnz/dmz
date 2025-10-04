@@ -4,11 +4,11 @@ struct S {
 }
 
 fn main() -> void {
+  // CHECK: [[# @LINE + 4 ]]:5: error: field 'x' is already initialized
+  // CHECK: [[# @LINE + 4 ]]:5: error: field 'x' is already initialized
   let x = S {
     x: 0,
     x: 1,
-    // CHECK: [[# @LINE - 1 ]]:5: error: field 'x' is already initialized
     x: 2,
-    // CHECK: [[# @LINE - 1 ]]:5: error: field 'x' is already initialized
   };
 }

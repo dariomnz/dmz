@@ -464,14 +464,10 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
     }
 
     // unsigned idx = 0;
-    for (auto &&field : structDecl.fields) {
-        if (!identifiers.emplace(field->identifier).second)
-            return report(field->location, "field '" + field->identifier + "' is already declared");
-    }
-
-    for (auto &&function : structDecl.functions) {
-        if (!identifiers.emplace(function->identifier).second)
-            return report(function->location, "function '" + function->identifier + "' is already declared");
+    for (auto &&decl : structDecl.decls) {
+        if (dynamic_cast<Decoration *>(decl.get())) continue;
+        if (!identifiers.emplace(decl->identifier).second)
+            return report(decl->location, "member '" + decl->identifier + "' is already declared");
     }
 
     return resStructDecl;
@@ -521,9 +517,8 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
     if (dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) return true;
 
     for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
-        auto &func = resolvedStructDecl.structDecl->functions[i];
         auto &resfunc = resolvedStructDecl.functions[i];
-        if (!resolve_func_body(*resfunc, *func->body)) return false;
+        if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
     }
 
     return true;
@@ -545,7 +540,9 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
 
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     int idx = 0;
-    for (auto &&field : resolvedStructDecl.structDecl->fields) {
+    for (auto &&decl : resolvedStructDecl.structDecl->decls) {
+        auto field = dynamic_cast<const FieldDecl *>(decl.get());
+        if (!field) continue;
         auto type = resolve_type(*field->type);
         if (!type) {
             report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
@@ -558,7 +555,9 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     resolvedStructDecl.fields = std::move(resolvedFields);
 
     std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
-    for (auto &&function : resolvedStructDecl.structDecl->functions) {
+    for (auto &&decl : resolvedStructDecl.structDecl->decls) {
+        auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
+        if (!function) continue;
         auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
         if (!memberFunc) return false;
         resolvedFunctions.emplace_back(std::move(memberFunc));

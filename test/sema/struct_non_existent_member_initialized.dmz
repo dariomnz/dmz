@@ -6,13 +6,13 @@ struct Color {
 }
 
 fn main() -> void {
+  // CHECK: [[# @LINE + 3 ]]:5: error: 'Color' has no field named 'rgba'
   let x = Color {
     r: 0,
     rgba: 1,
-    // CHECK: [[# @LINE - 1 ]]:5: error: 'Color' has no field named 'rgba'
     g: 2,
     b: 3,
     a: 4,
-    // CHECK: [[# @LINE - 1 ]]:5: error: 'Color' has no field named 'a'
   };
+  // CHECK: [[# @LINE - 2 ]]:5: error: 'Color' has no field named 'a'
 }

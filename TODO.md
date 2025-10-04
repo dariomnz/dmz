@@ -13,11 +13,11 @@
 - [x] Change modules and import
 - [x] Error defer
 - [x] pub pri in modules
-- [ ] Arrays, vectors and slice
+- [x] Arrays, vectors and slice
 - [x] Generics
 - [-] std (in progress)
 - [x] test
-- [ ] formater
+- [ ] formatter
 - [ ] benckmark
 - [x] add ops += ++
 - [x] add error. inplace

@@ -7,6 +7,7 @@ namespace DMZ {
 enum class TokenType {
     invalid,
     comment,
+    empty_line,
     id,
     return_arrow,
     switch_arrow,

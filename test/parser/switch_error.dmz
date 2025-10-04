@@ -5,10 +5,10 @@ fn main() -> void {
     switch(x) {
         case 1 => printf(&"1\n");
     }
+    // CHECK: [[# @LINE + 4 ]]:9: error: only one else is permited
     switch(x) {
         case 1 => printf(&"1\n");
         else   => printf(&"else\n");
-        // CHECK: [[# @LINE + 1 ]]:9: error: only one else is permited
         else   => printf(&"else\n");
     }
     // CHECK: [[# @LINE + 1 ]]:12: error: expected expression

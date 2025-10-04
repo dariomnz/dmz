@@ -91,6 +91,7 @@ ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 
     ScopeRAII blockScope(*this);
     for (auto &&stmt : block.statements) {
+        if (dynamic_cast<Decoration *>(stmt.get())) continue;
         auto resolvedStmt = resolve_stmt(*stmt);
         error |= !resolvedStatements.emplace_back(std::move(resolvedStmt));
         if (error) continue;

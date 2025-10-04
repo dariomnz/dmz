@@ -6,9 +6,9 @@ struct Color {
 }
 
 fn main() -> void {
+  // CHECK: [[# @LINE + 2 ]]:11: error: field 'r' is not initialized
+  // CHECK: [[# @LINE + 1 ]]:11: error: field 'g' is not initialized
   let x = Color {
-  // CHECK: [[# @LINE - 1 ]]:11: error: field 'r' is not initialized
-  // CHECK: [[# @LINE - 2 ]]:11: error: field 'g' is not initialized
     b: 2,
   };
 }

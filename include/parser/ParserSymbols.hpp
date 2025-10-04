@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string>
-
 #include "DMZPCH.hpp"
 #include "Debug.hpp"
+#include "Utils.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -53,6 +52,22 @@ struct Stmt {
 
 struct Expr : public Stmt {
     Expr(SourceLocation location) : Stmt(location) {}
+};
+
+struct Decoration : public Expr, public Decl {
+    Decoration(SourceLocation location) : Expr(location), Decl(location, true, "") {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct Comment : Decoration {
+    std::string comment;
+    Comment(SourceLocation location, std::string_view comment) : Decoration(location), comment(comment) {}
+};
+
+struct EmptyLine : Decoration {
+    EmptyLine(SourceLocation location) : Decoration(location) {}
 };
 
 struct Type : public Expr {
@@ -512,15 +527,11 @@ struct FieldDecl : public Decl {
 
 struct StructDecl : public Decl {
     bool isPacked;
-    std::vector<ptr<FieldDecl>> fields;
-    std::vector<ptr<MemberFunctionDecl>> functions;
+    std::vector<ptr<Decl>> decls;
 
     StructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
-               std::vector<ptr<FieldDecl>> fields, std::vector<ptr<MemberFunctionDecl>> functions)
-        : Decl(location, isPublic, std::move(identifier)),
-          isPacked(isPacked),
-          fields(std::move(fields)),
-          functions(std::move(functions)) {}
+               std::vector<ptr<Decl>> decls)
+        : Decl(location, isPublic, std::move(identifier)), isPacked(isPacked), decls(std::move(decls)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -530,9 +541,8 @@ struct GenericStructDecl : public StructDecl {
     std::vector<ptr<GenericTypeDecl>> genericTypes;
 
     GenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
-                      std::vector<ptr<FieldDecl>> fields, std::vector<ptr<MemberFunctionDecl>> functions,
-                      std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : StructDecl(location, isPublic, std::move(identifier), isPacked, std::move(fields), std::move(functions)),
+                      std::vector<ptr<Decl>> decls, std::vector<ptr<GenericTypeDecl>> genericTypes)
+        : StructDecl(location, isPublic, std::move(identifier), isPacked, std::move(decls)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;

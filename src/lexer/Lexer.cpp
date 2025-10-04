@@ -15,6 +15,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
     switch (t) {
         CASE_TYPE(invalid);
         CASE_TYPE(comment);
+        CASE_TYPE(empty_line);
         CASE_TYPE(id);
         CASE_TYPE(return_arrow);
         CASE_TYPE(switch_arrow);
@@ -130,6 +131,7 @@ static inline bool isDigit(const std::string_view& c) { return c.size() > 0 && '
 static inline bool isAlnum(const std::string_view& c) { return isDigit(c) || isAlpha(c); }
 
 bool Lexer::next_line() {
+    debug_msg("");
     if (!m_file.is_open()) {
         m_file.open(m_file_path);
         if (!m_file.is_open()) {
@@ -148,6 +150,7 @@ bool Lexer::next_line() {
 }
 
 bool Lexer::advance(int num) {
+    debug_msg("num " << num);
     if (num <= 0) return true;
     // debug_msg("m_col " << m_col << " new m_col " << m_col + num);
     m_col += num;
@@ -172,11 +175,12 @@ Token Lexer::next_token() {
     advance(space_count);
 
     line_content = line_content.substr(space_count);
+    Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
     if (line_content.empty()) {
-        return next_token();
+        t.type = TokenType::empty_line;
+        return t;
     }
 
-    Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
     defer([&]() { debug_msg(t); });
     if (line_content.substr(0, 1) == "\0") {
         t.type = TokenType::eof;

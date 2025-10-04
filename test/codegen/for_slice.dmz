@@ -21,7 +21,7 @@ fn main() -> void {
 // CHECK-NEXT:   %tmp.slice = alloca %slice.struct, align 8
 // CHECK-NEXT:   %for.counter = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.i = alloca i64, align 8
-// CHECK-NEXT:   %for.counter5 = alloca i64, align 8
+// CHECK-NEXT:   %for.counter3 = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.val = alloca ptr, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %str, i8 0, i64 40, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.i32[10].tmp", i8 0, i64 40, i1 false)
@@ -29,7 +29,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.i, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter5, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter3, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.val, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   %0 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 0
 // CHECK-NEXT:   store i32 0, ptr %0, align 4
@@ -97,26 +97,26 @@ fn main() -> void {
 // CHECK-NEXT:   br label %for.cond1
 // CHECK-NEXT: 
 // CHECK-NEXT: for.cond1:                                        ; preds = %for.increment2, %for.exit
-// CHECK-NEXT:   %33 = load i64, ptr %for.counter5, align 4
+// CHECK-NEXT:   %33 = load i64, ptr %for.counter3, align 4
 // CHECK-NEXT:   %34 = icmp slt i64 %33, %32
-// CHECK-NEXT:   br i1 %34, label %for.body3, label %for.exit4
+// CHECK-NEXT:   br i1 %34, label %for.body4, label %for.exit5
 // CHECK-NEXT: 
-// CHECK-NEXT: for.increment2:                                   ; preds = %for.body3
-// CHECK-NEXT:   %35 = load i64, ptr %for.counter5, align 4
+// CHECK-NEXT: for.increment2:                                   ; preds = %for.body4
+// CHECK-NEXT:   %35 = load i64, ptr %for.counter3, align 4
 // CHECK-NEXT:   %36 = add i64 %35, 1
-// CHECK-NEXT:   store i64 %36, ptr %for.counter5, align 4
+// CHECK-NEXT:   store i64 %36, ptr %for.counter3, align 4
 // CHECK-NEXT:   %37 = load ptr, ptr %for.capture.val, align 8
 // CHECK-NEXT:   %38 = getelementptr i32, ptr %37, i32 1
 // CHECK-NEXT:   store ptr %38, ptr %for.capture.val, align 8
 // CHECK-NEXT:   br label %for.cond1
 // CHECK-NEXT: 
-// CHECK-NEXT: for.body3:                                        ; preds = %for.cond1
+// CHECK-NEXT: for.body4:                                        ; preds = %for.cond1
 // CHECK-NEXT:   %39 = load ptr, ptr %for.capture.val, align 8
 // CHECK-NEXT:   %40 = load i32, ptr %39, align 4
 // CHECK-NEXT:   %41 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %40)
 // CHECK-NEXT:   br label %for.increment2
 // CHECK-NEXT: 
-// CHECK-NEXT: for.exit4:                                        ; preds = %for.cond1
+// CHECK-NEXT: for.exit5:                                        ; preds = %for.cond1
 // CHECK-NEXT:   %42 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

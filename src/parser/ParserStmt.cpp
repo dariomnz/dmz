@@ -40,6 +40,8 @@ ptr<Stmt> Parser::parse_statement() {
         return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
     if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
+    if (m_nextToken.type == TokenType::comment) return parse_comment();
+    if (m_nextToken.type == TokenType::empty_line) return parse_empty_line();
     return parse_assignment_or_expr();
 }
 

@@ -9,7 +9,7 @@ fn main() -> void {
 
     if (bar()) {}
     
-    // CHECK: [[# @LINE + 1 ]]:17: error: unexpected type in condition 'void'
     else if (foo()) {}
+    // CHECK: [[# @LINE - 1 ]]:17: error: unexpected type in condition 'void'
 }
 // CHECK-NOT: {{.*}}

@@ -10,27 +10,22 @@ bool Parser::is_top_stmt_level_token(TokenType tok) { return top_stmt_level_toke
 
 // <sourceFile>
 //   ::= (<structDecl> | <functionDecl>)* EOF
-std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file(bool expectMain) {
+std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file() {
     debug_func(m_lexer.get_file_path());
     ScopedTimer(StatType::Parse);
 
     auto declarations = parse_in_module_decl();
 
-    bool hasMainFunction = !expectMain;
-    for (auto &&fn : declarations) hasMainFunction |= fn->identifier == "main";
-
-    if (!hasMainFunction && !m_incompleteAST) report(m_nextToken.loc, "main function not found in global module");
-
     if (declarations.size() == 0) {
-        return {nullptr, false};
+        return {nullptr, true};
     }
 
     auto file_path = m_lexer.get_file_path();
-    SourceLocation location = {.file_name = file_path, .line = 0, .col = 0};
+    SourceLocation location = {.file_name = file_path, .line = 1, .col = 0};
     auto module_name = file_path.filename().replace_extension("").string();
     auto mod = makePtr<ModuleDecl>(location, std::move(module_name), std::move(file_path), std::move(declarations));
     debug_msg("Incomplete AST " << (m_incompleteAST ? "true" : "false"));
-    return {std::move(mod), !m_incompleteAST && hasMainFunction};
+    return {std::move(mod), !m_incompleteAST};
 }
 
 ptr<GenericExpr> Parser::parse_generic_expr(ptr<Expr> &prevExpr) {
@@ -198,5 +193,22 @@ bool Parser::nextToken_is_generic() {
     }
     ret = false;
     return ret;
+}
+
+ptr<Comment> Parser::parse_comment() {
+    debug_func("");
+    auto location = m_nextToken.loc;
+    auto identifier = m_nextToken.str;
+    eat_next_token();  // eat comment
+
+    return makePtr<Comment>(location, std::move(identifier));
+}
+
+ptr<EmptyLine> Parser::parse_empty_line() {
+    debug_func("");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat empty_line
+
+    return makePtr<EmptyLine>(location);
 }
 }  // namespace DMZ

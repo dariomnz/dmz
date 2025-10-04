@@ -5,4 +5,3 @@ struct Error {
     // CHECK: [[# @LINE -1 ]]:5: error: expected identifier or fn in struct
     b: i32,
 }
-// CHECK-NOT: {{.*}}

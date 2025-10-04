@@ -1,0 +1,46 @@
+#pragma once
+
+#include "DMZPCH.hpp"
+#include "fmt/Builder.hpp"
+#include "fmt/FormatterSymbols.hpp"
+#include "fmt/Generator.hpp"
+#include "parser/ParserSymbols.hpp"
+
+namespace DMZ {
+namespace fmt {
+class Formatter {
+    Generator gen;
+    Builder build;
+
+   public:
+    Formatter(int max_line) : gen(max_line) {};
+
+    void print(ref<Node> node) {
+        gen.generate(*node);
+        gen.print();
+    }
+
+    ref<Node> fmt_ast(const ModuleDecl& modDecl);
+
+    // Decorations
+    ref<Node> fmt_decoration(const Decoration& decl);
+    ref<Node> fmt_comment(const Comment& decl);
+    ref<Node> fmt_empty_line(const EmptyLine& decl);
+    ref<Node> fmt_block(const Block& block);
+
+    // Decl
+    ref<Node> fmt_decl(const Decl& decl);
+    ref<Node> fmt_module_decl(const ModuleDecl& modDecl);
+    ref<Node> fmt_function_decl(const FunctionDecl& fnDecl);
+
+    // Expr
+    ref<Node> fmt_expr(const Expr& expr);
+    ref<Node> fmt_decl_ref_expr(const DeclRefExpr& declRefExpr);
+    ref<Node> fmt_call_expr(const CallExpr& callExpr);
+
+    // Stmt
+    ref<Node> fmt_stmt(const Stmt& stmt);
+    ref<Node> fmt_decl_stmt(const DeclStmt& stmt);
+};
+}  // namespace fmt
+}  // namespace DMZ

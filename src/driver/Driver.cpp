@@ -2,6 +2,8 @@
 #include "driver/Driver.hpp"
 
 #include "Stats.hpp"
+#include "fmt/Formatter.hpp"
+
 namespace DMZ {
 
 ptr<Driver> Driver::driver_instance = nullptr;
@@ -15,6 +17,7 @@ void Driver::display_help() {
     println("  -o <file>          write executable to <file>");
     println("  -lexer-dump        print the lexer dump");
     println("  -ast-dump          print the abstract syntax tree");
+    println("  -fmt-dump          print the fmt syntax tree");
     println("  -import-dump       print the abstract syntax tree after import");
     println("  -no-remove-unused  disable the removal of unused code");
     println("  -res-dump          print the resolved syntax tree");
@@ -25,6 +28,7 @@ void Driver::display_help() {
     println("  -module            compile a module to .o file");
     println("  -run               runs the program with lli (Just In Time)");
     println("  -test              runs the test with lli (Just In Time)");
+    println("  -fmt               format the dmz source file");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -71,6 +75,10 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.run = true;
             } else if (arg == "-test") {
                 options.test = true;
+            } else if (arg == "-fmt-dump") {
+                options.fmtDump = true;
+            } else if (arg == "-fmt") {
+                options.fmt = true;
             } else if (arg == "-module") {
                 options.isModule = true;
             } else if (arg == "-print-stats") {
@@ -87,11 +95,11 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
 }
 
 bool Driver::need_exit() {
-    if (m_haveError || m_haveNormalExit) return true;
-    return false;
+    if (m_haveError || m_haveNormalExit) return debug_ret(true);
+    return debug_ret(false);
 }
 
-void Driver::check_sources_pass(Type_Source &source) {
+void Driver::check_sources_pass(std::filesystem::path &source) {
     if (source.empty()) {
         error("no source file specified");
         m_haveError = true;
@@ -111,77 +119,77 @@ void Driver::check_sources_pass(Type_Source &source) {
     // }
 }
 
-Driver::Type_Lexers Driver::lexer_pass(Type_Source &source) {
-    std::vector<ptr<Lexer>> lexers;
-    lexers.resize(1);
-    // for (size_t index = 0; index < sources.size(); index++) {
-    // debug_msg(sources[index]);
-    // m_workers.submit([&, index]() {
-    lexers[0] = makePtr<Lexer>(source.c_str());
-    //  });
-    // }
-
-    // m_workers.wait();
+ptr<Lexer> Driver::lexer_pass(std::filesystem::path &source) {
+    ptr<Lexer> lexer = makePtr<Lexer>(source.c_str());
 
     if (m_options.lexerDump) {
-        for (auto &&lexer : lexers) {
-            Token tok;
-            do {
-                tok = lexer->next_token();
-                println(tok);
-            } while (tok.type != TokenType::eof);
-        }
+        Token tok;
+        do {
+            tok = lexer->next_token();
+            println(tok);
+        } while (tok.type != TokenType::eof);
         m_haveNormalExit = true;
     }
-    return lexers;
+    return lexer;
 }
 
-Driver::Type_Ast Driver::parser_pass(Type_Lexers &lexers, bool expectMain) {
-    Type_Ast asts;
-    asts.reserve(lexers.size());
-    for (size_t index = 0; index < lexers.size(); index++) {
-        // m_workers.submit([&, index]() {
-        Parser parser(*lexers[index]);
-        bool needMain = expectMain && !m_options.isModule && !m_options.test && index == 0;
-        auto [ast, success] = parser.parse_source_file(needMain);
-        if (!success) {
-            m_haveError = true;
-        }
-        if (ast) {
-            asts.emplace_back(std::move(ast));
-        }
-        // });
+ptr<ModuleDecl> Driver::parser_pass(ptr<Lexer> lexer) {
+    Parser parser(*lexer);
+    auto [ast, success] = parser.parse_source_file();
+    if (!success) {
+        m_haveError = true;
     }
-
-    // m_workers.wait();
-
-    // for (size_t i = 1; i < asts.size(); i++) {
-    //     for (auto &&decl : asts[i]) {
-    //         asts[0].emplace_back(std::move(decl));
-    //     }
-    // }
-
-    // asts.resize(1);
 
     if (m_options.astDump) {
-        for (auto &&ast : asts) {
-            ast->dump();
-        }
+        if (ast) ast->dump();
         m_haveNormalExit = true;
     }
-    return asts;
+    return std::move(ast);
 }
 
-std::vector<std::string> split(const std::string &s, char delimiter) {
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream tokenStream(s);
-    while (std::getline(tokenStream, token, delimiter)) {
-        if (!token.empty()) {
-            tokens.push_back(token);
-        }
+void Driver::fmt_pass(ptr<ModuleDecl> ast) {
+    debug_func("");
+    fmt::Formatter fmt(120);
+
+    auto node = fmt.fmt_ast(*ast);
+    // auto gen = fmt::Generator(120);
+    // auto build = fmt::Builder();
+    // std::vector<ptr<fmt::Node>> args;
+    // args.emplace_back(makePtr<fmt::Text>("1000000000000000000000000000000"));
+    // auto node = build.call("foo", std::move(args));
+    // std::vector<ptr<Expr>> args;
+    // args.emplace_back(makePtr<IntLiteral>(SourceLocation{}, "100000000000000"));
+    // auto call = makePtr<CallExpr>(SourceLocation{}, makePtr<DeclRefExpr>(SourceLocation{}, "foo"), std::move(args));
+
+    if (m_options.fmtDump) {
+        node->dump();
+    } else {
+        fmt.print(node);
     }
-    return tokens;
+    // fmt.fmt_expr(*call);
+
+    // auto node = build.call(makeRef<fmt::Text>("foo"),
+    //                        {makeRef<fmt::Text>("1000000000000000000000000000000"),
+    //                         build.call(makeRef<fmt::Text>("bar"),
+    //                                    {makeRef<fmt::Text>("200000000000000000000"), build.string("this is a
+    //                                    string"),
+    //                                     build.call(makeRef<fmt::Text>("whithout_arguments"), {})})});
+    //   [
+    //     Node.Text('1000000000000000000000000000000'),
+    //     build.call(
+    //       'bar',
+    //       [
+    //         Node.Text('2000000000000000000000000000000'),
+    //         build.string('this is a string'),
+    //         build.call('without_arguments', []),
+    //       ],
+    //     ),
+    //   ],
+
+    // gen.generate(*node);
+    // gen.print();
+
+    m_haveNormalExit = true;
 }
 
 std::pair<std::string, std::filesystem::path> Driver::register_import(const std::filesystem::path &source,
@@ -275,9 +283,8 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
     return {identifier, module_path};
 }
 
-void Driver::import_pass(Type_Ast &ast) {
+void Driver::import_pass(ptr<ModuleDecl> &ast) {
     debug_func("");
-
     auto all_imported = [&]() -> bool {
         for (auto &&[k, v] : imported_modules) {
             if (!v) return false;
@@ -297,7 +304,7 @@ void Driver::import_pass(Type_Ast &ast) {
                 }
                 Lexer l(k.c_str());
                 Parser p(l);
-                auto [parse_ast, success] = p.parse_source_file(false);
+                auto [parse_ast, success] = p.parse_source_file();
                 if (!success) {
                     debug_msg("error parsing " << k);
                     to_remove.emplace_back(k);
@@ -315,9 +322,7 @@ void Driver::import_pass(Type_Ast &ast) {
     }
 
     if (m_options.importDump) {
-        for (auto &&decl : ast) {
-            decl->dump();
-        }
+        ast->dump();
         for (auto &&[k, v] : imported_modules) {
             v->dump();
         }
@@ -327,12 +332,13 @@ void Driver::import_pass(Type_Ast &ast) {
     return;
 }
 
-Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
+std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) {
     debug_func("");
     ScopedTimer(StatType::Semantic);
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree;
-    Sema sema(std::move(asts));
-    resolvedTree = sema.resolve_ast_decl();
+    Sema sema(std::move(ast));
+    bool needMain = !m_options.isModule && !m_options.test;
+    resolvedTree = sema.resolve_ast_decl(needMain);
     if (resolvedTree.empty()) m_haveError = true;
 
     if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
@@ -379,7 +385,7 @@ Driver::Type_ResolvedTree Driver::semantic_pass(Type_Ast &asts) {
     return resolvedTree;
 }
 
-Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree resolvedTree) {
+ptr<llvm::orc::ThreadSafeModule> Driver::codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
     ptr<llvm::orc::ThreadSafeModule> module;
     Codegen codegen(std::move(resolvedTree), m_options.source.c_str());
@@ -394,7 +400,7 @@ Driver::Type_Module Driver::codegen_pass(Type_ResolvedTree resolvedTree) {
     return module;
 }
 
-int Driver::jit_pass(Type_Module &module) {
+int Driver::jit_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -441,7 +447,7 @@ int Driver::jit_pass(Type_Module &module) {
         return WEXITSTATUS(status);
     }
 }
-int Driver::generate_exec_pass(Type_Module &module) {
+int Driver::generate_exec_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -523,15 +529,19 @@ int Driver::main() {
     check_sources_pass(m_options.source);
     if (need_exit()) return 0;
 
-    auto lexers = lexer_pass(m_options.source);
+    auto lexer = lexer_pass(m_options.source);
     if (need_exit()) return 0;
-    auto asts = parser_pass(lexers);
-    lexers.clear();
+    auto ast = parser_pass(std::move(lexer));
     if (need_exit()) return 0;
-    import_pass(asts);
+    if (m_options.fmt || m_options.fmtDump) {
+        fmt_pass(std::move(ast));
+        if (need_exit()) return 0;
+    }
+
+    import_pass(ast);
     if (need_exit()) return 0;
 
-    auto resolvedTrees = semantic_pass(asts);
+    auto resolvedTrees = semantic_pass(std::move(ast));
     if (need_exit()) return 0;
 
     auto module = codegen_pass(std::move(resolvedTrees));

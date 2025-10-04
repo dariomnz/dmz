@@ -4,7 +4,6 @@
 #include "DMZPCHSymbols.hpp"
 #include "Debug.hpp"
 #include "lexer/Lexer.hpp"
-#include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
 
@@ -47,14 +46,12 @@ class Parser {
     std::deque<Token> m_peekedTokens;
     void eat_next_token() {
         debug_func("");
-        do {
-            if (!m_peekedTokens.empty()) {
-                m_nextToken = m_peekedTokens.front();
-                m_peekedTokens.pop_front();
-            } else {
-                m_nextToken = m_lexer.next_token();
-            }
-        } while (m_nextToken.type == TokenType::comment);
+        if (!m_peekedTokens.empty()) {
+            m_nextToken = m_peekedTokens.front();
+            m_peekedTokens.pop_front();
+        } else {
+            m_nextToken = m_lexer.next_token();
+        }
         debug_msg(m_nextToken.loc << " '" << m_nextToken.str << "'");
     }
 
@@ -62,9 +59,7 @@ class Parser {
         debug_func("");
         while (m_peekedTokens.size() <= jump) {
             Token nextLexerToken = m_lexer.next_token();
-            if (nextLexerToken.type != TokenType::comment) {
-                m_peekedTokens.push_back(nextLexerToken);
-            }
+            m_peekedTokens.push_back(nextLexerToken);
             if (nextLexerToken.type == TokenType::eof) {
                 break;
             }
@@ -104,7 +99,7 @@ class Parser {
     bool is_top_stmt_level_token(TokenType tok);
 
    public:
-    std::pair<ptr<ModuleDecl>, bool> parse_source_file(bool expectMain = false);
+    std::pair<ptr<ModuleDecl>, bool> parse_source_file();
 
    public:
     explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
@@ -155,6 +150,8 @@ class Parser {
     ptr<ImportExpr> parse_import_expr();
     ptr<SwitchStmt> parse_switch_stmt();
     ptr<CaseStmt> parse_case_stmt();
+    ptr<Comment> parse_comment();
+    ptr<EmptyLine> parse_empty_line();
     ptr<TestDecl> parse_test_decl();
     ptr<SizeofExpr> parse_sizeof_expr();
 };

@@ -167,23 +167,27 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat openingToken
 
-    std::vector<ptr<FieldDecl>> fieldList;
-    std::vector<ptr<MemberFunctionDecl>> funcList;
+    std::vector<ptr<Decl>> declList;
     ptr<StructDecl> structDecl;
     if (genericTypes.size() != 0) {
-        structDecl = makePtr<GenericStructDecl>(location, isPublic, structIdentifier, isPacked, std::move(fieldList),
-                                                std::move(funcList), std::move(genericTypes));
+        structDecl = makePtr<GenericStructDecl>(location, isPublic, structIdentifier, isPacked, std::move(declList),
+                                                std::move(genericTypes));
     } else {
-        structDecl = makePtr<StructDecl>(location, isPublic, structIdentifier, isPacked, std::move(fieldList),
-                                         std::move(funcList));
+        structDecl = makePtr<StructDecl>(location, isPublic, structIdentifier, isPacked, std::move(declList));
     }
 
     while (true) {
         if (m_nextToken.type == TokenType::block_r) break;
 
-        if (m_nextToken.type == TokenType::id) {
+        if (m_nextToken.type == TokenType::comment) {
+            varOrReturn(comment, parse_comment());
+            declList.emplace_back(std::move(comment));
+        } else if (m_nextToken.type == TokenType::empty_line) {
+            varOrReturn(empty_line, parse_empty_line());
+            declList.emplace_back(std::move(empty_line));
+        } else if (m_nextToken.type == TokenType::id) {
             varOrReturn(init, parse_field_decl());
-            fieldList.emplace_back(std::move(init));
+            declList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
             eat_next_token();  // eat ','
         } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
@@ -196,7 +200,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             auto memberFunc =
                 makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
                                             std::move(func->params), std::move(func->body), structDecl.get());
-            funcList.emplace_back(std::move(memberFunc));
+            declList.emplace_back(std::move(memberFunc));
         } else {
             return report(m_nextToken.loc, "expected identifier or fn in struct");
         }
@@ -205,8 +209,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     matchOrReturn(TokenType::block_r, "expected '}'");
     eat_next_token();  // eat closingToken
 
-    structDecl->fields = std::move(fieldList);
-    structDecl->functions = std::move(funcList);
+    structDecl->decls = std::move(declList);
 
     return structDecl;
 }
@@ -326,6 +329,16 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
         } else if (ttype == TokenType::kw_test) {
             if (auto test = parse_test_decl()) {
                 declarations.emplace_back(std::move(test));
+                continue;
+            }
+        } else if (ttype == TokenType::comment) {
+            if (auto comment = parse_comment()) {
+                declarations.emplace_back(std::move(comment));
+                continue;
+            }
+        } else if (ttype == TokenType::empty_line) {
+            if (auto empty_line = parse_empty_line()) {
+                declarations.emplace_back(std::move(empty_line));
                 continue;
             }
         } else {

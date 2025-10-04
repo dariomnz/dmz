@@ -5,7 +5,7 @@ fn error1(x: i32) -> void {
         if (x == 2) {
             0;
             let
-        // CHECK: [[# @LINE + 1 ]]:9: error: expected identifier
+        // CHECK: [[# @LINE ]]:9: error: expected identifier
         } else {
             1;
         }

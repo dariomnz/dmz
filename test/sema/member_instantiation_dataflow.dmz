@@ -7,9 +7,9 @@ struct S {
 fn main() -> void {
   let n: i32;
 
+  // CHECK: [[# @LINE + 3 ]]:8: error: 'n' is not initialized
   let y = S { 
     x: 1, 
     y: n,
-    // CHECK: [[# @LINE - 1 ]]:8: error: 'n' is not initialized
   };
 }

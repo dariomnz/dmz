@@ -153,8 +153,6 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
     auto *header = llvm::BasicBlock::Create(*m_context, "for.cond", function);
     auto *increment = llvm::BasicBlock::Create(*m_context, "for.increment", function);
-    auto *body = llvm::BasicBlock::Create(*m_context, "for.body", function);
-    auto *exit = llvm::BasicBlock::Create(*m_context, "for.exit", function);
 
     auto isize = ResolvedTypeNumber::isize(stmt.location);
     auto llvmisize = generate_type(*isize);
@@ -214,9 +212,10 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
         m_builder.CreateCall(printf_func, {fmt});
         llvm::Function *trapIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trap);
         m_builder.CreateCall(trapIntrinsic, {});
-        break_into_bb(exit);
     }
 
+    auto *body = llvm::BasicBlock::Create(*m_context, "for.body", function);
+    auto *exit = llvm::BasicBlock::Create(*m_context, "for.exit", function);
     // Header to check exit
     break_into_bb(header);
     m_builder.SetInsertPoint(header);

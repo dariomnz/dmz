@@ -11,7 +11,7 @@ namespace DMZ {
 class Sema {
    private:
     ConstantExpressionEvaluator cee;
-    std::vector<ptr<ModuleDecl>> m_ast;
+    ptr<ModuleDecl> m_ast;
     std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
     void dump_scopes() const;
@@ -43,9 +43,9 @@ class Sema {
     std::unordered_set<ResolvedDecl *> m_removed_decls;
 
    public:
-    explicit Sema(std::vector<ptr<ModuleDecl>> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
+    explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
-    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl();
+    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(bool needMain);
     bool resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);

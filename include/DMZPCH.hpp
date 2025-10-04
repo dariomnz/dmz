@@ -22,6 +22,9 @@
 #include "Utils.hpp"
 
 template <typename T>
+using vec = std::vector<T>;
+
+template <typename T>
 using ptr = std::unique_ptr<T>;
 template <typename T, typename... Args>
 constexpr ptr<T> makePtr(Args&&... args) {

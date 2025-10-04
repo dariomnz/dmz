@@ -6,6 +6,7 @@
 #include "lexer/Lexer.hpp"
 #include "linker/Linker.hpp"
 #include "parser/Parser.hpp"
+#include "parser/ParserSymbols.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Semantic.hpp"
 
@@ -23,7 +24,9 @@ struct CompilerOptions {
     bool depsDump = false;
     bool llvmDump = false;
     bool cfgDump = false;
+    bool fmtDump = false;
     bool run = false;
+    bool fmt = false;
     bool test = false;
     bool isModule = false;
     bool printStats = false;
@@ -49,30 +52,19 @@ class Driver {
 
     bool need_exit();
 
-    using Type_Source = std::filesystem::path;
-    using Type_Lexers = std::vector<ptr<Lexer>>;
-    using Type_Ast = std::vector<ptr<ModuleDecl>>;
-    using Type_ResolvedTree = std::vector<ptr<ResolvedModuleDecl>>;
-    using Type_Module = ptr<llvm::orc::ThreadSafeModule>;
+    void check_sources_pass(std::filesystem::path& source);
+    ptr<Lexer> lexer_pass(std::filesystem::path& source);
+    ptr<ModuleDecl> parser_pass(ptr<Lexer> lexers);
 
-    void check_sources_pass(Type_Source& source);
-    Type_Lexers lexer_pass(Type_Source& source);
-    Type_Ast parser_pass(Type_Lexers& lexers, bool expectMain = true);
-    // Type_Sources find_modules(const Type_Sources& includeDirs,
-    //                           const std::unordered_set<std::string_view>& importedModuleIDs);
-    void import_pass(Type_Ast& asts);
-    // ptr<ModuleDecl> merge_modules(std::vector<ptr<ModuleDecl>> modules);
+    void fmt_pass(ptr<ModuleDecl> asts);
+    void import_pass(ptr<ModuleDecl>& asts);
     static std::pair<std::string, std::filesystem::path> register_import(const std::filesystem::path& source,
                                                                          std::string_view imported);
-    // static imported_module* get_import(std::string_view imported);
-    // bool all_imported();
-    // ModuleDecl* find_module(std::string_view name, ptr<ModuleDecl>& find_ast);
 
-    Type_ResolvedTree semantic_pass(Type_Ast& asts);
-    Type_Module codegen_pass(Type_ResolvedTree resolvedTrees);
-    // Type_Module linker_pass(Type_Module& modules);
-    int jit_pass(Type_Module& module);
-    int generate_exec_pass(Type_Module& module);
+    std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);
+    ptr<llvm::orc::ThreadSafeModule> codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
+    int jit_pass(ptr<llvm::orc::ThreadSafeModule>& module);
+    int generate_exec_pass(ptr<llvm::orc::ThreadSafeModule>& module);
 
     int ptrBitSize();
 

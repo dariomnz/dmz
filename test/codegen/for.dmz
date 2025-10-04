@@ -18,17 +18,17 @@ fn main() -> void {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %for.counter = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.x = alloca i64, align 8
-// CHECK-NEXT:   %for.counter5 = alloca i64, align 8
-// CHECK-NEXT:   %for.capture.x6 = alloca i64, align 8
+// CHECK-NEXT:   %for.counter3 = alloca i64, align 8
+// CHECK-NEXT:   %for.capture.x4 = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.y = alloca i64, align 8
-// CHECK-NEXT:   %for.counter12 = alloca i64, align 8
+// CHECK-NEXT:   %for.counter10 = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.i = alloca i64, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.x, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter5, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.x6, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter3, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.x4, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.y, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter12, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter10, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.i, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   store i64 0, ptr %for.capture.x, align 4
 // CHECK-NEXT:   br label %for.cond
@@ -53,67 +53,67 @@ fn main() -> void {
 // CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
 // CHECK-NEXT: for.exit:                                         ; preds = %for.cond
-// CHECK-NEXT:   store i64 0, ptr %for.capture.x6, align 4
+// CHECK-NEXT:   store i64 0, ptr %for.capture.x4, align 4
 // CHECK-NEXT:   store i64 5, ptr %for.capture.y, align 4
 // CHECK-NEXT:   br label %for.check_length
 // CHECK-NEXT: 
-// CHECK-NEXT: for.cond1:                                        ; preds = %for.increment2, %for.check_length7
-// CHECK-NEXT:   %8 = load i64, ptr %for.counter5, align 4
+// CHECK-NEXT: for.cond1:                                        ; preds = %for.increment2, %for.not.equal.length, %for.check_length5
+// CHECK-NEXT:   %8 = load i64, ptr %for.counter3, align 4
 // CHECK-NEXT:   %9 = icmp slt i64 %8, 5
-// CHECK-NEXT:   br i1 %9, label %for.body3, label %for.exit4
+// CHECK-NEXT:   br i1 %9, label %for.body6, label %for.exit7
 // CHECK-NEXT: 
-// CHECK-NEXT: for.increment2:                                   ; preds = %for.body3
-// CHECK-NEXT:   %10 = load i64, ptr %for.counter5, align 4
+// CHECK-NEXT: for.increment2:                                   ; preds = %for.body6
+// CHECK-NEXT:   %10 = load i64, ptr %for.counter3, align 4
 // CHECK-NEXT:   %11 = add i64 %10, 1
-// CHECK-NEXT:   store i64 %11, ptr %for.counter5, align 4
-// CHECK-NEXT:   %12 = load i64, ptr %for.capture.x6, align 4
+// CHECK-NEXT:   store i64 %11, ptr %for.counter3, align 4
+// CHECK-NEXT:   %12 = load i64, ptr %for.capture.x4, align 4
 // CHECK-NEXT:   %13 = add i64 %12, 1
-// CHECK-NEXT:   store i64 %13, ptr %for.capture.x6, align 4
+// CHECK-NEXT:   store i64 %13, ptr %for.capture.x4, align 4
 // CHECK-NEXT:   %14 = load i64, ptr %for.capture.y, align 4
 // CHECK-NEXT:   %15 = add i64 %14, 1
 // CHECK-NEXT:   store i64 %15, ptr %for.capture.y, align 4
 // CHECK-NEXT:   br label %for.cond1
 // CHECK-NEXT: 
-// CHECK-NEXT: for.body3:                                        ; preds = %for.cond1
-// CHECK-NEXT:   %16 = load i64, ptr %for.capture.x6, align 4
-// CHECK-NEXT:   %17 = load i64, ptr %for.capture.y, align 4
-// CHECK-NEXT:   %18 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %16, i64 %17)
+// CHECK-NEXT: for.not.equal.length:                             ; preds = %for.check_length
+// CHECK-NEXT:   %16 = call i32 (ptr, ...) @printf(ptr @0)
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   br label %for.cond1
+// CHECK-NEXT: 
+// CHECK-NEXT: for.check_length:                                 ; preds = %for.exit
+// CHECK-NEXT:   br i1 false, label %for.not.equal.length, label %for.check_length5
+// CHECK-NEXT: 
+// CHECK-NEXT: for.check_length5:                                ; preds = %for.check_length
+// CHECK-NEXT:   br label %for.cond1
+// CHECK-NEXT: 
+// CHECK-NEXT: for.body6:                                        ; preds = %for.cond1
+// CHECK-NEXT:   %17 = load i64, ptr %for.capture.x4, align 4
+// CHECK-NEXT:   %18 = load i64, ptr %for.capture.y, align 4
+// CHECK-NEXT:   %19 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %17, i64 %18)
 // CHECK-NEXT:   br label %for.increment2
 // CHECK-NEXT: 
-// CHECK-NEXT: for.exit4:                                        ; preds = %for.cond1, %for.not.equal.length
+// CHECK-NEXT: for.exit7:                                        ; preds = %for.cond1
 // CHECK-NEXT:   store i64 0, ptr %for.capture.i, align 4
 // CHECK-NEXT:   br label %for.cond8
 // CHECK-NEXT: 
-// CHECK-NEXT: for.not.equal.length:                             ; preds = %for.check_length
-// CHECK-NEXT:   %19 = call i32 (ptr, ...) @printf(ptr @0)
-// CHECK-NEXT:   call void @llvm.trap()
-// CHECK-NEXT:   br label %for.exit4
-// CHECK-NEXT: 
-// CHECK-NEXT: for.check_length:                                 ; preds = %for.exit
-// CHECK-NEXT:   br i1 false, label %for.not.equal.length, label %for.check_length7
-// CHECK-NEXT: 
-// CHECK-NEXT: for.check_length7:                                ; preds = %for.check_length
-// CHECK-NEXT:   br label %for.cond1
-// CHECK-NEXT: 
-// CHECK-NEXT: for.cond8:                                        ; preds = %for.increment9, %for.exit4
-// CHECK-NEXT:   %20 = load i64, ptr %for.counter12, align 4
+// CHECK-NEXT: for.cond8:                                        ; preds = %for.increment9, %for.exit7
+// CHECK-NEXT:   %20 = load i64, ptr %for.counter10, align 4
 // CHECK-NEXT:   %21 = icmp slt i64 %20, 10
-// CHECK-NEXT:   br i1 %21, label %for.body10, label %for.exit11
+// CHECK-NEXT:   br i1 %21, label %for.body11, label %for.exit12
 // CHECK-NEXT: 
-// CHECK-NEXT: for.increment9:                                   ; preds = %for.body10
-// CHECK-NEXT:   %22 = load i64, ptr %for.counter12, align 4
+// CHECK-NEXT: for.increment9:                                   ; preds = %for.body11
+// CHECK-NEXT:   %22 = load i64, ptr %for.counter10, align 4
 // CHECK-NEXT:   %23 = add i64 %22, 1
-// CHECK-NEXT:   store i64 %23, ptr %for.counter12, align 4
+// CHECK-NEXT:   store i64 %23, ptr %for.counter10, align 4
 // CHECK-NEXT:   %24 = load i64, ptr %for.capture.i, align 4
 // CHECK-NEXT:   %25 = add i64 %24, 1
 // CHECK-NEXT:   store i64 %25, ptr %for.capture.i, align 4
 // CHECK-NEXT:   br label %for.cond8
 // CHECK-NEXT: 
-// CHECK-NEXT: for.body10:                                       ; preds = %for.cond8
+// CHECK-NEXT: for.body11:                                       ; preds = %for.cond8
 // CHECK-NEXT:   %26 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2)
 // CHECK-NEXT:   br label %for.increment9
 // CHECK-NEXT: 
-// CHECK-NEXT: for.exit11:                                       ; preds = %for.cond8
+// CHECK-NEXT: for.exit12:                                       ; preds = %for.cond8
 // CHECK-NEXT:   %27 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.3)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

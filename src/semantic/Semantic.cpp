@@ -384,14 +384,31 @@ bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_reso
     return true;
 }
 
-std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl() {
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(bool needMain) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
     std::vector<ptr<ResolvedModuleDecl>> imported_mods;
     bool error = false;
     error = !resolve_import_modules(imported_mods);
+    if (needMain) {
+        bool haveMain = false;
+        for (auto &&decl : m_ast->declarations) {
+            if (decl->identifier == "main") {
+                haveMain = true;
+                break;
+            }
+        }
+        if (!haveMain) {
+            report(m_ast->location, "main function not found in global module");
+            return {};
+        }
+    }
 
-    auto declarations = resolve_modules_decls(m_ast);
+    std::vector<ptr<ModuleDecl>> ast_v;
+    ast_v.emplace_back(std::move(m_ast));
+    auto declarations = resolve_modules_decls(ast_v);
+    m_ast = std::move(ast_v[0]);
+    ast_v.clear();
 
     if (error) return {};
 

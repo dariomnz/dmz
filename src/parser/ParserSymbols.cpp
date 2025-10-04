@@ -2,6 +2,10 @@
 
 namespace DMZ {
 
+void Decoration::dump([[maybe_unused]] size_t level) const {}
+
+std::string Decoration::to_str() const { dmz_unreachable("TODO"); }
+
 void GenericTypeDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericTypeDecl " << identifier << '\n';
 }
@@ -309,8 +313,7 @@ std::string FieldDecl::to_str() const { dmz_unreachable("TODO"); }
 void StructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "StructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
 
-    for (auto &&field : fields) field->dump(level + 1);
-    for (auto &&function : functions) function->dump(level + 1);
+    for (auto &&decl : decls) decl->dump(level + 1);
 }
 
 std::string StructDecl::to_str() const { dmz_unreachable("TODO"); }
@@ -319,8 +322,7 @@ void GenericStructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericStructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
     for (auto &&genType : genericTypes) genType->dump(level + 1);
 
-    for (auto &&field : fields) field->dump(level + 1);
-    for (auto &&function : functions) function->dump(level + 1);
+    for (auto &&decl : decls) decl->dump(level + 1);
 }
 
 std::string GenericStructDecl::to_str() const { dmz_unreachable("TODO"); }
