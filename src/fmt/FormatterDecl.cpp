@@ -22,6 +22,8 @@ ref<Node> Formatter::fmt_decl(const Decl& decl) {
         return fmt_param_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const DeclStmt*>(&decl)) {
         return fmt_stmt(*cast_decl);
+    } else if (auto cast_decl = dynamic_cast<const ErrorDecl*>(&decl)) {
+        return fmt_error_decl(*cast_decl);
     }
 
     decl.dump();
@@ -54,12 +56,20 @@ ref<Node> Formatter::fmt_function_decl(const FunctionDecl& fnDecl) {
 
     auto returnType = fmt_expr(*fnDecl.type);
 
-    return makeRef<Group>(
-        build.new_id(),
-        vec<ref<Node>>{makeRef<Line>(), makeRef<Text>("fn"), makeRef<Space>(), makeRef<Text>(fnDecl.identifier),
-                       build.comma_separated_list("(", ")", paramList), makeRef<Space>(), makeRef<Text>("->"),
-                       makeRef<Space>(), std::move(returnType), makeRef<Space>(), fmt_block(*fnDecl.body),
-                       makeRef<Line>()});
+    return makeRef<Group>(build.new_id(), vec<ref<Node>>{
+                                              makeRef<Line>(),
+                                              makeRef<Text>("fn"),
+                                              makeRef<Space>(),
+                                              makeRef<Text>(fnDecl.identifier),
+                                              build.comma_separated_list("(", ")", paramList),
+                                              makeRef<Space>(),
+                                              makeRef<Text>("->"),
+                                              makeRef<Space>(),
+                                              std::move(returnType),
+                                              makeRef<Space>(),
+                                              fmt_block(*fnDecl.body),
+                                              makeRef<Line>(),
+                                          });
 }
 
 ref<Node> Formatter::fmt_extern_function_decl(const ExternFunctionDecl& fnDecl) {
@@ -73,12 +83,21 @@ ref<Node> Formatter::fmt_extern_function_decl(const ExternFunctionDecl& fnDecl) 
 
     auto returnType = fmt_expr(*fnDecl.type);
 
-    return makeRef<Group>(
-        build.new_id(),
-        vec<ref<Node>>{makeRef<Line>(), makeRef<Text>("extern"), makeRef<Space>(), makeRef<Text>("fn"),
-                       makeRef<Space>(), makeRef<Text>(fnDecl.identifier),
-                       build.comma_separated_list("(", ")", paramList), makeRef<Space>(), makeRef<Text>("->"),
-                       makeRef<Space>(), std::move(returnType), makeRef<Text>(";"), makeRef<Line>()});
+    return makeRef<Group>(build.new_id(), vec<ref<Node>>{
+                                              makeRef<Line>(),
+                                              makeRef<Text>("extern"),
+                                              makeRef<Space>(),
+                                              makeRef<Text>("fn"),
+                                              makeRef<Space>(),
+                                              makeRef<Text>(fnDecl.identifier),
+                                              build.comma_separated_list("(", ")", paramList),
+                                              makeRef<Space>(),
+                                              makeRef<Text>("->"),
+                                              makeRef<Space>(),
+                                              std::move(returnType),
+                                              makeRef<Text>(";"),
+                                              makeRef<Line>(),
+                                          });
 }
 
 ref<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
@@ -89,13 +108,18 @@ ref<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
         nodes.emplace_back(fmt_decl(*d));
     }
 
-    return makeRef<Nodes>(vec<ref<Node>>{makeRef<Line>(), makeRef<Text>("struct"), makeRef<Space>(),
-                                         makeRef<Text>(decl.identifier), makeRef<Space>(), makeRef<Text>("{"),
-                                         makeRef<Line>(),
-
-                                         makeRef<Indent>(std::move(nodes)),
-
-                                         makeRef<Text>("}"), makeRef<Line>()});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Line>(),
+        makeRef<Text>("struct"),
+        makeRef<Space>(),
+        makeRef<Text>(decl.identifier),
+        makeRef<Space>(),
+        makeRef<Text>("{"),
+        makeRef<Line>(),
+        makeRef<Indent>(std::move(nodes)),
+        makeRef<Text>("}"),
+        makeRef<Line>(),
+    });
 }
 
 ref<Node> Formatter::fmt_field_decl(const FieldDecl& decl) {
@@ -103,8 +127,14 @@ ref<Node> Formatter::fmt_field_decl(const FieldDecl& decl) {
 
     auto type = fmt_expr(*decl.type);
 
-    return makeRef<Nodes>(vec<ref<Node>>{makeRef<Text>(decl.identifier), makeRef<Text>(":"), makeRef<Space>(),
-                                         std::move(type), makeRef<Text>(","), makeRef<Line>()});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Text>(decl.identifier),
+        makeRef<Text>(":"),
+        makeRef<Space>(),
+        std::move(type),
+        makeRef<Text>(","),
+        makeRef<Line>(),
+    });
 }
 
 ref<Node> Formatter::fmt_param_decl(const ParamDecl& decl) {
@@ -112,8 +142,17 @@ ref<Node> Formatter::fmt_param_decl(const ParamDecl& decl) {
 
     auto type = fmt_expr(*decl.type);
 
-    return makeRef<Nodes>(
-        vec<ref<Node>>{makeRef<Text>(decl.identifier), makeRef<Text>(":"), makeRef<Space>(), std::move(type)});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Text>(decl.identifier),
+        makeRef<Text>(":"),
+        makeRef<Space>(),
+        std::move(type),
+    });
+}
+
+ref<Node> Formatter::fmt_error_decl(const ErrorDecl& decl) {
+    debug_func("");
+    return makeRef<Text>(decl.identifier);
 }
 }  // namespace fmt
 }  // namespace DMZ

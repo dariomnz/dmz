@@ -23,6 +23,10 @@ ref<Node> Formatter::fmt_expr(const Expr& expr) {
         return fmt_member_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ImportExpr*>(&expr)) {
         return fmt_import_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const UnaryOperator*>(&expr)) {
+        return fmt_unary_operator(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const ErrorGroupExprDecl*>(&expr)) {
+        return fmt_error_group_expr_decl(*cast_expr);
     }
     expr.dump();
     dmz_unreachable("TODO");
@@ -46,18 +50,63 @@ ref<Node> Formatter::fmt_call_expr(const CallExpr& callExpr) {
 
 ref<Node> Formatter::fmt_deref_ptr_expr(const DerefPtrExpr& expr) {
     debug_func("");
-    return makeRef<Nodes>(vec<ref<Node>>{makeRef<Text>("*"), fmt_expr(*expr.expr)});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Text>("*"),
+        fmt_expr(*expr.expr),
+    });
 }
 
 ref<Node> Formatter::fmt_member_expr(const MemberExpr& expr) {
     debug_func("");
-    return makeRef<Nodes>(vec<ref<Node>>{fmt_expr(*expr.base), makeRef<Text>("."), makeRef<Text>(expr.field)});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        fmt_expr(*expr.base),
+        makeRef<Text>("."),
+        makeRef<Text>(expr.field),
+    });
 }
 
 ref<Node> Formatter::fmt_import_expr(const ImportExpr& expr) {
     debug_func("");
-    return makeRef<Nodes>(
-        vec<ref<Node>>{makeRef<Text>("import"), makeRef<Text>("("), build.string(expr.identifier), makeRef<Text>(")")});
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Text>("import"),
+        makeRef<Text>("("),
+        build.string(expr.identifier),
+        makeRef<Text>(")"),
+    });
+}
+
+ref<Node> Formatter::fmt_unary_operator(const UnaryOperator& expr) {
+    debug_func("");
+
+    std::unordered_set<TokenType> postUnaryOps = {
+        TokenType::op_minusminus,
+        TokenType::op_plusplus,
+    };
+
+    if (postUnaryOps.count(expr.op) == 0) {
+        return makeRef<Nodes>(vec<ref<Node>>{
+            makeRef<Text>(get_op_str(expr.op)),
+            fmt_expr(*expr.operand),
+        });
+    } else {
+        return makeRef<Nodes>(vec<ref<Node>>{
+            fmt_expr(*expr.operand),
+            makeRef<Text>(get_op_str(expr.op)),
+        });
+    }
+}
+
+ref<Node> Formatter::fmt_error_group_expr_decl(const ErrorGroupExprDecl& expr) {
+    vec<ref<Node>> errs;
+    for (auto&& e : expr.errs) {
+        errs.emplace_back(fmt_decl(*e));
+    }
+    auto decls = build.comma_separated_list("{", "}", errs);
+
+    return makeRef<Nodes>(vec<ref<Node>>{
+        makeRef<Text>("error"),
+        std::move(decls),
+    });
 }
 }  // namespace fmt
 }  // namespace DMZ
