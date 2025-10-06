@@ -32,12 +32,18 @@ class Formatter {
     ref<Node> fmt_decl(const Decl& decl);
     ref<Node> fmt_module_decl(const ModuleDecl& decl);
     ref<Node> fmt_function_decl(const FunctionDecl& decl);
+    ref<Node> fmt_extern_function_decl(const ExternFunctionDecl& decl);
     ref<Node> fmt_struct_decl(const StructDecl& decl);
+    ref<Node> fmt_field_decl(const FieldDecl& decl);
+    ref<Node> fmt_param_decl(const ParamDecl& decl);
 
     // Expr
     ref<Node> fmt_expr(const Expr& expr);
     ref<Node> fmt_decl_ref_expr(const DeclRefExpr& expr);
     ref<Node> fmt_call_expr(const CallExpr& expr);
+    ref<Node> fmt_deref_ptr_expr(const DerefPtrExpr& expr);
+    ref<Node> fmt_member_expr(const MemberExpr& expr);
+    ref<Node> fmt_import_expr(const ImportExpr& expr);
 
     // Stmt
     ref<Node> fmt_stmt(const Stmt& stmt);

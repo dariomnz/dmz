@@ -5,7 +5,7 @@ struct Point {
     y:i32,
 
     fn print(selt: *@This) -> void {
-        std.io.printf("Point %d %d\n", self.x, self.y);
+        std.io.printf("Point %d %dmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmm\n", self.x, self.y);
     }
 }
 

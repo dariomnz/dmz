@@ -42,6 +42,8 @@ int Node::width(std::unordered_set<int>& wrapped) const {
         return 1;
     } else if (dynamic_cast<const Line*>(this)) {
         return 0;
+    } else if (dynamic_cast<const LineIfWrap*>(this)) {
+        return 0;
     } else {
         dump();
         dmz_unreachable("TODO");
