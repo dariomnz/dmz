@@ -117,7 +117,14 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t) {
     return os;
 }
 
-Lexer::Lexer(std::filesystem::path file_path) : m_file_path(file_path) {}
+Lexer::Lexer(std::string source_name) : m_source_name(source_name) {
+    if (source_name == "-") {
+        m_input_stream = &std::cin;
+        m_is_cin_stream = true;
+    } else {
+        m_is_cin_stream = false;
+    }
+}
 
 static inline bool isSpace(const std::string_view& c) {
     return c.size() > 0 &&
@@ -129,20 +136,29 @@ static inline bool isAlpha(const std::string_view& c) {
 static inline bool isDigit(const std::string_view& c) { return c.size() > 0 && '0' <= c[0] && c[0] <= '9'; }
 
 static inline bool isAlnum(const std::string_view& c) { return isDigit(c) || isAlpha(c); }
-
 bool Lexer::next_line() {
     debug_msg("");
-    if (!m_file.is_open()) {
-        m_file.open(m_file_path);
-        if (!m_file.is_open()) {
-            dmz_unreachable("unexpected cannot open " + m_file_path.string() + " " + std::strerror(errno));
+
+    if (!m_input_stream) {
+        if (!m_is_cin_stream) {
+            m_input_stream_file = makePtr<std::ifstream>(m_source_name);
+            m_input_stream = m_input_stream_file.get();
+            if (!m_input_stream->good()) {
+                m_input_stream_file.reset();
+                m_input_stream = nullptr;
+                dmz_unreachable("unexpected cannot open " + m_source_name + " " + std::strerror(errno));
+            }
+        } else {
+            dmz_unreachable("Lexer was not initialized with a valid input stream.");
         }
     }
+
     m_line_buffer.clear();
-    if (!std::getline(m_file, m_line_buffer)) {
+    if (!std::getline(*m_input_stream, m_line_buffer)) {
         debug_msg("no more lines");
         return false;
     }
+
     debug_msg("read line " << m_line << " '" + m_line_buffer + "'");
     m_line++;
     m_col = 0;
@@ -161,7 +177,7 @@ Token Lexer::next_token() {
     debug_msg("m_col " << m_col << " m_line_buffer.size() " << m_line_buffer.size());
     if (m_line_buffer.size() == 0 || m_col == m_line_buffer.size()) {
         if (!next_line()) {
-            return Token{.type = TokenType::eof, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
+            return Token{.type = TokenType::eof, .loc = {.file_name = m_source_name, .line = m_line, .col = m_col}};
         }
     }
     std::string_view line_content(m_line_buffer);
@@ -175,7 +191,7 @@ Token Lexer::next_token() {
     advance(space_count);
 
     line_content = line_content.substr(space_count);
-    Token t{.type = TokenType::invalid, .loc = {.file_name = m_file_path, .line = m_line, .col = m_col}};
+    Token t{.type = TokenType::invalid, .loc = {.file_name = m_source_name, .line = m_line, .col = m_col}};
     if (line_content.empty()) {
         if (m_col == space_count) {
             t.type = TokenType::empty_line;

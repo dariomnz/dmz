@@ -3,7 +3,7 @@
 namespace DMZ {
 namespace fmt {
 
-ref<Node> Formatter::fmt_decl(const Decl& decl) {
+ptr<Node> Formatter::fmt_decl(const Decl& decl) {
     debug_func("");
 
     if (auto cast_decl = dynamic_cast<const ModuleDecl*>(&decl)) {
@@ -30,25 +30,31 @@ ref<Node> Formatter::fmt_decl(const Decl& decl) {
     dmz_unreachable("TODO");
 }
 
-ref<Node> Formatter::fmt_module_decl(const ModuleDecl& modDecl) {
+ptr<Node> Formatter::fmt_module_decl(const ModuleDecl& modDecl) {
     debug_func("");
-    ref<Nodes> nodes = makeRef<Nodes>(vec<ref<Node>>{});
+    auto nodes = makePtr<Nodes>(vec<ptr<Node>>{});
 
-    for (auto&& decl : modDecl.declarations) {
+    for (size_t i = 0; i < modDecl.declarations.size(); i++) {
         // Ignore new_lines
-        if (dynamic_cast<const EmptyLine*>(decl.get())) continue;
+        if (dynamic_cast<const EmptyLine*>(modDecl.declarations[i].get())) continue;
 
-        auto node = fmt_decl(*decl);
-        nodes->nodes.emplace_back(node);
+        nodes->nodes.emplace_back(fmt_decl(*modDecl.declarations[i]));
+        // Extra line for functions
+        if (i < modDecl.declarations.size() - 1) {
+            if (dynamic_cast<const FunctionDecl*>(modDecl.declarations[i].get())) {
+                nodes->nodes.emplace_back(makePtr<Line>());
+            }
+            nodes->nodes.emplace_back(makePtr<Line>());
+        }
     }
 
     return nodes;
 }
 
-ref<Node> Formatter::fmt_function_decl(const FunctionDecl& fnDecl) {
+ptr<Node> Formatter::fmt_function_decl(const FunctionDecl& fnDecl) {
     debug_func("");
 
-    vec<ref<Node>> paramList;
+    vec<ptr<Node>> paramList;
 
     for (auto&& param : fnDecl.params) {
         paramList.emplace_back(fmt_decl(*param));
@@ -56,26 +62,26 @@ ref<Node> Formatter::fmt_function_decl(const FunctionDecl& fnDecl) {
 
     auto returnType = fmt_expr(*fnDecl.type);
 
-    return makeRef<Group>(build.new_id(), vec<ref<Node>>{
-                                              makeRef<Line>(),
-                                              makeRef<Text>("fn"),
-                                              makeRef<Space>(),
-                                              makeRef<Text>(fnDecl.identifier),
-                                              build.comma_separated_list("(", ")", paramList),
-                                              makeRef<Space>(),
-                                              makeRef<Text>("->"),
-                                              makeRef<Space>(),
-                                              std::move(returnType),
-                                              makeRef<Space>(),
-                                              fmt_block(*fnDecl.body),
-                                              makeRef<Line>(),
-                                          });
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Line>());
+    ret->nodes.emplace_back(makePtr<Text>("fn"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(fnDecl.identifier));
+    ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(paramList)));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("->"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(std::move(returnType));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_block(*fnDecl.body));
+
+    return ret;
 }
 
-ref<Node> Formatter::fmt_extern_function_decl(const ExternFunctionDecl& fnDecl) {
+ptr<Node> Formatter::fmt_extern_function_decl(const ExternFunctionDecl& fnDecl) {
     debug_func("");
 
-    vec<ref<Node>> paramList;
+    vec<ptr<Node>> paramList;
 
     for (auto&& param : fnDecl.params) {
         paramList.emplace_back(fmt_decl(*param));
@@ -83,76 +89,75 @@ ref<Node> Formatter::fmt_extern_function_decl(const ExternFunctionDecl& fnDecl) 
 
     auto returnType = fmt_expr(*fnDecl.type);
 
-    return makeRef<Group>(build.new_id(), vec<ref<Node>>{
-                                              makeRef<Line>(),
-                                              makeRef<Text>("extern"),
-                                              makeRef<Space>(),
-                                              makeRef<Text>("fn"),
-                                              makeRef<Space>(),
-                                              makeRef<Text>(fnDecl.identifier),
-                                              build.comma_separated_list("(", ")", paramList),
-                                              makeRef<Space>(),
-                                              makeRef<Text>("->"),
-                                              makeRef<Space>(),
-                                              std::move(returnType),
-                                              makeRef<Text>(";"),
-                                              makeRef<Line>(),
-                                          });
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Line>());
+    ret->nodes.emplace_back(makePtr<Text>("extern"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("fn"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(fnDecl.identifier));
+    ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(paramList)));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("->"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(std::move(returnType));
+    ret->nodes.emplace_back(makePtr<Text>(";"));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
+ptr<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
     debug_func("");
 
-    vec<ref<Node>> nodes;
-    for (auto&& d : decl.decls) {
-        nodes.emplace_back(fmt_decl(*d));
+    vec<ptr<Node>> nodes;
+    for (size_t i = 0; i < decl.decls.size(); i++) {
+        nodes.emplace_back(fmt_decl(*decl.decls[i]));
+        // Extra line for functions
+        if (dynamic_cast<const FunctionDecl*>(decl.decls[i].get())) {
+            nodes.emplace_back(makePtr<Line>());
+        }
+        if (i < decl.decls.size() - 1) {
+            nodes.emplace_back(makePtr<Line>());
+        }
     }
 
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Line>(),
-        makeRef<Text>("struct"),
-        makeRef<Space>(),
-        makeRef<Text>(decl.identifier),
-        makeRef<Space>(),
-        makeRef<Text>("{"),
-        makeRef<Line>(),
-        makeRef<Indent>(std::move(nodes)),
-        makeRef<Text>("}"),
-        makeRef<Line>(),
-    });
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("struct"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("{"));
+    ret->nodes.emplace_back(makePtr<Line>());
+    ret->nodes.emplace_back(makePtr<Indent>(std::move(nodes)));
+    ret->nodes.emplace_back(makePtr<Text>("}"));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_field_decl(const FieldDecl& decl) {
+ptr<Node> Formatter::fmt_field_decl(const FieldDecl& decl) {
     debug_func("");
 
-    auto type = fmt_expr(*decl.type);
-
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>(decl.identifier),
-        makeRef<Text>(":"),
-        makeRef<Space>(),
-        std::move(type),
-        makeRef<Text>(","),
-        makeRef<Line>(),
-    });
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
+    ret->nodes.emplace_back(makePtr<Text>(":"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*decl.type));
+    ret->nodes.emplace_back(makePtr<Text>(","));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_param_decl(const ParamDecl& decl) {
+ptr<Node> Formatter::fmt_param_decl(const ParamDecl& decl) {
     debug_func("");
 
-    auto type = fmt_expr(*decl.type);
-
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>(decl.identifier),
-        makeRef<Text>(":"),
-        makeRef<Space>(),
-        std::move(type),
-    });
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
+    ret->nodes.emplace_back(makePtr<Text>(":"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*decl.type));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_error_decl(const ErrorDecl& decl) {
+ptr<Node> Formatter::fmt_error_decl(const ErrorDecl& decl) {
     debug_func("");
-    return makeRef<Text>(decl.identifier);
+    return makePtr<Text>(decl.identifier);
 }
 }  // namespace fmt
 }  // namespace DMZ

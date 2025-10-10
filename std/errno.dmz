@@ -135,13 +135,14 @@ const POSIX_errs = error {
 };
 
 extern fn __errno_location() -> *i32;
+
 fn @builtin_get_errno() -> i32 {
-    const errno_ptr : *i32 = __errno_location();
+    const errno_ptr: *i32 = __errno_location();
     const errno_num = *errno_ptr;
     return errno_num;
 }
 
-fn error_errno() -> void! {
+fn error_errno() -> !void {
     switch (@builtin_get_errno()) {
         case 0 => return POSIX_errs.SUCCESS;
         case 1 => return POSIX_errs.OPERATION_NOT_PERMITTED;
@@ -275,6 +276,6 @@ fn error_errno() -> void! {
         case 131 => return POSIX_errs.STATE_NOT_RECOVERABLE;
         case 132 => return POSIX_errs.OPERATION_NOT_POSSIBLE_DUE_TO_RFKILL;
         case 133 => return POSIX_errs.MEMORY_PAGE_POISONED;
-        else     => return POSIX_errs.UNKNOWN;
+        else => return POSIX_errs.UNKNOWN;
     }
 }

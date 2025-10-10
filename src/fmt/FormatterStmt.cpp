@@ -3,16 +3,14 @@
 namespace DMZ {
 namespace fmt {
 
-ref<Node> Formatter::fmt_stmt(const Stmt& stmt) {
+ptr<Node> Formatter::fmt_stmt(const Stmt& stmt) {
     debug_func("");
     bool needSemicolon = true;
-    bool needNewLine = true;
-    ref<Node> node = nullptr;
+    ptr<Node> node = nullptr;
 
     if (auto cast_expr = dynamic_cast<const Decoration*>(&stmt)) {
         node = fmt_decoration(*cast_expr);
         needSemicolon = false;
-        needNewLine = false;
     } else if (auto cast_stmt = dynamic_cast<const Expr*>(&stmt)) {
         node = fmt_expr(*cast_stmt);
     } else if (auto cast_stmt = dynamic_cast<const DeclStmt*>(&stmt)) {
@@ -24,129 +22,168 @@ ref<Node> Formatter::fmt_stmt(const Stmt& stmt) {
     } else if (auto cast_stmt = dynamic_cast<const SwitchStmt*>(&stmt)) {
         node = fmt_switch_stmt(*cast_stmt);
         needSemicolon = false;
-        needNewLine = false;
     } else if (auto cast_stmt = dynamic_cast<const CaseStmt*>(&stmt)) {
         node = fmt_case_stmt(*cast_stmt);
         needSemicolon = false;
-        needNewLine = false;
+    } else if (auto cast_stmt = dynamic_cast<const WhileStmt*>(&stmt)) {
+        node = fmt_while_stmt(*cast_stmt);
+        needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const IfStmt*>(&stmt)) {
+        node = fmt_if_stmt(*cast_stmt);
+        needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const FieldInitStmt*>(&stmt)) {
+        node = fmt_field_init_stmt(*cast_stmt);
+        needSemicolon = false;
     } else {
         stmt.dump();
         dmz_unreachable("TODO");
     }
 
-    if (needSemicolon && !needNewLine) {
-        node = makeRef<Nodes>(vec<ref<Node>>{
-            std::move(node),
-            makeRef<Text>(";"),
-        });
-    } else if (!needSemicolon && needNewLine) {
-        node = makeRef<Nodes>(vec<ref<Node>>{
-            std::move(node),
-            makeRef<Line>(),
-        });
-    } else if (needSemicolon && needNewLine) {
-        node = makeRef<Nodes>(vec<ref<Node>>{
-            std::move(node),
-            makeRef<Text>(";"),
-            makeRef<Line>(),
-        });
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(std::move(node));
+    if (needSemicolon) {
+        ret->nodes.emplace_back(makePtr<Text>(";"));
     }
 
-    return node;
+    return ret;
 }
 
-ref<Node> Formatter::fmt_decl_stmt(const DeclStmt& stmt) {
-    auto let_const = makeRef<Text>(stmt.varDecl->isMutable ? "let" : "const");
-    auto name = makeRef<Text>(stmt.varDecl->identifier);
+ptr<Node> Formatter::fmt_decl_stmt(const DeclStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (stmt.isPublic) {
+        ret->nodes.emplace_back(makePtr<Text>("pub"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
+    ret->nodes.emplace_back(makePtr<Text>(stmt.varDecl->isMutable ? "let" : "const"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(stmt.varDecl->identifier));
+    if (stmt.varDecl->type) {
+        ret->nodes.emplace_back(makePtr<Text>(":"));
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_expr(*stmt.varDecl->type));
+    }
 
     if (stmt.varDecl->initializer) {
-        return makeRef<Nodes>(vec<ref<Node>>{
-            std::move(let_const),
-            makeRef<Space>(),
-            std::move(name),
-            makeRef<Space>(),
-            makeRef<Text>("="),
-            makeRef<Space>(),
-            fmt_expr(*stmt.varDecl->initializer),
-        });
-    } else {
-        return makeRef<Nodes>(vec<ref<Node>>{
-            std::move(let_const),
-            makeRef<Space>(),
-            std::move(name),
-        });
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(makePtr<Text>("="));
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_expr(*stmt.varDecl->initializer));
     }
+    return ret;
 }
 
-ref<Node> Formatter::fmt_assignment_stmt(const Assignment& stmt) {
+ptr<Node> Formatter::fmt_assignment_stmt(const Assignment& stmt) {
     std::string op = "=";
     if (auto asOp = dynamic_cast<const AssignmentOperator*>(&stmt)) {
         op = get_op_str(asOp->op);
     }
 
-    return makeRef<Nodes>(vec<ref<Node>>{
-        fmt_expr(*stmt.assignee),
-        makeRef<Space>(),
-        makeRef<Text>(op),
-        makeRef<Space>(),
-        fmt_expr(*stmt.expr),
-    });
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(fmt_expr(*stmt.assignee));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(op));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*stmt.expr));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_return_stmt(const ReturnStmt& stmt) {
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>("return"),
-        makeRef<Space>(),
-        fmt_expr(*stmt.expr),
-    });
+ptr<Node> Formatter::fmt_return_stmt(const ReturnStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("return"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*stmt.expr));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_switch_stmt(const SwitchStmt& stmt) {
-    auto cond = fmt_expr(*stmt.condition);
+ptr<Node> Formatter::fmt_switch_stmt(const SwitchStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("switch"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*stmt.condition));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("{"));
+    ret->nodes.emplace_back(makePtr<Line>());
 
-    auto ret = makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>("switch"),
-        makeRef<Text>("("),
-        std::move(cond),
-        makeRef<Text>(")"),
-        makeRef<Space>(),
-        makeRef<Text>("{"),
-        makeRef<Line>(),
-    });
-
-    auto indt = makeRef<Indent>(vec<ref<Node>>{});
-    for (auto&& s_case : stmt.cases) {
-        indt->nodes.emplace_back(fmt_stmt(*s_case));
+    auto indt = makePtr<Indent>(vec<ptr<Node>>{});
+    for (size_t i = 0; i < stmt.cases.size(); i++) {
+        indt->nodes.emplace_back(fmt_stmt(*stmt.cases[i]));
+        indt->nodes.emplace_back(makePtr<Line>());
     }
 
     if (stmt.elseBlock) {
-        indt->nodes.emplace_back(makeRef<Nodes>(vec<ref<Node>>{
-            makeRef<Text>("else"),
-            makeRef<Space>(),
-            makeRef<Text>("=>"),
-            makeRef<Space>(),
-            fmt_case_block(*stmt.elseBlock),
-        }));
+        auto nodes = makePtr<Nodes>(vec<ptr<Node>>{});
+        nodes->nodes.emplace_back(makePtr<Text>("else"));
+        nodes->nodes.emplace_back(makePtr<Space>());
+        nodes->nodes.emplace_back(makePtr<Text>("=>"));
+        nodes->nodes.emplace_back(makePtr<Space>());
+        nodes->nodes.emplace_back(fmt_case_block(*stmt.elseBlock));
+
+        indt->nodes.emplace_back(std::move(nodes));
+        indt->nodes.emplace_back(makePtr<Line>());
     }
 
     ret->nodes.emplace_back(std::move(indt));
 
-    ret->nodes.emplace_back(makeRef<Text>("}"));
-    ret->nodes.emplace_back(makeRef<Line>());
+    ret->nodes.emplace_back(makePtr<Text>("}"));
 
     return ret;
 }
 
-ref<Node> Formatter::fmt_case_stmt(const CaseStmt& stmt) {
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>("case"),
-        makeRef<Space>(),
-        fmt_expr(*stmt.condition),
-        makeRef<Space>(),
-        makeRef<Text>("=>"),
-        makeRef<Space>(),
-        fmt_case_block(*stmt.block),
-    });
+ptr<Node> Formatter::fmt_case_stmt(const CaseStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("case"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*stmt.condition));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("=>"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_case_block(*stmt.block));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_while_stmt(const WhileStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("while"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    auto cond_group = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    cond_group->nodes.emplace_back(fmt_expr(*stmt.condition));
+    ret->nodes.emplace_back(std::move(cond_group));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_block(*stmt.body));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_if_stmt(const IfStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("if"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    auto cond_group = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    cond_group->nodes.emplace_back(fmt_expr(*stmt.condition));
+    ret->nodes.emplace_back(std::move(cond_group));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_block(*stmt.trueBlock));
+    if (stmt.falseBlock) {
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(makePtr<Text>("else"));
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_block(*stmt.falseBlock));
+    }
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_field_init_stmt(const FieldInitStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>(stmt.identifier));
+    ret->nodes.emplace_back(makePtr<Text>(":"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*stmt.initializer));
+    return ret;
 }
 }  // namespace fmt
 }  // namespace DMZ

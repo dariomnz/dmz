@@ -3,71 +3,89 @@
 namespace DMZ {
 namespace fmt {
 
-ref<Node> Builder::string(std::string_view str) {
-    return makeRef<Group>(new_id(), vec<ref<Node>>{
-                                        makeRef<Text>("\""),
-                                        makeRef<Text>(str),
-                                        makeRef<Text>("\""),
-                                    });
+ptr<Node> Builder::string(std::string_view str) {
+    auto ret = makePtr<Group>(new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("\""));
+    ret->nodes.emplace_back(makePtr<Text>(str));
+    ret->nodes.emplace_back(makePtr<Text>("\""));
+    return ret;
 }
 
-ref<Node> Builder::comma_separated_list(std::string_view start_list, std::string_view end_list,
-                                        const vec<ref<Node>>& arguments) {
+ptr<Node> Builder::comma_separated_list(std::string_view start_list, std::string_view end_list,
+                                        vec<ptr<Node>> arguments) {
     debug_func("");
     if (arguments.empty()) {
-        return makeRef<Text>(std::string(start_list) + std::string(end_list));
+        return makePtr<Text>(std::string(start_list) + std::string(end_list));
     }
     auto id = new_id();
     auto max = arguments.size() - 1;
-    vec<ref<Node>> vals;
+    vec<ptr<Node>> vals;
     for (size_t i = 0; i < arguments.size(); i++) {
         auto& arg = arguments[i];
         if (i < max) {
-            vals.emplace_back(makeRef<Nodes>(vec<ref<Node>>{arg, makeRef<Text>(","), makeRef<SpaceOrLineIfWrap>()}));
+            vec<ptr<Node>> nodes;
+            nodes.emplace_back(std::move(arg));
+            nodes.emplace_back(makePtr<Text>(","));
+            nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(id));
+            vals.emplace_back(makePtr<Nodes>(std::move(nodes)));
         } else {
-            vals.emplace_back(
-                makeRef<Nodes>(vec<ref<Node>>{arg, makeRef<IfWrap>(id, makeRef<Text>(","), makeRef<Text>(""))}));
+            vec<ptr<Node>> nodes;
+            nodes.emplace_back(std::move(arg));
+            nodes.emplace_back(makePtr<IfWrap>(id, makePtr<Text>(","), makePtr<Text>("")));
+            vals.emplace_back(makePtr<Nodes>(std::move(nodes)));
         }
     }
 
-    return makeRef<Group>(id, vec<ref<Node>>{
-                                  makeRef<Text>(start_list),
-                                  makeRef<LineIfWrap>(),
-                                  makeRef<IndentIfWrap>(std::move(vals)),
-                                  makeRef<LineIfWrap>(),
-                                  makeRef<Text>(end_list),
-                              });
+    auto ret = makePtr<Group>(id, vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>(start_list));
+    ret->nodes.emplace_back(makePtr<LineIfWrap>(id));
+    ret->nodes.emplace_back(makePtr<IndentIfWrap>(id, std::move(vals)));
+    ret->nodes.emplace_back(makePtr<LineIfWrap>(id));
+    ret->nodes.emplace_back(makePtr<Text>(end_list));
+
+    return ret;
 }
 
-ref<Node> Builder::call(ref<Node> callee, vec<ref<Node>> arguments) {
+ptr<Node> Builder::call(ptr<Node> callee, vec<ptr<Node>> arguments) {
     debug_func("");
     auto id = new_id();
     if (arguments.empty()) {
-        return makeRef<Group>(id, vec<ref<Node>>{callee, makeRef<Text>("()")});
+        auto ret = makePtr<Group>(id, vec<ptr<Node>>{});
+        ret->nodes.emplace_back(std::move(callee));
+        ret->nodes.emplace_back(makePtr<Text>("()"));
+        return ret;
     }
     auto max = arguments.size() - 1;
-    vec<ref<Node>> vals;
+    vec<ptr<Node>> vals;
     for (size_t i = 0; i < arguments.size(); i++) {
         auto& arg = arguments[i];
         if (i < max) {
-            vals.emplace_back(makeRef<Nodes>(vec<ref<Node>>{arg, makeRef<Text>(","), makeRef<SpaceOrLineIfWrap>()}));
+            vec<ptr<Node>> nodes;
+            nodes.emplace_back(std::move(arg));
+            nodes.emplace_back(makePtr<Text>(","));
+            nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(id));
+            vals.emplace_back(makePtr<Nodes>(std::move(nodes)));
         } else {
-            vals.emplace_back(
-                makeRef<Nodes>(vec<ref<Node>>{arg, makeRef<IfWrap>(id, makeRef<Text>(","), makeRef<Text>(""))}));
+            vec<ptr<Node>> nodes;
+            nodes.emplace_back(std::move(arg));
+            nodes.emplace_back(makePtr<IfWrap>(id, makePtr<Text>(","), makePtr<Text>("")));
+            vals.emplace_back(makePtr<Nodes>(std::move(nodes)));
         }
     }
 
-    return makeRef<Group>(id, vec<ref<Node>>{
-                                  callee,
-                                  makeRef<Group>(new_id(),
-                                                 vec<ref<Node>>{
-                                                     makeRef<Text>("("),
-                                                     makeRef<LineIfWrap>(),
-                                                     makeRef<IndentIfWrap>(std::move(vals)),
-                                                     makeRef<LineIfWrap>(),
-                                                     makeRef<Text>(")"),
-                                                 }),
-                              });
+    auto ret = makePtr<Group>(id, vec<ptr<Node>>{});
+    ret->nodes.emplace_back(std::move(callee));
+    auto innerGroup_id = new_id();
+    auto innerGroup = makePtr<Group>(innerGroup_id, vec<ptr<Node>>{});
+    innerGroup->nodes.emplace_back(makePtr<Text>("("));
+    innerGroup->nodes.emplace_back(makePtr<LineIfWrap>(innerGroup_id));
+    innerGroup->nodes.emplace_back(makePtr<IndentIfWrap>(innerGroup_id, std::move(vals)));
+    innerGroup->nodes.emplace_back(makePtr<LineIfWrap>(innerGroup_id));
+    innerGroup->nodes.emplace_back(makePtr<Text>(")"));
+
+    ret->nodes.emplace_back(std::move(innerGroup));
+
+    return ret;
 }
 }  // namespace fmt
 }  // namespace DMZ

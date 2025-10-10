@@ -8,7 +8,6 @@ fn main() -> void {
     if (foo()) {}
 
     if (bar()) {}
-    
     else if (foo()) {}
     // CHECK: [[# @LINE - 1 ]]:17: error: unexpected type in condition 'void'
 }

@@ -1,25 +1,43 @@
 // RUN: dmz %s -fmt 2>&1 | filecheck %s
-
 struct Point {
     x: i32,
-    y:i32,
+    y: i32,
 
     fn print(selt: *@This) -> void {
-        std.io.printf("Point %d %dmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmm\n", self.x, self.y);
+        std.io.printf("Point %d %d\n", self.x, self.y);
     }
 }
 
 fn foo() -> i32 {
     let i = 2;
-    i=8;
-    i+=2;
+    i = 8;
+    i += 2;
 
-    return i; 
+    return i;
 }
 
-
-
+fn bar() -> i32 {
+    let i = 0;
+    while (i < 10) {
+        i = i +
+            10000000000000000000 +
+            20000000000000000000 +
+            30000000000000000000 +
+            40000000000000000000 +
+            50000000000000000000 +
+            60000000000000000000;
+        if (err) {
+            std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, err);
+            result = result -
+                1;
+        }
+        std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name);
+        result = result - 1;
+    }
+}
 
 fn main() -> void {
-    let i = 1; let j = 2;
+    let i = 1;
+    let j = 2;
 }
+

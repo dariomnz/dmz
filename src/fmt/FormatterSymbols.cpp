@@ -36,8 +36,12 @@ int Node::width(std::unordered_set<int>& wrapped) const {
         }
     } else if (auto text = dynamic_cast<const Text*>(this)) {
         return text->text.size();
-    } else if (dynamic_cast<const SpaceOrLineIfWrap*>(this)) {
-        return 1;
+    } else if (auto sline = dynamic_cast<const SpaceOrLineIfWrap*>(this)) {
+        if (wrapped.contains(sline->group_id)) {
+            return 0;
+        } else {
+            return 1;
+        }
     } else if (dynamic_cast<const Space*>(this)) {
         return 1;
     } else if (dynamic_cast<const Line*>(this)) {
@@ -82,7 +86,8 @@ void Nodes::dump(size_t level) const {
 }
 
 void Group::dump(size_t level) const {
-    std::cerr << indent(level) << "Group " << group_id << "\n";
+    std::unordered_set<int> wrapped;
+    std::cerr << indent(level) << "Group " << group_id << " width " << width(wrapped) << "\n";
     for (auto&& node : nodes) {
         node->dump(level + 1);
     }

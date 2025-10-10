@@ -3,12 +3,12 @@
 namespace DMZ {
 namespace fmt {
 
-ref<Node> Formatter::fmt_ast(const ModuleDecl& modDecl) {
+ptr<Node> Formatter::fmt_ast(const ModuleDecl& modDecl) {
     debug_func("");
     return fmt_decl(modDecl);
 }
 
-ref<Node> Formatter::fmt_decoration(const Decoration& decl) {
+ptr<Node> Formatter::fmt_decoration(const Decoration& decl) {
     debug_func("");
 
     if (auto comment = dynamic_cast<const Comment*>(&decl)) {
@@ -21,54 +21,57 @@ ref<Node> Formatter::fmt_decoration(const Decoration& decl) {
     dmz_unreachable("TODO");
 }
 
-ref<Node> Formatter::fmt_comment(const Comment& decl) {
+ptr<Node> Formatter::fmt_comment(const Comment& decl) {
     debug_func("");
-    return makeRef<Nodes>(vec<ref<Node>>{makeRef<Text>(decl.comment), makeRef<Line>()});
+    return makePtr<Text>(decl.comment);
 }
 
-ref<Node> Formatter::fmt_empty_line([[maybe_unused]] const EmptyLine& decl) {
+ptr<Node> Formatter::fmt_empty_line([[maybe_unused]] const EmptyLine& decl) {
     debug_func("");
-    return makeRef<Line>();
+    return makePtr<Line>();
 }
 
-ref<Node> Formatter::fmt_block(const Block& block) {
+ptr<Node> Formatter::fmt_block(const Block& block) {
     debug_func("");
-    vec<ref<Node>> stmtList;
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("{"));
+    ret->nodes.emplace_back(makePtr<Line>());
 
-    for (auto&& stmt : block.statements) {
-        stmtList.emplace_back(fmt_stmt(*stmt));
+    auto& _stmtList = ret->nodes.emplace_back(makePtr<Indent>(vec<ptr<Node>>{}));
+    auto stmtList = static_cast<Indent*>(_stmtList.get());
+    for (size_t i = 0; i < block.statements.size(); i++) {
+        stmtList->nodes.emplace_back(fmt_stmt(*block.statements[i]));
+        stmtList->nodes.emplace_back(makePtr<Line>());
     }
-
-    return makeRef<Nodes>(vec<ref<Node>>{
-        makeRef<Text>("{"),
-        makeRef<Line>(),
-        makeRef<Indent>(std::move(stmtList)),
-        makeRef<Text>("}"),
-    });
+    ret->nodes.emplace_back(makePtr<Text>("}"));
+    return ret;
 }
 
-ref<Node> Formatter::fmt_case_block(const Block& block) {
+ptr<Node> Formatter::fmt_case_block(const Block& block) {
     debug_func("");
 
-    auto ret = makeRef<Group>(build.new_id(), vec<ref<Node>>{});
-    vec<ref<Node>>* stmts = &ret->nodes;
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    vec<ptr<Node>>* stmts = &ret->nodes;
     if (block.statements.size() != 1) {
-        ret->nodes.emplace_back(makeRef<Text>("{"));
+        ret->nodes.emplace_back(makePtr<Text>("{"));
         if (block.statements.size() != 0) {
-            ret->nodes.emplace_back(makeRef<Line>());
-            auto indt = makeRef<Indent>(vec<ref<Node>>{});
+            ret->nodes.emplace_back(makePtr<Line>());
+            auto indt = makePtr<Indent>(vec<ptr<Node>>{});
             stmts = &indt->nodes;
             ret->nodes.emplace_back(std::move(indt));
         }
     }
 
-    for (auto&& stmt : block.statements) {
-        stmts->emplace_back(fmt_stmt(*stmt));
+    for (size_t i = 0; i < block.statements.size(); i++) {
+        stmts->emplace_back(fmt_stmt(*block.statements[i]));
+        if (i < block.statements.size() - 1) {
+            stmts->emplace_back(makePtr<Line>());
+        }
     }
 
     if (block.statements.size() != 1) {
-        ret->nodes.emplace_back(makeRef<Text>("}"));
-        ret->nodes.emplace_back(makeRef<Line>());
+        ret->nodes.emplace_back(makePtr<Text>("}"));
+        ret->nodes.emplace_back(makePtr<Line>());
     }
     return ret;
 }

@@ -37,7 +37,7 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
     int idx = 1;
     while (idx < argc) {
         std::string_view arg = argv[idx];
-        if (arg[0] != '-' && options.source.empty()) {
+        if ((arg == "-" && options.source.empty()) || (arg[0] != '-' && options.source.empty())) {
             options.source = arg;
         } else {
             if (arg == "-h" || arg == "--help") {
@@ -99,7 +99,15 @@ bool Driver::need_exit() {
     return debug_ret(false);
 }
 
+int Driver::exit_code() {
+    if (m_haveError) return debug_ret(EXIT_FAILURE);
+    return debug_ret(EXIT_SUCCESS);
+}
+
 void Driver::check_sources_pass(std::filesystem::path &source) {
+    // stdin
+    if (source == "-") return;
+
     if (source.empty()) {
         error("no source file specified");
         m_haveError = true;
@@ -527,25 +535,25 @@ int Driver::main() {
     }
 
     check_sources_pass(m_options.source);
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
 
     auto lexer = lexer_pass(m_options.source);
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
     auto ast = parser_pass(std::move(lexer));
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
     if (m_options.fmt || m_options.fmtDump) {
         fmt_pass(std::move(ast));
-        if (need_exit()) return 0;
+        if (need_exit()) return exit_code();
     }
 
     import_pass(ast);
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
 
     auto resolvedTrees = semantic_pass(std::move(ast));
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
 
     auto module = codegen_pass(std::move(resolvedTrees));
-    if (need_exit()) return 0;
+    if (need_exit()) return exit_code();
 
     // auto module = linker_pass(modules);
     // need_exit();

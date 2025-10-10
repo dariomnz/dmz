@@ -51,6 +51,7 @@ class Driver {
     void display_help();
 
     bool need_exit();
+    int exit_code();
 
     void check_sources_pass(std::filesystem::path& source);
     ptr<Lexer> lexer_pass(std::filesystem::path& source);

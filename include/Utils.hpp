@@ -19,7 +19,7 @@ namespace DMZ {
 
 [[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(std::string msg, const char* source, int line) {
     std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
-    std::abort();
+    std::exit(EXIT_FAILURE);
 }
 
 struct SourceLocation {

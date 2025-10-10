@@ -172,21 +172,23 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t);
 
 class Lexer {
    public:
-    Lexer(std::filesystem::path file_path);
+    Lexer(std::string file_path);
     std::vector<Token> tokenize_file();
     bool next_line();
     Token next_token();
-    std::string get_file_name() { return m_file_path.filename().string(); }
+    std::string get_file_name() { return std::filesystem::path(m_source_name).filename().string(); }
 
-    std::filesystem::path get_file_path() { return m_file_path; }
+    std::filesystem::path get_file_path() { return std::filesystem::path(m_source_name); }
 
    private:
     bool advance(int num = 1);
 
    private:
-    std::filesystem::path m_file_path = {};
-    std::ifstream m_file = {};
+    std::string m_source_name = {};
+    std::unique_ptr<std::istream> m_input_stream_file = nullptr;
+    std::istream* m_input_stream = nullptr;
     std::string m_line_buffer = "";
+    bool m_is_cin_stream = false;
     size_t m_line = 0;
     size_t m_col = 0;
 };

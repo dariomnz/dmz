@@ -210,14 +210,6 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         return parse_postfix_expr(std::move(expr));
     }
 
-    if ((restrictions & OnlyTypeExpr)) {
-        if (m_nextToken.type == TokenType::op_excla_mark) {
-            eat_next_token();  // eat !
-            expr = makePtr<UnaryOperator>(expr->location, std::move(expr), TokenType::op_excla_mark);
-            return parse_postfix_expr(std::move(expr));
-        }
-    }
-
     return expr;
 }
 
