@@ -1,2 +1,1 @@
-
-extern fn open(buffer:*u8, flags:i32, ...) -> i32;
+extern fn open(buffer: *u8, flags: i32, ...) -> i32;

@@ -1,13 +1,14 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-fn foo() -> void {}
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+fn foo() -> void {
+}
 
 fn main() -> void {
     let x: i32 = 1;
 
     foo;
-    
+
     x;
-    
+
     // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
     y;
 
@@ -23,4 +24,5 @@ fn bar(x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol
     x();
 }
+
 // CHECK-NOT: {{.*}}

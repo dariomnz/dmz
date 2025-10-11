@@ -1,6 +1,6 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 
-fn foo(x:i32) -> i32! {
+fn foo(x:i32) -> !i32 {
     if (x == 1){
         return error.ERROR_ONE;
     }else if (x == 2){
@@ -8,7 +8,7 @@ fn foo(x:i32) -> i32! {
     }
     return 10;
 }
-// CHECK: FunctionDecl foo -> i32!
+// CHECK: FunctionDecl foo -> !i32
 // CHECK-NEXT:     ParamDecl:i32 x
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       IfStmt

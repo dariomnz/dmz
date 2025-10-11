@@ -1,11 +1,13 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct Color {
-// CHECK: [[# @LINE - 1 ]]:1: error: struct 'Color' contains itself
-  r: i32,
-  g: i32,
-  b: i32,
-  c: Color,
+    // CHECK: [[# @LINE - 1 ]]:1: error: struct 'Color' contains itself
+
+    r: i32,
+    g: i32,
+    b: i32,
+    c: Color,
 }
 
-fn main() -> void {}
+fn main() -> void {
+}

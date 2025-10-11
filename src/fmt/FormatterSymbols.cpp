@@ -56,16 +56,18 @@ int Node::width(std::unordered_set<int>& wrapped) const {
 
 void Text::dump(size_t level) const { std::cerr << indent(level) << "Text '" << text << "'\n"; }
 
-void SpaceOrLineIfWrap::dump(size_t level) const { std::cerr << indent(level) << "SpaceOrLineIfWrap\n"; }
+void SpaceOrLineIfWrap::dump(size_t level) const {
+    std::cerr << indent(level) << "SpaceOrLineIfWrap " << group_id << "\n";
+}
 
 void Space::dump(size_t level) const { std::cerr << indent(level) << "Space\n"; }
 
 void Line::dump(size_t level) const { std::cerr << indent(level) << "Line\n"; }
 
-void LineIfWrap::dump(size_t level) const { std::cerr << indent(level) << "LineIfWrap\n"; }
+void LineIfWrap::dump(size_t level) const { std::cerr << indent(level) << "LineIfWrap " << group_id << "\n"; }
 
 void IndentIfWrap::dump(size_t level) const {
-    std::cerr << indent(level) << "IndentIfWrap\n";
+    std::cerr << indent(level) << "IndentIfWrap " << group_id << "\n";
     for (auto&& node : nodes) {
         node->dump(level + 1);
     }

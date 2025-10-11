@@ -18,8 +18,10 @@ std::vector<ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
     if (m_nextToken.type != TokenType::op_less) {
         return {};
     }
+    bool haveTrailingComma;
     auto typesDeclList = (parse_list_with_trailing_comma<GenericTypeDecl>(
-        {TokenType::op_less, "expected '<'"}, &Parser::parse_generic_type_decl, {TokenType::op_more, "expected '>'"}));
+        {TokenType::op_less, "expected '<'"}, [this]() { return parse_generic_type_decl(); },
+        {TokenType::op_more, "expected '>'"}, haveTrailingComma));
     if (!typesDeclList) return {};
 
     return std::move(*typesDeclList);
@@ -54,10 +56,10 @@ ptr<FuncDecl> Parser::parse_function_decl() {
     eat_next_token();  // eat identifier
 
     auto genericTypes = parse_generic_types_decl();
-
-    varOrReturn(parameterList,
-                parse_list_with_trailing_comma<ParamDecl>({TokenType::par_l, "expected '('"}, &Parser::parse_param_decl,
-                                                          {TokenType::par_r, "expected ')'"}));
+    bool haveTrailingComma;
+    varOrReturn(parameterList, parse_list_with_trailing_comma<ParamDecl>(
+                                   {TokenType::par_l, "expected '('"}, [this]() { return parse_param_decl(); },
+                                   {TokenType::par_r, "expected ')'"}, haveTrailingComma));
 
     matchOrReturn(TokenType::return_arrow, "expected '->'");
     eat_next_token();  // eat '->'
@@ -241,10 +243,11 @@ ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {
 
     eat_next_token();  // eat error
 
-    varOrReturn(errors, parse_list_with_trailing_comma<ErrorDecl>({TokenType::block_l, "expected '{'"},
-                                                                  &Parser::parse_error_decl,
-                                                                  {TokenType::block_r, "expected '}'"}));
-    return makePtr<ErrorGroupExprDecl>(location, std::move(*errors));
+    bool haveTrailingComma;
+    varOrReturn(errors, parse_list_with_trailing_comma<ErrorDecl>(
+                            {TokenType::block_l, "expected '{'"}, [this]() { return parse_error_decl(); },
+                            {TokenType::block_r, "expected '}'"}, haveTrailingComma));
+    return makePtr<ErrorGroupExprDecl>(location, std::move(*errors), haveTrailingComma);
 }
 
 ptr<ErrorInPlaceExpr> Parser::parse_error_in_place_expr() {

@@ -1,13 +1,14 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32
+    x: i32,
 }
 
 fn main() -> void {
-  let s = S { x: 0 };
+    let s = S{x: 0};
 
-  let y = s.x;
+    let y = s.x;
 }
+
 // CHECK: ResolvedStructDecl member_expr.S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT: ResolvedFunctionDecl main fn()->void

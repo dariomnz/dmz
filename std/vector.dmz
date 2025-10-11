@@ -1,19 +1,19 @@
 const std = import("std");
-
 const vector_error = error {
     IndexOutOfLenght,
     OutOfMemory,
 };
+
 pub struct vec<T> {
     buf: []T,
     len: usize,
     alloc: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) -> @This {
-        return @This {
+        return @This{
             buf: {},
             len: 0,
-            alloc: allocator
+            alloc: allocator,
         };
     }
 
@@ -39,12 +39,16 @@ pub struct vec<T> {
     }
 
     pub fn get(self: *@This, index: usize) -> !T {
-        if (index > self.len) { return vector_error.IndexOutOfLenght; }
+        if (index > self.len) {
+            return vector_error.IndexOutOfLenght;
+        }
         return self.buf[index];
     }
 
     pub fn remove(self: *@This, index: usize) -> !void {
-        if (index >= self.len) { return vector_error.IndexOutOfLenght; }
+        if (index >= self.len) {
+            return vector_error.IndexOutOfLenght;
+        }
 
         if (index < (self.len - 1)) {
             const num_bytes = (self.len - index - 1) * @sizeof(T);

@@ -20,7 +20,7 @@ test "add test 2" {
 // CHECK-NEXT:           ResolvedReturnStmt
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 
-// CHECK:       ResolvedFunctionDecl @builtin_test_run fn(i32)->void!
+// CHECK:       ResolvedFunctionDecl @builtin_test_run fn(i32)->!void
 // CHECK-NEXT:         ResolvedParamDecl:i32 n
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedSwitchStmt
@@ -29,14 +29,14 @@ test "add test 2" {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedTryErrorExpr:void
-// CHECK-NEXT:                   ResolvedCallExpr:void!
-// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->void! add test
+// CHECK-NEXT:                   ResolvedCallExpr:!void
+// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->!void add test
 // CHECK-NEXT:             ResolvedCaseStmt
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               ResolvedBlock
 // CHECK-NEXT:                 ResolvedTryErrorExpr:void
-// CHECK-NEXT:                   ResolvedCallExpr:void!
-// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->void! add test 2
+// CHECK-NEXT:                   ResolvedCallExpr:!void
+// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->!void add test 2
 // CHECK-NEXT:             ElseBlock
 // CHECK-NEXT:             ResolvedBlock
 
@@ -63,8 +63,8 @@ test "add test 2" {
 // CHECK:  ResolvedTestDecl add test
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedTryErrorExpr:void
-// CHECK-NEXT:           ResolvedCallExpr:void!
-// CHECK-NEXT:             ResolvedMemberExpr:fn(i1)->void! expect
+// CHECK-NEXT:           ResolvedCallExpr:!void
+// CHECK-NEXT:             ResolvedMemberExpr:fn(i1)->!void expect
 // CHECK-NEXT:               ResolvedMemberExpr:std.testing testing
 // CHECK-NEXT:                 ResolvedDeclRefExpr:std std
 // CHECK-NEXT:             ResolvedBinaryOperator:bool '=='
@@ -76,8 +76,8 @@ test "add test 2" {
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:         ResolvedTryErrorExpr:void
-// CHECK-NEXT:           ResolvedCallExpr:void!
-// CHECK-NEXT:             ResolvedMemberExpr:fn(i1)->void! expect
+// CHECK-NEXT:           ResolvedCallExpr:!void
+// CHECK-NEXT:             ResolvedMemberExpr:fn(i1)->!void expect
 // CHECK-NEXT:               ResolvedMemberExpr:std.testing testing
 // CHECK-NEXT:                 ResolvedDeclRefExpr:std std
 // CHECK-NEXT:             ResolvedBinaryOperator:bool '=='

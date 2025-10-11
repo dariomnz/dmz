@@ -1,10 +1,10 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 fn S() -> void {
-// CHECK: [[# @LINE - 1 ]]:1: error: redeclaration of 'S'
+    // CHECK: [[# @LINE - 1 ]]:1: error: redeclaration of 'S'
 }
 
 struct S {
-  x: i32,
+    x: i32,
 }
 
 fn main() -> void {

@@ -35,15 +35,13 @@ const formatDocument = (
 ): Promise<vscode.TextEdit[]> => {
 
 	const command: string = "dmz -fmt -";
-	outputChannel.appendLine(`command ${command}`);
-	outputChannel.appendLine(`document.uri.path ${document.uri.path}`);
 
 	const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
 	const backupFolder = vscode.workspace.workspaceFolders?.[0];
 	const cwd = workspaceFolder?.uri?.fsPath || backupFolder?.uri.fsPath;
 
 	return new Promise<vscode.TextEdit[]>(async (resolve, reject) => {
-		outputChannel.appendLine(`Started formatter: ${command}`);
+		outputChannel.appendLine(`Started formatter: ${command} on file ${document.fileName}`);
 
 		const textToFormat = document.getText();
 		const targetRange = new vscode.Range(
@@ -71,7 +69,7 @@ const formatDocument = (
 				const reason = signal
 					? `terminated by signal ${signal} (likely due to a timeout or external termination)`
 					: `exited with code ${code}`;
-				const message = `Formatter failed: ${command}\nReason: ${reason}`;
+				const message = `Formatter failed: ${command} on file ${document.fileName}\nReason: ${reason}`;
 				outputChannel.appendLine(message);
 				if (stderr !== "") outputChannel.appendLine(`Stderr:\n${stderr}`);
 				if (stdout !== "") outputChannel.appendLine(`Stdout:\n${stdout}`);
@@ -88,7 +86,7 @@ const formatDocument = (
 				return;
 			}
 
-			outputChannel.appendLine(`Finished running formatter: ${command}`);
+			outputChannel.appendLine(`Finished running formatter: ${command} on file ${document.fileName}`);
 			if (stderr.length > 0)
 				outputChannel.appendLine(`Possible issues occurred:\n${stderr}`);
 

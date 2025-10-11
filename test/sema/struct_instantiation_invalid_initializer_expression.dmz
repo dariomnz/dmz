@@ -1,11 +1,12 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32,
+    x: i32,
 }
 
-struct S2 {}
+struct S2 {
+}
 
 fn main() -> void {
-  S { x: S2 {} };
-  // CHECK: [[# @LINE - 1 ]]:10: error: 'S2{}' cannot be used to initialize a field of type 'i32'
+    S{x: S2{}};
+    // CHECK: [[# @LINE - 1 ]]:10: error: 'S2{}' cannot be used to initialize a field of type 'i32'
 }

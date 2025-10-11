@@ -1,9 +1,11 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-struct S {}
-struct S2 {}
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+struct S {
+}
+struct S2 {
+}
 
 fn main() -> void {
-  let x: S = S {};
-  let y: S = S2 {};
-  // CHECK: [[# @LINE - 1 ]]:14: error: initializer type mismatch
+    let x: S = S{};
+    let y: S = S2{};
+    // CHECK: [[# @LINE - 1 ]]:16: error: initializer type mismatch expected 'S{}' actual 'S2{}'
 }

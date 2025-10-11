@@ -183,7 +183,7 @@ void UnaryOperator::dump(size_t level) const {
     operand->dump(level + 1);
 }
 
-std::string UnaryOperator::to_str() const { return operand->to_str() + get_op_str(op); }
+std::string UnaryOperator::to_str() const { return get_op_str(op) + operand->to_str(); }
 
 void RefPtrExpr::dump(size_t level) const {
     std::cerr << indent(level) << "RefPtrExpr" << '\n';

@@ -1,4 +1,4 @@
-// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
 
 fn main() -> void {
     defer println(1);

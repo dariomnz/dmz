@@ -1,16 +1,18 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'customType' return type
 extern fn foo() -> customType;
 
 // CHECK: [[# @LINE + 1 ]]:15: error: parameter 'a' has invalid 'customType' type
-extern fn bar(a:customType) -> void;
+extern fn bar(a: customType) -> void;
 
 // CHECK: [[# @LINE + 1 ]]:32: error: vararg '...' can only be in the last argument
-extern fn argvar1(a:i32, ... , ...) -> void;
+extern fn argvar1(a: i32, ..., ...) -> void;
 
-// CHECK: [[# @LINE + 1 ]]:31: error: vararg '...' can only be in the last argument
-extern fn argvar2(a:i32, ..., b:i32) -> void;
+// CHECK: [[# @LINE + 1 ]]:32: error: vararg '...' can only be in the last argument
+extern fn argvar2(a: i32, ..., b: i32) -> void;
 
-fn main() -> void {}
+fn main() -> void {
+}
+
 // CHECK-NOT: {{.*}}

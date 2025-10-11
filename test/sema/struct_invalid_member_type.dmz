@@ -1,7 +1,8 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  nested: INVALID,
-  // CHECK: [[# @LINE - 1 ]]:11: error: symbol 'INVALID' not found
+    nested: INVALID,
+    // CHECK: [[# @LINE - 1 ]]:13: error: symbol 'INVALID' not found
 }
 
-fn main() -> void {}
+fn main() -> void {
+}

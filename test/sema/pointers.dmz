@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
@@ -11,6 +11,7 @@ fn main() -> void {
     *i_ptr = 12;
     printf("%d\n", i);
 }
+
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt

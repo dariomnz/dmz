@@ -141,12 +141,14 @@ ptr<ForStmt> Parser::parse_for_stmt() {
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'for'
 
-    varOrReturn(conditions,
-                parse_expr_list_with_trailing_comma({TokenType::par_l, "expected '('"}, [&]() { return parse_expr(); },
-                                                    {TokenType::par_r, "expected ')'"}));
-    varOrReturn(captures, parse_list_with_trailing_comma<CaptureDecl>({TokenType ::pipe, "expected '|'"},
-                                                                      &Parser::parse_capture_decl,
-                                                                      {TokenType ::pipe, "expected '|'"}));
+    bool haveTrailingCommaCond;
+    bool haveTrailingCommaCapt;
+    varOrReturn(conditions, parse_list_with_trailing_comma<Expr>(
+                                {TokenType::par_l, "expected '('"}, [this]() { return parse_expr(); },
+                                {TokenType::par_r, "expected ')'"}, haveTrailingCommaCond));
+    varOrReturn(captures, parse_list_with_trailing_comma<CaptureDecl>(
+                              {TokenType ::pipe, "expected '|'"}, [this]() { return parse_capture_decl(); },
+                              {TokenType ::pipe, "expected '|'"}, haveTrailingCommaCapt));
 
     matchOrReturn(TokenType::block_l, "expected 'for' body");
     varOrReturn(body, parse_block());
@@ -276,7 +278,12 @@ ptr<SwitchStmt> Parser::parse_switch_stmt() {
 
     std::vector<ptr<CaseStmt>> cases;
     ptr<Block> elseBlock;
-    while (m_nextToken.type == TokenType::kw_case || m_nextToken.type == TokenType::kw_else) {
+    while (m_nextToken.type == TokenType::kw_case || m_nextToken.type == TokenType::kw_else ||
+           m_nextToken.type == TokenType::empty_line) {
+        if (m_nextToken.type == TokenType::empty_line) {
+            eat_next_token();  // eat empty line
+            continue;
+        }
         bool isElse = m_nextToken.type == TokenType::kw_else;
         varOrReturn(cas, parse_case_stmt());
 

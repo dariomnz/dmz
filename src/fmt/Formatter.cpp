@@ -31,47 +31,43 @@ ptr<Node> Formatter::fmt_empty_line([[maybe_unused]] const EmptyLine& decl) {
     return makePtr<Line>();
 }
 
-ptr<Node> Formatter::fmt_block(const Block& block) {
+ptr<Node> Formatter::fmt_block(const Block& block, bool wantWrap, bool needBracket) {
     debug_func("");
     auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("{"));
-    ret->nodes.emplace_back(makePtr<Line>());
-
-    auto& _stmtList = ret->nodes.emplace_back(makePtr<Indent>(vec<ptr<Node>>{}));
-    auto stmtList = static_cast<Indent*>(_stmtList.get());
-    for (size_t i = 0; i < block.statements.size(); i++) {
-        stmtList->nodes.emplace_back(fmt_stmt(*block.statements[i]));
-        stmtList->nodes.emplace_back(makePtr<Line>());
-    }
-    ret->nodes.emplace_back(makePtr<Text>("}"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_case_block(const Block& block) {
-    debug_func("");
-
-    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
-    vec<ptr<Node>>* stmts = &ret->nodes;
-    if (block.statements.size() != 1) {
+    if (needBracket || block.statements.size() == 0 || block.statements.size() > 1) {
         ret->nodes.emplace_back(makePtr<Text>("{"));
-        if (block.statements.size() != 0) {
-            ret->nodes.emplace_back(makePtr<Line>());
-            auto indt = makePtr<Indent>(vec<ptr<Node>>{});
-            stmts = &indt->nodes;
-            ret->nodes.emplace_back(std::move(indt));
-        }
     }
-
-    for (size_t i = 0; i < block.statements.size(); i++) {
-        stmts->emplace_back(fmt_stmt(*block.statements[i]));
-        if (i < block.statements.size() - 1) {
-            stmts->emplace_back(makePtr<Line>());
+    if (block.statements.size() < 2 && wantWrap) {
+        if (needBracket) {
+            ret->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(ret->group_id));
+        } else {
+            ret->nodes.emplace_back(makePtr<LineIfWrap>(ret->group_id));
         }
-    }
-
-    if (block.statements.size() != 1) {
-        ret->nodes.emplace_back(makePtr<Text>("}"));
+    } else {
         ret->nodes.emplace_back(makePtr<Line>());
+    }
+
+    if (block.statements.size() < 2 && wantWrap) {
+        auto stmtList = makePtr<IndentIfWrap>(ret->group_id, vec<ptr<Node>>{});
+        for (size_t i = 0; i < block.statements.size(); i++) {
+            stmtList->nodes.emplace_back(fmt_stmt(*block.statements[i]));
+            if (needBracket) {
+                stmtList->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(ret->group_id));
+            } else {
+                stmtList->nodes.emplace_back(makePtr<LineIfWrap>(ret->group_id));
+            }
+        }
+        ret->nodes.emplace_back(std::move(stmtList));
+    } else {
+        auto stmtList = makePtr<Indent>(vec<ptr<Node>>{});
+        for (size_t i = 0; i < block.statements.size(); i++) {
+            stmtList->nodes.emplace_back(fmt_stmt(*block.statements[i]));
+            stmtList->nodes.emplace_back(makePtr<Line>());
+        }
+        ret->nodes.emplace_back(std::move(stmtList));
+    }
+    if (needBracket || block.statements.size() == 0 || block.statements.size() > 1) {
+        ret->nodes.emplace_back(makePtr<Text>("}"));
     }
     return ret;
 }

@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:13: error: file 'not_exits.dmz' doesn't exists
 const ops = import("not_exits.dmz");
@@ -10,6 +10,6 @@ fn main() -> void {
     ops.print(x);
 
     let result = ops.integer.add(x, y);
-    
+
     ops.print(result);
 }

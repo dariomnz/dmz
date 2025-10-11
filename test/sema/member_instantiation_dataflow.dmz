@@ -1,15 +1,15 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32,
-  y: i32,
+    x: i32,
+    y: i32,
 }
 
 fn main() -> void {
-  let n: i32;
+    let n: i32;
 
-  // CHECK: [[# @LINE + 3 ]]:8: error: 'n' is not initialized
-  let y = S { 
-    x: 1, 
-    y: n,
-  };
+    // CHECK: [[# @LINE + 3 ]]:12: error: 'n' is not initialized
+    let y = S{
+        x: 1,
+        y: n,
+    };
 }

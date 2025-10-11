@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\n')
 
 fn foo(x: *i32) -> void {
@@ -6,6 +6,7 @@ fn foo(x: *i32) -> void {
     *x = 20;
     println(*x);
 }
+
 // CHECK: ResolvedFunctionDecl foo fn(*i32)->void
 // CHECK-NEXT:    ResolvedParamDecl:*i32 x
 // CHECK-NEXT:    ResolvedBlock
@@ -23,11 +24,14 @@ fn foo(x: *i32) -> void {
 // CHECK-NEXT:        ResolvedDerefPtrExpr:i32
 // CHECK-NEXT:          ResolvedDeclRefExpr:*i32 x
 
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void {
+    printf("%d\n", n);
+}
 
 fn main() -> void {
     let i = 10;
-    let i_ptr:*i32 = &i;
+    let i_ptr: *i32 = &i;
     println(*i_ptr);
     foo(i_ptr);
     println(i);

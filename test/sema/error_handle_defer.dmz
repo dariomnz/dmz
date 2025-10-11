@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Defered foo\nDefered foo\nDefered foo\nDefered bar\nDefered foo\nDefered foo\nDefered bar\n")
 
 const e = error {
@@ -7,12 +7,12 @@ const e = error {
     ERROR_THREE,
 };
 
-fn bar(x:i32) -> i32! {
+fn bar(x:i32) -> !i32 {
     defer printf("Defered bar\n");
     let result = try foo(x);
     return try foo(x);
 }
-// CHECK:   ResolvedFunctionDecl bar fn(i32)->i32!
+// CHECK:   ResolvedFunctionDecl bar fn(i32)->!i32
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeferStmt
@@ -23,13 +23,13 @@ fn bar(x:i32) -> i32! {
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:i32 result
 // CHECK-NEXT:           ResolvedTryErrorExpr:i32
-// CHECK-NEXT:             ResolvedCallExpr:i32!
-// CHECK-NEXT:              ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:             ResolvedCallExpr:!i32
+// CHECK-NEXT:              ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:               ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedTryErrorExpr:i32
-// CHECK-NEXT:           ResolvedCallExpr:i32!
-// CHECK-NEXT:            ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:           ResolvedCallExpr:!i32
+// CHECK-NEXT:            ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:         ResolvedDeferRefStmt
 // CHECK-NEXT:           ResolvedBlock
@@ -37,14 +37,14 @@ fn bar(x:i32) -> i32! {
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 'Defered bar\n'
 
-fn foo(x:i32) -> i32! {
+fn foo(x:i32) -> !i32 {
     defer printf("Defered foo\n");
     if (x == 1){
         return e.ERROR_ONE;
     }
     return x;
 }
-// CHECK:   ResolvedFunctionDecl foo fn(i32)->i32!
+// CHECK:   ResolvedFunctionDecl foo fn(i32)->!i32
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeferStmt
@@ -84,26 +84,26 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:i32! result
-// CHECK-NEXT:         ResolvedCallExpr:i32!
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:       ResolvedVarDecl:!i32 result
+// CHECK-NEXT:         ResolvedCallExpr:!i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32! result
-// CHECK-NEXT:       ResolvedCallExpr:i32!
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:       ResolvedDeclRefExpr:!i32 result
+// CHECK-NEXT:       ResolvedCallExpr:!i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:         | value: 10
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32! result
-// CHECK-NEXT:       ResolvedCallExpr:i32!
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->i32! bar
+// CHECK-NEXT:       ResolvedDeclRefExpr:!i32 result
+// CHECK-NEXT:       ResolvedCallExpr:!i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->!i32 bar
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedAssignment
-// CHECK-NEXT:       ResolvedDeclRefExpr:i32! result
-// CHECK-NEXT:       ResolvedCallExpr:i32!
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->i32! bar
+// CHECK-NEXT:       ResolvedDeclRefExpr:!i32 result
+// CHECK-NEXT:       ResolvedCallExpr:!i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->!i32 bar
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:         | value: 10

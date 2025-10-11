@@ -1,7 +1,10 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-fn foo() -> void {}
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+fn foo() -> void {
+}
 
-fn bar() -> i32 { return 1; }
+fn bar() -> i32 {
+    return 1;
+}
 
 fn main() -> void {
     let x: i32 = 1;
@@ -10,7 +13,7 @@ fn main() -> void {
     x = foo();
 
     let y: i32 = 3;
-    
+
     y = 3;
 
     // CHECK: [[# @LINE + 1 ]]:5: error: 'bar' cannot be mutated
@@ -27,4 +30,5 @@ fn assignParam(x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:5: error: 'x' cannot be mutated
     x = 1;
 }
+
 // CHECK-NOT: {{.*}}

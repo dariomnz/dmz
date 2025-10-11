@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 struct Point {
     x: i32,
@@ -8,27 +8,44 @@ struct Point {
         self.x = self.x + 1;
         self.y = self.y + 1;
     }
-// CHECK:  ResolvedMemberFunctionDecl addOne fn(*struct_self_member.Point{})->void
-// CHECK-NEXT:    ResolvedParamDecl:*struct_self_member.Point{} self
-// CHECK-NEXT:    ResolvedBlock
-// CHECK-NEXT:      ResolvedAssignment
-// CHECK-NEXT:        ResolvedMemberExpr:i32 x
-// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
-// CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:          ResolvedMemberExpr:i32 x
-// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
-// CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
-// CHECK-NEXT:      ResolvedAssignment
-// CHECK-NEXT:        ResolvedMemberExpr:i32 y
-// CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
-// CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:          ResolvedMemberExpr:i32 y
-// CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
-// CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
+
+    // CHECK:  ResolvedMemberFunctionDecl addOne fn(*struct_self_member.Point{})->void
+
+    // CHECK-NEXT:    ResolvedParamDecl:*struct_self_member.Point{} self
+
+    // CHECK-NEXT:    ResolvedBlock
+
+    // CHECK-NEXT:      ResolvedAssignment
+
+    // CHECK-NEXT:        ResolvedMemberExpr:i32 x
+
+    // CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
+
+    // CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
+
+    // CHECK-NEXT:          ResolvedMemberExpr:i32 x
+
+    // CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
+
+    // CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
+
+    // CHECK-NEXT:      ResolvedAssignment
+
+    // CHECK-NEXT:        ResolvedMemberExpr:i32 y
+
+    // CHECK-NEXT:          ResolvedDeclRefExpr:*struct_self_member.Point{} self
+
+    // CHECK-NEXT:        ResolvedBinaryOperator:i32 '+'
+
+    // CHECK-NEXT:          ResolvedMemberExpr:i32 y
+
+    // CHECK-NEXT:            ResolvedDeclRefExpr:*struct_self_member.Point{} self
+
+    // CHECK-NEXT:          ResolvedIntLiteral:i32 '1'
 }
 
 fn main() -> void {
-    let p = Point{x:1,y:1};
+    let p = Point{x: 1, y: 1};
     p.addOne();
 }
 

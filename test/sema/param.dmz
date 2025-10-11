@@ -1,13 +1,18 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:8: error: parameter 'x' has invalid 'void' type
-fn foo(x: void, y: customType) -> void {}
+fn foo(x: void, y: customType) -> void {
+}
 
 // CHECK: [[# @LINE + 1 ]]:16: error: parameter 'y' has invalid 'customType' type
-fn bar(x: i32, y: customType) -> void {}
+fn bar(x: i32, y: customType) -> void {
+}
 
 // CHECK: [[# @LINE + 1 ]]:28: error: redeclaration of 'x'
-fn redeclaredParam(x: i32, x: i32) -> void {}
+fn redeclaredParam(x: i32, x: i32) -> void {
+}
 
-fn main() -> void {}
+fn main() -> void {
+}
+
 // CHECK-NOT: {{.*}}

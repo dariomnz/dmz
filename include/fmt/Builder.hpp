@@ -16,8 +16,8 @@ class Builder {
         return id;
     }
     ptr<Node> string(std::string_view str);
-    ptr<Node> comma_separated_list(std::string_view start_list, std::string_view end_list, vec<ptr<Node>> arguments);
-    ptr<Node> call(ptr<Node> callee, vec<ptr<Node>> arguments);
+    ptr<Node> comma_separated_list(std::string_view start_list, std::string_view end_list, vec<ptr<Node>> arguments,
+                                   bool forceWrap = false);
 };
 }  // namespace fmt
 }  // namespace DMZ

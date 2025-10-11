@@ -28,11 +28,17 @@ ptr<Node> Formatter::fmt_stmt(const Stmt& stmt) {
     } else if (auto cast_stmt = dynamic_cast<const WhileStmt*>(&stmt)) {
         node = fmt_while_stmt(*cast_stmt);
         needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const ForStmt*>(&stmt)) {
+        node = fmt_for_stmt(*cast_stmt);
+        needSemicolon = false;
     } else if (auto cast_stmt = dynamic_cast<const IfStmt*>(&stmt)) {
         node = fmt_if_stmt(*cast_stmt);
         needSemicolon = false;
     } else if (auto cast_stmt = dynamic_cast<const FieldInitStmt*>(&stmt)) {
         node = fmt_field_init_stmt(*cast_stmt);
+        needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const Block*>(&stmt)) {
+        node = fmt_block(*cast_stmt, false);
         needSemicolon = false;
     } else {
         stmt.dump();
@@ -90,8 +96,10 @@ ptr<Node> Formatter::fmt_assignment_stmt(const Assignment& stmt) {
 ptr<Node> Formatter::fmt_return_stmt(const ReturnStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
     ret->nodes.emplace_back(makePtr<Text>("return"));
-    ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_expr(*stmt.expr));
+    if (stmt.expr) {
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_expr(*stmt.expr));
+    }
     return ret;
 }
 
@@ -118,7 +126,7 @@ ptr<Node> Formatter::fmt_switch_stmt(const SwitchStmt& stmt) {
         nodes->nodes.emplace_back(makePtr<Space>());
         nodes->nodes.emplace_back(makePtr<Text>("=>"));
         nodes->nodes.emplace_back(makePtr<Space>());
-        nodes->nodes.emplace_back(fmt_case_block(*stmt.elseBlock));
+        nodes->nodes.emplace_back(fmt_block(*stmt.elseBlock, true, false));
 
         indt->nodes.emplace_back(std::move(nodes));
         indt->nodes.emplace_back(makePtr<Line>());
@@ -139,7 +147,7 @@ ptr<Node> Formatter::fmt_case_stmt(const CaseStmt& stmt) {
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("=>"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_case_block(*stmt.block));
+    ret->nodes.emplace_back(fmt_block(*stmt.block, true, false));
     return ret;
 }
 
@@ -153,7 +161,30 @@ ptr<Node> Formatter::fmt_while_stmt(const WhileStmt& stmt) {
     ret->nodes.emplace_back(std::move(cond_group));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_block(*stmt.body));
+    ret->nodes.emplace_back(fmt_block(*stmt.body, false));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_for_stmt(const ForStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("for"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    vec<ptr<Node>> conditions;
+    for (auto&& cond : stmt.conditions) {
+        conditions.emplace_back(fmt_expr(*cond));
+    }
+
+    ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(conditions)));
+    ret->nodes.emplace_back(makePtr<Space>());
+    vec<ptr<Node>> captures;
+    for (auto&& cap : stmt.captures) {
+        captures.emplace_back(fmt_decl(*cap));
+    }
+
+    ret->nodes.emplace_back(build.comma_separated_list("|", "|", std::move(captures)));
+    ret->nodes.emplace_back(makePtr<Space>());
+
+    ret->nodes.emplace_back(fmt_block(*stmt.body, false));
     return ret;
 }
 
@@ -167,12 +198,12 @@ ptr<Node> Formatter::fmt_if_stmt(const IfStmt& stmt) {
     ret->nodes.emplace_back(std::move(cond_group));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_block(*stmt.trueBlock));
+    ret->nodes.emplace_back(fmt_block(*stmt.trueBlock, false));
     if (stmt.falseBlock) {
         ret->nodes.emplace_back(makePtr<Space>());
         ret->nodes.emplace_back(makePtr<Text>("else"));
         ret->nodes.emplace_back(makePtr<Space>());
-        ret->nodes.emplace_back(fmt_block(*stmt.falseBlock));
+        ret->nodes.emplace_back(fmt_block(*stmt.falseBlock, false));
     }
     return ret;
 }

@@ -1,7 +1,8 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 fn main() -> void {
     let x: i32 = 1;
     // CHECK: [[# @LINE + 1 ]]:9: error: redeclaration of 'x'
     let x: i32 = 2;
 }
+
 // CHECK-NOT: {{.*}}

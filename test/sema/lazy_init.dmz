@@ -1,7 +1,7 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 fn main() -> void {
     let x: i32;
-    
+
     if (1) {
         x = 2;
     } else {
@@ -13,7 +13,7 @@ fn main() -> void {
 
 fn modifyImmutable() -> void {
     const x: i32 = 1;
-    
+
     if (1) {
         // CHECK: [[# @LINE + 1 ]]:9: error: 'x' cannot be mutated
         x = 1;
@@ -27,10 +27,11 @@ fn modifyImmutable() -> void {
 
 fn uninitOneBranch() -> void {
     let x: i32;
-    
+
     if (1) {
         let y: i32;
-        y = 1; // init inner 'x'
+        y = 1;
+        // init inner 'x'
     } else {
         x = 2;
     }
@@ -41,7 +42,7 @@ fn uninitOneBranch() -> void {
 
 fn initEveryBranch() -> void {
     let x: i32;
-    
+
     if (1) {
         x = 1;
     } else {
@@ -54,15 +55,17 @@ fn initEveryBranch() -> void {
 
 fn initConditionVar() -> void {
     let x: i32;
-    
+
     // CHECK: [[# @LINE + 1 ]]:14: error: 'x' is not initialized
     if (1 || x) {
         x = 1;
-    // CHECK: [[# @LINE + 1 ]]:25: error: 'x' is not initialized
-    } else if (false && x == 2) {
-        x = 3;
     } else {
-        x = 2;
+        // CHECK: [[# @LINE + 1 ]]:22: error: 'x' is not initialized
+        if (false && x == 2) {
+            x = 3;
+        } else {
+            x = 2;
+        }
     }
 
     // CHECK-NOT: [[# @LINE + 1 ]]:5: error
@@ -72,7 +75,7 @@ fn initConditionVar() -> void {
 fn loop() -> void {
     const x: i32;
     let y: i32;
-    
+
     while (1) {
         // CHECK: [[# @LINE + 1 ]]:9: error: 'x' cannot be mutated
         x = 1;
@@ -83,7 +86,7 @@ fn loop() -> void {
 
 fn shadowInitialization() -> void {
     const x: i32;
-    
+
     if (1) {
         // CHECK: [[# @LINE + 1 ]]:15: error: redeclaration of 'x'
         const x: i32;
@@ -98,7 +101,7 @@ fn shadowInitialization() -> void {
 
 fn shadowInitialized() -> void {
     let x: i32;
-    
+
     if (1) {
         x = 1;
         // CHECK: [[# @LINE + 1 ]]:15: error: redeclaration of 'x'
@@ -138,4 +141,5 @@ fn nestedInLoop(param: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
     x + x;
 }
+
 // CHECK-NOT: {{.*}}

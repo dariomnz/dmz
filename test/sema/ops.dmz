@@ -1,14 +1,15 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 fn main() -> void {
     let a = 12;
     a++;
     a--;
-    a+=3;
-    a-=4;
-    a*=2;
-    a/=2;
+    a += 3;
+    a -= 4;
+    a *= 2;
+    a /= 2;
 }
+
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt i32

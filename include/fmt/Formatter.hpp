@@ -26,14 +26,13 @@ class Formatter {
     ptr<Node> fmt_decoration(const Decoration& decl);
     ptr<Node> fmt_comment(const Comment& decl);
     ptr<Node> fmt_empty_line(const EmptyLine& decl);
-    ptr<Node> fmt_block(const Block& block);
-    ptr<Node> fmt_case_block(const Block& block);
+    ptr<Node> fmt_block(const Block& block, bool wantWrap = true, bool needBracket = true);
+    // ptr<Node> fmt_case_block(const Block& block);
 
     // Decl
     ptr<Node> fmt_decl(const Decl& decl);
     ptr<Node> fmt_module_decl(const ModuleDecl& decl);
-    ptr<Node> fmt_function_decl(const FunctionDecl& decl);
-    ptr<Node> fmt_extern_function_decl(const ExternFunctionDecl& decl);
+    ptr<Node> fmt_func_decl(const FuncDecl& decl);
     ptr<Node> fmt_struct_decl(const StructDecl& decl);
     ptr<Node> fmt_field_decl(const FieldDecl& decl);
     ptr<Node> fmt_param_decl(const ParamDecl& decl);
@@ -57,6 +56,10 @@ class Formatter {
     ptr<Node> fmt_array_at_expr(const ArrayAtExpr& expr);
     ptr<Node> fmt_ref_ptr_expr(const RefPtrExpr& expr);
     ptr<Node> fmt_range_expr(const RangeExpr& expr);
+    ptr<Node> fmt_error_in_place_expr(const ErrorInPlaceExpr& expr);
+    ptr<Node> fmt_try_error_expr(const TryErrorExpr& expr);
+    ptr<Node> fmt_orelse_error_expr(const OrElseErrorExpr& expr);
+    ptr<Node> fmt_generic_expr(const GenericExpr& expr);
 
     // Stmt
     ptr<Node> fmt_stmt(const Stmt& stmt);
@@ -66,6 +69,7 @@ class Formatter {
     ptr<Node> fmt_switch_stmt(const SwitchStmt& stmt);
     ptr<Node> fmt_case_stmt(const CaseStmt& stmt);
     ptr<Node> fmt_while_stmt(const WhileStmt& stmt);
+    ptr<Node> fmt_for_stmt(const ForStmt& stmt);
     ptr<Node> fmt_if_stmt(const IfStmt& stmt);
     ptr<Node> fmt_field_init_stmt(const FieldInitStmt& stmt);
 };

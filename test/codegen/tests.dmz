@@ -2,7 +2,7 @@
 // RUN: diff <(dmz %s -I std %S/../../std/std.dmz -run -test -module 2>&1) <(echo -n -e 'All 2 tests passed.\n')
 const std = import("std");
 
-fn add(x:i32, y:i32) -> i32 {
+fn add(x: i32, y: i32) -> i32 {
     return x + y;
 }
 
@@ -115,80 +115,90 @@ test "add test 3" {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %num_test = alloca i32, align 4
 // CHECK-NEXT:   %result = alloca i32, align 4
-// CHECK-NEXT:   %i = alloca i32, align 4
+// CHECK-NEXT:   %for.counter = alloca i64, align 8
+// CHECK-NEXT:   %for.capture.i = alloca i64, align 8
 // CHECK-NEXT:   %test_name = alloca ptr, align 8
 // CHECK-NEXT:   %err = alloca ptr, align 8
 // CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.void, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %num_test, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %i, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.i, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %test_name, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %err, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   %0 = call i32 @"std.builtin.@builtin_test_num"()
 // CHECK-NEXT:   store i32 %0, ptr %num_test, align 4
 // CHECK-NEXT:   store i32 0, ptr %result, align 4
-// CHECK-NEXT:   store i32 0, ptr %i, align 4
-// CHECK-NEXT:   br label %while.cond
+// CHECK-NEXT:   store i64 0, ptr %for.capture.i, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %num_test, align 4
+// CHECK-NEXT:   %int.to.int = sext i32 %1 to i64
+// CHECK-NEXT:   %2 = sub i64 %int.to.int, 0
+// CHECK-NEXT:   br label %for.cond
 // CHECK-NEXT: 
-// CHECK-NEXT: while.cond:                                       ; preds = %if.exit, %entry
-// CHECK-NEXT:   %1 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %2 = load i32, ptr %num_test, align 4
-// CHECK-NEXT:   %3 = icmp slt i32 %1, %2
-// CHECK-NEXT:   br i1 %3, label %while.body, label %while.exit
+// CHECK-NEXT: for.cond:                                         ; preds = %for.increment, %entry
+// CHECK-NEXT:   %3 = load i64, ptr %for.counter, align 4
+// CHECK-NEXT:   %4 = icmp slt i64 %3, %2
+// CHECK-NEXT:   br i1 %4, label %for.body, label %for.exit
 // CHECK-NEXT: 
-// CHECK-NEXT: while.body:                                       ; preds = %while.cond
-// CHECK-NEXT:   %4 = load i32, ptr %result, align 4
-// CHECK-NEXT:   %5 = add i32 %4, 1
-// CHECK-NEXT:   store i32 %5, ptr %result, align 4
-// CHECK-NEXT:   %6 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %7 = call ptr @"std.builtin.@builtin_test_name"(i32 %6)
-// CHECK-NEXT:   store ptr %7, ptr %test_name, align 8
-// CHECK-NEXT:   %8 = load i32, ptr %i, align 4
-// CHECK-NEXT:   call void @"std.builtin.@builtin_test_run"(ptr sret(%error.struct.void) %struct.ret.tmp, i32 %8)
-// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
-// CHECK-NEXT:   %10 = load ptr, ptr %9, align 8
-// CHECK-NEXT:   store ptr %10, ptr %err, align 8
-// CHECK-NEXT:   %11 = load ptr, ptr %err, align 8
-// CHECK-NEXT:   %12 = ptrtoint ptr %11 to i64
-// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %12, 0
+// CHECK-NEXT: for.increment:                                    ; preds = %if.exit
+// CHECK-NEXT:   %5 = load i64, ptr %for.counter, align 4
+// CHECK-NEXT:   %6 = add i64 %5, 1
+// CHECK-NEXT:   store i64 %6, ptr %for.counter, align 4
+// CHECK-NEXT:   %7 = load i64, ptr %for.capture.i, align 4
+// CHECK-NEXT:   %8 = add i64 %7, 1
+// CHECK-NEXT:   store i64 %8, ptr %for.capture.i, align 4
+// CHECK-NEXT:   br label %for.cond
+// CHECK-NEXT: 
+// CHECK-NEXT: for.body:                                         ; preds = %for.cond
+// CHECK-NEXT:   %9 = load i32, ptr %result, align 4
+// CHECK-NEXT:   %10 = add i32 %9, 1
+// CHECK-NEXT:   store i32 %10, ptr %result, align 4
+// CHECK-NEXT:   %11 = load i64, ptr %for.capture.i, align 4
+// CHECK-NEXT:   %12 = call ptr @"std.builtin.@builtin_test_name"(i64 %11)
+// CHECK-NEXT:   store ptr %12, ptr %test_name, align 8
+// CHECK-NEXT:   %13 = load i64, ptr %for.capture.i, align 4
+// CHECK-NEXT:   call void @"std.builtin.@builtin_test_run"(ptr sret(%error.struct.void) %struct.ret.tmp, i64 %13)
+// CHECK-NEXT:   %14 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %15 = load ptr, ptr %14, align 8
+// CHECK-NEXT:   store ptr %15, ptr %err, align 8
+// CHECK-NEXT:   %16 = load ptr, ptr %err, align 8
+// CHECK-NEXT:   %17 = ptrtoint ptr %16 to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %17, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true, label %if.exit
 // CHECK-NEXT: 
-// CHECK-NEXT: while.exit:                                       ; preds = %while.cond
-// CHECK-NEXT:   %13 = load i32, ptr %result, align 4
-// CHECK-NEXT:   %14 = load i32, ptr %num_test, align 4
-// CHECK-NEXT:   %15 = icmp eq i32 %13, %14
-// CHECK-NEXT:   br i1 %15, label %if.true1, label %if.false
+// CHECK-NEXT: for.exit:                                         ; preds = %for.cond
+// CHECK-NEXT:   %18 = load i32, ptr %result, align 4
+// CHECK-NEXT:   %19 = load i32, ptr %num_test, align 4
+// CHECK-NEXT:   %20 = icmp eq i32 %18, %19
+// CHECK-NEXT:   br i1 %20, label %if.true1, label %if.false
 // CHECK-NEXT: 
-// CHECK-NEXT: if.true:                                          ; preds = %while.body
-// CHECK-NEXT:   %16 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %17 = add i32 %16, 1
-// CHECK-NEXT:   %18 = load i32, ptr %num_test, align 4
-// CHECK-NEXT:   %19 = load ptr, ptr %test_name, align 8
-// CHECK-NEXT:   %20 = load ptr, ptr %err, align 8
-// CHECK-NEXT:   %21 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.3, i32 %17, i32 %18, ptr %19, ptr %20)
-// CHECK-NEXT:   %22 = load i32, ptr %result, align 4
-// CHECK-NEXT:   %23 = sub i32 %22, 1
-// CHECK-NEXT:   store i32 %23, ptr %result, align 4
+// CHECK-NEXT: if.true:                                          ; preds = %for.body
+// CHECK-NEXT:   %21 = load i64, ptr %for.capture.i, align 4
+// CHECK-NEXT:   %22 = add i64 %21, 1
+// CHECK-NEXT:   %23 = load i32, ptr %num_test, align 4
+// CHECK-NEXT:   %24 = load ptr, ptr %test_name, align 8
+// CHECK-NEXT:   %25 = load ptr, ptr %err, align 8
+// CHECK-NEXT:   %26 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.3, i64 %22, i32 %23, ptr %24, ptr %25)
+// CHECK-NEXT:   %27 = load i32, ptr %result, align 4
+// CHECK-NEXT:   %28 = sub i32 %27, 1
+// CHECK-NEXT:   store i32 %28, ptr %result, align 4
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
-// CHECK-NEXT: if.exit:                                          ; preds = %if.true, %while.body
-// CHECK-NEXT:   %24 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %25 = add i32 %24, 1
-// CHECK-NEXT:   store i32 %25, ptr %i, align 4
-// CHECK-NEXT:   br label %while.cond
+// CHECK-NEXT: if.exit:                                          ; preds = %if.true, %for.body
+// CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
-// CHECK-NEXT: if.true1:                                         ; preds = %while.exit
-// CHECK-NEXT:   %26 = load i32, ptr %num_test, align 4
-// CHECK-NEXT:   %27 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.4, i32 %26)
+// CHECK-NEXT: if.true1:                                         ; preds = %for.exit
+// CHECK-NEXT:   %29 = load i32, ptr %num_test, align 4
+// CHECK-NEXT:   %30 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.4, i32 %29)
 // CHECK-NEXT:   br label %if.exit2
 // CHECK-NEXT: 
-// CHECK-NEXT: if.false:                                         ; preds = %while.exit
-// CHECK-NEXT:   %28 = load i32, ptr %result, align 4
-// CHECK-NEXT:   %29 = load i32, ptr %num_test, align 4
-// CHECK-NEXT:   %30 = load i32, ptr %result, align 4
-// CHECK-NEXT:   %31 = sub i32 %29, %30
-// CHECK-NEXT:   %32 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.5, i32 %28, i32 %31)
+// CHECK-NEXT: if.false:                                         ; preds = %for.exit
+// CHECK-NEXT:   %31 = load i32, ptr %result, align 4
+// CHECK-NEXT:   %32 = load i32, ptr %num_test, align 4
+// CHECK-NEXT:   %33 = load i32, ptr %result, align 4
+// CHECK-NEXT:   %34 = sub i32 %32, %33
+// CHECK-NEXT:   %35 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.5, i32 %31, i32 %34)
 // CHECK-NEXT:   br label %if.exit2
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit2:                                         ; preds = %if.false, %if.true1

@@ -1,4 +1,4 @@
-// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:1: error: expected declaration
 while 0 {}

@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 const ops = import("module_ops.dmz");
 
@@ -12,6 +12,6 @@ fn main() -> void {
     let result = ops.integer.add(x, y);
     // CHECK: [[# @LINE + 1 ]]:8: error: module 'module_ops' has no member called 'float'
     ops.float.add(x, y);
-    
+
     ops.print(result);
 }

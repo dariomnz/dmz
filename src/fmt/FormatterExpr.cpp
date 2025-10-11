@@ -48,6 +48,14 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_ref_ptr_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const RangeExpr*>(&expr)) {
         node = fmt_range_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const ErrorInPlaceExpr*>(&expr)) {
+        node = fmt_error_in_place_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const TryErrorExpr*>(&expr)) {
+        node = fmt_try_error_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const OrElseErrorExpr*>(&expr)) {
+        node = fmt_orelse_error_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const GenericExpr*>(&expr)) {
+        node = fmt_generic_expr(*cast_expr);
     } else {
         println(expr.location.to_string());
         expr.dump();
@@ -68,8 +76,10 @@ ptr<Node> Formatter::fmt_call_expr(const CallExpr& callExpr) {
     for (auto&& arg : callExpr.arguments) {
         args.emplace_back(fmt_expr(*arg));
     }
-
-    return build.call(std::move(callee), std::move(args));
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
+    ret->nodes.emplace_back(fmt_expr(*callExpr.callee));
+    ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(args), callExpr.haveTrailingComma));
+    return ret;
 }
 
 ptr<Node> Formatter::fmt_deref_ptr_expr(const DerefPtrExpr& expr) {
@@ -151,7 +161,7 @@ ptr<Node> Formatter::fmt_error_group_expr_decl(const ErrorGroupExprDecl& expr) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
     ret->nodes.emplace_back(makePtr<Text>("error"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(build.comma_separated_list("{", "}", std::move(errs)));
+    ret->nodes.emplace_back(build.comma_separated_list("{", "}", std::move(errs), expr.haveTrailingComma));
     return ret;
 }
 
@@ -171,8 +181,7 @@ ptr<Node> Formatter::fmt_struct_instantiation_expr(const StructInstantiationExpr
 
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
     ret->nodes.emplace_back(fmt_expr(*expr.base));
-    ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(build.comma_separated_list("{", "}", std::move(arguments)));
+    ret->nodes.emplace_back(build.comma_separated_list("{", "}", std::move(arguments), expr.haveTrailingComma));
     return ret;
 }
 
@@ -182,7 +191,7 @@ ptr<Node> Formatter::fmt_array_instantiation_expr(const ArrayInstantiationExpr& 
         arguments.emplace_back(fmt_stmt(*field));
     }
 
-    return build.comma_separated_list("{", "}", std::move(arguments));
+    return build.comma_separated_list("{", "}", std::move(arguments), expr.haveTrailingComma);
 }
 
 ptr<Node> Formatter::fmt_sizeof_expr(const SizeofExpr& expr) {
@@ -215,6 +224,42 @@ ptr<Node> Formatter::fmt_range_expr(const RangeExpr& expr) {
     ret->nodes.emplace_back(fmt_expr(*expr.startExpr));
     ret->nodes.emplace_back(makePtr<Text>(".."));
     ret->nodes.emplace_back(fmt_expr(*expr.endExpr));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_error_in_place_expr(const ErrorInPlaceExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("error."));
+    ret->nodes.emplace_back(makePtr<Text>(expr.identifier));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_try_error_expr(const TryErrorExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("try"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*expr.errorToTry));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_orelse_error_expr(const OrElseErrorExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(fmt_expr(*expr.errorToOrElse));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("orelse"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*expr.orElseExpr));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(fmt_expr(*expr.base));
+    vec<ptr<Node>> gens;
+    for (auto&& gen : expr.types) {
+        gens.emplace_back(fmt_expr(*gen));
+    }
+    ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
     return ret;
 }
 }  // namespace fmt

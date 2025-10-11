@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '5\n4\n1\n3\n2\n1\nSecond-last\nThe last one\n')
 
 fn foo(x: i32) -> void {

@@ -2,10 +2,10 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-fn print<T>(param:T) -> void! {
+fn print<T>(param:T) -> !void {
     printf("Pointer of type %d\n", param);
 }
-// CHECK: GenericFunctionDecl print -> void!
+// CHECK: GenericFunctionDecl print -> !void
 // CHECK-NEXT:   GenericTypeDecl T
 // CHECK-NEXT:   ParamDecl:T param
 // CHECK-NEXT:   Block

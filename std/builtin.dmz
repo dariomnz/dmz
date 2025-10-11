@@ -17,17 +17,16 @@ fn @builtin_test_name(n: i32) -> *u8 {
 fn __builtin_main_test() -> void {
     const num_test = @builtin_test_num();
     let result = 0;
-    let i = 0;
-    while (i < num_test) {
+
+    for (0..num_test) |i| {
         result = result + 1;
         const test_name = @builtin_test_name(i);
-        // std.io.printf("Run test [%d/%d] '%s'.\n", i+1, num_test, test_name);
+        // std.io.printf("Run test [%d/%d] '%s'.\n", i + 1, num_test, test_name);
         let err = catch @builtin_test_run(i);
         if (err) {
             std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, err);
             result = result - 1;
         }
-        i = i + 1;
     }
 
     if (result == num_test) {

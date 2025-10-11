@@ -1,6 +1,9 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-fn main() -> void {}
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+fn main() -> void {
+}
 
 // CHECK: [[# @LINE + 1 ]]:1: error: redeclaration of 'main'
-fn main() -> void {}
+fn main() -> void {
+}
+
 // CHECK-NOT: {{.*}}

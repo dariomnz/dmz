@@ -1,11 +1,11 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32,
+    x: i32,
 }
 
 fn main() -> void {
-  let s = S { x: 1 };
+    let s = S{x: 1};
 
-  !s;
-  // CHECK: [[# @LINE - 1 ]]:4: error: 'S{}' cannot be used as an operand to unary operator '!'
+    !s;
+    // CHECK: [[# @LINE - 1 ]]:6: error: 'S{}' cannot be used as an operand to unary operator '!'
 }

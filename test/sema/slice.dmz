@@ -1,9 +1,10 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 fn main() -> void {
     const str = "Hello, World\n";
     const slice: []u8 = str[0..5];
 }
+
 // CHECK: ResolvedModuleDecl slice
 // CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock

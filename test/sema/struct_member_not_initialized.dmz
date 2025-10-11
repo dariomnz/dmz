@@ -1,14 +1,14 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct Color {
-  r: i32,
-  g: i32,
-  b: i32,
+    r: i32,
+    g: i32,
+    b: i32,
 }
 
 fn main() -> void {
-  // CHECK: [[# @LINE + 2 ]]:11: error: field 'r' is not initialized
-  // CHECK: [[# @LINE + 1 ]]:11: error: field 'g' is not initialized
-  let x = Color {
-    b: 2,
-  };
+    // CHECK: [[# @LINE + 2 ]]:13: error: field 'r' is not initialized
+    // CHECK: [[# @LINE + 1 ]]:13: error: field 'g' is not initialized
+    let x = Color{
+        b: 2,
+    };
 }

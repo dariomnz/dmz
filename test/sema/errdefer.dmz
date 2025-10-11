@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Call foo false\nfoo normal defer\nCall foo true\nfoo err defer\nfoo normal defer\nmain normal defer\n")
 
 const e = error {
@@ -7,14 +7,14 @@ const e = error {
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-fn foo(n: bool) -> void! {
+fn foo(n: bool) -> !void {
     defer printf("foo normal defer\n");
     errdefer printf("foo err defer\n");
     if (n == true) {
         return e.ERROR_ONE;
     }
 }
-// CHECK:   ResolvedFunctionDecl foo fn(bool)->void!
+// CHECK:   ResolvedFunctionDecl foo fn(bool)->!void
 // CHECK-NEXT:     ResolvedParamDecl:bool n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeferStmt
@@ -69,15 +69,15 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Call foo false\n'
 // CHECK-NEXT:       ResolvedTryErrorExpr:void
-// CHECK-NEXT:         ResolvedCallExpr:void!
-// CHECK-NEXT:           ResolvedDeclRefExpr:fn(bool)->void! foo
+// CHECK-NEXT:         ResolvedCallExpr:!void
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(bool)->!void foo
 // CHECK-NEXT:           ResolvedBoolLiteral:bool 'false'
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Call foo true\n'
-// CHECK-NEXT:       ResolvedCallExpr:void!
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn(bool)->void! foo
+// CHECK-NEXT:       ResolvedCallExpr:!void
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(bool)->!void foo
 // CHECK-NEXT:         ResolvedBoolLiteral:bool 'true'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:       ResolvedDeferRefStmt

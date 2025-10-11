@@ -29,9 +29,10 @@ ptr<Expr> Parser::parse_primary() {
     }
     if (m_nextToken.type == TokenType::kw_fn && peek_token().type == TokenType::par_l) {
         eat_next_token();  // eat fn
-        varOrReturn(paramsList, (parse_expr_list_with_trailing_comma({TokenType::par_l, "expected '('"},
-                                                                     [&]() { return parse_type(); },
-                                                                     {TokenType::par_r, "expected ')'"})));
+        bool haveTrailingComma;
+        varOrReturn(paramsList, (parse_list_with_trailing_comma<Expr>(
+                                    {TokenType::par_l, "expected '('"}, [&]() { return parse_type(); },
+                                    {TokenType::par_r, "expected ')'"}, haveTrailingComma)));
 
         matchOrReturn(TokenType::return_arrow, "expected '->'");
         eat_next_token();  // eat '->'
@@ -88,15 +89,17 @@ ptr<Expr> Parser::parse_primary() {
             return literal;
         }
         if (m_nextToken.type == TokenType::block_l) {
+            bool haveTrailingComma;
             auto initList = parse_list_with_trailing_comma<Expr>(
-                {TokenType::block_l, "expected '{'"}, &Parser::parse_expr, {TokenType::block_r, "expected '}'"});
+                {TokenType::block_l, "expected '{'"}, [this]() { return parse_expr(); },
+                {TokenType::block_r, "expected '}'"}, haveTrailingComma);
             if (!initList) {
                 synchronize_on({TokenType::block_r});
                 eat_next_token();  // eat '}'
                 return nullptr;
             }
 
-            return makePtr<ArrayInstantiationExpr>(location, std::move(*initList));
+            return makePtr<ArrayInstantiationExpr>(location, std::move(*initList), haveTrailingComma);
         }
         if (m_nextToken.type == TokenType::kw_catch) {
             return parse_catch_error_expr();
@@ -163,24 +166,28 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
 
     if (!(restrictions & OnlyTypeExpr) && m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
-        varOrReturn(argumentList,
-                    parse_list_with_trailing_comma<Expr>({TokenType::par_l, "expected '('"}, &Parser::parse_expr,
-                                                         {TokenType::par_r, "expected ')'"}));
+        bool haveTrailingComma;
+        varOrReturn(argumentList, parse_list_with_trailing_comma<Expr>(
+                                      {TokenType::par_l, "expected '('"}, [this]() { return parse_expr(); },
+                                      {TokenType::par_r, "expected ')'"}, haveTrailingComma));
 
-        expr = makePtr<CallExpr>(location, std::move(expr), std::move(*argumentList));
+        expr = makePtr<CallExpr>(location, std::move(expr), std::move(*argumentList), haveTrailingComma);
         return parse_postfix_expr(std::move(expr));
     }
     if (!(restrictions & (StructNotAllowed | OnlyTypeExpr)) && m_nextToken.type == TokenType::block_l) {
         SourceLocation location = m_nextToken.loc;
+        bool haveTrailingComma;
         auto fieldInitList = parse_list_with_trailing_comma<FieldInitStmt>(
-            {TokenType::block_l, "expected '{'"}, &Parser::parse_field_init_stmt, {TokenType::block_r, "expected '}'"});
+            {TokenType::block_l, "expected '{'"}, [this]() { return parse_field_init_stmt(); },
+            {TokenType::block_r, "expected '}'"}, haveTrailingComma);
 
         if (!fieldInitList) {
             synchronize_on({TokenType::block_r});
             eat_next_token();  // eat '}'
             return nullptr;
         }
-        expr = makePtr<StructInstantiationExpr>(expr->location, std::move(expr), std::move(*fieldInitList));
+        expr = makePtr<StructInstantiationExpr>(expr->location, std::move(expr), std::move(*fieldInitList),
+                                                haveTrailingComma);
         return parse_postfix_expr(std::move(expr));
     }
     if (m_nextToken.type == TokenType::dot) {

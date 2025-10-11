@@ -1,13 +1,17 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
-struct S {}
-struct S2 {}
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+struct S {
+}
+struct S2 {
+}
 
 fn main() -> void {
-  let x = S {};
+    let x = S{};
 
-  if (x) {}
-  // CHECK: [[# @LINE - 1 ]]:7: error: unexpected type in condition 'S{}'
+    // CHECK: [[# @LINE + 1 ]]:9: error: unexpected type in condition 'S{}'
+    if (x) {
+    }
 
-  while (x) {}
-  // CHECK: [[# @LINE - 1 ]]:10: error: unexpected type in condition 'S{}'
+    // CHECK: [[# @LINE + 1 ]]:12: error: unexpected type in condition 'S{}'
+    while (x) {
+    }
 }

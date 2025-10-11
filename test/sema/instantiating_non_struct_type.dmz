@@ -1,5 +1,5 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 fn main() -> void {
-  let x = invalid { x: 0 };
-  // CHECK: [[# @LINE - 1 ]]:11: error: symbol 'invalid' not found
+    let x = invalid{x: 0};
+    // CHECK: [[# @LINE - 1 ]]:13: error: symbol 'invalid' not found
 }

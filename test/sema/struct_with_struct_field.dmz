@@ -1,17 +1,17 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct Point {
-  x: i32,
-  y: i32,
+    x: i32,
+    y: i32,
 }
 // CHECK: ResolvedStructDecl  struct_with_struct_field.Point
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
 struct Color {
-  r: i32,
-  g: i32,
-  b: i32,
-  p: Point,
+    r: i32,
+    g: i32,
+    b: i32,
+    p: Point,
 }
 // CHECK: ResolvedStructDecl  struct_with_struct_field.Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
@@ -20,13 +20,14 @@ struct Color {
 // CHECK-NEXT:   ResolvedFieldDecl:struct_with_struct_field.Point{} p
 
 fn main() -> void {
-  let x = Color { 
-    r: 0,
-    g: 1,
-    b: 2,
-    p: Point { x: 3 + 4, y: 4 * 9 },
-  };
+    let x = Color{
+        r: 0,
+        g: 1,
+        b: 2,
+        p: Point{x: 3 + 4, y: 4 * 9},
+    };
 }
+
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt

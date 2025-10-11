@@ -5,7 +5,7 @@ const e = error {
     ERROR_ONE
 };
 
-fn foo(n:i32) -> i32! {
+fn foo(n:i32) -> !i32 {
     printf("foo called\n");
     if (n == 0) {
         return e.ERROR_ONE;

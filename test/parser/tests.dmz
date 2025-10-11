@@ -8,7 +8,7 @@ test "add test" {
     try std.testing.expect(add(1, 1) == 2);
     try std.testing.expect(add(1, 1) == 3);
 }
-// CHECK:   TestDecl add test -> void!
+// CHECK:   TestDecl add test -> !void
 // CHECK-NEXT:     Block
 // CHECK-NEXT:       TryErrorExpr 
 // CHECK-NEXT:         CallExpr

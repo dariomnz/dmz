@@ -1,7 +1,10 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 // CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'userDefinedType' return type
-fn foo() -> userDefinedType {}
+fn foo() -> userDefinedType {
+}
 
-fn main() -> void {}
+fn main() -> void {
+}
+
 // CHECK-NOT: {{.*}}

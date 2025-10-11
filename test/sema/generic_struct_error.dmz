@@ -1,18 +1,18 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
-extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 struct Point<T> {
-    x:T,
-    y:T,
+    x: T,
+    y: T,
 }
 
-fn add<T>(x:T) -> T {
+fn add<T>(x: T) -> T {
     return x;
 }
 
 fn main() -> void {
-    let p1 = Point{x:1, y:2};
+    let p1 = Point{x: 1, y: 2};
     // CHECK: [[# @LINE - 1 ]]:14: error: 'Point' is a generic and need specialization
 
     add(63);

@@ -382,7 +382,7 @@ void ResolvedTypeOptional::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeOptional " << to_str() << "\n";
 }
 
-std::string ResolvedTypeOptional::to_str() const { return optionalType->to_str() + "!"; }
+std::string ResolvedTypeOptional::to_str() const { return "!" + optionalType->to_str(); }
 
 bool ResolvedTypePointer::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << location);

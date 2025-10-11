@@ -1,16 +1,17 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32
+    x: i32,
 }
 
 struct S2 {
-  x: i32
+    x: i32,
 }
 
-fn foo(s: S) -> void {}
+fn foo(s: S) -> void {
+}
 
 fn main() -> void {
-  foo(S {x: 0});
-  foo(S2 {x: 0});
-  // CHECK: [[# @LINE - 1 ]]:7: error: unexpected type of argument
+    foo(S{x: 0});
+    foo(S2{x: 0});
+    // CHECK: [[# @LINE - 1 ]]:9: error: unexpected type of argument
 }

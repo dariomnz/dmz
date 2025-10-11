@@ -11,7 +11,7 @@ const e = error {
 // CHECK-NEXT: @error.str.ERROR_TWO = private constant [10 x i8] c"ERROR_TWO\00"
 // CHECK-NEXT: @error.str.ERROR_THREE = private constant [12 x i8] c"ERROR_THREE\00"
 
-fn foo(x:i32) -> i32! {
+fn foo(x:i32) -> !i32 {
     if (x == 1){
         return e.ERROR_ONE;
     }
@@ -35,7 +35,7 @@ fn foo(x:i32) -> i32! {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn bar(x:i32) -> i32! {
+fn bar(x:i32) -> !i32 {
     if (x == 2){
         return e.ERROR_TWO;
     }
@@ -78,7 +78,7 @@ fn bar(x:i32) -> i32! {
 
 extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;
 
-fn voiderr(n:i32) -> void! {
+fn voiderr(n:i32) -> !void {
     if (n == 0){
         return e.ERROR_THREE;
     }

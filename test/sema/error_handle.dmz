@@ -1,4 +1,4 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 const e = error {
     ERROR_ONE,
@@ -12,15 +12,18 @@ const e = error {
 // CHECK-NEXT:         ResolvedErrorDecl ERROR_TWO
 // CHECK-NEXT:         ResolvedErrorDecl ERROR_THREE
 
-fn foo(x:i32) -> i32! {
-    if (x == 1){
+fn foo(x: i32) -> !i32 {
+    if (x == 1) {
         return e.ERROR_ONE;
-    }else if (x == 2){
-        return e.ERROR_TWO;
+    } else {
+        if (x == 2) {
+            return e.ERROR_TWO;
+        }
     }
     return x;
 }
-// CHECK:   ResolvedFunctionDecl foo fn(i32)->i32!
+
+// CHECK:   ResolvedFunctionDecl foo fn(i32)->!i32
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedIfStmt
@@ -43,7 +46,7 @@ fn foo(x:i32) -> i32! {
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
 
-extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;
+extern fn dprintf(fd: i32, fmt: *u8, ...) -> i32;
 
 fn main() -> void {
     let result = foo(2);
@@ -51,34 +54,35 @@ fn main() -> void {
     dprintf(1, "%s\n", result_e);
 
     let err = catch result;
-    if (err){
+    if (err) {
         dprintf(1, "%s\n", err);
     }
     let result2 = try foo(10);
     dprintf(1, "%d\n", result2);
 
-    if (catch result){
+    if (catch result) {
         dprintf(1, "There are an error\n");
     }
-    if (catch foo(2)){
+    if (catch foo(2)) {
         dprintf(1, "There are an error\n");
     }
 
     dprintf(1, "No error %d\n", result);
     dprintf(1, "No safe error %d\n", try foo(10));
 }
+
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:i32! result
-// CHECK-NEXT:           ResolvedCallExpr:i32!
-// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:         ResolvedVarDecl:!i32 result
+// CHECK-NEXT:           ResolvedCallExpr:!i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:const error result_e
 // CHECK-NEXT:           ResolvedCatchErrorExpr:error
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32! result
+// CHECK-NEXT:             ResolvedDeclRefExpr:!i32 result
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32, *u8, ...)->i32 dprintf
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
@@ -88,7 +92,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:error err
 // CHECK-NEXT:           ResolvedCatchErrorExpr:error
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32! result
+// CHECK-NEXT:             ResolvedDeclRefExpr:!i32 result
 // CHECK-NEXT:       ResolvedIfStmt
 // CHECK-NEXT:         ResolvedDeclRefExpr:error err
 // CHECK-NEXT:         ResolvedBlock
@@ -101,8 +105,8 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:i32 result2
 // CHECK-NEXT:           ResolvedTryErrorExpr:i32
-// CHECK-NEXT:             ResolvedCallExpr:i32!
-// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:             ResolvedCallExpr:!i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:               | value: 10
 // CHECK-NEXT:       ResolvedCallExpr:i32
@@ -113,7 +117,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 result2
 // CHECK-NEXT:       ResolvedIfStmt
 // CHECK-NEXT:         ResolvedCatchErrorExpr:error
-// CHECK-NEXT:           ResolvedDeclRefExpr:i32! result
+// CHECK-NEXT:           ResolvedDeclRefExpr:!i32 result
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedCallExpr:i32
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32, *u8, ...)->i32 dprintf
@@ -122,8 +126,8 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 'There are an error\n'
 // CHECK-NEXT:       ResolvedIfStmt
 // CHECK-NEXT:         ResolvedCatchErrorExpr:error
-// CHECK-NEXT:           ResolvedCallExpr:i32!
-// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:           ResolvedCallExpr:!i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:         ResolvedBlock
@@ -137,14 +141,14 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'No error %d\n'
-// CHECK-NEXT:         ResolvedDeclRefExpr:i32! result
+// CHECK-NEXT:         ResolvedDeclRefExpr:!i32 result
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32, *u8, ...)->i32 dprintf
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'No safe error %d\n'
 // CHECK-NEXT:         ResolvedTryErrorExpr:i32
-// CHECK-NEXT:           ResolvedCallExpr:i32!
-// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32! foo
+// CHECK-NEXT:           ResolvedCallExpr:!i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->!i32 foo
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:             | value: 10

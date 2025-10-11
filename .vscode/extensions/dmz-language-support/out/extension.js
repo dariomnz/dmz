@@ -59,13 +59,11 @@ const registerFormatters = (outputChannel) => {
 };
 const formatDocument = (document, options, outputChannel) => {
     const command = "dmz -fmt -";
-    outputChannel.appendLine(`command ${command}`);
-    outputChannel.appendLine(`document.uri.path ${document.uri.path}`);
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
     const backupFolder = vscode.workspace.workspaceFolders?.[0];
     const cwd = workspaceFolder?.uri?.fsPath || backupFolder?.uri.fsPath;
     return new Promise(async (resolve, reject) => {
-        outputChannel.appendLine(`Started formatter: ${command}`);
+        outputChannel.appendLine(`Started formatter: ${command} on file ${document.fileName}`);
         const textToFormat = document.getText();
         const targetRange = new vscode.Range(document.lineAt(0).range.start, document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end);
         const process = (0, child_process_1.spawn)(command, { cwd, shell: true });
@@ -84,7 +82,7 @@ const formatDocument = (document, options, outputChannel) => {
                 const reason = signal
                     ? `terminated by signal ${signal} (likely due to a timeout or external termination)`
                     : `exited with code ${code}`;
-                const message = `Formatter failed: ${command}\nReason: ${reason}`;
+                const message = `Formatter failed: ${command} on file ${document.fileName}\nReason: ${reason}`;
                 outputChannel.appendLine(message);
                 if (stderr !== "")
                     outputChannel.appendLine(`Stderr:\n${stderr}`);
@@ -102,7 +100,7 @@ const formatDocument = (document, options, outputChannel) => {
                 resolve([]);
                 return;
             }
-            outputChannel.appendLine(`Finished running formatter: ${command}`);
+            outputChannel.appendLine(`Finished running formatter: ${command} on file ${document.fileName}`);
             if (stderr.length > 0)
                 outputChannel.appendLine(`Possible issues occurred:\n${stderr}`);
             resolve([new vscode.TextEdit(targetRange, stdout)]);

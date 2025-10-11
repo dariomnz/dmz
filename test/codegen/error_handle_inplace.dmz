@@ -1,14 +1,17 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Error 1 ERROR_ONE\nError 2 ERROR_TWO\n")
 
-fn foo(x:i32) -> i32! {
-    if (x == 1){
+fn foo(x: i32) -> !i32 {
+    if (x == 1) {
         return error.ERROR_ONE;
-    }else if (x == 2){
-        return error.ERROR_TWO;
+    } else {
+        if (x == 2) {
+            return error.ERROR_TWO;
+        }
     }
     return 10;
 }
+
 // CHECK: define void @error_handle_inplace.foo(ptr sret(%error.struct.i32) %ret, i32 %x) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %0 = icmp eq i32 %x, 1
@@ -39,7 +42,7 @@ fn foo(x:i32) -> i32! {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
     let err = catch foo(1);

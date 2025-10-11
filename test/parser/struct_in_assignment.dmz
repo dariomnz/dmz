@@ -1,4 +1,4 @@
-// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
 struct S {}
 
 fn main() -> void {

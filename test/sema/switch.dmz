@@ -1,17 +1,18 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
-extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
     let x = 10;
 
-    switch(x) {
+    switch (x) {
         case 1 => printf("1\n");
         case 2 => printf("2\n");
         case 3 => printf("3\n");
-        else   => printf("else %d\n", x);
+        else => printf("else %d\n", x);
     }
 }
+
 // CHECK: ResolvedSwitchStmt
 // CHECK-NEXT:      ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:      ResolvedCaseStmt

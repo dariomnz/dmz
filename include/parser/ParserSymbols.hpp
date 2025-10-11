@@ -70,6 +70,10 @@ struct EmptyLine : Decoration {
     EmptyLine(SourceLocation location) : Decoration(location) {}
 };
 
+struct Comma : Decoration {
+    Comma(SourceLocation location) : Decoration(location) {}
+};
+
 struct Type : public Expr {
     Type(SourceLocation location) : Expr(location) {}
 };
@@ -216,9 +220,14 @@ struct FieldInitStmt : public Stmt {
 struct StructInstantiationExpr : public Expr {
     ptr<Expr> base;
     std::vector<ptr<FieldInitStmt>> fieldInitializers;
+    bool haveTrailingComma;
 
-    StructInstantiationExpr(SourceLocation location, ptr<Expr> base, std::vector<ptr<FieldInitStmt>> fieldInitializers)
-        : Expr(location), base(std::move(base)), fieldInitializers(std::move(fieldInitializers)) {}
+    StructInstantiationExpr(SourceLocation location, ptr<Expr> base, std::vector<ptr<FieldInitStmt>> fieldInitializers,
+                            bool haveTrailingComma)
+        : Expr(location),
+          base(std::move(base)),
+          fieldInitializers(std::move(fieldInitializers)),
+          haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -226,9 +235,10 @@ struct StructInstantiationExpr : public Expr {
 
 struct ArrayInstantiationExpr : public Expr {
     std::vector<ptr<Expr>> initializers;
+    bool haveTrailingComma;
 
-    ArrayInstantiationExpr(SourceLocation location, std::vector<ptr<Expr>> initializers)
-        : Expr(location), initializers(std::move(initializers)) {}
+    ArrayInstantiationExpr(SourceLocation location, std::vector<ptr<Expr>> initializers, bool haveTrailingComma)
+        : Expr(location), initializers(std::move(initializers)), haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -307,9 +317,13 @@ struct SizeofExpr : public Expr {
 struct CallExpr : public Expr {
     ptr<Expr> callee;
     std::vector<ptr<Expr>> arguments;
+    bool haveTrailingComma;
 
-    CallExpr(SourceLocation location, ptr<Expr> callee, std::vector<ptr<Expr>> arguments)
-        : Expr(location), callee(std::move(callee)), arguments(std::move(arguments)) {}
+    CallExpr(SourceLocation location, ptr<Expr> callee, std::vector<ptr<Expr>> arguments, bool haveTrailingComma)
+        : Expr(location),
+          callee(std::move(callee)),
+          arguments(std::move(arguments)),
+          haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -613,9 +627,10 @@ struct ErrorInPlaceExpr : public Expr {
 struct ErrorGroupExprDecl : public Expr, public Decl {
     SourceLocation location;
     std::vector<ptr<ErrorDecl>> errs;
+    bool haveTrailingComma;
 
-    ErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ErrorDecl>> errs)
-        : Expr(location), Decl(location, true, ""), errs(std::move(errs)) {}
+    ErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ErrorDecl>> errs, bool haveTrailingComma)
+        : Expr(location), Decl(location, true, ""), errs(std::move(errs)), haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

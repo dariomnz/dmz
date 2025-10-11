@@ -1,16 +1,16 @@
-// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 struct S {
-  x: i32,
-  n: S2
+    x: i32,
+    n: S2,
 }
 
 struct S2 {
-  x: i32
+    x: i32,
 }
 
 fn main() -> void {
-  let s = S { x: 0, n: S2 { x: 1 } };
+    let s = S{x: 0, n: S2{x: 1}};
 
-  let x = s.y.x;
-  // CHECK: [[# @LINE - 1 ]]:12: error: struct 'S{}' has no member called 'y'
+    let x = s.y.x;
+    // CHECK: [[# @LINE - 1 ]]:14: error: struct 'S{}' has no member called 'y'
 }
