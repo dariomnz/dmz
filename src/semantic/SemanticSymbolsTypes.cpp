@@ -151,6 +151,9 @@ std::string ResolvedTypeStructDecl::to_str() const {
     std::stringstream out;
     if (decl->symbolName.empty()) {
         out << decl->identifier;
+        if (auto genStru = dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
+            out << ResolvedGenericTypeDecl::generic_types_to_str(genStru->genericTypeDecls);
+        }
         if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
             out << speStru->specializedTypes->to_str();
         }
@@ -190,6 +193,9 @@ std::string ResolvedTypeStruct::to_str() const {
     std::stringstream out;
     if (decl->symbolName.empty()) {
         out << decl->identifier;
+        if (auto genStru = dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
+            out << ResolvedGenericTypeDecl::generic_types_to_str(genStru->genericTypeDecls);
+        }
         if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
             out << speStru->specializedTypes->to_str();
         }

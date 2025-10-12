@@ -105,11 +105,7 @@ ptr<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
     vec<ptr<Node>> nodes;
     for (size_t i = 0; i < decl.decls.size(); i++) {
         nodes.emplace_back(fmt_decl(*decl.decls[i]));
-        // Extra line for functions
         nodes.emplace_back(makePtr<Line>());
-        if (i < decl.decls.size() - 1 && !dynamic_cast<FieldDecl*>(decl.decls[i].get())) {
-            nodes.emplace_back(makePtr<Line>());
-        }
     }
 
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});

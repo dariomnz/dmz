@@ -21,7 +21,7 @@ fn print_color(n: Color) -> void {
     ops.println(n.b);
 }
 
-fn add_color(n:Color, add:i32) -> Color {
+fn add_color(n: Color, add: i32) -> Color {
     let aux = n;
     aux.r = n.r + add;
     aux.g = n.g + add;
@@ -30,7 +30,7 @@ fn add_color(n:Color, add:i32) -> Color {
 }
 
 fn main() -> void {
-    let c = Color{r:1,g:2,b:3};
+    let c = Color{r: 1, g: 2, b: 3};
     print_color(c);
     let c2 = add_color(c, 40);
     print_color(c2);

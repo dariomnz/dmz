@@ -34,7 +34,7 @@ void Sema::dump_modules_for_import() const {
     }
 }
 
-bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
+bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) {
     debug_func(decl.identifier << " " << decl.location);
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << decl.identifier << " ======================");
@@ -42,6 +42,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl) {
     const auto foundDecl = lookup(decl.location, decl.identifier, false);
 
     if (foundDecl) {
+        if (ignoreIfFound) return true;
 #ifdef DEBUG_SCOPES
         dump_scopes();
 #endif
@@ -329,31 +330,55 @@ ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &g
 }
 
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
-    debug_func(Dumper([&]() { type.dump(); }));
+    ptr<ResolvedType> ret = nullptr;
+    ResolvedType *retPtr = nullptr;
+    debug_func("'" << type.to_str() << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
         if (genType->decl->specializedType) {
-            return re_resolve_type(*genType->decl->specializedType);
+            ret = re_resolve_type(*genType->decl->specializedType);
+            retPtr = ret.get();
+            return ret;
         } else {
-            return genType->clone();
+            ret = genType->clone();
+            retPtr = ret.get();
+            return ret;
         }
     }
     if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
-        return makePtr<ResolvedTypeArray>(arrType->location, re_resolve_type(*arrType->arrayType), arrType->arraySize);
+        ret = makePtr<ResolvedTypeArray>(arrType->location, re_resolve_type(*arrType->arrayType), arrType->arraySize);
+        retPtr = ret.get();
+        return ret;
     }
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&type)) {
-        return makePtr<ResolvedTypeOptional>(optType->location, re_resolve_type(*optType->optionalType));
+        ret = makePtr<ResolvedTypeOptional>(optType->location, re_resolve_type(*optType->optionalType));
+        retPtr = ret.get();
+        return ret;
     }
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&type)) {
-        return makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
+        ret = makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
+        retPtr = ret.get();
+        return ret;
     }
     if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
-        return makePtr<ResolvedTypeSlice>(sliceType->location, re_resolve_type(*sliceType->sliceType));
+        ret = makePtr<ResolvedTypeSlice>(sliceType->location, re_resolve_type(*sliceType->sliceType));
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(structType->decl)) {
+            // specialize_generic_struct(type.location, genStruct, const ResolvedTypeSpecialized &specializedTypes)
+            // println(structType->location);
+            // structType->dump();
+            // structType->decl->dump();
+        }
     }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
         type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||
         type.kind == ResolvedTypeKind::Function) {
-        return type.clone();
+        ret = type.clone();
+        retPtr = ret.get();
+        return ret;
     }
     type.dump();
     dmz_unreachable("TODO");
@@ -889,6 +914,12 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
         }
         if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
             e.decl->symbolName += struc->specializedTypes->to_str();
+        }
+        if (const auto *func = dynamic_cast<const ResolvedGenericFunctionDecl *>(e.decl)) {
+            e.decl->symbolName += ResolvedGenericTypeDecl::generic_types_to_str(func->genericTypeDecls);
+        }
+        if (const auto *struc = dynamic_cast<const ResolvedGenericStructDecl *>(e.decl)) {
+            e.decl->symbolName += ResolvedGenericTypeDecl::generic_types_to_str(struc->genericTypeDecls);
         }
         debug_msg(indent(e.level) << "Symbol name: " << e.decl->symbolName);
         // println(indent(e.level) << "Symbol identifier: " << e.decl->identifier);

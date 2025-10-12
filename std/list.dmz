@@ -1,0 +1,115 @@
+const std = import("std");
+
+pub struct Node<T> {
+    value: T,
+    next: *@This,
+}
+
+pub struct NodeIterator<T> {
+    current: *Node<T>,
+
+    pub fn next(self: *@This) -> *T {
+        if (!self.current) {
+            return null;
+        }
+        const value_ptr = &(*self.current).value;
+
+        self.current = (*self.current).next;
+
+        return value_ptr;
+    }
+}
+
+pub struct SimplyLinkedList<T> {
+    head: *Node<i32>,
+    len: usize,
+    alloc: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator) -> @This {
+        return @This{
+            head: null,
+            len: 0,
+            alloc: allocator,
+        };
+    }
+
+    pub fn deinit(self: *@This) -> void {
+        let current = self.head;
+        while (current) {
+            const next = current.next;
+            self.alloc.free(current);
+            current = next;
+        }
+        self.head = null;
+        self.len = 0;
+    }
+
+    pub fn insertAtFirst(self: *@This, data: T) -> !void {
+        const new_node: *Node<T> = self.alloc.malloc(@sizeof(Node<T>));
+        if (!new_node) {
+            return error.OutOfMemory;
+        }
+
+        *new_node = Node<T>{
+            value: data,
+            next: self.head,
+        };
+
+        self.head = new_node;
+        self.len++;
+    }
+
+    pub fn get(self: *@This, index: usize) -> !T {
+        if (index >= self.len) {
+            return error.IndexOutOfLenght;
+        }
+        let node = self.head;
+        for (0..index) |i| {
+            node = (*node).next;
+        }
+        return (*node).value;
+    }
+
+    pub fn size(self: *@This) -> usize {
+        return self.len;
+    }
+
+    pub fn iterator(self: *@This) -> NodeIterator<T> {
+        return NodeIterator<T>{
+            current: self.head,
+        };
+    }
+}
+
+test "SimplyLinkedList insertAtFirst" {
+    let libc_alloc = std.mem.libc_allocator.init();
+    defer libc_alloc.deinit();
+    let allocator = libc_alloc.Allocator();
+    let list = SimplyLinkedList<i32>.init(allocator);
+    defer list.deinit();
+
+    const list_size = 10;
+    for (0..list_size) |i| {
+        try list.insertAtFirst(i);
+        std.io.printf("try list.insertAtFirst(%d)\n", i);
+
+    }
+
+    std.io.printf("list.size() = %d\n", list.size());
+    for (0..list.size()) |i| {
+        std.io.printf("list[%d] = %d\n", i, try list.get(i));
+    }
+
+    let iter = list.iterator();
+
+    let node = iter.next();
+    let i = 0;
+    std.io.printf("list.size() = %d\n", list.size());
+    while (i < list_size) {
+        std.io.printf("list[%d] = %d\n", i, *node);
+        node = iter.next();
+        i++;
+    }
+
+    try std.testing.expect(list.size() == list_size);
+}

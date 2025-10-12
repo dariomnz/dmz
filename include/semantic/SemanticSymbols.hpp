@@ -76,6 +76,8 @@ struct ResolvedGenericTypeDecl : public ResolvedDecl {
         : ResolvedDecl(location, identifier, makePtr<ResolvedTypeGeneric>(location, this), false, false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const;
+
+    static std::string generic_types_to_str(const std::vector<ptr<ResolvedGenericTypeDecl>> &genericTypeDecls);
 };
 
 // Forward declaration

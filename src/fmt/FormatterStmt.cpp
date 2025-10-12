@@ -40,6 +40,9 @@ ptr<Node> Formatter::fmt_stmt(const Stmt& stmt) {
     } else if (auto cast_stmt = dynamic_cast<const Block*>(&stmt)) {
         node = fmt_block(*cast_stmt, false);
         needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const DeferStmt*>(&stmt)) {
+        node = fmt_defer_stmt(*cast_stmt);
+        needSemicolon = false;
     } else {
         stmt.dump();
         dmz_unreachable("TODO");
@@ -214,6 +217,18 @@ ptr<Node> Formatter::fmt_field_init_stmt(const FieldInitStmt& stmt) {
     ret->nodes.emplace_back(makePtr<Text>(":"));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(fmt_expr(*stmt.initializer));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_defer_stmt(const DeferStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (stmt.isErrDefer) {
+        ret->nodes.emplace_back(makePtr<Text>("errdefer"));
+    } else {
+        ret->nodes.emplace_back(makePtr<Text>("defer"));
+    }
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_block(*stmt.block, true, false));
     return ret;
 }
 }  // namespace fmt

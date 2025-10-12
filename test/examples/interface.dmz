@@ -26,6 +26,7 @@ struct Square {
     pub fn draw(self: *@This) -> void {
         printf("Square h: %d w: %d\n", self.h, self.w);
     }
+
     pub fn Shape(self: *@This) -> Shape {
         return Shape{
             shape: self,
@@ -39,6 +40,7 @@ struct Triangle {
     pub fn draw(self: *@This) -> void {
         printf("Triangle h: %d b: %d\n", self.h, self.b);
     }
+
     pub fn Shape(self: *@This) -> Shape {
         return Shape{
             shape: self,
@@ -49,18 +51,18 @@ struct Triangle {
 
 fn main() -> void {
 
-    let s = Square{h:1, w:2};
+    let s = Square{h: 1, w: 2};
     let sh = s.Shape();
 
     sh.draw();
 
-    let t = Triangle{h:2, b:4};
+    let t = Triangle{h: 2, b: 4};
     let sh2 = t.Shape();
 
     sh2.draw();
 
-    let s_array:Shape[2] = {sh, sh2};
-    
+    let s_array: Shape[2] = {sh, sh2};
+
     s_array[0].draw();
     s_array[1].draw();
 
@@ -69,7 +71,7 @@ fn main() -> void {
     defer vector.deinit();
     try vector.add(sh);
     try vector.add(sh2);
-    
+
     let i = 0;
     while (i < vector.size()) {
         let aux_shape = try vector.get(i);

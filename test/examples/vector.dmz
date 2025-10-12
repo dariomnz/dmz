@@ -10,7 +10,7 @@ const std = import("std");
 fn printVector<T>(v: *std.vec<T>) -> void {
     std.io.printf("vector [");
     let slice = v.slice();
-    for(0..slice.len, slice) |i, val| {
+    for (0..slice.len, slice) |i, val| {
         std.io.printf("%d", *val);
         if (i != slice.len - 1) {
             std.io.printf(", ");
@@ -33,7 +33,7 @@ fn main() -> void {
         i = i + 1;
     }
     printVector<i32>(&v);
-    
+
     i = 0;
     while (i < 4) {
         try v.remove(0);

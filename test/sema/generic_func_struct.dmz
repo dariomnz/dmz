@@ -1,0 +1,42 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+struct Point<T> {
+    x: T,
+    y: T,
+}
+// CHECK: ResolvedGenericStructDecl generic_func_struct.Point<T>
+// CHECK-NEXT:   ResolvedGenericTypeDecl T
+// CHECK-NEXT:   ResolvedFieldDecl:T x
+// CHECK-NEXT:   ResolvedFieldDecl:T y
+// CHECK-NEXT:   ResolvedSpecializedStructDecl generic_func_struct.Point<i32>
+// CHECK-NEXT:     ResolvedFieldDecl:i32 x
+// CHECK-NEXT:     ResolvedFieldDecl:i32 y
+
+fn foo<T>() -> Point<T> {
+    return Point<T>{
+        x: 1,
+        y: 2,
+    };
+}
+// CHECK: ResolvedGenericFunctionDecl foo fn()->generic_func_struct.Point<T>{}
+// CHECK-NEXT:    ResolvedGenericTypeDecl T
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl foo<i32> fn()->generic_func_struct.Point<i32>{}
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedReturnStmt
+// CHECK-NEXT:          ResolvedStructInstantiationExpr:generic_func_struct.Point<i32>{}
+// CHECK-NEXT:            ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:              ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:              | value: 1
+// CHECK-NEXT:            ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:              ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:              | value: 2
+
+fn main() -> void {
+    foo<i32>();
+}
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedCallExpr:generic_func_struct.Point<i32>{}
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn()->generic_func_struct.Point<i32>{} foo

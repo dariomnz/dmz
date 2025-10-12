@@ -15,14 +15,14 @@ extern fn free(ptr: *void) -> void;
 extern fn exit(code: i32) -> void;
 
 fn main() -> void {
-    let ptr:*i32;
-    let numElementos:i32 = 5;
+    let ptr: *i32;
+    let numElementos: i32 = 5;
 
     ptr = malloc(numElementos * 4);
 
     printf("Memory successfully allocated for %d integers.\n", numElementos);
 
-    let i:i32 = 0;
+    let i: i32 = 0;
     while (i < numElementos) {
         ptr[i] = i + 1;
         printf("Element %d: %d\n", i, ptr[i]);

@@ -5,18 +5,18 @@
 // CHECK-NOT: {{.*}}
 const io = import("std").io;
 
-fn calculate_pi_leibniz(iterations:i32) -> f64 {
-    let pi_estimate:f64 = 0.0;
-    let sign:f64 = 1.0;
+fn calculate_pi_leibniz(iterations: i32) -> f64 {
+    let pi_estimate: f64 = 0.0;
+    let sign: f64 = 1.0;
 
-    let i:i32 = 0; 
-    let i_f:f64 = 0.0; 
+    let i: i32 = 0;
+    let i_f: f64 = 0.0;
     while (i < iterations) {
-        let term:f64 = sign / (2.0 * i_f + 1.0);
+        let term: f64 = sign / (2.0 * i_f + 1.0);
         pi_estimate = pi_estimate + term;
         sign = -sign;
-        i = i + 1; 
-        i_f = i_f + 1.0; 
+        i = i + 1;
+        i_f = i_f + 1.0;
     }
     return 4.0 * pi_estimate;
 }

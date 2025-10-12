@@ -205,8 +205,8 @@ bool Parser::nextToken_is_generic() {
     bool ret = false;
     debug_func(" ret: " << (ret ? "true" : "false"));
     std::unordered_set<TokenType> postGenericToken = {
-        TokenType::dot,   TokenType::block_l,   TokenType::par_l,
-        TokenType::par_r, TokenType::semicolon, TokenType::op_assign,
+        TokenType::dot,       TokenType::block_l,   TokenType::par_l, TokenType::par_r,
+        TokenType::semicolon, TokenType::op_assign, TokenType::comma,
     };
     if (m_nextToken.type == TokenType::op_less) {
         int blocks = 0;

@@ -6,7 +6,7 @@
 const io = import("std").io;
 
 fn main() -> void {
-    let num:i512 = 123456789;
+    let num: i512 = 123456789;
     num = num * 1000000000;
     num = num + 123456789;
     num = num * 1000000000;
@@ -33,7 +33,7 @@ fn main() -> void {
         io.printf("-");
     }
 
-    let buffer:i4[512] = {};
+    let buffer: i4[512] = {};
     let i = 0;
 
     while (num > 0) {

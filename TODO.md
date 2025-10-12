@@ -12,12 +12,13 @@
 - [x] Pointers
 - [x] Change modules and import
 - [x] Error defer
-- [x] pub pri in modules
+- [x] pub in declarations
 - [x] Arrays, vectors and slice
 - [x] Generics
 - [-] std (in progress)
 - [x] test
-- [ ] formatter
+- [x] formatter
+- [ ] formatter tests
 - [ ] benckmark
 - [x] add ops += ++
 - [x] add error. inplace

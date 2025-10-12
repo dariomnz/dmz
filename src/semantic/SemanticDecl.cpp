@@ -322,30 +322,7 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     m_currentStruct = resolvedStruct.get();
     defer([&]() { m_currentStruct = prevStruct; });
 
-    unsigned idx = 0;
-    for (auto &&field : struDecl.fields) {
-        auto type = re_resolve_type(*field->type);
-        if (!type) return report(field->location, "cannot resolve '" + field->type->to_str() + "' type");
-        resolvedFields.emplace_back(
-            makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
-    }
-
-    for (auto &&function : struDecl.functions) {
-        if (auto memFunc = dynamic_cast<const MemberFunctionDecl *>(function->functionDecl)) {
-            varOrReturn(func, resolve_member_function_decl(*resolvedStruct, *memFunc));
-            resolvedFunctions.emplace_back(std::move(func));
-        } else {
-            return report(function->location, "internal error, expected member function decl");
-        }
-    }
-
-    resolvedStruct->fields = std::move(resolvedFields);
-    resolvedStruct->functions = std::move(resolvedFunctions);
-
-    for (auto &&func : resolvedStruct->functions) {
-        if (!resolve_func_body(*func, *func->functionDecl->body)) return nullptr;
-    }
-
+    if (!resolve_struct_decl_funcs(*resolvedStruct)) return nullptr;
     if (!resolve_struct_members(*resolvedStruct)) return nullptr;
 
     auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
@@ -420,8 +397,8 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
             }
             if (shouldCheckType) {
                 if (!varDecl.type->compare(*resolvedInitializer->type)) {
-                    varDecl.type->dump();
-                    resolvedInitializer->type->dump();
+                    // varDecl.type->dump();
+                    // resolvedInitializer->type->dump();
                     report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                               varDecl.type->to_str() + "' actual '" +
                                                               resolvedInitializer->type->to_str() + "'");
@@ -490,7 +467,7 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         ScopeRAII fieldScope(*this);
         if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
             for (auto &&genType : genStruct->genericTypeDecls) {
-                if (!insert_decl_to_current_scope(*genType)) dmz_unreachable("unexpected error");
+                if (!insert_decl_to_current_scope(*genType, true)) dmz_unreachable("unexpected error");
             }
         }
 
@@ -534,7 +511,7 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     ScopeRAII structScope(*this);
     if (auto genstruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
         for (auto &&gen : genstruct->genericTypeDecls) {
-            if (!insert_decl_to_current_scope(*gen)) return false;
+            if (!insert_decl_to_current_scope(*gen, true)) return false;
         }
     }
 
@@ -630,23 +607,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
 ptr<ResolvedModuleDecl> Sema::resolve_module_decl(const ModuleDecl &moduleDecl) {
     debug_func(moduleDecl.location);
     std::vector<ptr<DMZ::ResolvedDecl>> declarations;
-    // bool error = false;
-    // {
-    //     ScopeRAII moduleScope(*this);
-    //     for (auto &&decl : moduleDecl.declarations) {
-    //         if (auto *md = dynamic_cast<ModuleDecl *>(decl.get())) {
-    //             auto resolvedDecl = resolve_module(*md);
 
-    //             if (!resolvedDecl) {
-    //                 error = true;
-    //                 continue;
-    //             }
-    //             declarations.emplace_back(std::move(resolvedDecl));
-    //             continue;
-    //         }
-    //     }
-    // }
-    // if (error) return nullptr;
     auto modDecl = makePtr<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, moduleDecl,
                                                moduleDecl.module_path, std::vector<ptr<DMZ::ResolvedDecl>>{});
 
@@ -735,155 +696,6 @@ bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl)
     return !error;
 }
 
-// bool Sema::resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl) {
-//     debug_func(moduleDecl.location);
-//     auto prevModule = m_currentModule;
-//     m_currentModule = &resolvedModuleDecl;
-//     defer([&]() { m_currentModule = prevModule; });
-//     // println("resolve_module_decl New actual module: "<<m_currentModule->identifier);
-//     auto resolvedDecls = resolve_in_module_decl(moduleDecl.declarations,
-//     std::move(resolvedModuleDecl.declarations)); if (resolvedDecls.size() == 0) return false;
-//     resolvedModuleDecl.declarations = std::move(resolvedDecls);
-
-//     return true;
-// }
-
-// bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
-//     debug_func(moduleDecl.location);
-//     auto prevModule = m_currentModule;
-//     m_currentModule = &moduleDecl;
-//     defer([&]() { m_currentModule = prevModule; });
-//     // println("resolve_module_body New actual module: "<<m_currentModule->identifier);
-//     return resolve_in_module_body(moduleDecl.declarations);
-// }
-
-// std::vector<ptr<ResolvedDecl>> Sema::resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
-//                                                             std::vector<ptr<ResolvedDecl>> alreadyResolved) {
-//     bool error = false;
-//     debug_func("Decls " << decls.size() << " Already resolved " << alreadyResolved.size() << " error "
-//                         << (error ? "true" : "false"));
-//     std::vector<ptr<ResolvedDecl>> resolvedTree;
-//     std::unordered_map<ModuleDecl *, ResolvedModuleDecl *> map_modules;
-//     ScopeRAII moduleScope(*this);
-//     // Resolve every struct first so that functions have access to them in their signature.
-//     {
-//         for (auto &&decl : decls) {
-//             debug_msg(decl->identifier << " " << decl->location);
-//             if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
-//                 ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
-
-//                 if (!resolvedDecl || !insert_decl_to_current_scope(*resolvedDecl)) {
-//                     error = true;
-//                     continue;
-//                 }
-
-//                 resolvedTree.emplace_back(std::move(resolvedDecl));
-//                 continue;
-//             }
-//             if (auto *st = dynamic_cast<ModuleDecl *>(decl.get())) {
-//                 ptr<ResolvedModuleDecl> resolvedDecl = nullptr;
-//                 auto it = std::find_if(
-//                     alreadyResolved.begin(), alreadyResolved.end(),
-//                     [id = decl->identifier](ptr<ResolvedDecl> &decl) { return decl && decl->identifier == id; });
-//                 if (it != alreadyResolved.end()) {
-//                     if (auto ptrModDecl = dynamic_cast<ResolvedModuleDecl *>((*it).get())) {
-//                         (*it).release();
-//                         resolvedDecl = ptr<ResolvedModuleDecl>(ptrModDecl);
-//                     } else {
-//                         report((*it)->location, "unexpected identifier with module name");
-//                         error = true;
-//                         continue;
-//                     }
-//                 } else {
-//                     resolvedDecl = resolve_module(*st);
-//                 }
-//                 if (!resolvedDecl) {
-//                     error = true;
-//                     continue;
-//                 }
-//                 map_modules.emplace(st, resolvedDecl.get());
-
-//                 resolvedTree.emplace_back(std::move(resolvedDecl));
-//                 continue;
-//             }
-//             if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
-//                 if (auto declStmt = resolve_decl_stmt(*ds)) {
-//                     resolvedTree.emplace_back(std::move(declStmt));
-//                 } else {
-//                     error = true;
-//                 }
-//                 continue;
-//             }
-//             if (dynamic_cast<FuncDecl *>(decl.get()) || dynamic_cast<TestDecl *>(decl.get())) {
-//                 continue;
-//             }
-//             decl->dump();
-//             dmz_unreachable("TODO: unexpected declaration");
-//         }
-//     }
-
-//     if (error) return {};
-//     // {
-//     //     for (auto &&decl : decls) {
-//     //         if (auto *st = dynamic_cast<ModuleDecl *>(decl.get())) {
-//     //             auto success = resolve_module_decl(*st, *map_modules[st]);
-//     //             if (!success) {
-//     //                 error = true;
-//     //             }
-//     //             continue;
-//     //         }
-//     //     }
-//     // }
-
-//     if (error) return {};
-
-//     {
-//         for (auto &&resDecl : resolvedTree) {
-//             if (auto *st = dynamic_cast<ResolvedStructDecl *>(resDecl.get())) {
-//                 if (!resolve_struct_decl_funcs(*st)) {
-//                     error = true;
-//                     continue;
-//                 }
-//             }
-//         }
-//     }
-//     if (error) return {};
-
-//     {
-//         for (auto &&decl : decls) {
-//             if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
-//                 auto resolvedDecl = resolve_function_decl(*fn);
-//                 if (resolvedDecl && insert_decl_to_current_scope(*resolvedDecl)) {
-//                     if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
-//                         m_tests.emplace_back(test);
-//                     }
-//                     resolvedTree.emplace_back(std::move(resolvedDecl));
-//                     continue;
-//                 }
-//                 error = true;
-//                 continue;
-//             }
-//             // if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
-//             //     if (auto declStmt = resolve_decl_stmt(*ds)) {
-//             //         resolvedTree.emplace_back(std::move(declStmt));
-//             //     } else {
-//             //         error = true;
-//             //     }
-//             //     continue;
-//             // }
-//             if (dynamic_cast<ModuleDecl *>(decl.get()) || dynamic_cast<DeclStmt *>(decl.get()) ||
-//                 dynamic_cast<StructDecl *>(decl.get())) {
-//                 continue;
-//             }
-//             decl->dump();
-//             dmz_unreachable("TODO: unexpected declaration");
-//         }
-//     }
-
-//     if (error) return {};
-//     return resolvedTree;
-// }
-
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_func("");
     auto prevModule = m_currentModule;
@@ -892,52 +704,6 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     bool error = false;
     ScopeRAII moduleScope(*this);
 
-    // for (auto &&currentDeclRef : moduleDecl.declarations) {
-    //     auto currentDecl = currentDeclRef.get();
-    //     if (!currentDecl) dmz_unreachable("");
-    //     debug_msg(currentDecl << " " << currentDecl->identifier << " " << currentDecl->location);
-    //     if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
-    //         if (!insert_decl_to_current_scope(*st)) {
-    //             error = true;
-    //             continue;
-    //         }
-    //         continue;
-    //     }
-    //     if (auto *fn = dynamic_cast<ResolvedFuncDecl *>(currentDecl)) {
-    //         if (!insert_decl_to_current_scope(*fn)) {
-    //             error = true;
-    //         }
-    //         continue;
-    //     }
-
-    //     if (auto *fn = dynamic_cast<ResolvedDeclStmt *>(currentDecl)) {
-    //         if (!insert_decl_to_current_scope(*fn->varDecl)) {
-    //             error = true;
-    //         }
-    //         continue;
-    //     }
-    //     if (dynamic_cast<ResolvedTestDecl *>(currentDecl) || dynamic_cast<ResolvedModuleDecl *>(currentDecl)) {
-    //         continue;
-    //     }
-    //     currentDecl->dump();
-    //     dmz_unreachable("TODO: unexpected declaration");
-    // }
-    // if (error) return false;
-
-    // for (auto &&currentDeclRef : moduleDecl.declarations) {
-    //     auto currentDecl = currentDeclRef.get();
-    //     if (auto *fn = dynamic_cast<ResolvedGenericFunctionDecl *>(currentDecl)) {
-    //         debug_msg("Collect scope for: " << fn->identifier);
-    //         auto collectedScope = collect_scope();
-    //         fn->scopeToSpecialize.insert(fn->scopeToSpecialize.end(), collectedScope.begin(), collectedScope.end());
-    //     }
-    //     if (auto *fn = dynamic_cast<ResolvedGenericStructDecl *>(currentDecl)) {
-    //         debug_msg("Collect scope for: " << fn->identifier);
-    //         auto collectedScope = collect_scope();
-    //         fn->scopeToSpecialize.insert(fn->scopeToSpecialize.end(), collectedScope.begin(), collectedScope.end());
-    //     }
-    // }
-    // if (error) return false;
     for (auto &&currentDeclRef : moduleDecl.declarations) {
         auto currentDecl = currentDeclRef.get();
         if (auto *declStmt = dynamic_cast<ResolvedDeclStmt *>(currentDecl)) {

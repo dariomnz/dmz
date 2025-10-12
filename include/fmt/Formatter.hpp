@@ -72,6 +72,7 @@ class Formatter {
     ptr<Node> fmt_for_stmt(const ForStmt& stmt);
     ptr<Node> fmt_if_stmt(const IfStmt& stmt);
     ptr<Node> fmt_field_init_stmt(const FieldInitStmt& stmt);
+    ptr<Node> fmt_defer_stmt(const DeferStmt& stmt);
 };
 }  // namespace fmt
 }  // namespace DMZ

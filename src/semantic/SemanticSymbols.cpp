@@ -42,6 +42,21 @@ void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf)
     // }
 }
 
+std::string ResolvedGenericTypeDecl::generic_types_to_str(
+    const std::vector<ptr<ResolvedGenericTypeDecl>> &genericTypeDecls) {
+    if (genericTypeDecls.size() == 0) return "";
+    std::stringstream out;
+    out << "<";
+    for (size_t i = 0; i < genericTypeDecls.size(); i++) {
+        out << genericTypeDecls[i]->identifier;
+        if (i != genericTypeDecls.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ">";
+    return out.str();
+}
+
 void ResolvedIntLiteral::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedIntLiteral:" << type->to_str() << " '" << value << "'\n";
     if (onlySelf) return;

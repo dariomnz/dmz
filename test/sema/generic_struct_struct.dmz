@@ -1,0 +1,47 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+struct Point<T> {
+    x: T,
+    y: T,
+}
+// CHECK: ResolvedGenericStructDecl generic_struct_struct.Point<T>
+// CHECK-NEXT:     ResolvedGenericTypeDecl T
+// CHECK-NEXT:     ResolvedFieldDecl:T x
+// CHECK-NEXT:     ResolvedFieldDecl:T y
+// CHECK-NEXT:     ResolvedSpecializedStructDecl generic_struct_struct.Point<i32>
+// CHECK-NEXT:       ResolvedFieldDecl:i32 x
+// CHECK-NEXT:       ResolvedFieldDecl:i32 y
+struct Points<T> {
+    a: Point<T>,
+    b: Point<T>,
+}
+// CHECK: ResolvedGenericStructDecl generic_struct_struct.Points<T>
+// CHECK-NEXT:   ResolvedGenericTypeDecl T
+// CHECK-NEXT:   ResolvedFieldDecl:generic_struct_struct.Point<T>{} a
+// CHECK-NEXT:   ResolvedFieldDecl:generic_struct_struct.Point<T>{} b
+// CHECK-NEXT:   ResolvedSpecializedStructDecl generic_struct_struct.Points<i32>
+// CHECK-NEXT:     ResolvedFieldDecl:generic_struct_struct.Point<i32>{} a
+// CHECK-NEXT:     ResolvedFieldDecl:generic_struct_struct.Point<i32>{} b
+
+fn main() -> void {
+    let p1 = Point<i32>{x: 1, y: 2};
+    let ps = Points<i32>{a: p1, b: p1};
+}
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt generic_struct_struct.Point<i32>{}
+// CHECK-NEXT:       ResolvedVarDecl:generic_struct_struct.Point<i32>{} p1
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct_struct.Point<i32>{}
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:           ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:     ResolvedDeclStmt generic_struct_struct.Points<i32>{}
+// CHECK-NEXT:       ResolvedVarDecl:generic_struct_struct.Points<i32>{} ps
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct_struct.Points<i32>{}
+// CHECK-NEXT:           ResolvedFieldInitStmt:generic_struct_struct.Point<i32>{} a
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic_struct_struct.Point<i32>{} p1
+// CHECK-NEXT:           ResolvedFieldInitStmt:generic_struct_struct.Point<i32>{} b
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic_struct_struct.Point<i32>{} p1

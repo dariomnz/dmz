@@ -12,10 +12,16 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = makePtr<Text>(cast_expr->to_str());
     } else if (auto cast_expr = dynamic_cast<const IntLiteral*>(&expr)) {
         node = makePtr<Text>(cast_expr->value);
+    } else if (auto cast_expr = dynamic_cast<const FloatLiteral*>(&expr)) {
+        node = makePtr<Text>(cast_expr->value);
     } else if (auto cast_expr = dynamic_cast<const BoolLiteral*>(&expr)) {
         node = makePtr<Text>(cast_expr->value);
     } else if (auto cast_expr = dynamic_cast<const StringLiteral*>(&expr)) {
         node = makePtr<Text>(cast_expr->value);
+    } else if (auto cast_expr = dynamic_cast<const CharLiteral*>(&expr)) {
+        node = makePtr<Text>(cast_expr->value);
+    } else if (dynamic_cast<const NullLiteral*>(&expr)) {
+        node = makePtr<Text>("null");
     } else if (auto cast_expr = dynamic_cast<const DeclRefExpr*>(&expr)) {
         node = fmt_decl_ref_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const CallExpr*>(&expr)) {
@@ -188,7 +194,7 @@ ptr<Node> Formatter::fmt_struct_instantiation_expr(const StructInstantiationExpr
 ptr<Node> Formatter::fmt_array_instantiation_expr(const ArrayInstantiationExpr& expr) {
     vec<ptr<Node>> arguments;
     for (auto&& field : expr.initializers) {
-        arguments.emplace_back(fmt_stmt(*field));
+        arguments.emplace_back(fmt_expr(*field));
     }
 
     return build.comma_separated_list("{", "}", std::move(arguments), expr.haveTrailingComma);
