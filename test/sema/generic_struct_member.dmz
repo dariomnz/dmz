@@ -19,17 +19,21 @@ struct Point<T> {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedAssignment
 // CHECK-NEXT:         ResolvedMemberExpr:i32 x
-// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:           ResolvedDerefPtrExpr:generic_struct_member.Point<i32>{}
+// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self
 // CHECK-NEXT:         ResolvedBinaryOperator:i32 '+='
 // CHECK-NEXT:           ResolvedMemberExpr:i32 x
-// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:             ResolvedDerefPtrExpr:generic_struct_member.Point<i32>{}
+// CHECK-NEXT:               ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 // CHECK-NEXT:       ResolvedAssignment
 // CHECK-NEXT:         ResolvedMemberExpr:i32 y
-// CHECK-NEXT:           ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:           ResolvedDerefPtrExpr:generic_struct_member.Point<i32>{}
+// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self
 // CHECK-NEXT:         ResolvedBinaryOperator:i32 '+='
 // CHECK-NEXT:           ResolvedMemberExpr:i32 y
-// CHECK-NEXT:             ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self 
+// CHECK-NEXT:             ResolvedDerefPtrExpr:generic_struct_member.Point<i32>{}
+// CHECK-NEXT:               ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
 }
 

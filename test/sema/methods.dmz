@@ -19,11 +19,14 @@ struct Color {
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:               ResolvedMemberExpr:i32 r
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
+// CHECK-NEXT:                 ResolvedDerefPtrExpr:methods.Color{}
+// CHECK-NEXT:                   ResolvedDeclRefExpr:*methods.Color{} self
 // CHECK-NEXT:               ResolvedMemberExpr:i32 g
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
+// CHECK-NEXT:                 ResolvedDerefPtrExpr:methods.Color{}
+// CHECK-NEXT:                   ResolvedDeclRefExpr:*methods.Color{} self
 // CHECK-NEXT:               ResolvedMemberExpr:i32 b
-// CHECK-NEXT:                 ResolvedDeclRefExpr:*methods.Color{} self
+// CHECK-NEXT:                 ResolvedDerefPtrExpr:methods.Color{}
+// CHECK-NEXT:                   ResolvedDeclRefExpr:*methods.Color{} self
 
 fn main() -> void {
     let c: Color = Color{r: 1, g: 2, b: 3};

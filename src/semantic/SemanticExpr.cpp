@@ -395,14 +395,15 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
     if (!resolvedBase) return nullptr;
-    // resolvedBase->dump();
-    // println("Type " << resolvedBase->type.to_str() << " type");
-    // println("Type " << resolvedBase->type.decl << " type");
-    // println("Type " << resolvedBase->type.decl->location << " type");
+    bool baseIsPointer = false;
     ResolvedType *baseType = resolvedBase->type.get();
-    // TODO: change acces members
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(baseType)) {
         baseType = ptrType->pointerType.get();
+        baseIsPointer = true;
+        if (baseType->kind == ResolvedTypeKind::Pointer) {
+            return report(memberExpr.location, "unable to access member of a ptr of a ptr '" +
+                                                   resolvedBase->type->to_str() + "', deref with ptr.*");
+        }
     }
 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
@@ -451,7 +452,6 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         auto errorGroupDecl = modType->decl;
         if (!errorGroupDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a error group decl");
-        // println("Error group declaration size " << errorGroupDecl->errors.size());
         for (auto &&err : errorGroupDecl->errors) {
             // println("Err " << err->identifier << " field " << memberExpr.field);
             if (err->identifier == memberExpr.field) {
@@ -462,6 +462,10 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (!decl) return report(memberExpr.location, "error group has no member called '" + memberExpr.field + '\'');
     } else {
         return report(memberExpr.base->location, "cannot access member of '" + resolvedBase->type->to_str() + '\'');
+    }
+    // Implicit deref of the pointer in members
+    if (baseIsPointer) {
+        resolvedBase = makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
     }
     return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
 }
