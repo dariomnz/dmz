@@ -44,6 +44,10 @@ std::string TypeFunction::to_str() const {
     return out.str();
 }
 
+void TypePointer::dump(size_t level) const { std::cerr << indent(level) << "TypePointer " << to_str() << '\n'; }
+
+std::string TypePointer::to_str() const { return "*" + pointerType->to_str(); }
+
 void FunctionDecl::dump(size_t level) const {
     if (dynamic_cast<const MemberFunctionDecl *>(this)) {
         std::cerr << indent(level) << "MemberFunctionDecl ";

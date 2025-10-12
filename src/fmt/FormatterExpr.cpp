@@ -91,8 +91,8 @@ ptr<Node> Formatter::fmt_call_expr(const CallExpr& callExpr) {
 ptr<Node> Formatter::fmt_deref_ptr_expr(const DerefPtrExpr& expr) {
     debug_func("");
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("*"));
     ret->nodes.emplace_back(fmt_expr(*expr.expr));
+    ret->nodes.emplace_back(makePtr<Text>(".*"));
     return ret;
 }
 

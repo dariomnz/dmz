@@ -3,7 +3,7 @@
 
 fn foo(n:*i32) -> void {
     if (n) {
-        printf("is something %d\n", *n);
+        printf("is something %d\n", n.*);
     }else{
         printf("is null\n");
     }

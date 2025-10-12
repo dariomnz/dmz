@@ -221,6 +221,12 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return ret;
     }
+    if (auto ptrType = dynamic_cast<const TypePointer *>(&type)) {
+        varOrReturn(pointerType, resolve_type(*ptrType->pointerType));
+        ret = makePtr<ResolvedTypePointer>(type.location, std::move(pointerType));
+        retPtr = ret.get();
+        return ret;
+    }
     if (auto fnType = dynamic_cast<const TypeFunction *>(&type)) {
         std::vector<ptr<ResolvedType>> paramsTypes;
         for (auto &&param : fnType->paramsTypes) {
@@ -364,14 +370,6 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         retPtr = ret.get();
         return ret;
     }
-    if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
-        if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(structType->decl)) {
-            // specialize_generic_struct(type.location, genStruct, const ResolvedTypeSpecialized &specializedTypes)
-            // println(structType->location);
-            // structType->dump();
-            // structType->decl->dump();
-        }
-    }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
         type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||
@@ -380,6 +378,7 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         retPtr = ret.get();
         return ret;
     }
+    (void)retPtr;
     type.dump();
     dmz_unreachable("TODO");
 }

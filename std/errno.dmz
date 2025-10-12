@@ -138,7 +138,7 @@ extern fn __errno_location() -> *i32;
 
 fn @builtin_get_errno() -> i32 {
     const errno_ptr: *i32 = __errno_location();
-    const errno_num = *errno_ptr;
+    const errno_num = errno_ptr.*;
     return errno_num;
 }
 

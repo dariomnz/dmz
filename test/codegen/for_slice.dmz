@@ -9,7 +9,7 @@ fn main() -> void {
         printf("slice[%d] = %d\n", i, slice[i]);
     }
     for (slice) |val| {
-        printf("%d ", *val);
+        printf("%d ", val.*);
     }
     printf("\n");
 }

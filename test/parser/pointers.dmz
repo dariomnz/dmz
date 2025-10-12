@@ -8,7 +8,7 @@ fn main() -> void {
     let i_ptr2: *i32 = i_ptr;
 
     printf("%d\n", i);
-    *i_ptr = 12;
+    i_ptr.* = 12;
     printf("%d\n", i);
 }
 // CHECK: FunctionDecl main -> void

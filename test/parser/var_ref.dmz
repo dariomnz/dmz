@@ -1,7 +1,7 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 
 fn foo(x: *i32) -> void {
-    *x = 20;
+    x.* = 20;
 }
 // CHECK: FunctionDecl foo -> void
 // CHECK-NEXT:   ParamDecl:*i32 x

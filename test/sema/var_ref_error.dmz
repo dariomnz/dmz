@@ -1,7 +1,7 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 fn foo(x: *i32) -> void {
-    *x = 20;
+    x.* = 20;
 }
 
 fn main() -> void {

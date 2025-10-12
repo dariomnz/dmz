@@ -194,11 +194,17 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         SourceLocation location = m_nextToken.loc;
         eat_next_token();  // eat '.'
 
-        matchOrReturn(TokenType::id, "expected field identifier");
-
-        expr = makePtr<MemberExpr>(location, std::move(expr), m_nextToken.str);
-        eat_next_token();  // eat identifier
-        return parse_postfix_expr(std::move(expr));
+        if (m_nextToken.type == TokenType::id) {
+            expr = makePtr<MemberExpr>(location, std::move(expr), m_nextToken.str);
+            eat_next_token();  // eat identifier
+            return parse_postfix_expr(std::move(expr));
+        } else if (m_nextToken.type == TokenType::asterisk) {
+            expr = makePtr<DerefPtrExpr>(location, std::move(expr));
+            eat_next_token();  // eat '*'
+            return parse_postfix_expr(std::move(expr));
+        } else {
+            return report(m_nextToken.loc, "expected member identifier or '*'");
+        }
     }
     if (m_nextToken.type == TokenType::op_plusplus || m_nextToken.type == TokenType::op_minusminus) {
         SourceLocation location = m_nextToken.loc;
@@ -224,7 +230,7 @@ ptr<Expr> Parser::parse_prefix_expr() {
     debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'");
     Token tok = m_nextToken;
     std::unordered_set<TokenType> unaryOps = {
-        TokenType::op_minus, TokenType::op_excla_mark, TokenType::amp, TokenType::asterisk, TokenType::ty_slice,
+        TokenType::op_minus, TokenType::amp, TokenType::op_excla_mark, TokenType::asterisk, TokenType::ty_slice,
     };
 
     if (unaryOps.count(tok.type) == 0) {
@@ -235,16 +241,22 @@ ptr<Expr> Parser::parse_prefix_expr() {
 
     varOrReturn(rhs, parse_prefix_expr());
 
-    if (restrictions & OnlyTypeExpr && tok.type == TokenType::ty_slice) {
-        return makePtr<TypeSlice>(tok.loc, std::move(rhs));
+    if (restrictions & OnlyTypeExpr) {
+        if (tok.type == TokenType::ty_slice) {
+            return makePtr<TypeSlice>(tok.loc, std::move(rhs));
+        }
+        if (tok.type == TokenType::asterisk) {
+            return makePtr<TypePointer>(tok.loc, std::move(rhs));
+        }
     }
     switch (tok.type) {
-        case TokenType::asterisk:
-            return makePtr<DerefPtrExpr>(tok.loc, std::move(rhs));
         case TokenType::amp:
             return makePtr<RefPtrExpr>(tok.loc, std::move(rhs));
-        default:
+        case TokenType::op_excla_mark:
+        case TokenType::op_minus:
             return makePtr<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
+        default:
+            return report(tok.loc, "unexpected unary operator");
     }
 }
 

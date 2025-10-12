@@ -12,9 +12,9 @@ pub struct NodeIterator<T> {
         if (!self.current) {
             return null;
         }
-        const value_ptr = &(*self.current).value;
+        const value_ptr = &self.current.*.value;
 
-        self.current = (*self.current).next;
+        self.current = self.current.*.next;
 
         return value_ptr;
     }
@@ -50,7 +50,7 @@ pub struct SimplyLinkedList<T> {
             return error.OutOfMemory;
         }
 
-        *new_node = Node<T>{
+        new_node.* = Node<T>{
             value: data,
             next: self.head,
         };
@@ -65,9 +65,9 @@ pub struct SimplyLinkedList<T> {
         }
         let node = self.head;
         for (0..index) |i| {
-            node = (*node).next;
+            node = node.*.next;
         }
-        return (*node).value;
+        return node.*.value;
     }
 
     pub fn size(self: *@This) -> usize {
@@ -106,7 +106,7 @@ test "SimplyLinkedList insertAtFirst" {
     let i = 0;
     std.io.printf("list.size() = %d\n", list.size());
     while (i < list_size) {
-        std.io.printf("list[%d] = %d\n", i, *node);
+        std.io.printf("list[%d] = %d\n", i, node.*);
         node = iter.next();
         i++;
     }

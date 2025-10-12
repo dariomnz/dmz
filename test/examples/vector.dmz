@@ -11,7 +11,7 @@ fn printVector<T>(v: *std.vec<T>) -> void {
     std.io.printf("vector [");
     let slice = v.slice();
     for (0..slice.len, slice) |i, val| {
-        std.io.printf("%d", *val);
+        std.io.printf("%d", val.*);
         if (i != slice.len - 1) {
             std.io.printf(", ");
         }

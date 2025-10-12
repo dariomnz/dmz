@@ -39,9 +39,9 @@ fn printColor(c: *Color) -> void {
 // CHECK-NEXT: }
 
 fn foo(x: *i32) -> void {
-    dprintf(1, "%d\n", *x);
-    *x = 20;
-    dprintf(1, "%d\n", *x);
+    dprintf(1, "%d\n", x.*);
+    x.* = 20;
+    dprintf(1, "%d\n", x.*);
 }
 // CHECK: define void @var_ref.foo(ptr byref(i32) %x) {
 // CHECK-NEXT: entry:
@@ -61,7 +61,7 @@ fn main() -> void {
     let i_ptr:*i32 = &i;
     dprintf(1, "%d\n", i);
     foo(i_ptr);
-    dprintf(1, "%d\n", *i_ptr);
+    dprintf(1, "%d\n", i_ptr.*);
 
     let col = Color{r:1, g:1, b:1};
     let col_ptr:*Color = &col;

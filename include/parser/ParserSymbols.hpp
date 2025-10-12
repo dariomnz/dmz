@@ -118,6 +118,14 @@ struct TypeFunction : public Type {
     std::string to_str() const override;
 };
 
+struct TypePointer : public Type {
+    ptr<Expr> pointerType;
+    TypePointer(SourceLocation location, ptr<Expr> pointerType) : Type(location), pointerType(std::move(pointerType)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct Block : public Stmt {
     std::vector<ptr<Stmt>> statements;
 

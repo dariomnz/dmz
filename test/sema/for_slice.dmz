@@ -5,7 +5,7 @@ fn main() -> void {
     let str = "Hello, World\n";
     let slice: []u8 = str[0..5];
     for (slice) |val| {
-        printf("%c", *val);
+        printf("%c", val.*);
     }
     printf("\n");
 }
