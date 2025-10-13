@@ -26,6 +26,7 @@ struct CompilerOptions {
     bool cfgDump = false;
     bool fmtDump = false;
     bool run = false;
+    bool debugSymbols = false;
     bool fmt = false;
     bool test = false;
     bool isModule = false;
@@ -37,7 +38,7 @@ struct CompilerOptions {
 class Driver {
     ThreadPool m_workers;
     std::mutex m_modulesMutex;
-    std::vector<ptr<llvm::orc::ThreadSafeModule>> modules;
+    std::vector<ptr<llvm::Module>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
 
@@ -63,9 +64,9 @@ class Driver {
                                                                          std::string_view imported);
 
     std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);
-    ptr<llvm::orc::ThreadSafeModule> codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
-    int jit_pass(ptr<llvm::orc::ThreadSafeModule>& module);
-    int generate_exec_pass(ptr<llvm::orc::ThreadSafeModule>& module);
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>>  codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
+    int jit_pass(ptr<llvm::Module>& module);
+    int generate_exec_pass(ptr<llvm::Module>& module);
 
     int ptrBitSize();
 

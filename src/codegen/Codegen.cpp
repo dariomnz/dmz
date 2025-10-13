@@ -5,27 +5,29 @@
 #include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
-Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath)
+Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols)
     : m_resolvedTree(move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(resolvedTree)),
-      m_context(get_shared_context().getContext()),
+      m_context(makePtr<llvm::LLVMContext>()),
       m_builder(*m_context),
-      m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)) {
+      m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)),
+      m_debugBuilder(*m_module),
+      m_debugSymbols(debugSymbols) {
     m_module->setSourceFileName(sourcePath);
     m_module->setTargetTriple(llvm::sys::getDefaultTargetTriple());
 }
 
-ptr<llvm::orc::ThreadSafeModule> Codegen::generate_ir(bool runTest) {
+std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool runTest) {
     debug_func("");
     ScopedTimer(StatType::Codegen);
-    // TODO: rethink lock to not lock all threads
-    auto lock = get_shared_context().getLock();
 
     generate_in_module_decl(m_resolvedTree);
     generate_in_module_body(m_resolvedTree);
 
     generate_main_wrapper(runTest);
-
-    return makePtr<llvm::orc::ThreadSafeModule>(std::move(m_module), get_shared_context());
+    if (m_debugSymbols) {
+        m_debugBuilder.finalize();
+    }
+    return {std::move(m_context), std::move(m_module)};
 }
 
 llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
@@ -127,8 +129,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             returnType = generate_type(*fnType->returnType);
         }
         ret = llvm::FunctionType::get(returnType, paramsTypes, isVarArg);
-    }
-    if (dynamic_cast<const ResolvedTypeSlice *>(&type)) {
+    } else if (dynamic_cast<const ResolvedTypeSlice *>(&type)) {
         std::string structName("slice.struct");
         ret = llvm::StructType::getTypeByName(*m_context, structName);
         if (!ret) {
@@ -146,7 +147,39 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
     return ret;
 }
 
-llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identifier, const ResolvedType &type) {
+llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
+    if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(&type)) {
+        unsigned int Encoding;
+        switch (typeNum->numberKind) {
+            case ResolvedNumberKind::Int:
+                Encoding = llvm::dwarf::DW_ATE_signed;
+                break;
+            case ResolvedNumberKind::UInt:
+                Encoding = llvm::dwarf::DW_ATE_unsigned;
+                break;
+            case ResolvedNumberKind::Float:
+                Encoding = llvm::dwarf::DW_ATE_float;
+                break;
+        }
+        return m_debugBuilder.createBasicType(typeNum->to_str(), typeNum->bitSize, Encoding);
+    } else if (type.kind == ResolvedTypeKind::Void) {
+        return nullptr;
+    } else if (auto typeFn = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
+        std::vector<llvm::Metadata *> Elements;
+        Elements.emplace_back(generate_debug_type(*typeFn->returnType));
+
+        for (auto &&param : typeFn->paramsTypes) {
+            Elements.emplace_back(generate_debug_type(*param));
+        }
+
+        return m_debugBuilder.createSubroutineType(m_debugBuilder.getOrCreateTypeArray(Elements));
+    }
+    type.dump();
+    dmz_unreachable("TODO");
+}
+
+llvm::AllocaInst *Codegen::allocate_stack_variable(const SourceLocation &location, const std::string_view identifier,
+                                                   const ResolvedType &type) {
     debug_func("");
     assert(m_allocaInsertPoint != nullptr);
     assert(m_memsetInsertPoint != nullptr);
@@ -162,6 +195,14 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const std::string_view identi
     tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
                                         tmpBuilderMemset.getInt64(*value->getAllocationSize(dl)));
     // }
+    if (m_debugSymbols) {
+        llvm::DILocalVariable *localVar = m_debugBuilder.createAutoVariable(
+            m_currentDebugScope, identifier, m_currentDebugFile, location.line, generate_debug_type(type));
+        m_debugBuilder.insertDeclare(
+            value, localVar, m_debugBuilder.createExpression(),
+            llvm::DILocation::get(*m_context, location.line, location.col, m_currentDebugScope),
+            m_builder.GetInsertBlock());
+    }
     return value;
 }
 
@@ -329,25 +370,4 @@ llvm::Value *Codegen::load_value(llvm::Value *v, const ResolvedType &type) {
     if (type.kind == ResolvedTypeKind::Void) return nullptr;
     return m_builder.CreateLoad(generate_type(type), v);
 }
-
-// TODO
-// llvm::Type *Codegen::generate_optional_type(const ResolvedType &type, llvm::Type *llvmType) {
-//     debug_func("");
-//     std::string structName("error.struct." + type.withoutOptional().to_str());
-//     auto ret = llvm::StructType::getTypeByName(*m_context, structName);
-//     if (!ret) {
-//         ret = llvm::StructType::create(*m_context, structName);
-
-//         std::vector<llvm::Type *> fieldTypes;
-//         if (type.kind == Type::Kind::Void) {
-//             fieldTypes.emplace_back(m_builder.getInt1Ty());
-//         } else {
-//             fieldTypes.emplace_back(llvmType);
-//         }
-//         fieldTypes.emplace_back(generate_type(Type::builtinError("error")));
-//         ret->setBody(fieldTypes);
-//     }
-//     return ret;
-// }
-
 }  // namespace DMZ

@@ -123,6 +123,14 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
+    ptr<DebugScopeRAII> debugScope = nullptr;
+    if (m_debugSymbols) {
+        auto scope = m_debugBuilder.createFunction(
+            m_currentDebugScope, functionDecl.name(), llvm::StringRef(), m_currentDebugFile, functionDecl.location.line,
+            static_cast<llvm::DISubroutineType *>(generate_debug_type(*functionDecl.type)), functionDecl.location.line);
+        debugScope = makePtr<DebugScopeRAII>(*this, scope);
+    }
+
     auto fnType = functionDecl.getFnType();
 
     m_currentFunction = &functionDecl;
@@ -142,7 +150,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
 
     if (!returnsVoid) {
         debug_msg("retVal is not null");
-        retVal = allocate_stack_variable("retval", *fnType->returnType);
+        retVal = allocate_stack_variable(functionDecl.location, "retval", *fnType->returnType);
     }
     retBB = llvm::BasicBlock::Create(*m_context, "return");
 
@@ -160,7 +168,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
 
         llvm::Value *declVal = &arg;
         if (!paramDecl->type->generate_struct() && paramDecl->isMutable) {
-            declVal = allocate_stack_variable(paramDecl->identifier, *paramDecl->type);
+            declVal = allocate_stack_variable(paramDecl->location, paramDecl->identifier, *paramDecl->type);
             store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
         }
 
@@ -295,11 +303,23 @@ void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &E
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
+    ptr<DebugScopeRAII> debugScope = nullptr;
+    if (m_debugSymbols) {
+        m_currentDebugFile = m_debugBuilder.createFile(moduleDecl.module_path.filename().string(),
+                                                       moduleDecl.module_path.parent_path().string());
+        debugScope = makePtr<DebugScopeRAII>(*this, m_currentDebugFile);
+    }
     generate_in_module_decl(moduleDecl.declarations);
 }
 
 void Codegen::generate_module_body(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
+    ptr<DebugScopeRAII> debugScope = nullptr;
+    if (m_debugSymbols) {
+        m_currentDebugFile = m_debugBuilder.createFile(moduleDecl.module_path.filename().string(),
+                                                       moduleDecl.module_path.parent_path().string());
+        debugScope = makePtr<DebugScopeRAII>(*this, m_currentDebugFile);
+    }
     generate_in_module_body(moduleDecl.declarations);
 }
 

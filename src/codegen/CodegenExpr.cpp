@@ -112,7 +112,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     std::vector<llvm::Value *> args;
 
     if (isReturningStruct) {
-        callRetVal = args.emplace_back(allocate_stack_variable("struct.ret.tmp", *fnType->returnType));
+        callRetVal = args.emplace_back(allocate_stack_variable(call.location, "struct.ret.tmp", *fnType->returnType));
     }
 
     for (auto &&arg : call.arguments) {
@@ -489,7 +489,7 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     } else {
         tmpName += sie.type->to_str();
     }
-    llvm::Value *tmp = allocate_stack_variable(tmpName, *sie.type);
+    llvm::Value *tmp = allocate_stack_variable(sie.location, tmpName, *sie.type);
 
     std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
     for (auto &&initStmt : sie.fieldInitializers) {
@@ -516,7 +516,7 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
         dmz_unreachable("unexpected type in array instantiation");
     }
     std::string varName = "array." + typeArray->to_str() + ".tmp";
-    llvm::Value *tmp = allocate_stack_variable(varName, *typeArray);
+    llvm::Value *tmp = allocate_stack_variable(aie.location, varName, *typeArray);
 
     size_t idx = 0;
     for (auto &&initExpr : aie.initializers) {
@@ -628,7 +628,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
         m_builder.CreateStructGEP(generate_type(*orelseErrorExpr.errorToOrElse->type), error_struct, 1);
     llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
 
-    llvm::Value *return_value = allocate_stack_variable("tmp.orelse", *orelseErrorExpr.type);
+    llvm::Value *return_value = allocate_stack_variable(orelseErrorExpr.location, "tmp.orelse", *orelseErrorExpr.type);
 
     auto typeOptional = dynamic_cast<const ResolvedTypeOptional *>(orelseErrorExpr.errorToOrElse->type.get());
     if (!typeOptional) dmz_unreachable("unexpected type");
@@ -676,7 +676,7 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
     } else {
         return report(from.location, "unexpected type used in generate of slice '" + from.type->to_str() + "'");
     }
-    auto tmpSlice = allocate_stack_variable("tmp.slice", *sliceType);
+    auto tmpSlice = allocate_stack_variable(from.location, "tmp.slice", *sliceType);
 
     // ptr + sizeof(type)
     if (!range.startExpr->type->compare(*range.endExpr->type)) {

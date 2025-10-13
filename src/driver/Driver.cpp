@@ -26,6 +26,7 @@ void Driver::display_help() {
     println("  -llvm-dump         print the llvm module");
     println("  -print-stats       print the time stats");
     println("  -module            compile a module to .o file");
+    println("  -g                 generate debug symbols");
     println("  -run               runs the program with lli (Just In Time)");
     println("  -test              runs the test with lli (Just In Time)");
     println("  -fmt               format the dmz source file");
@@ -73,6 +74,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.cfgDump = true;
             } else if (arg == "-run") {
                 options.run = true;
+            } else if (arg == "-g") {
+                options.debugSymbols = true;
             } else if (arg == "-test") {
                 options.test = true;
             } else if (arg == "-fmt-dump") {
@@ -393,22 +396,21 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     return resolvedTree;
 }
 
-ptr<llvm::orc::ThreadSafeModule> Driver::codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
+std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
-    ptr<llvm::orc::ThreadSafeModule> module;
-    Codegen codegen(std::move(resolvedTree), m_options.source.c_str());
-    module = codegen.generate_ir(m_options.test);
+    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols);
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module = codegen.generate_ir(m_options.test);
 
     if (m_options.llvmDump) {
-        module->withModuleDo([](auto &m) { m.dump(); });
+        module.second->dump();
         m_haveNormalExit = true;
-        return nullptr;
+        return {};
     }
 
     return module;
 }
 
-int Driver::jit_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
+int Driver::jit_pass(ptr<llvm::Module> &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -447,7 +449,7 @@ int Driver::jit_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
 
         llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
 
-        module->withModuleDo([&pipe_stream](auto &m) { m.print(pipe_stream, nullptr); });
+        module->print(pipe_stream, nullptr);
 
         close(pipefd[1]);
 
@@ -455,7 +457,7 @@ int Driver::jit_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
         return WEXITSTATUS(status);
     }
 }
-int Driver::generate_exec_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
+int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -483,7 +485,7 @@ int Driver::generate_exec_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
         cmd = "clang";
         args.emplace_back("clang");
         args.emplace_back("-O0");
-        args.emplace_back("-ggdb");
+        args.emplace_back("-g");
         args.emplace_back("-x");
         args.emplace_back("ir");
         args.emplace_back("-");
@@ -508,7 +510,7 @@ int Driver::generate_exec_pass(ptr<llvm::orc::ThreadSafeModule> &module) {
 
         llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
 
-        module->withModuleDo([&pipe_stream](auto &m) { m.print(pipe_stream, nullptr); });
+        module->print(pipe_stream, nullptr);
 
         close(pipefd[1]);
 
@@ -555,13 +557,10 @@ int Driver::main() {
     auto module = codegen_pass(std::move(resolvedTrees));
     if (need_exit()) return exit_code();
 
-    // auto module = linker_pass(modules);
-    // need_exit();
-
     if (m_options.run) {
-        return jit_pass(module);
+        return jit_pass(module.second);
     } else {
-        return generate_exec_pass(module);
+        return generate_exec_pass(module.second);
     }
 }
 }  // namespace DMZ

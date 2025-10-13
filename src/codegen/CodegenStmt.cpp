@@ -156,14 +156,14 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
     auto isize = ResolvedTypeNumber::isize(stmt.location);
     auto llvmisize = generate_type(*isize);
-    llvm::Value *counter = allocate_stack_variable("for.counter", *isize);
+    llvm::Value *counter = allocate_stack_variable(stmt.location, "for.counter", *isize);
     std::vector<llvm::Value *> startCaptures(stmt.captures.size(), nullptr);
     std::vector<llvm::Value *> endCaptures(stmt.captures.size(), nullptr);
     std::vector<llvm::Value *> lenghtCaptures(stmt.captures.size(), nullptr);
     for (size_t i = 0; i < stmt.captures.size(); i++) {
         if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
             startCaptures[i] =
-                allocate_stack_variable("for.capture." + stmt.captures[i]->name(), *stmt.captures[i]->type);
+                allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(), *stmt.captures[i]->type);
             auto aux_start = cast_to(generate_expr(*rangeExpr->startExpr), *rangeExpr->startExpr->type, *isize);
             store_value(aux_start, startCaptures[i], *isize, *stmt.captures[i]->type);
             m_declarations[stmt.captures[i].get()] = startCaptures[i];
@@ -171,7 +171,7 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
             endCaptures[i] = cast_to(generate_expr(*rangeExpr->endExpr), *rangeExpr->endExpr->type, *isize);
             lenghtCaptures[i] = m_builder.CreateSub(endCaptures[i], aux_start);
         } else if (auto sliceType = dynamic_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get())) {
-            startCaptures[i] = allocate_stack_variable("for.capture." + stmt.captures[i]->name(),
+            startCaptures[i] = allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(),
                                                        *ResolvedTypePointer::opaquePtr(stmt.captures[i]->location));
             m_declarations[stmt.captures[i].get()] = startCaptures[i];
             auto generatedCond = generate_expr(*stmt.conditions[i], true);
@@ -256,7 +256,7 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     debug_func(stmt.type->to_str());
     const auto *decl = stmt.varDecl.get();
-    llvm::AllocaInst *var = allocate_stack_variable(decl->identifier, *decl->type);
+    llvm::AllocaInst *var = allocate_stack_variable(stmt.location, decl->identifier, *decl->type);
 
     if (const auto &init = decl->initializer) {
         if (init->type->kind != ResolvedTypeKind::DefaultInit)

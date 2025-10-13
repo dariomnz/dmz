@@ -18,6 +18,7 @@
 // CHECK-NEXT:   -llvm-dump         print the llvm module
 // CHECK-NEXT:   -print-stats       print the time stats
 // CHECK-NEXT:   -module            compile a module to .o file
+// CHECK-NEXT:   -g                 generate debug symbols
 // CHECK-NEXT:   -run               runs the program with lli (Just In Time)
 // CHECK-NEXT:   -test              runs the test with lli (Just In Time)
 // CHECK-NEXT:   -fmt               format the dmz source file

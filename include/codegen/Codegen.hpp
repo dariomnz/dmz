@@ -8,13 +8,9 @@
 namespace DMZ {
 
 class Codegen {
-    static llvm::orc::ThreadSafeContext get_shared_context() {
-        static llvm::orc::ThreadSafeContext tsc(makePtr<llvm::LLVMContext>());
-        return tsc;
-    }
     std::vector<ptr<ResolvedDecl>> m_resolvedTree;
 
-    llvm::LLVMContext *m_context;
+    ptr<llvm::LLVMContext> m_context;
     llvm::IRBuilder<> m_builder;
     ptr<llvm::Module> m_module;
 
@@ -27,15 +23,40 @@ class Codegen {
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
 
-   public:
-    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath);
+    // Debug
+    llvm::DIBuilder m_debugBuilder;
+    bool m_debugSymbols = false;
+    llvm::DIFile *m_currentDebugFile = nullptr;
+    llvm::DIScope *m_currentDebugScope = nullptr;
+    std::vector<llvm::DIScope *>m_debugScopes = {};
+    
+    class DebugScopeRAII {
+        Codegen &m_codegen;
 
-    ptr<llvm::orc::ThreadSafeModule> generate_ir(bool runTest);
+       public:
+        explicit DebugScopeRAII(Codegen &cod, llvm::DIScope *debugScope) : m_codegen(cod) {
+            auto emplaced = m_codegen.m_debugScopes.emplace_back(debugScope);
+            m_codegen.m_currentDebugScope = emplaced;
+        }
+        ~DebugScopeRAII() {
+            m_codegen.m_debugScopes.pop_back();
+            if (!m_codegen.m_debugScopes.empty()){
+                m_codegen.m_currentDebugScope = m_codegen.m_debugScopes.back();
+            }
+        }
+    };
+
+   public:
+    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols);
+
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
+    llvm::DIType *generate_debug_type(const ResolvedType &type);
+
     std::string generate_decl_name(const ResolvedDecl &decl);
     llvm::Function *generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
-    llvm::AllocaInst *allocate_stack_variable(const std::string_view identifier, const ResolvedType &type);
+    llvm::AllocaInst *allocate_stack_variable(const SourceLocation& location, const std::string_view identifier, const ResolvedType &type);
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);

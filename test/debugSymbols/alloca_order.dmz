@@ -1,0 +1,35 @@
+// RUN: dmz %s -llvm-dump -g 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '1\n2\n3\n')
+extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
+fn foo(x: i32, y: i32, z: i32) -> void {
+    let x1: i32 = x;
+    let y1: i32 = y;
+    let z1: i32 = z;
+
+    println(x1);
+    println(y1);
+    println(z1);
+}
+// CHECK: define void @alloca_order.foo(i32 %x, i32 %y, i32 %z) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   %y1 = alloca i32, align 4
+// CHECK-NEXT:   %z1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
+// CHECK-NEXT:   store i32 %y, ptr %y1, align 4
+// CHECK-NEXT:   store i32 %z, ptr %z1, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   call void @alloca_order.println(i32 %0)
+// CHECK-NEXT:   %1 = load i32, ptr %y1, align 4
+// CHECK-NEXT:   call void @alloca_order.println(i32 %1)
+// CHECK-NEXT:   %2 = load i32, ptr %z1, align 4
+// CHECK-NEXT:   call void @alloca_order.println(i32 %2)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+fn main() -> void {
+    foo(1, 2, 3);
+}
