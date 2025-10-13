@@ -10,6 +10,7 @@ add_custom_target(check
     "${CMAKE_CURRENT_SOURCE_DIR}/cfg"
     "${CMAKE_CURRENT_SOURCE_DIR}/constexpr"
     "${CMAKE_CURRENT_SOURCE_DIR}/codegen"
+    "${CMAKE_CURRENT_SOURCE_DIR}/debugSymbols"
     "${CMAKE_CURRENT_SOURCE_DIR}/driver"
     "${CMAKE_CURRENT_SOURCE_DIR}/examples"
     "${CMAKE_CURRENT_SOURCE_DIR}/fmt"

@@ -608,9 +608,9 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
 }
 
 void Sema::remove_unused(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool buildTest) {
-    for (auto &&module : moduleDecls) {
-        remove_unused(module->declarations, buildTest);
-    }
+    auto aux_vector = move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(moduleDecls);
+    remove_unused(aux_vector, buildTest);
+    moduleDecls = move_vector_ptr<ResolvedDecl, ResolvedModuleDecl>(aux_vector);
 }
 
 void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) {

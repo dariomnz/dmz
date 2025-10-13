@@ -11,6 +11,7 @@ namespace DMZ {
 
 llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) {
     debug_func(expr.location << " keepPointer " << (keepPointer ? "true" : "false"));
+    generate_debug_location(expr.location);
     if (auto val = expr.get_constant_value()) {
         if (auto nt = dynamic_cast<ResolvedTypeNumber *>(expr.type.get())) {
             return m_builder.getIntN(nt->bitSize, *val);
@@ -405,7 +406,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
         val = m_declarations[&dre.decl];
     }
 
-    keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&dre.decl) && !dre.decl.isMutable;
+    // keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&dre.decl) && !dre.decl.isMutable;
     keepPointer |= dre.type->generate_struct();
     keepPointer |= dre.type->kind == ResolvedTypeKind::Array;
 

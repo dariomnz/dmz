@@ -71,6 +71,7 @@ struct ResolvedTypeNumber : public ResolvedType {
     std::string to_str() const override;
 
     static ptr<ResolvedType> isize(SourceLocation location);
+    static ptr<ResolvedType> usize(SourceLocation location);
 };
 
 struct ResolvedTypeBool : public ResolvedTypeNumber {

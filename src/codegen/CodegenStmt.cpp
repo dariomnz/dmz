@@ -28,6 +28,7 @@ void Codegen::generate_block(const ResolvedBlock &block) {
 
 llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     debug_func("");
+    generate_debug_location(stmt.location);
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return generate_expr(*expr);
     }
@@ -162,8 +163,8 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     std::vector<llvm::Value *> lenghtCaptures(stmt.captures.size(), nullptr);
     for (size_t i = 0; i < stmt.captures.size(); i++) {
         if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
-            startCaptures[i] =
-                allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(), *stmt.captures[i]->type);
+            startCaptures[i] = allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(),
+                                                       *stmt.captures[i]->type);
             auto aux_start = cast_to(generate_expr(*rangeExpr->startExpr), *rangeExpr->startExpr->type, *isize);
             store_value(aux_start, startCaptures[i], *isize, *stmt.captures[i]->type);
             m_declarations[stmt.captures[i].get()] = startCaptures[i];

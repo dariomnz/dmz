@@ -20,6 +20,14 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
     debug_func("");
     ScopedTimer(StatType::Codegen);
 
+    if (m_debugSymbols) {
+        m_debugBuilder.createCompileUnit(llvm::dwarf::DW_LANG_C, generate_debug_file(m_resolvedTree.back()->location),
+                                         "dmz Compiler", false, "", 0);
+
+        m_module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+        m_module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", llvm::dwarf::DWARF_VERSION);
+    }
+
     generate_in_module_decl(m_resolvedTree);
     generate_in_module_body(m_resolvedTree);
 
@@ -148,6 +156,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
 }
 
 llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
+    debug_func("");
     if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(&type)) {
         unsigned int Encoding;
         switch (typeNum->numberKind) {
@@ -162,8 +171,32 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
                 break;
         }
         return m_debugBuilder.createBasicType(typeNum->to_str(), typeNum->bitSize, Encoding);
-    } else if (type.kind == ResolvedTypeKind::Void) {
+    } else if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::VarArg) {
         return nullptr;
+    } else if (auto typePtr = dynamic_cast<const ResolvedTypePointer *>(&type)) {
+        return m_debugBuilder.createPointerType(generate_debug_type(*typePtr->pointerType),
+                                                m_module->getDataLayout().getPointerSizeInBits());
+    } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        std::vector<llvm::Metadata *> Elements;
+        uint64_t offset = 0;
+        auto structFile = generate_debug_file(typeStruct->decl->location);
+        for (auto &&field : typeStruct->decl->fields) {
+            auto llvmMemberType = generate_type(*field->type, true);
+            auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType);
+            auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType).value() * 8;
+            auto memberFile = generate_debug_file(field->location);
+            auto memberType = m_debugBuilder.createMemberType(
+                memberFile, field->name(), memberFile, field->location.line, bitSize, alingSize, offset,
+                llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
+            Elements.emplace_back(memberType);
+            offset += bitSize;
+        }
+        auto llvmStructType = generate_type(type, true);
+        auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmStructType);
+        auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmStructType).value() * 8;
+        return m_debugBuilder.createStructType(
+            structFile, typeStruct->decl->name(), structFile, typeStruct->decl->location.line, bitSize, alingSize,
+            llvm::DINode::DIFlags::FlagPrototyped, nullptr, m_debugBuilder.getOrCreateArray(Elements));
     } else if (auto typeFn = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
         std::vector<llvm::Metadata *> Elements;
         Elements.emplace_back(generate_debug_type(*typeFn->returnType));
@@ -173,9 +206,93 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         }
 
         return m_debugBuilder.createSubroutineType(m_debugBuilder.getOrCreateTypeArray(Elements));
+    } else if (auto typeSlice = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
+        std::vector<llvm::Metadata *> Elements;
+        uint64_t offset = 0;
+        auto structFile = generate_debug_file(typeSlice->location);
+        auto type_ptr = ResolvedTypePointer::opaquePtr(typeSlice->location);
+        auto type_len = ResolvedTypeNumber::usize(typeSlice->location);
+        // ptr
+        auto llvmMemberType_ptr = generate_type(*type_ptr, true);
+        auto bitSize_ptr = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType_ptr);
+        auto alingSize_ptr = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType_ptr).value() * 8;
+        auto memberType_ptr = m_debugBuilder.createMemberType(
+            structFile, "ptr", structFile, typeSlice->location.line, bitSize_ptr, alingSize_ptr, offset,
+            llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*type_ptr));
+        Elements.emplace_back(memberType_ptr);
+        offset += bitSize_ptr;
+
+        // len
+        auto llvmMemberType_len = m_builder.getIntPtrTy(m_module->getDataLayout());
+        auto bitSize_len = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType_len);
+        auto alingSize_len = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType_len).value() * 8;
+        auto memberType_len = m_debugBuilder.createMemberType(
+            structFile, "len", structFile, typeSlice->location.line, bitSize_len, alingSize_len, offset,
+            llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*type_len));
+        Elements.emplace_back(memberType_len);
+        offset += bitSize_len;
+
+        auto llvmStructType = generate_type(type, true);
+        auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmStructType);
+        auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmStructType).value() * 8;
+        return m_debugBuilder.createStructType(structFile, "slice", structFile, type.location.line, bitSize, alingSize,
+                                               llvm::DINode::DIFlags::FlagPrototyped, nullptr,
+                                               m_debugBuilder.getOrCreateArray(Elements));
+    } else if (auto typeOptional = dynamic_cast<const ResolvedTypeOptional *>(&type)) {
+        std::vector<llvm::Metadata *> Elements;
+        uint64_t offset = 0;
+        std::string structName("error.struct." + typeOptional->optionalType->to_str());
+        auto structFile = generate_debug_file(typeOptional->location);
+        ptr<ResolvedType> type_value = nullptr;
+        if (typeOptional->optionalType->kind == ResolvedTypeKind::Void) {
+            type_value = makePtr<ResolvedTypeNumber>(typeOptional->location, ResolvedNumberKind::Int, 1);
+        } else {
+            type_value = typeOptional->optionalType->clone();
+        }
+        auto type_error = ResolvedTypePointer::opaquePtr(typeOptional->location);
+        // ptr
+        auto llvmMemberType_value = generate_type(*type_value, true);
+        auto bitSize_value = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType_value);
+        auto alingSize_value = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType_value).value() * 8;
+        auto memberType_value = m_debugBuilder.createMemberType(
+            structFile, "value", structFile, typeOptional->location.line, bitSize_value, alingSize_value, offset,
+            llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*type_value));
+        Elements.emplace_back(memberType_value);
+        offset += bitSize_value;
+
+        // len
+        auto llvmMemberType_error = m_builder.getIntPtrTy(m_module->getDataLayout());
+        auto bitSize_error = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType_error);
+        auto alingSize_error = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType_error).value() * 8;
+        auto memberType_error = m_debugBuilder.createMemberType(
+            structFile, "error", structFile, typeOptional->location.line, bitSize_error, alingSize_error, offset,
+            llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*type_error));
+        Elements.emplace_back(memberType_error);
+        offset += bitSize_error;
+
+        auto llvmStructType = generate_type(type, true);
+        auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmStructType);
+        auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmStructType).value() * 8;
+        return m_debugBuilder.createStructType(structFile, structName, structFile, type.location.line, bitSize,
+                                               alingSize, llvm::DINode::DIFlags::FlagPrototyped, nullptr,
+                                               m_debugBuilder.getOrCreateArray(Elements));
     }
     type.dump();
     dmz_unreachable("TODO");
+}
+
+llvm::DIFile *Codegen::generate_debug_file(const SourceLocation &location) {
+    debug_func("");
+    auto path = std::filesystem::path(location.file_name);
+    path = std::filesystem::canonical(path);
+    return m_debugBuilder.createFile(path.filename().string(), path.parent_path().string());
+}
+
+void Codegen::generate_debug_location(const SourceLocation &location) {
+    if (m_debugSymbols) {
+        m_builder.SetCurrentDebugLocation(
+            llvm::DILocation::get(m_currentDebugScope->getContext(), location.line, location.col, m_currentDebugScope));
+    }
 }
 
 llvm::AllocaInst *Codegen::allocate_stack_variable(const SourceLocation &location, const std::string_view identifier,
@@ -187,14 +304,12 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const SourceLocation &locatio
     debug_msg("m_allocaInsertPoint " << (void *)m_allocaInsertPoint);
     tmpBuilder.SetInsertPoint(m_allocaInsertPoint);
     auto value = tmpBuilder.CreateAlloca(generate_type(type, true), nullptr, identifier);
-    // if (type.isOptional) {
     llvm::IRBuilder<> tmpBuilderMemset(*m_context);
     debug_msg("m_memsetInsertPoint " << (void *)m_memsetInsertPoint);
     tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
     const llvm::DataLayout &dl = m_module->getDataLayout();
     tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
                                         tmpBuilderMemset.getInt64(*value->getAllocationSize(dl)));
-    // }
     if (m_debugSymbols) {
         llvm::DILocalVariable *localVar = m_debugBuilder.createAutoVariable(
             m_currentDebugScope, identifier, m_currentDebugFile, location.line, generate_debug_type(type));

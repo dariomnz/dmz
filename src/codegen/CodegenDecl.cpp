@@ -76,6 +76,15 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     std::string funcName = generate_decl_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));
+
+    if (m_debugSymbols && dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
+        llvm::DISubprogram *subProgram = m_debugBuilder.createFunction(
+            m_currentDebugScope, functionDecl.name(), llvm::StringRef(), m_currentDebugFile, functionDecl.location.line,
+            static_cast<llvm::DISubroutineType *>(generate_debug_type(*fnType)), functionDecl.location.line,
+            llvm::DINode::FlagPrototyped, llvm::DISubprogram::SPFlagDefinition);
+        fn->setSubprogram(subProgram);
+    }
+
     return fn;
 }
 
@@ -123,20 +132,20 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         return;
     }
 
-    ptr<DebugScopeRAII> debugScope = nullptr;
-    if (m_debugSymbols) {
-        auto scope = m_debugBuilder.createFunction(
-            m_currentDebugScope, functionDecl.name(), llvm::StringRef(), m_currentDebugFile, functionDecl.location.line,
-            static_cast<llvm::DISubroutineType *>(generate_debug_type(*functionDecl.type)), functionDecl.location.line);
-        debugScope = makePtr<DebugScopeRAII>(*this, scope);
-    }
-
     auto fnType = functionDecl.getFnType();
 
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
     if (!function) dmz_unreachable("internal error no function '" + funcName + "'");
+
+    ptr<DebugScopeRAII> debugScope = nullptr;
+    if (m_debugSymbols) {
+        auto scope = function->getSubprogram();
+        if (!scope) dmz_unreachable("internal error no subprogram '" + funcName + "'");
+
+        debugScope = makePtr<DebugScopeRAII>(*this, scope);
+    }
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);
     m_builder.SetInsertPoint(entryBB);
@@ -164,12 +173,22 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         }
 
         const auto *paramDecl = functionDecl.params[idx].get();
-        arg.setName(paramDecl->identifier);
+        // arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
-        if (!paramDecl->type->generate_struct() && paramDecl->isMutable) {
+        if (!paramDecl->type->generate_struct()) {
             declVal = allocate_stack_variable(paramDecl->location, paramDecl->identifier, *paramDecl->type);
             store_value(&arg, declVal, *paramDecl->type, *paramDecl->type);
+        }
+        if (m_debugSymbols) {
+            llvm::DILocalVariable *D = m_debugBuilder.createParameterVariable(
+                m_currentDebugScope, paramDecl->name(), idx + 1, m_currentDebugFile, paramDecl->location.line,
+                generate_debug_type(*paramDecl->type), true);
+
+            m_debugBuilder.insertDeclare(declVal, D, m_debugBuilder.createExpression(),
+                                         llvm::DILocation::get(*m_context, paramDecl->location.line,
+                                                               paramDecl->location.col, m_currentDebugScope),
+                                         m_builder.GetInsertBlock());
         }
 
         m_declarations[paramDecl] = declVal;

@@ -88,6 +88,10 @@ ptr<ResolvedType> ResolvedTypeNumber::isize(SourceLocation location) {
     return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, Driver::instance().ptrBitSize());
 }
 
+ptr<ResolvedType> ResolvedTypeNumber::usize(SourceLocation location) {
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize());
+}
+
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << location);
     if (other.kind == ResolvedTypeKind::Bool) {

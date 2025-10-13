@@ -28,8 +28,8 @@ class Codegen {
     bool m_debugSymbols = false;
     llvm::DIFile *m_currentDebugFile = nullptr;
     llvm::DIScope *m_currentDebugScope = nullptr;
-    std::vector<llvm::DIScope *>m_debugScopes = {};
-    
+    std::vector<llvm::DIScope *> m_debugScopes = {};
+
     class DebugScopeRAII {
         Codegen &m_codegen;
 
@@ -40,7 +40,7 @@ class Codegen {
         }
         ~DebugScopeRAII() {
             m_codegen.m_debugScopes.pop_back();
-            if (!m_codegen.m_debugScopes.empty()){
+            if (!m_codegen.m_debugScopes.empty()) {
                 m_codegen.m_currentDebugScope = m_codegen.m_debugScopes.back();
             }
         }
@@ -52,11 +52,14 @@ class Codegen {
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     llvm::DIType *generate_debug_type(const ResolvedType &type);
+    llvm::DIFile *generate_debug_file(const SourceLocation &location);
+    void generate_debug_location(const SourceLocation &location);
 
     std::string generate_decl_name(const ResolvedDecl &decl);
     llvm::Function *generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
-    llvm::AllocaInst *allocate_stack_variable(const SourceLocation& location, const std::string_view identifier, const ResolvedType &type);
+    llvm::AllocaInst *allocate_stack_variable(const SourceLocation &location, const std::string_view identifier,
+                                              const ResolvedType &type);
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
