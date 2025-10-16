@@ -5,13 +5,17 @@ fn foo(x: i32) -> void {
         return;
     }
 }
-// CHECK: define void @while_empty_exit.foo(i32 %x) {
+// CHECK: define void @while_empty_exit.foo(i32 %0) {
 // CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %0, ptr %x, align 4
 // CHECK-NEXT:   br label %while.cond
 // CHECK-NEXT: 
 // CHECK-NEXT: while.cond:                                       ; preds = %entry
-// CHECK-NEXT:   %0 = icmp sgt i32 %x, 1
-// CHECK-NEXT:   br i1 %0, label %while.body, label %while.exit
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %2 = icmp sgt i32 %1, 1
+// CHECK-NEXT:   br i1 %2, label %while.body, label %while.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: while.body:                                       ; preds = %while.cond
 // CHECK-NEXT:   br label %return

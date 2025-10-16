@@ -39,8 +39,8 @@ fn foo(x: i32) -> i32 {
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %while.exit, %if.exit, %if.true
-// CHECK-NEXT:   %5 = load i32, ptr %retval, align 4
-// CHECK-NEXT:   ret i32 %5
+// CHECK-NEXT:   %8 = load i32, ptr %retval, align 4
+// CHECK-NEXT:   ret i32 %8
 
 fn main() -> void {
     println(foo(10));

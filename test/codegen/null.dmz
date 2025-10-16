@@ -8,19 +8,24 @@ fn foo(n:*i32) -> void {
         printf("is null\n");
     }
 }
-// CHECK: define void @null.foo(ptr byref(i32) %n) {
+// CHECK: define void @null.foo(ptr byref(i32) %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = ptrtoint ptr %n to i64
-// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %0, 0
+// CHECK-NEXT:   %n = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store ptr %0, ptr %n, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %n, align 8
+// CHECK-NEXT:   %2 = ptrtoint ptr %1 to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %2, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
-// CHECK-NEXT:   %1 = load i32, ptr %n, align 4
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1)
+// CHECK-NEXT:   %3 = load ptr, ptr %n, align 8
+// CHECK-NEXT:   %4 = load i32, ptr %3, align 4
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %4)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %entry
-// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1)
+// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true

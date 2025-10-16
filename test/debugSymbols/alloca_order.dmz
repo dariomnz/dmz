@@ -1,6 +1,11 @@
 // RUN: dmz %s -llvm-dump -g 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '1\n2\n3\n')
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn println(n: i32) -> void {
+    printf("%d\n", n);
+}
+
 fn foo(x: i32, y: i32, z: i32) -> void {
     let x1: i32 = x;
     let y1: i32 = y;
@@ -10,26 +15,126 @@ fn foo(x: i32, y: i32, z: i32) -> void {
     println(y1);
     println(z1);
 }
-// CHECK: define void @alloca_order.foo(i32 %x, i32 %y, i32 %z) {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %x1 = alloca i32, align 4
-// CHECK-NEXT:   %y1 = alloca i32, align 4
-// CHECK-NEXT:   %z1 = alloca i32, align 4
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z1, i8 0, i64 4, i1 false)
-// CHECK-NEXT:   store i32 %x, ptr %x1, align 4
-// CHECK-NEXT:   store i32 %y, ptr %y1, align 4
-// CHECK-NEXT:   store i32 %z, ptr %z1, align 4
-// CHECK-NEXT:   %0 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   call void @alloca_order.println(i32 %0)
-// CHECK-NEXT:   %1 = load i32, ptr %y1, align 4
-// CHECK-NEXT:   call void @alloca_order.println(i32 %1)
-// CHECK-NEXT:   %2 = load i32, ptr %z1, align 4
-// CHECK-NEXT:   call void @alloca_order.println(i32 %2)
-// CHECK-NEXT:   ret void
-// CHECK-NEXT: }
 
 fn main() -> void {
     foo(1, 2, 3);
 }
+// CHECK: define void @alloca_order.println(i32 %0) !dbg !4 {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %n = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 4, i1 false)
+// CHECK-NEXT:     #dbg_declare(ptr %n, !10, !DIExpression(), !11)
+// CHECK-NEXT:   store i32 %0, ptr %n, align 4
+// CHECK-NEXT:     #dbg_declare(ptr %n, !9, !DIExpression(), !11)
+// CHECK-NEXT:   %1 = load i32, ptr %n, align 4, !dbg !12
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1), !dbg !13
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+// CHECK-NEXT: 
+// CHECK-NEXT: define void @alloca_order.foo(i32 %0, i32 %1, i32 %2) !dbg !14 {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %y = alloca i32, align 4
+// CHECK-NEXT:   %z = alloca i32, align 4
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   %y1 = alloca i32, align 4
+// CHECK-NEXT:   %z1 = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %y1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %z1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:     #dbg_declare(ptr %x, !21, !DIExpression(), !22)
+// CHECK-NEXT:   store i32 %0, ptr %x, align 4
+// CHECK-NEXT:     #dbg_declare(ptr %x, !18, !DIExpression(), !22)
+// CHECK-NEXT:     #dbg_declare(ptr %y, !23, !DIExpression(), !24)
+// CHECK-NEXT:   store i32 %1, ptr %y, align 4
+// CHECK-NEXT:     #dbg_declare(ptr %y, !19, !DIExpression(), !24)
+// CHECK-NEXT:     #dbg_declare(ptr %z, !25, !DIExpression(), !26)
+// CHECK-NEXT:   store i32 %2, ptr %z, align 4
+// CHECK-NEXT:     #dbg_declare(ptr %z, !20, !DIExpression(), !26)
+// CHECK-NEXT:     #dbg_declare(ptr %x1, !27, !DIExpression(), !28)
+// CHECK-NEXT:   %3 = load i32, ptr %x, align 4, !dbg !29
+// CHECK-NEXT:   store i32 %3, ptr %x1, align 4, !dbg !28
+// CHECK-NEXT:     #dbg_declare(ptr %y1, !30, !DIExpression(), !31)
+// CHECK-NEXT:   %4 = load i32, ptr %y, align 4, !dbg !32
+// CHECK-NEXT:   store i32 %4, ptr %y1, align 4, !dbg !31
+// CHECK-NEXT:     #dbg_declare(ptr %z1, !33, !DIExpression(), !34)
+// CHECK-NEXT:   %5 = load i32, ptr %z, align 4, !dbg !35
+// CHECK-NEXT:   store i32 %5, ptr %z1, align 4, !dbg !34
+// CHECK-NEXT:   %6 = load i32, ptr %x1, align 4, !dbg !36
+// CHECK-NEXT:   call void @alloca_order.println(i32 %6), !dbg !37
+// CHECK-NEXT:   %7 = load i32, ptr %y1, align 4, !dbg !38
+// CHECK-NEXT:   call void @alloca_order.println(i32 %7), !dbg !39
+// CHECK-NEXT:   %8 = load i32, ptr %z1, align 4, !dbg !40
+// CHECK-NEXT:   call void @alloca_order.println(i32 %8), !dbg !41
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+// CHECK-NEXT: 
+// CHECK-NEXT: define void @__builtin_main() !dbg !42 {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @alloca_order.foo(i32 1, i32 2, i32 3), !dbg !45
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+// CHECK-NEXT: 
+// CHECK-NEXT: ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+// CHECK-NEXT: declare void @llvm.memset.inline.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #0
+// CHECK-NEXT: 
+// CHECK-NEXT: define i32 @main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @__builtin_main()
+// CHECK-NEXT:   ret i32 0
+// CHECK-NEXT: }
+// CHECK-NEXT: 
+// CHECK-NEXT: attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+// CHECK-NEXT: 
+// CHECK-NEXT: !llvm.dbg.cu = !{!0}
+// CHECK-NEXT: !llvm.module.flags = !{!2, !3}
+// CHECK-NEXT: 
+// CHECK-NEXT: !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "dmz Compiler", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+// CHECK-NEXT: !1 = !DIFile(filename: "alloca_order.dmz", directory: "/home/dario/git/dmz/test/debugSymbols")
+// CHECK-NEXT: !2 = !{i32 2, !"Debug Info Version", i32 3}
+// CHECK-NEXT: !3 = !{i32 2, !"Dwarf Version", i32 4}
+// CHECK-NEXT: !4 = distinct !DISubprogram(name: "alloca_order.println", scope: !1, file: !1, line: 5, type: !5, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !8)
+// CHECK-NEXT: !5 = !DISubroutineType(types: !6)
+// CHECK-NEXT: !6 = !{null, !7}
+// CHECK-NEXT: !7 = !DIBasicType(name: "i32", size: 32, encoding: DW_ATE_signed)
+// CHECK-NEXT: !8 = !{!9}
+// CHECK-NEXT: !9 = !DILocalVariable(name: "n", arg: 1, scope: !4, file: !1, line: 5, type: !7)
+// CHECK-NEXT: !10 = !DILocalVariable(name: "n", scope: !4, file: !1, line: 5, type: !7)
+// CHECK-NEXT: !11 = !DILocation(line: 5, column: 11, scope: !4)
+// CHECK-NEXT: !12 = !DILocation(line: 6, column: 19, scope: !4)
+// CHECK-NEXT: !13 = !DILocation(line: 6, column: 10, scope: !4)
+// CHECK-NEXT: !14 = distinct !DISubprogram(name: "alloca_order.foo", scope: !1, file: !1, line: 9, type: !15, scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !17)
+// CHECK-NEXT: !15 = !DISubroutineType(types: !16)
+// CHECK-NEXT: !16 = !{null, !7, !7, !7}
+// CHECK-NEXT: !17 = !{!18, !19, !20}
+// CHECK-NEXT: !18 = !DILocalVariable(name: "x", arg: 1, scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !19 = !DILocalVariable(name: "y", arg: 2, scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !20 = !DILocalVariable(name: "z", arg: 3, scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !21 = !DILocalVariable(name: "x", scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !22 = !DILocation(line: 9, column: 7, scope: !14)
+// CHECK-NEXT: !23 = !DILocalVariable(name: "y", scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !24 = !DILocation(line: 9, column: 15, scope: !14)
+// CHECK-NEXT: !25 = !DILocalVariable(name: "z", scope: !14, file: !1, line: 9, type: !7)
+// CHECK-NEXT: !26 = !DILocation(line: 9, column: 23, scope: !14)
+// CHECK-NEXT: !27 = !DILocalVariable(name: "x1", scope: !14, file: !1, line: 10, type: !7)
+// CHECK-NEXT: !28 = !DILocation(line: 10, column: 4, scope: !14)
+// CHECK-NEXT: !29 = !DILocation(line: 10, column: 18, scope: !14)
+// CHECK-NEXT: !30 = !DILocalVariable(name: "y1", scope: !14, file: !1, line: 11, type: !7)
+// CHECK-NEXT: !31 = !DILocation(line: 11, column: 4, scope: !14)
+// CHECK-NEXT: !32 = !DILocation(line: 11, column: 18, scope: !14)
+// CHECK-NEXT: !33 = !DILocalVariable(name: "z1", scope: !14, file: !1, line: 12, type: !7)
+// CHECK-NEXT: !34 = !DILocation(line: 12, column: 4, scope: !14)
+// CHECK-NEXT: !35 = !DILocation(line: 12, column: 18, scope: !14)
+// CHECK-NEXT: !36 = !DILocation(line: 14, column: 12, scope: !14)
+// CHECK-NEXT: !37 = !DILocation(line: 14, column: 11, scope: !14)
+// CHECK-NEXT: !38 = !DILocation(line: 15, column: 12, scope: !14)
+// CHECK-NEXT: !39 = !DILocation(line: 15, column: 11, scope: !14)
+// CHECK-NEXT: !40 = !DILocation(line: 16, column: 12, scope: !14)
+// CHECK-NEXT: !41 = !DILocation(line: 16, column: 11, scope: !14)
+// CHECK-NEXT: !42 = distinct !DISubprogram(name: "alloca_order.main", scope: !1, file: !1, line: 19, type: !43, scopeLine: 19, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+// CHECK-NEXT: !43 = !DISubroutineType(types: !44)
+// CHECK-NEXT: !44 = !{null}
+// CHECK-NEXT: !45 = !DILocation(line: 20, column: 7, scope: !42)

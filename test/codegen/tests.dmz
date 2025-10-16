@@ -28,29 +28,33 @@ test "add test 3" {
 // CHECK-NEXT:   %0 = load i32, ptr %retval, align 4
 // CHECK-NEXT:   ret i32 %0
 // CHECK-NEXT: }
-// CHECK-NEXT: 
-// CHECK-NEXT: define void @"std.builtin.@builtin_test_run"(ptr sret(%error.struct.void) %ret, i32 %n) {
+
+// CHECK: define void @"std.builtin.@builtin_test_run"(ptr sret(%error.struct.void) %ret, i32 %0) {
 // CHECK-NEXT: entry:
+// CHECK-NEXT:   %n = alloca i32, align 4
 // CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.void, align 8
 // CHECK-NEXT:   %struct.ret.tmp2 = alloca %error.struct.void, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp2, i8 0, i64 16, i1 false)
-// CHECK-NEXT:   switch i32 %n, label %switch.else [
+// CHECK-NEXT:   store i32 %0, ptr %n, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %n, align 4
+// CHECK-NEXT:   switch i32 %1, label %switch.else [
 // CHECK-NEXT:     i32 0, label %switch.case
 // CHECK-NEXT:     i32 1, label %switch.case1
 // CHECK-NEXT:   ]
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case:                                      ; preds = %entry
 // CHECK-NEXT:   call void @"tests.add test 2"(ptr sret(%error.struct.void) %struct.ret.tmp)
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
-// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
-// CHECK-NEXT:   %2 = ptrtoint ptr %1 to i64
-// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %2, 0
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %3 = load ptr, ptr %2, align 8
+// CHECK-NEXT:   %4 = ptrtoint ptr %3 to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %4, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.try, label %if.exit.try
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.try:                                      ; preds = %switch.case
-// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr %1, ptr %3, align 8
+// CHECK-NEXT:   %5 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr %3, ptr %5, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit.try:                                      ; preds = %switch.case
@@ -58,15 +62,15 @@ test "add test 3" {
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case1:                                     ; preds = %entry
 // CHECK-NEXT:   call void @"tests.add test 3"(ptr sret(%error.struct.void) %struct.ret.tmp2)
-// CHECK-NEXT:   %4 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp2, i32 0, i32 1
-// CHECK-NEXT:   %5 = load ptr, ptr %4, align 8
-// CHECK-NEXT:   %6 = ptrtoint ptr %5 to i64
-// CHECK-NEXT:   %ptr.to.bool3 = icmp ne i64 %6, 0
+// CHECK-NEXT:   %6 = getelementptr inbounds nuw %error.struct.void, ptr %struct.ret.tmp2, i32 0, i32 1
+// CHECK-NEXT:   %7 = load ptr, ptr %6, align 8
+// CHECK-NEXT:   %8 = ptrtoint ptr %7 to i64
+// CHECK-NEXT:   %ptr.to.bool3 = icmp ne i64 %8, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool3, label %if.true.try4, label %if.exit.try5
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true.try4:                                     ; preds = %switch.case1
-// CHECK-NEXT:   %7 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr %5, ptr %7, align 8
+// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.void, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr %7, ptr %9, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit.try5:                                     ; preds = %switch.case1
@@ -82,11 +86,15 @@ test "add test 3" {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-// CHECK: define ptr @"std.builtin.@builtin_test_name"(i32 %n) {
+// CHECK: define ptr @"std.builtin.@builtin_test_name"(i32 %0) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca ptr, align 8
+// CHECK-NEXT:   %n = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %retval, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   switch i32 %n, label %switch.else [
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %0, ptr %n, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %n, align 4
+// CHECK-NEXT:   switch i32 %1, label %switch.else [
 // CHECK-NEXT:     i32 0, label %switch.case
 // CHECK-NEXT:     i32 1, label %switch.case1
 // CHECK-NEXT:   ]
@@ -107,8 +115,8 @@ test "add test 3" {
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %switch.exit, %switch.else, %switch.case1, %switch.case
-// CHECK-NEXT:   %0 = load ptr, ptr %retval, align 8
-// CHECK-NEXT:   ret ptr %0
+// CHECK-NEXT:   %2 = load ptr, ptr %retval, align 8
+// CHECK-NEXT:   ret ptr %2
 // CHECK-NEXT: }
 
 // CHECK: define void @__builtin_main_test() {

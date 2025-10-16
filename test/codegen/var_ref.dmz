@@ -12,29 +12,41 @@ fn bar(c: *Color) -> void {
     c.g = 10;
     c.b = 10;
 }
-// CHECK: define void @var_ref.bar(ptr byref(%var_ref.Color) %c) {
+// CHECK: define void @var_ref.bar(ptr byref(%var_ref.Color) %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 0
-// CHECK-NEXT:   store i32 10, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 1
-// CHECK-NEXT:   store i32 10, ptr %1, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 2
+// CHECK-NEXT:   %c = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store ptr %0, ptr %c, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %1, i32 0, i32 0
 // CHECK-NEXT:   store i32 10, ptr %2, align 4
+// CHECK-NEXT:   %3 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %4 = getelementptr inbounds nuw %var_ref.Color, ptr %3, i32 0, i32 1
+// CHECK-NEXT:   store i32 10, ptr %4, align 4
+// CHECK-NEXT:   %5 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %6 = getelementptr inbounds nuw %var_ref.Color, ptr %5, i32 0, i32 2
+// CHECK-NEXT:   store i32 10, ptr %6, align 4
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
 fn printColor(c: *Color) -> void {
     dprintf(1, "Color{%d,%d,%d}\n", c.r, c.g, c.b);
 }
-// CHECK: define void @var_ref.printColor(ptr byref(%var_ref.Color) %c) {
+// CHECK: define void @var_ref.printColor(ptr byref(%var_ref.Color) %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 0
-// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 1
+// CHECK-NEXT:   %c = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store ptr %0, ptr %c, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %var_ref.Color, ptr %1, i32 0, i32 0
 // CHECK-NEXT:   %3 = load i32, ptr %2, align 4
-// CHECK-NEXT:   %4 = getelementptr inbounds nuw %var_ref.Color, ptr %c, i32 0, i32 2
-// CHECK-NEXT:   %5 = load i32, ptr %4, align 4
-// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str, i32 %1, i32 %3, i32 %5)
+// CHECK-NEXT:   %4 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %5 = getelementptr inbounds nuw %var_ref.Color, ptr %4, i32 0, i32 1
+// CHECK-NEXT:   %6 = load i32, ptr %5, align 4
+// CHECK-NEXT:   %7 = load ptr, ptr %c, align 8
+// CHECK-NEXT:   %8 = getelementptr inbounds nuw %var_ref.Color, ptr %7, i32 0, i32 2
+// CHECK-NEXT:   %9 = load i32, ptr %8, align 4
+// CHECK-NEXT:   %10 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str, i32 %3, i32 %6, i32 %9)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -43,13 +55,19 @@ fn foo(x: *i32) -> void {
     x.* = 20;
     dprintf(1, "%d\n", x.*);
 }
-// CHECK: define void @var_ref.foo(ptr byref(i32) %x) {
+// CHECK: define void @var_ref.foo(ptr byref(i32) %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %1 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.1, i32 %0)
-// CHECK-NEXT:   store i32 20, ptr %x, align 4
-// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.2, i32 %2)
+// CHECK-NEXT:   %x = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store ptr %0, ptr %x, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %x, align 8
+// CHECK-NEXT:   %2 = load i32, ptr %1, align 4
+// CHECK-NEXT:   %3 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.1, i32 %2)
+// CHECK-NEXT:   %4 = load ptr, ptr %x, align 8
+// CHECK-NEXT:   store i32 20, ptr %4, align 4
+// CHECK-NEXT:   %5 = load ptr, ptr %x, align 8
+// CHECK-NEXT:   %6 = load i32, ptr %5, align 4
+// CHECK-NEXT:   %7 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.2, i32 %6)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

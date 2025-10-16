@@ -28,7 +28,9 @@ void Codegen::generate_block(const ResolvedBlock &block) {
 
 llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     debug_func("");
-    generate_debug_location(stmt.location);
+    set_debug_location(stmt.location);
+    defer([&]() { unset_debug_location(); });
+
     if (auto *expr = dynamic_cast<const ResolvedExpr *>(&stmt)) {
         return generate_expr(*expr);
     }

@@ -7,15 +7,23 @@ fn print<T>(param:T) -> void {
     printf("One integer %d\n", param);
 }
 
-// CHECK: define void @"generic_func.print<i32>"(i32 %param) {
+// CHECK: define void @"generic_func.print<i32>"(i32 %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %param)
+// CHECK-NEXT:   %param = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %0, ptr %param, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %param, align 4
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-
-// CHECK: define void @"generic_func.print<i64>"(i64 %param) {
+// CHECK-NEXT: 
+// CHECK-NEXT: define void @"generic_func.print<i64>"(i64 %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %param)
+// CHECK-NEXT:   %param = alloca i64, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store i64 %0, ptr %param, align 4
+// CHECK-NEXT:   %1 = load i64, ptr %param, align 4
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i64 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -23,9 +31,21 @@ fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
     printf("Integers %d %d %d\n", param1, param2, param3);
 }
 
-// CHECK: define void @"generic_func.foo<i16, i32, i64>"(i16 %param1, i32 %param2, i64 %param3) {
+// CHECK: define void @"generic_func.foo<i16, i32, i64>"(i16 %0, i32 %1, i64 %2) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i16 %param1, i32 %param2, i64 %param3)
+// CHECK-NEXT:   %param1 = alloca i16, align 2
+// CHECK-NEXT:   %param2 = alloca i32, align 4
+// CHECK-NEXT:   %param3 = alloca i64, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param1, i8 0, i64 2, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param2, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param3, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store i16 %0, ptr %param1, align 2
+// CHECK-NEXT:   store i32 %1, ptr %param2, align 4
+// CHECK-NEXT:   store i64 %2, ptr %param3, align 4
+// CHECK-NEXT:   %3 = load i16, ptr %param1, align 2
+// CHECK-NEXT:   %4 = load i32, ptr %param2, align 4
+// CHECK-NEXT:   %5 = load i64, ptr %param3, align 4
+// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2, i16 %3, i32 %4, i64 %5)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

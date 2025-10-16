@@ -276,6 +276,11 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         return m_debugBuilder.createStructType(structFile, structName, structFile, type.location.line, bitSize,
                                                alingSize, llvm::DINode::DIFlags::FlagPrototyped, nullptr,
                                                m_debugBuilder.getOrCreateArray(Elements));
+    } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
+        auto llvmArrayType = generate_type(type, true);
+        auto llvmElemType = generate_debug_type(*typeArray->arrayType);
+        auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmArrayType).value() * 8;
+        return m_debugBuilder.createArrayType(typeArray->arraySize, alingSize, llvmElemType, nullptr);
     }
     type.dump();
     dmz_unreachable("TODO");
@@ -288,10 +293,20 @@ llvm::DIFile *Codegen::generate_debug_file(const SourceLocation &location) {
     return m_debugBuilder.createFile(path.filename().string(), path.parent_path().string());
 }
 
-void Codegen::generate_debug_location(const SourceLocation &location) {
+void Codegen::set_debug_location(const SourceLocation &location) {
     if (m_debugSymbols) {
+        debug_func(Dumper([this]() { m_currentDebugScope->print(llvm::errs()); }));
+        m_DebugScopeStack.emplace(m_builder.getCurrentDebugLocation());
         m_builder.SetCurrentDebugLocation(
             llvm::DILocation::get(m_currentDebugScope->getContext(), location.line, location.col, m_currentDebugScope));
+    }
+}
+
+void Codegen::unset_debug_location() {
+    if (m_debugSymbols) {
+        debug_func("");
+        m_builder.SetCurrentDebugLocation(m_DebugScopeStack.top());
+        m_DebugScopeStack.pop();
     }
 }
 

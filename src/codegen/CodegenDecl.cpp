@@ -77,14 +77,6 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));
 
-    if (m_debugSymbols && dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
-        llvm::DISubprogram *subProgram = m_debugBuilder.createFunction(
-            m_currentDebugScope, functionDecl.name(), llvm::StringRef(), m_currentDebugFile, functionDecl.location.line,
-            static_cast<llvm::DISubroutineType *>(generate_debug_type(*fnType)), functionDecl.location.line,
-            llvm::DINode::FlagPrototyped, llvm::DISubprogram::SPFlagDefinition);
-        fn->setSubprogram(subProgram);
-    }
-
     return fn;
 }
 
@@ -141,10 +133,12 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
 
     ptr<DebugScopeRAII> debugScope = nullptr;
     if (m_debugSymbols) {
-        auto scope = function->getSubprogram();
-        if (!scope) dmz_unreachable("internal error no subprogram '" + funcName + "'");
-
-        debugScope = makePtr<DebugScopeRAII>(*this, scope);
+        llvm::DISubprogram *subProgram = m_debugBuilder.createFunction(
+            m_currentDebugScope, functionDecl.name(), llvm::StringRef(), m_currentDebugFile, functionDecl.location.line,
+            static_cast<llvm::DISubroutineType *>(generate_debug_type(*fnType)), functionDecl.location.line,
+            llvm::DINode::FlagPrototyped, llvm::DISubprogram::SPFlagDefinition);
+        function->setSubprogram(subProgram);
+        debugScope = makePtr<DebugScopeRAII>(*this, subProgram);
     }
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);

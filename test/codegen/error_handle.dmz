@@ -17,18 +17,23 @@ fn foo(x:i32) -> !i32 {
     }
     return x;
 }
-// CHECK: define void @error_handle.foo(ptr sret(%error.struct.i32) %ret, i32 %x) {
+// CHECK: define void @error_handle.foo(ptr sret(%error.struct.i32) %ret, i32 %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = icmp eq i32 %x, 1
-// CHECK-NEXT:   br i1 %0, label %if.true, label %if.exit
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %0, ptr %x, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %2 = icmp eq i32 %1, 1
+// CHECK-NEXT:   br i1 %2, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr @error.str.ERROR_ONE, ptr %1, align 8
+// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_ONE, ptr %3, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %entry
-// CHECK-NEXT:   store i32 %x, ptr %ret, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   store i32 %4, ptr %ret, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %if.exit, %if.true
@@ -41,35 +46,40 @@ fn bar(x:i32) -> !i32 {
     }
     return try foo(x);
 }
-// CHECK: define void @error_handle.bar(ptr sret(%error.struct.i32) %ret, i32 %x) {
+// CHECK: define void @error_handle.bar(ptr sret(%error.struct.i32) %ret, i32 %0) {
 // CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.i32, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
-// CHECK-NEXT:   %0 = icmp eq i32 %x, 2
-// CHECK-NEXT:   br i1 %0, label %if.true, label %if.exit
+// CHECK-NEXT:   store i32 %0, ptr %x, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %2 = icmp eq i32 %1, 2
+// CHECK-NEXT:   br i1 %2, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr @error.str.ERROR_TWO, ptr %1, align 8
+// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_TWO, ptr %3, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %entry
-// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 %x)
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
-// CHECK-NEXT:   %3 = load ptr, ptr %2, align 8
-// CHECK-NEXT:   %4 = ptrtoint ptr %3 to i64
-// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %4, 0
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 %4)
+// CHECK-NEXT:   %5 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 1
+// CHECK-NEXT:   %6 = load ptr, ptr %5, align 8
+// CHECK-NEXT:   %7 = ptrtoint ptr %6 to i64
+// CHECK-NEXT:   %ptr.to.bool = icmp ne i64 %7, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool, label %if.true.try, label %if.exit.try
 // CHECK-NEXT: 
-// CHECK-NEXT: if.true.try:                                   ; preds = %if.exit
-// CHECK-NEXT:   %5 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr %3, ptr %5, align 8
+// CHECK-NEXT: if.true.try:                                      ; preds = %if.exit
+// CHECK-NEXT:   %8 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr %6, ptr %8, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
-// CHECK-NEXT: if.exit.try:                                   ; preds = %if.exit
-// CHECK-NEXT:   %6 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
-// CHECK-NEXT:   %7 = load i32, ptr %6, align 4
-// CHECK-NEXT:   store i32 %7, ptr %ret, align 4
+// CHECK-NEXT: if.exit.try:                                      ; preds = %if.exit
+// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
+// CHECK-NEXT:   %10 = load i32, ptr %9, align 4
+// CHECK-NEXT:   store i32 %10, ptr %ret, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %if.exit.try, %if.true.try, %if.true

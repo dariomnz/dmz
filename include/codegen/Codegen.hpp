@@ -29,6 +29,7 @@ class Codegen {
     llvm::DIFile *m_currentDebugFile = nullptr;
     llvm::DIScope *m_currentDebugScope = nullptr;
     std::vector<llvm::DIScope *> m_debugScopes = {};
+    std::stack<llvm::DILocation *> m_DebugScopeStack = {};
 
     class DebugScopeRAII {
         Codegen &m_codegen;
@@ -42,6 +43,8 @@ class Codegen {
             m_codegen.m_debugScopes.pop_back();
             if (!m_codegen.m_debugScopes.empty()) {
                 m_codegen.m_currentDebugScope = m_codegen.m_debugScopes.back();
+            } else {
+                m_codegen.m_currentDebugScope = nullptr;
             }
         }
     };
@@ -53,7 +56,8 @@ class Codegen {
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     llvm::DIType *generate_debug_type(const ResolvedType &type);
     llvm::DIFile *generate_debug_file(const SourceLocation &location);
-    void generate_debug_location(const SourceLocation &location);
+    void set_debug_location(const SourceLocation &location);
+    void unset_debug_location();
 
     std::string generate_decl_name(const ResolvedDecl &decl);
     llvm::Function *generate_function_decl(const ResolvedFuncDecl &functionDecl);

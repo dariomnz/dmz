@@ -4,25 +4,31 @@ fn foo(x: i32) -> void {
 
     }
 }
-// CHECK: define void @if_conditional_binop_condition.foo(i32 %x) {
+// CHECK: define void @if_conditional_binop_condition.foo(i32 %0) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = icmp eq i32 %x, 1
-// CHECK-NEXT:   br i1 %0, label %or.merge, label %or.rhs
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 %0, ptr %x, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %2 = icmp eq i32 %1, 1
+// CHECK-NEXT:   br i1 %2, label %or.merge, label %or.rhs
 // CHECK-NEXT: 
 // CHECK-NEXT: or.rhs:                                           ; preds = %entry
-// CHECK-NEXT:   %1 = icmp eq i32 %x, 2
-// CHECK-NEXT:   br i1 %1, label %and.rhs, label %and.merge
+// CHECK-NEXT:   %3 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %4 = icmp eq i32 %3, 2
+// CHECK-NEXT:   br i1 %4, label %and.rhs, label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: or.merge:                                         ; preds = %and.merge, %entry
-// CHECK-NEXT:   %2 = phi i1 [ %4, %and.merge ], [ true, %entry ]
-// CHECK-NEXT:   br i1 %2, label %if.true, label %if.exit
+// CHECK-NEXT:   %5 = phi i1 [ %8, %and.merge ], [ true, %entry ]
+// CHECK-NEXT:   br i1 %5, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: and.rhs:                                          ; preds = %or.rhs
-// CHECK-NEXT:   %3 = icmp sgt i32 %x, 3
+// CHECK-NEXT:   %6 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %7 = icmp sgt i32 %6, 3
 // CHECK-NEXT:   br label %and.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: and.merge:                                        ; preds = %and.rhs, %or.rhs
-// CHECK-NEXT:   %4 = phi i1 [ %3, %and.rhs ], [ false, %or.rhs ]
+// CHECK-NEXT:   %8 = phi i1 [ %7, %and.rhs ], [ false, %or.rhs ]
 // CHECK-NEXT:   br label %or.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %or.merge

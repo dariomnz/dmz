@@ -564,12 +564,10 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
-    if (auto modDecl = dynamic_cast<ResolvedModuleDecl *>(&resolvedDeps)) {
-        if (modDecl->declarations.size() == 0) {
-            debug_msg("ResolvedModuleDecl is empty");
-            ret = false;
-            return ret;
-        }
+    if (dynamic_cast<ResolvedModuleDecl *>(&resolvedDeps)) {
+        debug_msg("ResolvedModuleDecl is empty");
+        ret = false;
+        return ret;
     }
 
     if (resolvedDeps.identifier == "main") {
@@ -655,7 +653,7 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
         if (auto md = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
             debug_msg("ModuleDecl " << md->identifier);
             remove_unused(md->declarations, buildTest);
-            if (!recurse_needed(*md, buildTest, recurse_check)) {
+            if (md->declarations.empty()) {
                 add_to_remove(decl);
             }
             continue;
