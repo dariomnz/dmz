@@ -397,8 +397,8 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
             }
             if (shouldCheckType) {
                 if (!varDecl.type->compare(*resolvedInitializer->type)) {
-                    // varDecl.type->dump();
-                    // resolvedInitializer->type->dump();
+                    varDecl.type->dump();
+                    resolvedInitializer->type->dump();
                     report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                               varDecl.type->to_str() + "' actual '" +
                                                               resolvedInitializer->type->to_str() + "'");
@@ -416,8 +416,15 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
         return false;
     }
 
+    if (dynamic_cast<ResolvedMemberExpr *>(resolvedInitializer.get()) && !varDecl.isMutable) {
+        if (auto structType = dynamic_cast<ResolvedTypeStruct *>(resolvedInitializer->type.get())) {
+            resolvedInitializer->type = makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl);
+        }
+    }
+
     varDecl.type = type->clone();
     varDecl.initializer = std::move(resolvedInitializer);
+
     return true;
 }
 
@@ -559,7 +566,8 @@ ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(const ErrorG
     return makePtr<ResolvedErrorGroupExprDecl>(ErrorGroupExprDecl.location, std::move(resolvedErrors));
 }
 
-std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules) {
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
+                                                                 bool sourceModule) {
     bool error = false;
     debug_func("error " << (error ? "true" : "false"));
     std::vector<ptr<ResolvedModuleDecl>> resolvedModules;
@@ -595,7 +603,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {
-        if (!resolve_module_function_decls(*module)) {
+        if (!resolve_module_function_decls(*module, sourceModule)) {
             error = true;
             continue;
         }
@@ -673,7 +681,7 @@ bool Sema::resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDe
     return !error;
 }
 
-bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl) {
+bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, bool sourceModule) {
     debug_func(resolvedModuleDecl.location);
     auto prevModule = m_currentModule;
     m_currentModule = &resolvedModuleDecl;
@@ -683,8 +691,14 @@ bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl)
         if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             auto resolvedDecl = resolve_function_decl(*fn);
-            if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
-                m_tests.emplace_back(test);
+            if (sourceModule) {
+                if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
+                    auto it = std::find_if(m_tests.begin(), m_tests.end(),
+                                           [test](ResolvedTestDecl *t) { return t->identifier == test->identifier; });
+                    if (it == m_tests.end()) {
+                        m_tests.emplace_back(test);
+                    }
+                }
             }
 
             if (!resolvedDecl || !insert_decl_to_module(resolvedModuleDecl, std::move(resolvedDecl))) {

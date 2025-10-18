@@ -438,7 +438,15 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
                 dmz_unreachable("TODO");
             }
         } else {
-            dmz_unreachable("TODO");
+            auto ret = m_declarations[declStmt->varDecl.get()];
+            if (!ret) {
+                ret = m_declarations[declStmt];
+                if (!ret) {
+                    declStmt->dump();
+                    dmz_unreachable("TODO");
+                }
+            }
+            return keepPointer ? ret : load_value(ret, *declStmt->type);
         }
     } else {
         memberExpr.member.dump();

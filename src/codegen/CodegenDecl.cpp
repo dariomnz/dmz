@@ -66,7 +66,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
             continue;
         }
         llvm::Type *paramType = generate_type(*param->type);
-        if (dynamic_cast<ResolvedTypeStruct *>(param->type.get())) {
+        if (param->type->generate_struct()) {
             paramType = llvm::PointerType::get(paramType, 0);
         }
         paramTypes.emplace_back(paramType);

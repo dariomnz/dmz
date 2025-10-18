@@ -60,7 +60,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) 
 
 bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl) {
     [[maybe_unused]] auto declPtr = decl.get();
-    debug_func(declPtr->identifier << " " << declPtr->location);
+    debug_func("module: '" << moduleDecl.name() << "' decl '" << declPtr->identifier << "' " << declPtr->location);
     auto it = std::find_if(moduleDecl.declarations.begin(), moduleDecl.declarations.end(),
                            [&](const ptr<ResolvedDecl> &d) { return decl->identifier == d->identifier; });
     if (it != moduleDecl.declarations.end()) {
@@ -134,6 +134,7 @@ ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedMo
     add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
+        debug_msg("Search: " << decl->identifier << " in " << moduleDecl.identifier << " to find " << id);
         if (id != declPtr->identifier) continue;
         if (&moduleDecl != m_currentModule && !decl->isPublic) {
             report(loc, "cannot access private member '" + std::string(id) + "'");
@@ -278,6 +279,15 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             dump_scopes();
             return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
         }
+        if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl)) {
+            if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(declStmt->type.get())) {
+                ret = makePtr<ResolvedTypeStruct>(struType->location, struType->decl);
+            } else {
+                ret = declStmt->type->clone();
+            }
+            retPtr = ret.get();
+            return ret;
+        }
         if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
             ret = makePtr<ResolvedTypeStruct>(type.location, struDecl);
             retPtr = ret.get();
@@ -394,7 +404,7 @@ bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_reso
     }
     imported_modules.clear();
 
-    auto resolvedModuleDecl = resolve_modules_decls(moduleDecls);
+    auto resolvedModuleDecl = resolve_modules_decls(moduleDecls, false);
     for (size_t i = 0; i < moduleDecls.size(); i++) {
         imported_modules.emplace(std::move(moduleDeclsPaths[i]), std::move(moduleDecls[i]));
     }
@@ -430,7 +440,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(bool needMain) {
 
     std::vector<ptr<ModuleDecl>> ast_v;
     ast_v.emplace_back(std::move(m_ast));
-    auto declarations = resolve_modules_decls(ast_v);
+    auto declarations = resolve_modules_decls(ast_v, true);
     m_ast = std::move(ast_v[0]);
     ast_v.clear();
 
@@ -616,26 +626,31 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
 
     auto add_to_remove = [&](ptr<DMZ::ResolvedDecl> &d) {
         if (auto deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
-            debug_msg_func("add_to_remove", deps->identifier);
-            debug_msg_func("add_to_remove",
-                           "Removing all " << deps->dependsOn.size() << " dependsOn of " << deps->identifier);
-            for (auto &&decl : deps->dependsOn) {
-                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-                if (!decl->isUsedBy.erase(deps)) {
-                    debug_msg_func("add_to_remove", "Error erasing");
-                }
-            }
-            deps->dependsOn.clear();
+            if (m_removed_decls.find(deps) != m_removed_decls.end()) return;
+            // debug_msg_func("add_to_remove", deps->identifier);
+            // debug_msg_func("add_to_remove",
+            //                "Removing all " << deps->dependsOn.size() << " dependsOn of " << deps->identifier);
+            // for (auto &&decl : deps->dependsOn) {
+            //     if (m_removed_decls.find(decl) != m_removed_decls.end()) continue;
+            //     if (decl->isUsedBy.find(deps) == decl->isUsedBy.end()) continue;
+            //     debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
+            //     if (!decl->isUsedBy.erase(deps)) {
+            //         debug_msg_func("add_to_remove", "Error erasing");
+            //     }
+            // }
+            // deps->dependsOn.clear();
 
-            debug_msg_func("add_to_remove",
-                           "Removing all " << deps->isUsedBy.size() << " isUsedBy of " << deps->identifier);
-            for (auto &&decl : deps->isUsedBy) {
-                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-                if (!decl->dependsOn.erase(deps)) {
-                    debug_msg_func("add_to_remove", "Error erasing");
-                }
-            }
-            deps->isUsedBy.clear();
+            // debug_msg_func("add_to_remove",
+            //                "Removing all " << deps->isUsedBy.size() << " isUsedBy of " << deps->identifier);
+            // for (auto &&decl : deps->isUsedBy) {
+            //     if (m_removed_decls.find(decl) != m_removed_decls.end()) continue;
+            //     if (decl->dependsOn.find(deps) == decl->dependsOn.end()) continue;
+            //     debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
+            //     if (!decl->dependsOn.erase(deps)) {
+            //         debug_msg_func("add_to_remove", "Error erasing");
+            //     }
+            // }
+            // deps->isUsedBy.clear();
             m_removed_decls.emplace(deps);
             d.reset();
         } else {
@@ -711,7 +726,7 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
         }
     }
 
-    std::erase_if(decls, [&](ptr<ResolvedDecl> &d) -> bool { return d ? false : true; });
+    std::erase_if(decls, [&](ptr<ResolvedDecl> &d) -> bool { return d == nullptr; });
 }
 
 bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {

@@ -3,6 +3,7 @@ extern fn realloc(ptr: *void, size: u64) -> *void;
 extern fn free(ptr: *void) -> void;
 pub extern fn memmove(dest: *void, src: *void, size: u64) -> *void;
 pub extern fn memcpy(dest: *void, src: *void, size: u64) -> *void;
+pub extern fn strlen(str: *void) -> usize;
 
 pub struct Allocator {
     allocator: *void,

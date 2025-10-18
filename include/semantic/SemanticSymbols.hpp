@@ -554,12 +554,17 @@ struct ResolvedDeclStmt : public ResolvedDependencies, public ResolvedStmt {
     SourceLocation location;
     ptr<ResolvedVarDecl> varDecl;
     bool initialized = false;
+    ResolvedModuleDecl *saveCurrentModule;
+    ResolvedStructDecl *saveCurrentStruct;
 
-    ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl)
+    ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl,
+                     ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct)
         : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
           ResolvedStmt(location),
           location(location),
-          varDecl(std::move(varDecl)) {}
+          varDecl(std::move(varDecl)),
+          saveCurrentModule(saveCurrentModule),
+          saveCurrentStruct(saveCurrentStruct) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

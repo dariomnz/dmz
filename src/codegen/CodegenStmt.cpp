@@ -258,6 +258,12 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
 llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     debug_func(stmt.type->to_str());
+
+    if (stmt.type->kind == ResolvedTypeKind::Module || stmt.type->kind == ResolvedTypeKind::Function ||
+        stmt.type->kind == ResolvedTypeKind::StructDecl) {
+        return nullptr;
+    }
+
     const auto *decl = stmt.varDecl.get();
     llvm::AllocaInst *var = allocate_stack_variable(stmt.location, decl->identifier, *decl->type);
 

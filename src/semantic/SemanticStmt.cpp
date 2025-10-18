@@ -58,11 +58,12 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
     }
     auto fnType = m_currentFunction->getFnType();
 
-    if (fnType->returnType->kind == ResolvedTypeKind::Void && returnStmt.expr)
-        if (fnType->returnType->kind != ResolvedTypeKind::Optional)
-            return report(returnStmt.location, "unexpected return value in void function");
+    if (fnType->returnType->kind == ResolvedTypeKind::Void && returnStmt.expr &&
+        !fnType->returnType->equal(*ResolvedTypeOptional::voidOptional(fnType->returnType->location)))
+        return report(returnStmt.location, "unexpected return value in void function");
 
-    if (fnType->returnType->kind != ResolvedTypeKind::Void && !returnStmt.expr)
+    if (fnType->returnType->kind != ResolvedTypeKind::Void && !returnStmt.expr &&
+        !fnType->returnType->equal(*ResolvedTypeOptional::voidOptional(fnType->returnType->location)))
         return report(returnStmt.location, "expected a return value");
 
     ptr<ResolvedExpr> resolvedExpr;
@@ -223,12 +224,20 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    return makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl));
+    return makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), m_currentModule,
+                                     m_currentStruct);
 }
 
 bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
     debug_func(declStmt.location);
     if (declStmt.initialized) return true;
+
+    auto prevModule = m_currentModule;
+    defer([&]() { m_currentModule = prevModule; });
+    m_currentModule = declStmt.saveCurrentModule;
+    auto prevStruct = m_currentStruct;
+    defer([&]() { m_currentStruct = prevStruct; });
+    m_currentStruct = declStmt.saveCurrentStruct;
 
     if (!resolve_var_decl_initialize(*declStmt.varDecl)) return false;
     declStmt.type = declStmt.varDecl->type->clone();

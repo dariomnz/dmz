@@ -1,0 +1,68 @@
+const std = import("std");
+
+pub struct Writer {
+
+    buffer: []u8,
+    end: usize,
+
+    vtable_ptr: *void,
+    // fn flush(ptr: *@This, w: Writer, data: []u8, splat: usize)
+    vtable_flush: *fn(*void, *Writer, []u8, usize)->!usize,
+
+    pub fn fixed(buf: []u8) -> @This {
+        let ret = @This{
+            buffer: buf,
+            end: 0,
+            vtable_ptr: null,
+            vtable_flush: &@This.fixedFlush,
+        };
+        ret.vtable_ptr = &ret;
+        return ret;
+    }
+
+    pub fn print(w: *@This) -> void {
+        // std.io.printf("Writer buffer %p len %ld end %ld\n", w.buffer.ptr, w.buffer.len, w.end);
+    }
+
+    fn fixedFlush(ptr: *void, w: *Writer, data: []u8, splat: usize) -> !usize {
+        // std.io.printf("fixedFlush splat %ld\n", splat);
+        return 0;
+    }
+
+    pub fn writeAll(w: *@This, bytes: []u8) -> !void {
+        let index: usize = 0;
+        while (index < bytes.len) {
+            index += try w.write(bytes[index..bytes.len]);
+        }
+    }
+
+    pub fn write(w: *@This, bytes: []u8) -> !usize {
+        if (w.end + bytes.len <= w.buffer.len) {
+            let remaining = w.buffer[w.end..w.buffer.len];
+            std.mem.memcpy(remaining.ptr, bytes.ptr, bytes.len);
+            w.end += bytes.len;
+            return bytes.len;
+        }
+        return w.vtable_flush(w.vtable_ptr, w, bytes, 1);
+    }
+
+    pub fn flush(w: *@This) -> !usize {
+        if (w.end == 0) {
+            return 0;
+        }
+        defer w.end = 0;
+        const emptySlice: []u8 = {};
+        return w.vtable_flush(w.vtable_ptr, w, emptySlice, 0);
+    }
+}
+
+test "Writer init" {
+    let array: u8[1024] = {};
+
+    let w = Writer.fixed(array[0..1024]);
+
+    const data = "Hello";
+    w.writeAll(data[0..3]);
+
+    std.io.printf("Init: %s\n", array);
+}

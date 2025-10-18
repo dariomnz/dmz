@@ -394,6 +394,10 @@ void ResolvedTypeOptional::dump(size_t level) const {
 
 std::string ResolvedTypeOptional::to_str() const { return "!" + optionalType->to_str(); }
 
+ptr<ResolvedType> ResolvedTypeOptional::voidOptional(SourceLocation location) {
+    return makePtr<ResolvedTypeOptional>(location, makePtr<ResolvedTypeVoid>(location));
+}
+
 bool ResolvedTypePointer::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << location);
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {

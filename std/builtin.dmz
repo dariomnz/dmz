@@ -21,7 +21,7 @@ fn __builtin_main_test() -> void {
     for (0..num_test) |i| {
         result = result + 1;
         const test_name = @builtin_test_name(i);
-        // std.io.printf("Run test [%d/%d] '%s'.\n", i + 1, num_test, test_name);
+        std.io.printf("Run test [%d/%d] '%s'.\n", i + 1, num_test, test_name);
         let err = catch @builtin_test_run(i);
         if (err) {
             std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, err);

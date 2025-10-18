@@ -122,12 +122,13 @@ class Sema {
     ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
 
-    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules);
+    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
+                                                               bool sourceModule);
     ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
     bool resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_decl_stmts(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, bool sourceModule);
 
     // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);

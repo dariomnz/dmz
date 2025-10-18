@@ -142,7 +142,7 @@ fn @builtin_get_errno() -> i32 {
     return errno_num;
 }
 
-fn error_errno() -> !void {
+pub fn error_errno() -> !void {
     switch (@builtin_get_errno()) {
         case 0 => return POSIX_errs.SUCCESS;
         case 1 => return POSIX_errs.OPERATION_NOT_PERMITTED;

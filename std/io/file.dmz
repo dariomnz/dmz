@@ -1,1 +1,26 @@
-extern fn open(buffer: *u8, flags: i32, ...) -> i32;
+pub const stdout: i32 = 1;
+pub const stderr: i32 = 2;
+
+pub extern fn open(buffer: *u8, flags: i32, ...) -> i32;
+pub extern fn write(fd: i32, buffer: *u8, count: usize) -> isize;
+pub extern fn read(fd: i32, buffer: *u8, count: usize) -> isize;
+pub extern fn cloase(fd: i32) -> i32;
+
+const std = import("std");
+pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
+    let writed = 0;
+    let buf_slice = buffer[0..count];
+    while (buf_slice.len > 0) {
+        const ret = write(fd, buf_slice.ptr, buf_slice.len);
+        if (ret < 0) {
+            try std.errno.error_errno();
+        } else {
+            if (ret == 0) {
+                return writed;
+            }
+        }
+        buf_slice = buf_slice[ret..buf_slice.len];
+        writed += ret;
+    }
+    return writed;
+}
