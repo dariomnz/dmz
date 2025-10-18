@@ -1,10 +1,7 @@
 #pragma once
 
-#include <chrono>
-#include <iomanip>
-#include <mutex>
-#include <ostream>
-
+#include "DMZPCH.hpp"
+#include "Profiler.hpp"
 namespace DMZ {
 
 constexpr const char *get_file_name(const char *path) {
@@ -83,6 +80,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
                   << __LINE__ << "] [" << func << "] " << out_format << std::endl;                                   \
     }
 #define debug_func(out_format)                                                       \
+    dmz_profile_function();                                                          \
     auto ____func_name = __func__;                                                   \
     debug_msg("BEGIN " << ____func_name << " " << out_format);                       \
     debug_lock::get_count()++;                                                       \
@@ -94,7 +92,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
 #define debug_ret(ret) ret
 #define debug_msg(out_format)
 #define debug_msg_func(func, out_format)
-#define debug_func(out_format)
+#define debug_func(out_format) dmz_profile_function();
 #endif
 
 #ifdef DMZ_SINGLE_THREADED

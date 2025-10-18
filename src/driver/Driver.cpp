@@ -396,7 +396,8 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     return resolvedTree;
 }
 
-std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
+std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
+    std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
     Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module = codegen.generate_ir(m_options.test);
@@ -411,6 +412,7 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(std::v
 }
 
 int Driver::jit_pass(ptr<llvm::Module> &module) {
+    debug_func("");
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -458,6 +460,7 @@ int Driver::jit_pass(ptr<llvm::Module> &module) {
     }
 }
 int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
+    debug_func("");
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -526,7 +529,9 @@ int Driver::ptrBitSize() {
 }
 
 int Driver::main() {
+    dmz_profile_begin_session("dmz_profiler.json");
     defer([&] {
+        dmz_profile_end_session();
         if (m_options.printStats) Stats::instance().dump();
     });
     ScopedTimer(StatType::Total);
