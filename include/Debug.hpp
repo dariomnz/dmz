@@ -17,7 +17,8 @@ struct time_stamp {
     friend std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const time_stamp &logger) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-        std::tm local_tm = *std::localtime(&now_c);
+        std::tm local_tm;
+        ::localtime_r(&now_c, &local_tm);
 
         auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 

@@ -1,5 +1,7 @@
 #include "fmt/FormatterSymbols.hpp"
 
+#include "Debug.hpp"
+
 namespace DMZ {
 namespace fmt {
 int Node::width(std::unordered_set<int>& wrapped) const {

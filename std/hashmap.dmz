@@ -1,0 +1,173 @@
+const std = import("std");
+
+struct elem<K, V> {
+    key: K,
+    value: V,
+}
+
+struct HashMap_bucket<K, V> {
+    elems: std.vec<elem<K, V>>,
+}
+
+pub struct HashMap<K, V> {
+    buckets: []HashMap_bucket<K, V>,
+    len: usize,
+    fn_hash: *fn(K)->usize,
+    fn_eq: *fn(K, K)->bool,
+    alloc: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator, init_size: usize, hash_fn: *fn(K)->usize, eq_fn: *fn(K, K)->bool) -> @This {
+        let new_buckets: []HashMap_bucket<K, V> = {};
+        new_buckets.ptr = allocator.malloc(@sizeof(HashMap_bucket<K, V>) * init_size);
+        new_buckets.len = init_size;
+
+        for (new_buckets) |b| {
+            b.* = HashMap_bucket<K, V>{elems: std.vec<elem<K, V>>.init(allocator)};
+        }
+
+        return @This{
+            buckets: new_buckets,
+            len: 0,
+            fn_hash: hash_fn,
+            fn_eq: eq_fn,
+            alloc: allocator,
+        };
+    }
+
+    pub fn deinit(self: *@This) -> void {
+        for (self.buckets) |d| {
+            d.elems.deinit();
+        }
+
+        self.alloc.free(self.buckets.ptr);
+    }
+
+    pub fn size(self: *@This) -> usize {
+        return self.len;
+    }
+
+    fn hash(self: *@This, key: K) -> usize {
+        const h = self.fn_hash(key);
+        return h % self.buckets.len;
+    }
+
+    pub fn set(self: *@This, key: K, value: V) -> !void {
+        const index = self.hash(key);
+        let bucket = &self.buckets[index].elems;
+
+        // If key already exists, update it
+        for (bucket.slice()) |b| {
+            if (self.fn_eq(b.key, key)) {
+                b.value = value;
+                return;
+            }
+        }
+
+        // Otherwise, insert new entry
+        try bucket.add(elem<K, V>{key: key, value: value});
+        self.len += 1;
+
+        // Check load factor and rehash if needed
+        // len > buckets.len * 0.75
+        if (self.len > (self.buckets.len * 3 / 4)) {
+            try self.rehash(self.buckets.len * 2);
+        }
+    }
+
+    // fn rehash_bucket(self: *@This, bucket: *HashMap_bucket<K, V>, new_size: usize, new_buckets: []HashMap_bucket<K, V>) -> !void {
+    //     let s = bucket.elems.slice();
+    //     for (s, 0..s.len) |entry, j| {
+    //         const h = self.fn_hash(entry.key) % new_size;
+    //         // std.io.printf("Move[%ld] k: %d v: %d\n", j, entry.key, entry.value);
+    //         try new_buckets[h].elems.add(elem<K, V>{key: entry.key, value: entry.value});
+    //     }
+    // }
+
+    pub fn rehash(self: *@This, new_size: usize) -> !void {
+        // Allocate new buckets
+        let new_buckets: []HashMap_bucket<K, V> = {};
+        new_buckets.ptr = self.alloc.malloc(@sizeof(HashMap_bucket<K, V>) * new_size);
+        new_buckets.len = new_size;
+        for (new_buckets) |b| {
+            b.* = HashMap_bucket<K, V>{elems: std.vec<elem<K, V>>.init(self.alloc)};
+        }
+
+        // Move all existing entries into new buckets
+        for (self.buckets, 0..self.buckets.len) |bucket, i| {
+            // std.io.printf("Bucket[%ld] size %ld\n", i, bucket.elems.size());
+            // try self.rehash_bucket(bucket, new_size, new_buckets);
+            let s = bucket.elems.slice();
+            for (s, 0..s.len) |entry, j| {
+                const h = self.fn_hash(entry.key) % new_size;
+                // std.io.printf("Move[%ld] k: %d v: %d\n", j, entry.key, entry.value);
+                try new_buckets[h].elems.add(elem<K, V>{key: entry.key, value: entry.value});
+            }
+            // free old bucket memory
+            bucket.elems.deinit();
+        }
+
+        // Free old bucket list
+        self.alloc.free(self.buckets.ptr);
+
+        // Update references
+        self.buckets = new_buckets;
+    }
+
+    pub fn remove(self: *@This, key: K) -> !void {
+        const index = self.hash(key);
+        let bucket = &self.buckets[index].elems;
+        const bucket_slice = bucket.slice();
+
+        for (bucket_slice, 0..bucket_slice.len) |b, i| {
+            if (self.fn_eq(b.key, key)) {
+                try bucket.swapRemove(i);
+                return;
+            }
+        }
+        return error.KeyNotFound;
+    }
+
+    pub fn get(self: *@This, key: K) -> !V {
+        const index = self.hash(key);
+        const bucket = &self.buckets[index].elems;
+
+        for (bucket.slice()) |b| {
+            if (self.fn_eq(b.key, key)) {
+                return b.value;
+            }
+        }
+        return error.KeyNotFound;
+    }
+}
+
+fn hash_i32(value: i32) -> usize {
+    return value;
+}
+
+fn eq_i32(lhs: i32, rhs: i32) -> bool {
+    return lhs == rhs;
+}
+
+test "HashMap<i32, i32>" {
+    let libc_alloc = std.mem.libc_allocator.init();
+    let allocator = libc_alloc.Allocator();
+    let hm = HashMap<i32, i32>.init(allocator, 10, &hash_i32, &eq_i32);
+    defer hm.deinit();
+
+    const num_items = 1000;
+
+    for (0..num_items) |i| {
+        try hm.set(i, i + 10);
+        // std.io.printf("HashMap size %ld\n", hm.size());
+    }
+
+    for (0..num_items) |i| {
+        let getted = hm.get(i);
+        let err = catch getted;
+        if (err) {
+            std.io.printf("HashMap cannot get %d\n", i);
+        }
+        let getted_value = try getted;
+        // std.io.printf("HashMap getted %d\n", getted_value);
+    }
+}

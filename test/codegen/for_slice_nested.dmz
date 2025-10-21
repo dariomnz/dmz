@@ -1,0 +1,132 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'Slice1: 0\nSlice1: 0 Slice2: 5\nSlice1: 0 Slice2: 6\nSlice1: 1\nSlice1: 1 Slice2: 5\nSlice1: 1 Slice2: 6\nSlice1: 2\nSlice1: 2 Slice2: 5\nSlice1: 2 Slice2: 6\n')
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let data: i32[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    let slice1: []i32 = data[0..3];
+    let slice2: []i32 = data[5..7];
+    for (slice1) |val1| {
+        printf("Slice1: %d\n", val1.*);
+        for (slice2) |val2| {
+            printf("Slice1: %d Slice2: %d\n", val1.*, val2.*);
+        }
+    }
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %data = alloca [10 x i32], align 4
+// CHECK-NEXT:   %"array.i32[10].tmp" = alloca [10 x i32], align 4
+// CHECK-NEXT:   %slice1 = alloca %slice.struct, align 8
+// CHECK-NEXT:   %tmp.slice = alloca %slice.struct, align 8
+// CHECK-NEXT:   %slice2 = alloca %slice.struct, align 8
+// CHECK-NEXT:   %tmp.slice1 = alloca %slice.struct, align 8
+// CHECK-NEXT:   %for.counter = alloca i64, align 8
+// CHECK-NEXT:   %for.capture.val1 = alloca ptr, align 8
+// CHECK-NEXT:   %for.counter4 = alloca i64, align 8
+// CHECK-NEXT:   %for.capture.val2 = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %data, i8 0, i64 40, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.i32[10].tmp", i8 0, i64 40, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice2, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice1, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.val1, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter4, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.val2, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   %0 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 0
+// CHECK-NEXT:   store i32 0, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 1
+// CHECK-NEXT:   store i32 1, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 2
+// CHECK-NEXT:   store i32 2, ptr %2, align 4
+// CHECK-NEXT:   %3 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 3
+// CHECK-NEXT:   store i32 3, ptr %3, align 4
+// CHECK-NEXT:   %4 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 4
+// CHECK-NEXT:   store i32 4, ptr %4, align 4
+// CHECK-NEXT:   %5 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 5
+// CHECK-NEXT:   store i32 5, ptr %5, align 4
+// CHECK-NEXT:   %6 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 6
+// CHECK-NEXT:   store i32 6, ptr %6, align 4
+// CHECK-NEXT:   %7 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 7
+// CHECK-NEXT:   store i32 7, ptr %7, align 4
+// CHECK-NEXT:   %8 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 8
+// CHECK-NEXT:   store i32 8, ptr %8, align 4
+// CHECK-NEXT:   %9 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 9
+// CHECK-NEXT:   store i32 9, ptr %9, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %data, ptr align 4 %"array.i32[10].tmp", i64 40, i1 false)
+// CHECK-NEXT:   %10 = getelementptr i32, ptr %data, i32 0
+// CHECK-NEXT:   %11 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 0
+// CHECK-NEXT:   %12 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 1
+// CHECK-NEXT:   store ptr %10, ptr %11, align 8
+// CHECK-NEXT:   store i64 3, ptr %12, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %slice1, ptr align 8 %tmp.slice, i64 16, i1 false)
+// CHECK-NEXT:   %13 = getelementptr i32, ptr %data, i32 5
+// CHECK-NEXT:   %14 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice1, i32 0, i32 0
+// CHECK-NEXT:   %15 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice1, i32 0, i32 1
+// CHECK-NEXT:   store ptr %13, ptr %14, align 8
+// CHECK-NEXT:   store i64 2, ptr %15, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %slice2, ptr align 8 %tmp.slice1, i64 16, i1 false)
+// CHECK-NEXT:   store i64 0, ptr %for.counter, align 4
+// CHECK-NEXT:   %16 = getelementptr inbounds nuw %slice.struct, ptr %slice1, i32 0, i32 0
+// CHECK-NEXT:   %17 = load ptr, ptr %16, align 8
+// CHECK-NEXT:   store ptr %17, ptr %for.capture.val1, align 8
+// CHECK-NEXT:   %18 = getelementptr inbounds nuw %slice.struct, ptr %slice1, i32 0, i32 1
+// CHECK-NEXT:   %19 = load i64, ptr %18, align 4
+// CHECK-NEXT:   br label %for.cond
+// CHECK-NEXT: 
+// CHECK-NEXT: for.cond:                                         ; preds = %for.increment, %entry
+// CHECK-NEXT:   %20 = load i64, ptr %for.counter, align 4
+// CHECK-NEXT:   %21 = icmp slt i64 %20, %19
+// CHECK-NEXT:   br i1 %21, label %for.body, label %for.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: for.increment:                                    ; preds = %for.exit6
+// CHECK-NEXT:   %22 = load i64, ptr %for.counter, align 4
+// CHECK-NEXT:   %23 = add i64 %22, 1
+// CHECK-NEXT:   store i64 %23, ptr %for.counter, align 4
+// CHECK-NEXT:   %24 = load ptr, ptr %for.capture.val1, align 8
+// CHECK-NEXT:   %25 = getelementptr i32, ptr %24, i32 1
+// CHECK-NEXT:   store ptr %25, ptr %for.capture.val1, align 8
+// CHECK-NEXT:   br label %for.cond
+// CHECK-NEXT: 
+// CHECK-NEXT: for.body:                                         ; preds = %for.cond
+// CHECK-NEXT:   %26 = load ptr, ptr %for.capture.val1, align 8
+// CHECK-NEXT:   %27 = load i32, ptr %26, align 4
+// CHECK-NEXT:   %28 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %27)
+// CHECK-NEXT:   store i64 0, ptr %for.counter4, align 4
+// CHECK-NEXT:   %29 = getelementptr inbounds nuw %slice.struct, ptr %slice2, i32 0, i32 0
+// CHECK-NEXT:   %30 = load ptr, ptr %29, align 8
+// CHECK-NEXT:   store ptr %30, ptr %for.capture.val2, align 8
+// CHECK-NEXT:   %31 = getelementptr inbounds nuw %slice.struct, ptr %slice2, i32 0, i32 1
+// CHECK-NEXT:   %32 = load i64, ptr %31, align 4
+// CHECK-NEXT:   br label %for.cond2
+// CHECK-NEXT: 
+// CHECK-NEXT: for.exit:                                         ; preds = %for.cond
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: 
+// CHECK-NEXT: for.cond2:                                        ; preds = %for.increment3, %for.body
+// CHECK-NEXT:   %33 = load i64, ptr %for.counter4, align 4
+// CHECK-NEXT:   %34 = icmp slt i64 %33, %32
+// CHECK-NEXT:   br i1 %34, label %for.body5, label %for.exit6
+// CHECK-NEXT: 
+// CHECK-NEXT: for.increment3:                                   ; preds = %for.body5
+// CHECK-NEXT:   %35 = load i64, ptr %for.counter4, align 4
+// CHECK-NEXT:   %36 = add i64 %35, 1
+// CHECK-NEXT:   store i64 %36, ptr %for.counter4, align 4
+// CHECK-NEXT:   %37 = load ptr, ptr %for.capture.val2, align 8
+// CHECK-NEXT:   %38 = getelementptr i32, ptr %37, i32 1
+// CHECK-NEXT:   store ptr %38, ptr %for.capture.val2, align 8
+// CHECK-NEXT:   br label %for.cond2
+// CHECK-NEXT: 
+// CHECK-NEXT: for.body5:                                        ; preds = %for.cond2
+// CHECK-NEXT:   %39 = load ptr, ptr %for.capture.val1, align 8
+// CHECK-NEXT:   %40 = load i32, ptr %39, align 4
+// CHECK-NEXT:   %41 = load ptr, ptr %for.capture.val2, align 8
+// CHECK-NEXT:   %42 = load i32, ptr %41, align 4
+// CHECK-NEXT:   %43 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %40, i32 %42)
+// CHECK-NEXT:   br label %for.increment3
+// CHECK-NEXT: 
+// CHECK-NEXT: for.exit6:                                        ; preds = %for.cond2
+// CHECK-NEXT:   br label %for.increment
+// CHECK-NEXT: }

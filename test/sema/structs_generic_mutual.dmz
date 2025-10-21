@@ -1,0 +1,48 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+struct a<T> {
+    pub fn method(self: *@This, other: b<T>) -> void {
+        printf("a.method\n");
+    }
+}
+// CHECK:   ResolvedGenericStructDecl structs_generic_mutual.a<T>
+// CHECK-NEXT:     ResolvedGenericTypeDecl T
+// CHECK-NEXT:     ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.a<T>{}, structs_generic_mutual.b<T>{})->void
+// CHECK-NEXT:       ResolvedParamDecl:*structs_generic_mutual.a<T>{} self
+// CHECK-NEXT:       ResolvedParamDecl:structs_generic_mutual.b<T>{} other
+// CHECK-NEXT:     ResolvedSpecializedStructDecl structs_generic_mutual.a<i32>
+// CHECK-NEXT:       ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.a<i32>{}, structs_generic_mutual.b<i32>{})->void
+// CHECK-NEXT:         ResolvedParamDecl:*structs_generic_mutual.a<i32>{} self
+// CHECK-NEXT:         ResolvedParamDecl:structs_generic_mutual.b<i32>{} other
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:             ResolvedStringLiteral:*u8 'a.method\n'
+
+struct b<T> {
+    pub fn method(self: *@This, other: a<T>) -> void {
+        printf("b.method\n");
+    }
+}
+// CHECK:   ResolvedGenericStructDecl structs_generic_mutual.b<T>
+// CHECK-NEXT:     ResolvedGenericTypeDecl T
+// CHECK-NEXT:     ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.b<T>{}, structs_generic_mutual.a<T>{})->void
+// CHECK-NEXT:       ResolvedParamDecl:*structs_generic_mutual.b<T>{} self
+// CHECK-NEXT:       ResolvedParamDecl:structs_generic_mutual.a<T>{} other
+// CHECK-NEXT:     ResolvedSpecializedStructDecl structs_generic_mutual.b<i32>
+// CHECK-NEXT:       ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.b<i32>{}, structs_generic_mutual.a<i32>{})->void
+// CHECK-NEXT:         ResolvedParamDecl:*structs_generic_mutual.b<i32>{} self
+// CHECK-NEXT:         ResolvedParamDecl:structs_generic_mutual.a<i32>{} other
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:             ResolvedStringLiteral:*u8 'b.method\n'
+
+fn main() -> void {
+    let one = a<i32>{};
+    let two = b<i32>{};
+    one.method(two);
+    two.method(one);
+}

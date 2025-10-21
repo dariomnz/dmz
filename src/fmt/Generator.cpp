@@ -1,5 +1,7 @@
 #include "fmt/Generator.hpp"
 
+#include "Debug.hpp"
+
 namespace DMZ {
 namespace fmt {
 

@@ -1,4 +1,4 @@
-const mem = import("mem.dmz");
+const std = import("std");
 const vector_error = error {
     IndexOutOfLenght,
     OutOfMemory,
@@ -7,9 +7,9 @@ const vector_error = error {
 pub struct vec<T> {
     buf: []T,
     len: usize,
-    alloc: mem.Allocator,
+    alloc: std.mem.Allocator,
 
-    pub fn init(allocator: mem.Allocator) -> @This {
+    pub fn init(allocator: std.mem.Allocator) -> @This {
         return @This{
             buf: {},
             len: 0,
@@ -52,7 +52,19 @@ pub struct vec<T> {
 
         if (index < (self.len - 1)) {
             const num_bytes = (self.len - index - 1) * @sizeof(T);
-            mem.memmove(&self.buf[index], &self.buf[index + 1], num_bytes);
+            std.mem.memmove(&self.buf[index], &self.buf[index + 1], num_bytes);
+        }
+
+        self.len--;
+    }
+
+    pub fn swapRemove(self: *@This, index: usize) -> !void {
+        if (index >= self.len) {
+            return vector_error.IndexOutOfLenght;
+        }
+
+        if (index < (self.len - 1)) {
+            self.buf[index] = self.buf[self.len - 1];
         }
 
         self.len--;

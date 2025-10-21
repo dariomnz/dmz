@@ -1,0 +1,41 @@
+// RUN: dmz %s -I std %S/../../std/std.dmz -run | filecheck %s
+
+// CHECK: Time taken in vector 100000: 
+// CHECK: Time taken in hashmap 100000: 
+// CHECK-NOT: {{.*}}
+const std = import("std");
+
+fn hash_i32(value: i32) -> usize {
+    return value * 7 * 13 * 32;
+}
+
+fn eq_i32(lhs: i32, rhs: i32) -> bool {
+    return lhs == rhs;
+}
+
+fn main() -> void {
+    let libc_alloc = std.mem.libc_allocator.init();
+    let allocator = libc_alloc.Allocator();
+    let v = std.vec<i32>.init(allocator);
+    defer v.deinit();
+
+    let hm = std.HashMap<i32, i32>.init(allocator, 10, &hash_i32, &eq_i32);
+    defer hm.deinit();
+
+    const iters = 100000;
+
+    const start_vector = std.time.get();
+    for (0..iters) |i| {
+        v.add(i);
+    }
+    const end_vector = std.time.get();
+
+    const start_hashmap = std.time.get();
+    for (0..iters) |i| {
+        hm.set(i, i);
+    }
+    const end_hashmap = std.time.get();
+
+    std.io.printf("Time taken in vector %ld: %f ms\n", v.size(), (end_vector - start_vector) * 1000.0);
+    std.io.printf("Time taken in hashmap %ld: %f ms\n", hm.size(), (end_hashmap - start_hashmap) * 1000.0);
+}

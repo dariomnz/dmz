@@ -1,5 +1,7 @@
 #include "fmt/Builder.hpp"
 
+#include "Debug.hpp"
+
 namespace DMZ {
 namespace fmt {
 

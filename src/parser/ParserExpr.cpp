@@ -137,7 +137,7 @@ ptr<Expr> Parser::parse_primary() {
 // <memberExpr>
 //  ::= '.' <identifier>
 ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
-    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'" << restiction_to_str(restrictions));
+    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "' " << restiction_to_str(restrictions));
 
     if (m_nextToken.type == TokenType::bracket_l) {
         SourceLocation location = m_nextToken.loc;

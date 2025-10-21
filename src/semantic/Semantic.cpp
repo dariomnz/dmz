@@ -464,11 +464,15 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
     ScopedTimer(StatType::Semantic_Body);
     bool error = false;
     for (auto &&module : moduleDecls) {
-        auto ret = resolve_module_body(*module);
-        if (!ret) {
+        if (!resolve_module_body(*module)) {
             error = true;
         }
     }
+
+    if (!resolve_pending_body()) {
+        error = true;
+    }
+
     if (!error) {
         resolve_symbol_names(moduleDecls);
         fill_depends(moduleDecls);

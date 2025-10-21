@@ -4,3 +4,6 @@ pub const testing = import("testing.dmz");
 pub const builtin = import("builtin.dmz");
 pub const errno = import("errno.dmz");
 pub const io = import("io/io.dmz");
+pub const list = import("list.dmz");
+pub const HashMap = import("hashmap.dmz").HashMap;
+pub const time = import("time.dmz");

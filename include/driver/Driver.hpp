@@ -1,7 +1,6 @@
 #pragma once
 
 #include "DMZPCH.hpp"
-#include "Debug.hpp"
 #include "codegen/Codegen.hpp"
 #include "lexer/Lexer.hpp"
 #include "linker/Linker.hpp"

@@ -2,7 +2,6 @@
 
 #include "DMZPCH.hpp"
 #include "DMZPCHSymbols.hpp"
-#include "Debug.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
 
@@ -41,6 +40,7 @@ class Sema {
     std::vector<ResolvedTestDecl *> m_tests;
 
     std::unordered_set<ResolvedDecl *> m_removed_decls;
+    std::vector<ResolvedDecl *> m_pending_decls;
 
    public:
     explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
@@ -115,6 +115,7 @@ class Sema {
     ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
+    bool resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl);
     ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
     ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
@@ -132,6 +133,7 @@ class Sema {
 
     // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
+    bool resolve_pending_body();
     // std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
     //                                                       std::vector<ptr<ResolvedDecl>> alreadyResolved = {});
     // bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);

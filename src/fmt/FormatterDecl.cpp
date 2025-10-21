@@ -1,5 +1,5 @@
+#include "Debug.hpp"
 #include "fmt/Formatter.hpp"
-
 namespace DMZ {
 namespace fmt {
 

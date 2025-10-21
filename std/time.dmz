@@ -1,0 +1,38 @@
+struct timeval {
+    // seconds
+    tv_sec: i64,
+    // microseconds
+    tv_usec: i64,
+}
+
+struct timezone {
+    //minutes west of Greenwich 
+    tz_minuteswest: i32,
+    // type of DST correction
+    tz_dsttime: i32,
+}
+
+extern fn gettimeofday(tv: *timeval, tz: *void) -> i32;
+
+const std = import("std");
+pub fn get() -> f64 {
+    let tv: timeval = {};
+    let ret = gettimeofday(&tv, null);
+    if (ret < 0) {
+        std.io.printf("Cannot gettimeofdat %d\n", ret);
+        return 0.0;
+    }
+    let sec:f64 = tv.tv_sec;
+    let usec:f64 = tv.tv_usec;
+    return sec + usec * 0.000001;
+}
+
+test "time get()" {
+    let start = get();
+    let counter = 0;
+    for(0..1000000) |i| {
+        counter += i;
+    }
+    let end = get();
+    std.io.printf("Elapsed %f seconds\n", end - start);
+}

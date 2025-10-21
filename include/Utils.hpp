@@ -1,11 +1,6 @@
 #pragma once
 
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <sstream>
+#include "DMZPCH.hpp"
 
 namespace DMZ {
 
@@ -19,6 +14,7 @@ namespace DMZ {
 
 [[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(std::string msg, const char* source, int line) {
     std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
+    ::raise(SIGTRAP);
     std::exit(EXIT_FAILURE);
 }
 

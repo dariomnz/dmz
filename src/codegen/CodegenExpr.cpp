@@ -119,9 +119,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     }
 
     for (auto &&arg : call.arguments) {
-        llvm::Value *val = generate_expr(*arg);
-
-        args.emplace_back(val);
+        args.emplace_back(generate_expr(*arg, arg->type->generate_struct()));
     }
 
     llvm::FunctionType *llvmType = static_cast<llvm::FunctionType *>(generate_type(*fnType));

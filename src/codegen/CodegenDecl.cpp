@@ -96,7 +96,8 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
         debug_msg("Param: " << param->to_str());
         llvm::AttrBuilder paramAttrs(*m_context);
         if (auto typePrt = dynamic_cast<ResolvedTypePointer *>(param.get())) {
-            if (!dynamic_cast<ResolvedTypeVoid *>(typePrt->pointerType.get())) {
+            if (typePrt->pointerType->kind != ResolvedTypeKind::Void &&
+                typePrt->pointerType->kind != ResolvedTypeKind::Function) {
                 paramAttrs.addByRefAttr(generate_type(*typePrt->pointerType));
             }
         } else if (param->kind == ResolvedTypeKind::Struct) {
@@ -200,6 +201,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         body = function->body.get();
     }
     if (!body) {
+        functionDecl.dump();
         dmz_unreachable("unexpected void body");
     }
     generate_block(*body);
@@ -270,7 +272,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 
     std::vector<llvm::Type *> fieldTypes;
     for (auto &&field : structDecl.fields) {
-        llvm::Type *t = generate_type(*field->type);
+        llvm::Type *t = generate_type(*field->type, true);
         fieldTypes.emplace_back(t);
     }
 

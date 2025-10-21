@@ -1,6 +1,7 @@
 // #define DEBUG
 #include "codegen/Codegen.hpp"
 
+#include "Debug.hpp"
 #include "Stats.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
@@ -83,6 +84,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
             decl = typeStruct->decl;
         }
+        if (!decl) dmz_unreachable("unexpected error");
         std::string name = generate_decl_name(*decl);
         debug_msg("struct '" << name << "'");
         auto structType = get_struct_decl(*decl);
@@ -176,6 +178,8 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
     } else if (auto typePtr = dynamic_cast<const ResolvedTypePointer *>(&type)) {
         return m_debugBuilder.createPointerType(generate_debug_type(*typePtr->pointerType),
                                                 m_module->getDataLayout().getPointerSizeInBits());
+    } else if (auto typeError = dynamic_cast<const ResolvedTypeError *>(&type)) {
+        return generate_debug_type(*ResolvedTypePointer::opaquePtr(typeError->location));
     } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
         std::vector<llvm::Metadata *> Elements;
         uint64_t offset = 0;
@@ -391,6 +395,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                }) << "'");
     // m_module->dump();
     // v->dump();
+    if (from.equal(to)) return v;
+
     if (from.kind == ResolvedTypeKind::Pointer) {
         if (to.kind == ResolvedTypeKind::Pointer) {
             return v;

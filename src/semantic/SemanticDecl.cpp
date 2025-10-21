@@ -315,19 +315,21 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
 
     auto resolvedStruct = makePtr<ResolvedSpecializedStructDecl>(
         struDecl.location, struDecl.isPublic, struDecl.identifier, struDecl.structDecl, struDecl.isPacked,
-        std::move(resolvedFields), std::move(resolvedFunctions),
+        std::move(resolvedFields), std::move(resolvedFunctions), &struDecl,
         castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
-
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = resolvedStruct.get();
-    defer([&]() { m_currentStruct = prevStruct; });
-
-    if (!resolve_struct_decl_funcs(*resolvedStruct)) return nullptr;
-    if (!resolve_struct_members(*resolvedStruct)) return nullptr;
 
     auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
     retStruct->specializedTypes = castPtr<ResolvedTypeSpecialized>(genericTypes.clone());
     add_dependency(retStruct.get());
+
+    auto prevStruct = m_currentStruct;
+    m_currentStruct = retStruct.get();
+    defer([&]() { m_currentStruct = prevStruct; });
+
+    if (!resolve_struct_members(*retStruct)) return nullptr;
+    if (!resolve_struct_decl_funcs(*retStruct)) return nullptr;
+    m_pending_decls.emplace_back(retStruct.get());
+
     return retStruct.get();
 }
 
@@ -498,11 +500,68 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         }
     }
 
-    if (dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) return true;
+    return true;
+}
 
-    for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
-        auto &resfunc = resolvedStructDecl.functions[i];
-        if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
+bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
+    auto prevStruct = m_currentStruct;
+    m_currentStruct = &resolvedStructDecl;
+    defer([&]() { m_currentStruct = prevStruct; });
+
+    ScopeRAII structScope(*this);
+    if (auto genstruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
+        auto prevModule = m_currentModule;
+        m_currentModule = genstruct->saveCurrentModule;
+        defer([&]() { m_currentModule = prevModule; });
+
+        for (auto &&spec : genstruct->specializations) {
+            // Specialize types
+            for (auto &&gen : genstruct->genericTypeDecls) {
+                if (!insert_decl_to_current_scope(*gen, true)) return false;
+            }
+            for (size_t i = 0; i < genstruct->genericTypeDecls.size(); i++) {
+                debug_msg("Specialize " << genstruct->genericTypeDecls[i]->identifier << " to "
+                                        << genericTypes.specializedTypes[i]->to_str());
+                genstruct->genericTypeDecls[i]->specializedType = spec->specializedTypes->specializedTypes[i]->clone();
+            }
+
+            auto prevStruct = m_currentStruct;
+            m_currentStruct = spec.get();
+            defer([&]() { m_currentStruct = prevStruct; });
+
+            // Resolve functions body
+            for (size_t i = 0; i < spec->functions.size(); i++) {
+                auto &resfunc = spec->functions[i];
+                if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
+            }
+        }
+        // dmz_unreachable("TODO");
+    } else {
+        auto prevModule = m_currentModule;
+        defer([&]() { m_currentModule = prevModule; });
+        auto prevStruct = m_currentStruct;
+        defer([&]() { m_currentStruct = prevStruct; });
+
+        if (auto specStruct = dynamic_cast<ResolvedSpecializedStructDecl *>(&resolvedStructDecl)) {
+            // Specialize types
+            for (auto &&gen : specStruct->genStruct->genericTypeDecls) {
+                if (!insert_decl_to_current_scope(*gen, true)) return false;
+            }
+            for (size_t i = 0; i < specStruct->genStruct->genericTypeDecls.size(); i++) {
+                debug_msg("Specialize " << specStruct->genStruct->genericTypeDecls[i]->identifier << " to "
+                                        << genericTypes.specializedTypes[i]->to_str());
+                specStruct->genStruct->genericTypeDecls[i]->specializedType =
+                    specStruct->specializedTypes->specializedTypes[i]->clone();
+            }
+
+            m_currentModule = specStruct->genStruct->saveCurrentModule;
+            m_currentStruct = specStruct;
+        }
+
+        for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
+            auto &resfunc = resolvedStructDecl.functions[i];
+            if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
+        }
     }
 
     return true;
@@ -728,38 +787,59 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
         }
     }
     if (error) return false;
-    {
-        for (auto &&currentDeclRef : moduleDecl.declarations) {
-            auto currentDecl = currentDeclRef.get();
-            if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
-                if (!resolve_struct_members(*st)) {
-                    debug_msg("error resolve_struct_members");
-                    error = true;
-                }
-                continue;
-            }
-            if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
-                if (resolve_builtin_function(*fn)) continue;
-                if (dynamic_cast<ResolvedGenericFunctionDecl *>(fn)) continue;
 
-                if (!resolve_func_body(*fn, *fn->functionDecl->body)) {
-                    debug_msg("error resolve_func_body");
-                    error = true;
-                }
+    for (auto &&currentDeclRef : moduleDecl.declarations) {
+        auto currentDecl = currentDeclRef.get();
+        if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
+            if (!resolve_struct_members(*st)) {
+                debug_msg("error resolve_struct_members");
+                error = true;
                 continue;
             }
-            if (dynamic_cast<ResolvedDeclStmt *>(currentDecl) ||
-                dynamic_cast<ResolvedExternFunctionDecl *>(currentDecl)) {
+            if (!resolve_struct_body_funcs(*st)) {
+                debug_msg("error resolve_struct_body_funcs");
+                error = true;
                 continue;
             }
-            currentDecl->dump();
-            dmz_unreachable("TODO: unexpected declaration");
+            continue;
         }
+        if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
+            if (resolve_builtin_function(*fn)) continue;
+            if (dynamic_cast<ResolvedGenericFunctionDecl *>(fn)) continue;
+
+            if (!resolve_func_body(*fn, *fn->functionDecl->body)) {
+                debug_msg("error resolve_func_body");
+                error = true;
+            }
+            continue;
+        }
+        if (dynamic_cast<ResolvedDeclStmt *>(currentDecl) || dynamic_cast<ResolvedExternFunctionDecl *>(currentDecl)) {
+            continue;
+        }
+        currentDecl->dump();
+        dmz_unreachable("TODO: unexpected declaration");
     }
     debug_msg("error " << error);
     if (error) return false;
 
     return true;
+}
+
+bool Sema::resolve_pending_body() {
+    bool error = false;
+    while (m_pending_decls.size() != 0) {
+        auto decl = *m_pending_decls.begin();
+        if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
+            if (!resolve_struct_body_funcs(*struDecl)) {
+                error = true;
+            }
+            std::erase(m_pending_decls, decl);
+        } else {
+            decl->dump();
+            dmz_unreachable("TODO");
+        }
+    }
+    return !error;
 }
 
 bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) {

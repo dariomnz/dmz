@@ -1,4 +1,3 @@
-// #define DEBUG
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
 #include "driver/Driver.hpp"
@@ -184,7 +183,8 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     for (auto &&arg : call.arguments) {
         varOrReturn(resolvedArg, resolve_expr(*arg));
         // Only check until vararg
-        if (idx < funcDeclArgs) {
+        debug_msg("To compare " << resolvedArg->type->to_str() << " idx " << idx << " funcDeclArgs " << funcDeclArgs);
+        if ((isMemberCall ? idx - 1 : idx) < funcDeclArgs) {
             if (!fnType->paramsTypes[idx]->compare(*resolvedArg->type)) {
                 return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type->to_str() +
                                                          "' expected '" + fnType->paramsTypes[idx]->to_str() + "'");
@@ -409,6 +409,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
+            dmz_unreachable("asdfasf");
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }

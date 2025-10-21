@@ -358,15 +358,19 @@ struct ResolvedStructDecl : public ResolvedDependencies {
     void dump_dependencies(size_t level = 0) const override;
 };
 
+// Forward declaration
+struct ResolvedGenericStructDecl;
 struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
+    ResolvedGenericStructDecl *genStruct;
     ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
     ResolvedSpecializedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                   const StructDecl *structDecl, bool isPacked,
                                   std::vector<ptr<ResolvedFieldDecl>> fields,
                                   std::vector<ptr<ResolvedMemberFunctionDecl>> functions,
-                                  ptr<ResolvedTypeSpecialized> specializedTypes)
+                                  ResolvedGenericStructDecl *genStruct, ptr<ResolvedTypeSpecialized> specializedTypes)
         : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
                              std::move(functions)),
+          genStruct(genStruct),
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;

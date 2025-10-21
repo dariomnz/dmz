@@ -157,9 +157,11 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     auto *header = llvm::BasicBlock::Create(*m_context, "for.cond", function);
     auto *increment = llvm::BasicBlock::Create(*m_context, "for.increment", function);
 
-    auto isize = ResolvedTypeNumber::isize(stmt.location);
+    auto isize = castPtr<ResolvedTypeNumber>(ResolvedTypeNumber::isize(stmt.location));
     auto llvmisize = generate_type(*isize);
     llvm::Value *counter = allocate_stack_variable(stmt.location, "for.counter", *isize);
+    // Set to 0 for inner loops not only when allocated
+    store_value(m_builder.getIntN(isize->bitSize, 0), counter, *isize, *isize);
     std::vector<llvm::Value *> startCaptures(stmt.captures.size(), nullptr);
     std::vector<llvm::Value *> endCaptures(stmt.captures.size(), nullptr);
     std::vector<llvm::Value *> lenghtCaptures(stmt.captures.size(), nullptr);

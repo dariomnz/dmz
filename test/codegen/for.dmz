@@ -30,6 +30,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.y, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter10, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.i, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store i64 0, ptr %for.counter, align 4
 // CHECK-NEXT:   store i64 0, ptr %for.capture.x, align 4
 // CHECK-NEXT:   br label %for.cond
 // CHECK-NEXT: 
@@ -53,6 +54,7 @@ fn main() -> void {
 // CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
 // CHECK-NEXT: for.exit:                                         ; preds = %for.cond
+// CHECK-NEXT:   store i64 0, ptr %for.counter3, align 4
 // CHECK-NEXT:   store i64 0, ptr %for.capture.x4, align 4
 // CHECK-NEXT:   store i64 5, ptr %for.capture.y, align 4
 // CHECK-NEXT:   br label %for.check_length
@@ -92,6 +94,7 @@ fn main() -> void {
 // CHECK-NEXT:   br label %for.increment2
 // CHECK-NEXT: 
 // CHECK-NEXT: for.exit7:                                        ; preds = %for.cond1
+// CHECK-NEXT:   store i64 0, ptr %for.counter10, align 4
 // CHECK-NEXT:   store i64 0, ptr %for.capture.i, align 4
 // CHECK-NEXT:   br label %for.cond8
 // CHECK-NEXT: 

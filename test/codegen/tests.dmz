@@ -138,6 +138,7 @@ test "add test 3" {
 // CHECK-NEXT:   %0 = call i32 @"std.builtin.@builtin_test_num"()
 // CHECK-NEXT:   store i32 %0, ptr %num_test, align 4
 // CHECK-NEXT:   store i32 0, ptr %result, align 4
+// CHECK-NEXT:   store i64 0, ptr %for.counter, align 4
 // CHECK-NEXT:   store i64 0, ptr %for.capture.i, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %num_test, align 4
 // CHECK-NEXT:   %int.to.int = sext i32 %1 to i64
