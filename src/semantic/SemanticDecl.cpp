@@ -591,8 +591,14 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
             report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
             return false;
         }
-        resolvedFields.emplace_back(
-            std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++));
+        ptr<ResolvedExpr> default_initizlizer = nullptr;
+        if (field->default_initializer) {
+            default_initizlizer = resolve_expr(*field->default_initializer);
+            if (!default_initizlizer) return false;
+        }
+
+        resolvedFields.emplace_back(std::make_unique<ResolvedFieldDecl>(
+            field->location, field->identifier, std::move(type), idx++, std::move(default_initizlizer)));
     }
 
     resolvedStructDecl.fields = std::move(resolvedFields);
@@ -655,14 +661,14 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {
-        if (!resolve_module_struct_decl_funcs(*module)) {
+        if (!resolve_module_function_decls(*module, sourceModule)) {
             error = true;
             continue;
         }
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {
-        if (!resolve_module_function_decls(*module, sourceModule)) {
+        if (!resolve_module_struct_decl_funcs(*module)) {
             error = true;
             continue;
         }

@@ -1,0 +1,34 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn one() -> i32 {
+    return 1;
+}
+
+struct StructWithDefault {
+    r: i32,
+    g: i32 = 0,
+    b: i32 = one(),
+}
+// CHECK: ResolvedStructDecl struct_default_field.StructWithDefault
+// CHECK-NEXT:     ResolvedFieldDecl:i32 r
+// CHECK-NEXT:     ResolvedFieldDecl:i32 g
+// CHECK-NEXT:       ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:     ResolvedFieldDecl:i32 b
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn()->i32 one
+
+fn main() -> void {
+    let s = StructWithDefault{r: 2};
+}
+// CHECK: ResolvedDeclStmt struct_default_field.StructWithDefault{}
+// CHECK-NEXT:         ResolvedVarDecl:struct_default_field.StructWithDefault{} s
+// CHECK-NEXT:           ResolvedStructInstantiationExpr:struct_default_field.StructWithDefault{}
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 r
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:               | value: 2
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 g
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:               | value: 0
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 b
+// CHECK-NEXT:               ResolvedCallExpr:i32
+// CHECK-NEXT:                 ResolvedDeclRefExpr:fn()->i32 one

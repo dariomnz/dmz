@@ -538,9 +538,12 @@ struct MemberGenericFunctionDecl : public GenericFunctionDecl {
 
 struct FieldDecl : public Decl {
     ptr<Expr> type;
+    ptr<Expr> default_initializer;
 
-    FieldDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type)
-        : Decl(location, true, std::move(identifier)), type(std::move(type)) {}
+    FieldDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type, ptr<Expr> default_initializer)
+        : Decl(location, true, std::move(identifier)),
+          type(std::move(type)),
+          default_initializer(std::move(default_initializer)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

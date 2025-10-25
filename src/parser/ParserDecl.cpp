@@ -233,7 +233,14 @@ ptr<FieldDecl> Parser::parse_field_decl() {
 
     varOrReturn(type, parse_type());
 
-    return makePtr<FieldDecl>(location, std::move(identifier), std::move(type));
+    ptr<Expr> defaultInitializer = nullptr;
+    if (m_nextToken.type == TokenType::op_assign) {
+        eat_next_token();  // eat =
+        defaultInitializer = parse_expr();
+        if (!defaultInitializer) return nullptr;
+    }
+
+    return makePtr<FieldDecl>(location, std::move(identifier), std::move(type), std::move(defaultInitializer));
 };
 
 ptr<ErrorGroupExprDecl> Parser::parse_error_group_expr_decl() {

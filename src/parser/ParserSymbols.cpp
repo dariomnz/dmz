@@ -310,6 +310,7 @@ std::string AssignmentOperator::to_str() const { dmz_unreachable("TODO"); }
 
 void FieldDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FieldDecl:" << type->to_str() << " " << identifier << '\n';
+    if (default_initializer) default_initializer->dump(level + 1);
 }
 
 std::string FieldDecl::to_str() const { dmz_unreachable("TODO"); }

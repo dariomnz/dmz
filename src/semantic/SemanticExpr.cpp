@@ -384,11 +384,11 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         std::vector<ptr<ResolvedFieldDecl>> sliceFields;
         sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
             SourceLocation{}, "ptr",
-            makePtr<ResolvedTypePointer>(SourceLocation{}, makePtr<ResolvedTypeVoid>(SourceLocation{})), 0));
+            makePtr<ResolvedTypePointer>(SourceLocation{}, makePtr<ResolvedTypeVoid>(SourceLocation{})), 0, nullptr));
         sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
             SourceLocation{}, "len",
-            makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize()),
-            1));
+            makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize()), 1,
+            nullptr));
         return ResolvedStructDecl(SourceLocation{}, true, "slice", nullptr, false, std::move(sliceFields),
                                   std::vector<ptr<ResolvedMemberFunctionDecl>>{});
     }();
@@ -560,6 +560,27 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
 
         auto init = makePtr<ResolvedFieldInitStmt>(loc, *fieldDecl, std::move(resolvedInitExpr));
         inits[id] = resolvedFieldInits.emplace_back(std::move(init)).get();
+    }
+
+    // Add the default initilizers if there was not initialized
+    for (auto &&decl : st->structDecl->decls) {
+        if (inits.count(decl->identifier)) continue;
+
+        auto fieldDecl = dynamic_cast<const FieldDecl *>(decl.get());
+        if (!fieldDecl) continue;
+        if (fieldDecl->default_initializer) {
+            const std::string &id = fieldDecl->identifier;
+            auto resolvedInitExpr = resolve_expr(*fieldDecl->default_initializer);
+            if (!resolvedInitExpr) {
+                error = true;
+                continue;
+            }
+
+            const ResolvedFieldDecl *resolvedfieldDecl = fields[id];
+            auto init = makePtr<ResolvedFieldInitStmt>(fieldDecl->default_initializer->location, *resolvedfieldDecl,
+                                                       std::move(resolvedInitExpr));
+            inits[id] = resolvedFieldInits.emplace_back(std::move(init)).get();
+        }
     }
 
     for (auto &&fieldDecl : st->fields) {

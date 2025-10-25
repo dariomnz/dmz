@@ -143,6 +143,12 @@ ptr<Node> Formatter::fmt_field_decl(const FieldDecl& decl) {
     ret->nodes.emplace_back(makePtr<Text>(":"));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(fmt_expr(*decl.type));
+    if (decl.default_initializer) {
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(makePtr<Text>("="));
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_expr(*decl.default_initializer));
+    }
     ret->nodes.emplace_back(makePtr<Text>(","));
     return ret;
 }

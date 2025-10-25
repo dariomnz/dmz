@@ -326,6 +326,7 @@ void ResolvedAssignment::dump(size_t level, bool onlySelf) const {
 void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedFieldDecl:" << type->to_str() << " " << identifier << '\n';
     if (onlySelf) return;
+    if (default_initializer) default_initializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {

@@ -1,0 +1,21 @@
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+
+struct StructWithDefault {
+    r: i32,
+    g: i32 = 0,
+    b: i32 = 1,
+}
+// CHECK:   StructDecl StructWithDefault
+// CHECK-NEXT:     FieldDecl:i32 r
+// CHECK-NEXT:     FieldDecl:i32 g
+// CHECK-NEXT:       IntLiteral '0'
+// CHECK-NEXT:     FieldDecl:i32 b
+// CHECK-NEXT:       IntLiteral '1'
+
+fn main() -> void {
+    let s = StructWithDefault{r: 2};
+}
+// CHECK: StructInstantiationExpr 
+// CHECK-NEXT:             DeclRefExpr StructWithDefault
+// CHECK-NEXT:             FieldInitStmt r
+// CHECK-NEXT:               IntLiteral '2'

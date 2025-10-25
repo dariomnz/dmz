@@ -197,9 +197,13 @@ struct ResolvedParamDecl : public ResolvedDecl {
 
 struct ResolvedFieldDecl : public ResolvedDecl {
     unsigned index;
+    ptr<ResolvedExpr> default_initializer;
 
-    ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, unsigned index)
-        : ResolvedDecl(location, std::move(identifier), std::move(type), false, true), index(index) {}
+    ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, unsigned index,
+                      ptr<ResolvedExpr> default_initializer)
+        : ResolvedDecl(location, std::move(identifier), std::move(type), false, true),
+          index(index),
+          default_initializer(std::move(default_initializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
