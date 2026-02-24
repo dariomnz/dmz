@@ -26,30 +26,34 @@ pub struct Allocator {
 
 pub struct libc_allocator {
     allocated: u64,
+    allocated_count: u64,
 
     pub fn init() -> @This {
         return @This{
             allocated: 0,
+            allocated_count: 0,
         };
     }
 
     pub fn deinit(self: *@This) -> !void {
-        if (self.allocated != 0) {
+        if (self.allocated_count != 0) {
             return error.LeakMemory;
         }
     }
 
     fn malloc(self: *@This, size: u64) -> *void {
-        self.allocated++;
+        self.allocated += size;
+        self.allocated_count++;
         return malloc(size);
     }
 
     fn realloc(self: *@This, ptr: *void, size: u64) -> *void {
+        self.allocated += size;
         return realloc(ptr, size);
     }
 
     fn free(self: *@This, ptr: *void) -> void {
-        self.allocated--;
+        self.allocated_count--;
         free(ptr);
     }
 

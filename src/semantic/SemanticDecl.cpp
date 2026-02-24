@@ -1,5 +1,8 @@
-
-// #define DEBUG
+#ifdef DEBUG_SEMANTIC
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "semantic/Semantic.hpp"
@@ -521,7 +524,7 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
             }
             for (size_t i = 0; i < genstruct->genericTypeDecls.size(); i++) {
                 debug_msg("Specialize " << genstruct->genericTypeDecls[i]->identifier << " to "
-                                        << genericTypes.specializedTypes[i]->to_str());
+                                        << spec->specializedTypes->specializedTypes[i]->to_str());
                 genstruct->genericTypeDecls[i]->specializedType = spec->specializedTypes->specializedTypes[i]->clone();
             }
 
@@ -549,7 +552,7 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
             }
             for (size_t i = 0; i < specStruct->genStruct->genericTypeDecls.size(); i++) {
                 debug_msg("Specialize " << specStruct->genStruct->genericTypeDecls[i]->identifier << " to "
-                                        << genericTypes.specializedTypes[i]->to_str());
+                                        << specStruct->specializedTypes->specializedTypes[i]->to_str());
                 specStruct->genStruct->genericTypeDecls[i]->specializedType =
                     specStruct->specializedTypes->specializedTypes[i]->clone();
             }
@@ -581,6 +584,17 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
         }
     }
 
+    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
+    for (auto &&decl : resolvedStructDecl.structDecl->decls) {
+        auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
+        if (!function) continue;
+        auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
+        if (!memberFunc) return false;
+        resolvedFunctions.emplace_back(std::move(memberFunc));
+    }
+
+    resolvedStructDecl.functions = std::move(resolvedFunctions);
+
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     int idx = 0;
     for (auto &&decl : resolvedStructDecl.structDecl->decls) {
@@ -602,17 +616,6 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     }
 
     resolvedStructDecl.fields = std::move(resolvedFields);
-
-    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
-    for (auto &&decl : resolvedStructDecl.structDecl->decls) {
-        auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
-        if (!function) continue;
-        auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
-        if (!memberFunc) return false;
-        resolvedFunctions.emplace_back(std::move(memberFunc));
-    }
-
-    resolvedStructDecl.functions = std::move(resolvedFunctions);
 
     return true;
 }

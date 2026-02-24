@@ -1,0 +1,103 @@
+const std = import("std");
+
+pub struct Reader {
+
+    buffer: []u8,
+    seek: usize = 0,
+    end: usize = 0,
+
+    vtable_ptr: *void,
+    // fn rebase(ptr: *@This, capacity: usize) -> !void
+    vtable_rebase: *fn(*void, *@This, usize)->!void = &Reader.defaultRebase,
+    // fn refill(ptr: *@This, wanted: usize) -> !usize
+    vtable_refill: *fn(*void, *@This, usize)->!usize,
+
+    pub fn print(r: *@This) -> void {
+        std.io.printf("Reader{buf %p, size %ld, seek %ld, end %ld}\n", r.buffer.ptr, r.buffer.len, r.seek, r.end);
+    }
+
+    pub fn rebase(r: *@This, capacity: usize) -> !void {
+        // std.io.printf("rebase capacity %ld\n", capacity);
+        // r.print();
+        // defer r.print();
+        if (r.buffer.len - r.seek >= capacity) {
+            return;
+        }
+        return r.vtable_rebase(r.vtable_ptr, r, capacity);
+    }
+
+    pub fn defaultRebase(ptr: *void, r: *@This, capacity: usize) -> !void {
+        // std.io.printf("defaultRebase capacity %ld\n", capacity);
+        // r.print();
+        // defer r.print();
+        // if (r.buffer.len - r.seek < capacity) {
+        //     return error.UnexpectedCall;
+        // }
+        if (r.seek < r.end) {
+            const data = r.buffer[r.seek..r.end];
+            std.mem.memmove(r.buffer.ptr, data.ptr, data.len);
+        }
+        r.end = r.end - r.seek;
+        r.seek = 0;
+    }
+
+    pub fn fixed(buf: []u8) -> @This {
+        let ret = @This{
+            buffer: buf,
+            end: buf.len,
+            vtable_ptr: null,
+            vtable_refill: &fixedRefill,
+        };
+        ret.vtable_ptr = &ret;
+        return ret;
+    }
+
+    fn fixedRefill(ptr: *void, r: *@This, wanted: usize) -> !usize {
+        return error.EndOfStream;
+    }
+
+    pub fn readByte(r: *@This) -> !u8 {
+        // std.io.printf("readByte\n");
+        // r.print();
+        if (r.end <= r.seek) {
+            try r.refill(1);
+        }
+
+        defer r.seek++;
+        return r.buffer[r.seek];
+    }
+
+    pub fn refill(r: *@This, wanted: usize) -> !usize {
+        // std.io.printf("refill\n");
+        // r.print();
+        if (r.end == r.seek) {
+            r.end = 0;
+            r.seek = 0;
+        }
+        if (r.end - r.seek < wanted) {
+            try r.rebase(wanted);
+        }
+        let to_refill = wanted;
+        if (r.buffer.len - r.end > wanted) {
+            to_refill = r.buffer.len - r.end;
+        }
+        return r.vtable_refill(r.vtable_ptr, r, to_refill);
+    }
+}
+
+test "Reader init" {
+    const data = "Hello baby";
+
+    let r = Reader.fixed(data[0..std.mem.strlen(data)]);
+
+    for (0..11) |i| {
+        let readed_err = r.readByte();
+        let readed_catch = catch readed_err;
+        if (readed_catch) {
+            std.io.printf("There are an error: %s\n", readed_catch);
+        } else {
+            let readed: u8 = try readed_err;
+            std.io.printf("Readed %d: %c\n", i, readed);
+        }
+    }
+}

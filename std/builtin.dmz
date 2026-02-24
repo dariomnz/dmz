@@ -35,3 +35,10 @@ fn __builtin_main_test() -> void {
         std.io.printf("%d passed, %d failed.\n", result, num_test - result);
     }
 }
+
+fn @strAsSlice(str: *u8) -> []u8 {
+    let ret: []u8 = {};
+    ret.ptr = str;
+    ret.len = std.mem.strlen(str);
+    return ret;
+}

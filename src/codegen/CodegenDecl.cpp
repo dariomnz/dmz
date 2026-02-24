@@ -1,5 +1,8 @@
-// #define DEBUG
-#include <llvm-20/llvm/IR/Attributes.h>
+#ifdef DEBUG_CODEGEN
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 
 #include "Debug.hpp"
 #include "codegen/Codegen.hpp"

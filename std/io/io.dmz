@@ -2,12 +2,13 @@ pub const file = import("file.dmz");
 pub const print = import("print.dmz");
 pub const printf = print.printf;
 pub const Writer = import("writer.dmz").Writer;
+pub const Reader = import("reader.dmz").Reader;
 
+const std = import("std");
 pub struct stdout {
     pub fn writer(buf: []u8) -> Writer {
         let ret = Writer{
             buffer: buf,
-            end: 0,
             vtable_ptr: null,
             vtable_flush: &stdout.flush,
         };
@@ -17,6 +18,7 @@ pub struct stdout {
 
     fn flush(ptr: *void, w: *Writer, data: []u8, splat: usize) -> !usize {
         let flused = try file.writeAll(file.stdout, w.buffer.ptr, w.end);
+        w.end = 0;
 
         for (0..splat) |i| {
             flused += try file.writeAll(file.stdout, data.ptr, data.len);
@@ -25,17 +27,35 @@ pub struct stdout {
     }
 }
 
+pub struct stdin {
+    pub fn reader(buf: []u8) -> Reader {
+        let ret = Reader{
+            buffer: buf,
+            vtable_ptr: null,
+            vtable_refill: &stdin.refill,
+        };
+        ret.vtable_ptr = &ret;
+        return ret;
+    }
+
+    fn refill(ptr: *@This, r: *Reader, wanted: usize) -> !usize {
+        std.io.printf("stdin refill %ld\n", wanted);
+        let readed = try file.readOne(file.stdin, r.buffer[r.end..(r.end + wanted)]);
+        std.io.printf("readAll %ld\n", readed);
+        r.end += readed;
+        return readed;
+    }
+}
+
 test "stdout splat" {
-    const std = import("std");
-    let buf: u8[1024] = {};
-    let out = stdout.writer(buf[0..1024]);
+    let buf: u8[24] = {};
+    let out = stdout.writer(buf[0..24]);
     defer out.flush();
 
     out.print();
     let data = "Message ";
     for (0..10) |i| {
         let num = '0';
-        out.writeAll(data[0..std.mem.strlen(data)]);
         out.writeAll(data[0..std.mem.strlen(data)]);
     }
     let new_line = "\n";

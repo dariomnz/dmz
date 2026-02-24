@@ -1,4 +1,8 @@
-// #define DEBUG
+#ifdef DEBUG_CODEGEN
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "codegen/Codegen.hpp"
 
 #include "Debug.hpp"

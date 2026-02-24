@@ -1,3 +1,8 @@
+#ifdef DEBUG_SEMANTIC
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
 #include "driver/Driver.hpp"
@@ -413,11 +418,11 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
-        auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl);
-        auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
-        if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
-            return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
-        }
+        // auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl);
+        // auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
+        // if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
+        //     return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
+        // }
     } else if (dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
         if (memberExpr.field == "ptr") {
             decl = sliceDecl.fields[0].get();

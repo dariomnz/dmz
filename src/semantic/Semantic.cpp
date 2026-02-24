@@ -1,4 +1,8 @@
-// #define DEBUG
+#ifdef DEBUG_SEMANTIC
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "semantic/Semantic.hpp"
 
 #include "Debug.hpp"
@@ -122,7 +126,13 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
     }
 
     if (m_currentModule) {
-        return lookup_in_module(loc, *m_currentModule, id);
+        auto ret = lookup_in_module(loc, *m_currentModule, id);
+        if (ret) return ret;
+    }
+
+    if (m_currentStruct) {
+        auto ret = lookup_in_struct(loc, *m_currentStruct, id);
+        if (ret) return ret;
     }
 
     return nullptr;
@@ -1024,12 +1034,12 @@ void Sema::add_dependency(ResolvedDecl *decl) {
         }
     }
     if (m_currentStruct) {
-        debug_msg("Adding " << decl->name() << " to struct " << m_currentModule->name());
+        debug_msg("Adding " << decl->name() << " to struct " << m_currentStruct->name());
         m_currentStruct->dependsOn.emplace(dep);
         dep->isUsedBy.emplace(m_currentStruct);
 
         if (declDep) {
-            debug_msg("Adding " << declDep->name() << " to struct " << m_currentModule->name());
+            debug_msg("Adding " << declDep->name() << " to struct " << m_currentStruct->name());
             m_currentStruct->dependsOn.emplace(declDep);
             declDep->isUsedBy.emplace(m_currentStruct);
         }

@@ -1,7 +1,11 @@
 // RUN: dmz %s -I std %S/../../std/std.dmz -run | filecheck %s
 
-// CHECK: Time taken in vector 100000: 
-// CHECK: Time taken in hashmap 100000: 
+// CHECK: Allocated in vector = 1048544
+// CHECK: Time taken in vector 100000:
+// CHECK: Allocated in hashmap = 22936720
+// CHECK: Time taken in hashmap 100000:
+// CHECK: Allocated in list = 1600000
+// CHECK: Time taken in list 100000:
 // CHECK-NOT: {{.*}}
 const std = import("std");
 
@@ -16,26 +20,45 @@ fn eq_i32(lhs: i32, rhs: i32) -> bool {
 fn main() -> void {
     let libc_alloc = std.mem.libc_allocator.init();
     let allocator = libc_alloc.Allocator();
-    let v = std.vec<i32>.init(allocator);
-    defer v.deinit();
-
-    let hm = std.HashMap<i32, i32>.init(allocator, 10, &hash_i32, &eq_i32);
-    defer hm.deinit();
 
     const iters = 100000;
+    {
+        const start_allocated = libc_alloc.allocated;
+        let v = std.vec<i32>.init(allocator);
+        defer v.deinit();
 
-    const start_vector = std.time.get();
-    for (0..iters) |i| {
-        v.add(i);
+        const start_vector = std.time.get();
+        for (0..iters) |i| {
+            v.add(i);
+        }
+        const end_vector = std.time.get();
+        std.io.printf("Allocated in vector = %ld\n", libc_alloc.allocated - start_allocated);
+        std.io.printf("Time taken in vector %ld: %f ms\n", v.size(), (end_vector - start_vector) * 1000.0);
     }
-    const end_vector = std.time.get();
+    {
+        const start_allocated = libc_alloc.allocated;
+        let hm = std.HashMap<i32, i32>.init(allocator, 10, &hash_i32, &eq_i32);
+        defer hm.deinit();
 
-    const start_hashmap = std.time.get();
-    for (0..iters) |i| {
-        hm.set(i, i);
+        const start_hashmap = std.time.get();
+        for (0..iters) |i| {
+            hm.set(i, i);
+        }
+        const end_hashmap = std.time.get();
+        std.io.printf("Allocated in hashmap = %ld\n", libc_alloc.allocated - start_allocated);
+        std.io.printf("Time taken in hashmap %ld: %f ms\n", hm.size(), (end_hashmap - start_hashmap) * 1000.0);
     }
-    const end_hashmap = std.time.get();
+    {
+        const start_allocated = libc_alloc.allocated;
+        let l = std.list.SimplyLinkedList<i32>.init(allocator);
+        defer l.deinit();
 
-    std.io.printf("Time taken in vector %ld: %f ms\n", v.size(), (end_vector - start_vector) * 1000.0);
-    std.io.printf("Time taken in hashmap %ld: %f ms\n", hm.size(), (end_hashmap - start_hashmap) * 1000.0);
+        const start_list = std.time.get();
+        for (0..iters) |i| {
+            l.insertAtFirst(i);
+        }
+        const end_list = std.time.get();
+        std.io.printf("Allocated in list = %ld\n", libc_alloc.allocated - start_allocated);
+        std.io.printf("Time taken in list %ld: %f ms\n", l.size(), (end_list - start_list) * 1000.0);
+    }
 }

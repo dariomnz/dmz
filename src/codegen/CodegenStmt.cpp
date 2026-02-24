@@ -1,8 +1,8 @@
-#include <llvm-20/llvm/IR/Constants.h>
-#include <llvm-20/llvm/IR/Value.h>
-
-#include <charconv>
-#include <string>
+#ifdef DEBUG_CODEGEN
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 
 #include "Debug.hpp"
 #include "Utils.hpp"

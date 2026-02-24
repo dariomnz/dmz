@@ -1,0 +1,12 @@
+// RUN: true || dmz %s -I std %S/../../std/std.dmz -res-dump
+const std = import("std");
+
+fn main() -> void {
+    let buf: u8[10] = {};
+    let in = std.io.stdin.reader(buf[0..10]);
+
+    for (0..100) |i| {
+        let readed = try in.readByte();
+        std.io.printf("Readed: %c\n", readed);
+    }
+}

@@ -1,9 +1,10 @@
+pub const stdin: i32 = 0;
 pub const stdout: i32 = 1;
 pub const stderr: i32 = 2;
 
 pub extern fn open(buffer: *u8, flags: i32, ...) -> i32;
 pub extern fn write(fd: i32, buffer: *u8, count: usize) -> isize;
-pub extern fn read(fd: i32, buffer: *u8, count: usize) -> isize;
+extern fn read(fd: i32, buffer: *u8, count: usize) -> isize;
 pub extern fn cloase(fd: i32) -> i32;
 
 const std = import("std");
@@ -23,4 +24,13 @@ pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
         writed += ret;
     }
     return writed;
+}
+
+pub fn readOne(fd: i32, buffer: []u8) -> !usize {
+    std.io.printf("to readAll %ld\n", buffer.len);
+    const readed = read(fd, buffer.ptr, buffer.len);
+    if (readed < 0) {
+        try std.errno.error_errno();
+    }
+    return readed;
 }

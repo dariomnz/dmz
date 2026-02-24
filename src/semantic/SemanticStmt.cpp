@@ -1,4 +1,8 @@
-// #define DEBUG
+#ifdef DEBUG_SEMANTIC
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include <memory>
 #include <string>
 

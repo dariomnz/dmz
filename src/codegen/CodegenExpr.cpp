@@ -1,4 +1,8 @@
-#include <llvm-20/llvm/IR/Value.h>
+#ifdef DEBUG_CODEGEN
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 
 #include "DMZPCH.hpp"
 #include "Debug.hpp"
@@ -397,11 +401,26 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     debug_func(dre.location << " keepPointer " << (keepPointer ? "true" : "false"));
 
     llvm::Value *val = nullptr;
-    if (auto funcDecl = dynamic_cast<const ResolvedFuncDecl *>(&dre.decl)) {
-        std::string funcName = generate_decl_name(*funcDecl);
-        val = m_module->getFunction(funcName);
-        if (!val) dmz_unreachable("internal error no function '" + funcName + "'");
-        return val;
+    if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&dre.decl)) {
+        return generate_function_decl(*fnDecl);
+    } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(declStmt->type.get())) {
+            if (fnType->fnDecl) {
+                return generate_function_decl(*fnType->fnDecl);
+            } else {
+                dmz_unreachable("TODO");
+            }
+        } else {
+            auto ret = m_declarations[declStmt->varDecl.get()];
+            if (!ret) {
+                ret = m_declarations[declStmt];
+                if (!ret) {
+                    declStmt->dump();
+                    dmz_unreachable("TODO");
+                }
+            }
+            return keepPointer ? ret : load_value(ret, *declStmt->type);
+        }
     } else {
         val = m_declarations[&dre.decl];
     }

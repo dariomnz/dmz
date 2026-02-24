@@ -1,3 +1,8 @@
+#ifdef DEBUG_PARSER
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "parser/ParserSymbols.hpp"
 
 namespace DMZ {
