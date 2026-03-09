@@ -3,6 +3,7 @@
 
 #include "Stats.hpp"
 #include "fmt/Formatter.hpp"
+#include "lsp/server.hpp"
 #include "test_runner/test_runner.hpp"
 
 namespace DMZ {
@@ -18,6 +19,7 @@ void Driver::display_help() {
     println("  -o <file>          write executable to <file>");
     println("  -lexer-dump        print the lexer dump");
     println("  -ast-dump          print the abstract syntax tree");
+    println("  -lsp               start the language server");
     println("  -fmt-dump          print the fmt syntax tree");
     println("  -import-dump       print the abstract syntax tree after import");
     println("  -no-remove-unused  disable the removal of unused code");
@@ -106,6 +108,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.isModule = true;
             } else if (arg == "-print-stats") {
                 options.printStats = true;
+            } else if (arg == "-lsp" || arg == "--lsp") {
+                options.lsp = true;
             } else if (arg == "-quiet") {
                 options.quiet = true;
             } else {
@@ -567,6 +571,12 @@ int Driver::main() {
 
     if (m_options.displayHelp) {
         display_help();
+        return EXIT_SUCCESS;
+    }
+
+    if (m_options.lsp) {
+        lsp::LSPServer server;
+        server.run();
         return EXIT_SUCCESS;
     }
 

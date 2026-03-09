@@ -11,17 +11,42 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "dmz",
-      "aliases": ["DMZ", "dmz"],
-      "extensions": [".dmz"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "dmz",
-      "scopeName": "source.dmz",
-      "path": "./syntaxes/dmz.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "dmz",
+        "aliases": [
+          "DMZ",
+          "dmz"
+        ],
+        "extensions": [
+          ".dmz"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dmz",
+        "scopeName": "source.dmz",
+        "path": "./syntaxes/dmz.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "DMZ",
+      "properties": {
+        "dmz.compilerPath": {
+          "type": "string",
+          "default": "dmz",
+          "description": "Path to the dmz compiler executable."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "dmz.restartServer",
+        "title": "DMZ: Restart language server"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -30,6 +55,9 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.2"
   },
   "devDependencies": {
     "@types/vscode": "^1.104.0",

@@ -9,6 +9,7 @@
 // CHECK-NEXT:   -o <file>          write executable to <file>
 // CHECK-NEXT:   -lexer-dump        print the lexer dump
 // CHECK-NEXT:   -ast-dump          print the abstract syntax tree
+// CHECK-NEXT:   -lsp               start the language server
 // CHECK-NEXT:   -fmt-dump          print the fmt syntax tree
 // CHECK-NEXT:   -import-dump       print the abstract syntax tree after import
 // CHECK-NEXT:   -no-remove-unused  disable the removal of unused code

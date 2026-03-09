@@ -173,6 +173,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Token>& v_t);
 class Lexer {
    public:
     Lexer(std::string file_path);
+    Lexer(std::string file_path, std::string content);
     std::vector<Token> tokenize_file();
     bool next_line();
     Token next_token();

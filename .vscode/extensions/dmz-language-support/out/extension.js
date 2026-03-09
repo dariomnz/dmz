@@ -37,16 +37,49 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const child_process_1 = require("child_process");
 const vscode = __importStar(require("vscode"));
+const node_1 = require("vscode-languageclient/node");
+let client;
+let lspOutputChannel;
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("dmz Formatter");
+    lspOutputChannel = vscode.window.createOutputChannel("DMZ Language Server");
+    context.subscriptions.push(outputChannel);
+    context.subscriptions.push(lspOutputChannel);
     let disposables = [];
     vscode.workspace.onDidChangeConfiguration((e) => {
-        if (!e.affectsConfiguration("dmz-formatter"))
-            return;
-        disposables.forEach((d) => d.dispose());
-        disposables = registerFormatters(outputChannel);
+        if (e.affectsConfiguration("dmz-formatter")) {
+            disposables.forEach((d) => d.dispose());
+            disposables = registerFormatters(outputChannel);
+        }
+        if (e.affectsConfiguration("dmz.compilerPath")) {
+            restartServer();
+        }
     });
     disposables = registerFormatters(outputChannel);
+    context.subscriptions.push(vscode.commands.registerCommand("dmz.restartServer", () => {
+        restartServer();
+    }));
+    startLanguageServer();
+}
+function startLanguageServer() {
+    const compilerPath = vscode.workspace.getConfiguration("dmz").get("compilerPath") || "dmz";
+    const serverOptions = {
+        command: compilerPath,
+        args: ["--lsp"],
+    };
+    const clientOptions = {
+        documentSelector: [{ scheme: "file", language: "dmz" }],
+        outputChannel: lspOutputChannel,
+    };
+    client = new node_1.LanguageClient("dmzLanguageServer", "DMZ Language Server", serverOptions, clientOptions);
+    client.start();
+}
+async function restartServer() {
+    if (client) {
+        await client.stop();
+        client = undefined;
+    }
+    startLanguageServer();
 }
 const registerFormatters = (outputChannel) => {
     return [
@@ -110,6 +143,10 @@ const formatDocument = (document, options, outputChannel) => {
         process.stdin.end();
     });
 };
-// this method is called when your extension is deactivated
-function deactivate() { }
+function deactivate() {
+    if (!client) {
+        return undefined;
+    }
+    return client.stop();
+}
 //# sourceMappingURL=extension.js.map

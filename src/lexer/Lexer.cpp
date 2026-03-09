@@ -126,6 +126,12 @@ Lexer::Lexer(std::string source_name) : m_source_name(source_name) {
     }
 }
 
+Lexer::Lexer(std::string source_name, std::string content) : m_source_name(source_name) {
+    m_input_stream_file = makePtr<std::stringstream>(content);
+    m_input_stream = m_input_stream_file.get();
+    m_is_cin_stream = false;
+}
+
 static inline bool isSpace(const std::string_view& c) {
     return c.size() > 0 &&
            (c[0] == ' ' || c[0] == '\f' || c[0] == '\n' || c[0] == '\r' || c[0] == '\t' || c[0] == '\v');

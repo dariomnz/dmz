@@ -1,24 +1,75 @@
 import { spawn } from "child_process";
 import * as vscode from "vscode";
+import {
+	LanguageClient,
+	LanguageClientOptions,
+	ServerOptions,
+} from "vscode-languageclient/node";
+
+let client: LanguageClient | undefined;
+let lspOutputChannel: vscode.OutputChannel | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
 	const outputChannel = vscode.window.createOutputChannel("dmz Formatter");
+	lspOutputChannel = vscode.window.createOutputChannel("DMZ Language Server");
+	context.subscriptions.push(outputChannel);
+	context.subscriptions.push(lspOutputChannel);
 	let disposables: readonly vscode.Disposable[] = [];
 
 	vscode.workspace.onDidChangeConfiguration((e) => {
-		if (!e.affectsConfiguration("dmz-formatter")) return;
-		disposables.forEach((d) => d.dispose());
-		disposables = registerFormatters(outputChannel);
+		if (e.affectsConfiguration("dmz-formatter")) {
+			disposables.forEach((d) => d.dispose());
+			disposables = registerFormatters(outputChannel);
+		}
+		if (e.affectsConfiguration("dmz.compilerPath")) {
+			restartServer();
+		}
 	});
 
 	disposables = registerFormatters(outputChannel);
+
+	context.subscriptions.push(vscode.commands.registerCommand("dmz.restartServer", () => {
+		restartServer();
+	}));
+
+	startLanguageServer();
+}
+
+function startLanguageServer() {
+	const compilerPath = vscode.workspace.getConfiguration("dmz").get<string>("compilerPath") || "dmz";
+
+	const serverOptions: ServerOptions = {
+		command: compilerPath,
+		args: ["--lsp"],
+	};
+
+	const clientOptions: LanguageClientOptions = {
+		documentSelector: [{ scheme: "file", language: "dmz" }],
+		outputChannel: lspOutputChannel,
+	};
+
+	client = new LanguageClient(
+		"dmzLanguageServer",
+		"DMZ Language Server",
+		serverOptions,
+		clientOptions
+	);
+
+	client.start();
+}
+
+async function restartServer() {
+	if (client) {
+		await client.stop();
+		client = undefined;
+	}
+
+	startLanguageServer();
 }
 
 const registerFormatters = (
 	outputChannel: vscode.OutputChannel,
 ): readonly vscode.Disposable[] => {
-
-
 	return [
 		vscode.languages.registerDocumentFormattingEditProvider("dmz", {
 			provideDocumentFormattingEdits(document, options) {
@@ -33,7 +84,6 @@ const formatDocument = (
 	options: vscode.FormattingOptions,
 	outputChannel: vscode.OutputChannel,
 ): Promise<vscode.TextEdit[]> => {
-
 	const command: string = "dmz -fmt -";
 
 	const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
@@ -99,5 +149,9 @@ const formatDocument = (
 	});
 };
 
-// this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate(): Thenable<void> | undefined {
+	if (!client) {
+		return undefined;
+	}
+	return client.stop();
+}

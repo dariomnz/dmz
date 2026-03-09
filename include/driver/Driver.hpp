@@ -32,6 +32,7 @@ struct CompilerOptions {
     bool isModule = false;
     bool printStats = false;
     bool quiet = false;
+    bool lsp = false;
     int parallelJobs = 1;
 
     static CompilerOptions parse_arguments(int argc, char** argv);
@@ -89,5 +90,7 @@ class Driver {
         if (!driver_instance) dmz_unreachable("Driver instance not created");
         return *driver_instance;
     }
+
+    static ptr<Driver>& instance_ptr() { return driver_instance; }
 };
 }  // namespace DMZ
