@@ -3,6 +3,7 @@
 
 #include "Stats.hpp"
 #include "fmt/Formatter.hpp"
+#include "test_runner/test_runner.hpp"
 
 namespace DMZ {
 
@@ -29,7 +30,9 @@ void Driver::display_help() {
     println("  -g                 generate debug symbols");
     println("  -run               runs the program with lli (Just In Time)");
     println("  -test              runs the test with lli (Just In Time)");
+    println("  -test-compiler [dir] runs the compiler tests in [dir] (default: ./test)");
     println("  -fmt               format the dmz source file");
+    println("  -quiet             suppress output for successful tests");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -78,6 +81,23 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.debugSymbols = true;
             } else if (arg == "-test") {
                 options.test = true;
+            } else if (arg == "-test-compiler") {
+                options.testCompiler = true;
+                if (++idx < argc) {
+                    std::string_view nextArg = argv[idx];
+                    if (nextArg[0] != '-') {
+                        options.source = nextArg;
+                    } else {
+                        --idx;  // Put it back, it's another option
+                    }
+                }
+                if (options.source.empty()) {
+                    options.source = "./test";
+                }
+            } else if (arg == "-j") {
+                if (++idx < argc) {
+                    options.parallelJobs = std::stoi(argv[idx]);
+                }
             } else if (arg == "-fmt-dump") {
                 options.fmtDump = true;
             } else if (arg == "-fmt") {
@@ -86,6 +106,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.isModule = true;
             } else if (arg == "-print-stats") {
                 options.printStats = true;
+            } else if (arg == "-quiet") {
+                options.quiet = true;
             } else {
                 error("unexpected option '" + std::string(arg) + '\'');
             }
@@ -117,17 +139,24 @@ void Driver::check_sources_pass(std::filesystem::path &source) {
         return;
     }
 
-    // for (auto &&source : sources) {
+    if (!std::filesystem::exists(source)) {
+        error("failed to open '" + source.string() + '\'');
+        m_haveError = true;
+        return;
+    }
+
+    if (std::filesystem::is_directory(source)) {
+        if (!m_options.test && !m_options.testCompiler) {
+            error("source is a directory, but -test or -test-compiler not specified");
+            m_haveError = true;
+        }
+        return;
+    }
+
     if (source.extension() != ".dmz") {
         error("unexpected source file extension '" + source.extension().string() + "'");
         m_haveError = true;
     }
-
-    if (!std::filesystem::exists(source)) {
-        error("failed to open '" + source.string() + '\'');
-        m_haveError = true;
-    }
-    // }
 }
 
 ptr<Lexer> Driver::lexer_pass(std::filesystem::path &source) {
@@ -543,6 +572,13 @@ int Driver::main() {
 
     check_sources_pass(m_options.source);
     if (need_exit()) return exit_code();
+
+    if ((m_options.test || m_options.testCompiler) && std::filesystem::is_directory(m_options.source)) {
+        TestOptions testOpts;
+        testOpts.parallel_jobs = m_options.parallelJobs;
+        testOpts.quiet = m_options.quiet;
+        return run_tests(m_options.source.string(), testOpts);
+    }
 
     auto lexer = lexer_pass(m_options.source);
     if (need_exit()) return exit_code();

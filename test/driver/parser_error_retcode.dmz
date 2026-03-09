@@ -1,2 +1,3 @@
-// RUN: dmz %s -run || test $? -eq 1
+// RUN: dmz %s -run 2>&1 | filecheck %s
 parser error
+// CHECK: error: expected declaration

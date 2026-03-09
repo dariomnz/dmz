@@ -28,8 +28,11 @@ struct CompilerOptions {
     bool debugSymbols = false;
     bool fmt = false;
     bool test = false;
+    bool testCompiler = false;
     bool isModule = false;
     bool printStats = false;
+    bool quiet = false;
+    int parallelJobs = 1;
 
     static CompilerOptions parse_arguments(int argc, char** argv);
 };
@@ -63,7 +66,8 @@ class Driver {
                                                                          std::string_view imported);
 
     std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);
-    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>>  codegen_pass(std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> codegen_pass(
+        std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
     int jit_pass(ptr<llvm::Module>& module);
     int generate_exec_pass(ptr<llvm::Module>& module);
 

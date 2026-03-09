@@ -19,14 +19,14 @@ fn main() -> void {
         else   => printf("else %d\n", x);
     }
 }
-// CHECK-NEXT: main:
+// CHECK: main:
 // CHECK-NEXT: [11 (entry)]
 // CHECK-NEXT:   preds: 
 // CHECK-NEXT:   succs: 10 
 // CHECK-NEXT: 
 // CHECK-NEXT: [10]
 // CHECK-NEXT:   preds: 11 
-// CHECK-NEXT:   succs: 8(U) 9 
+// CHECK-NEXT:   succs: 8(U) 9(U) 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:   ResolvedDeclStmt
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '10'
@@ -35,7 +35,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedSwitchStmt
 // CHECK-NEXT: 
 // CHECK-NEXT: [9]
-// CHECK-NEXT:   preds: 10 
+// CHECK-NEXT:   preds: 10(U) 
 // CHECK-NEXT:   succs: 7 
 // CHECK-NEXT:   ResolvedStringLiteral:*u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x

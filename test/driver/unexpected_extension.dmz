@@ -1,2 +1,2 @@
-// RUN: (dmz ./source.cpp || true) 2>&1 | filecheck %s
+// RUN: (dmz CMakeLists.txt || true) 2>&1 | filecheck %s
 // CHECK: error: unexpected source file extension

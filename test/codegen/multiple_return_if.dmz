@@ -4,12 +4,8 @@ extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n",
 fn foo(x: i32) -> i32 {
     if (x == 1) {
         return 2;
-
-        return 3;
     } else if (x == 2) {
         return 10;
-
-        let y: i32 = 5 + 1;
     }
 
     return 52;

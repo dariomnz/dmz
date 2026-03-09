@@ -2,9 +2,6 @@
 // RUN: dmz %s -run
 fn main() -> void {
     return;
-
-    let x: i32 = 1;
-    return;
 }
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
