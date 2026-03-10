@@ -244,6 +244,7 @@ llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &struct
     debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (espec->specializedTypes->is_generic()) continue;
             generate_struct_decl(*espec);
         }
         return nullptr;
@@ -262,6 +263,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (espec->specializedTypes->is_generic()) continue;
             generate_struct_fields(*espec);
         }
         return;
@@ -286,6 +288,7 @@ void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.symbolName);
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (espec->specializedTypes->is_generic()) continue;
             generate_struct_functions(*espec);
         }
         return;

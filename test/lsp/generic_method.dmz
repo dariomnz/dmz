@@ -1,0 +1,21 @@
+struct GenericStruct<T> {
+    val: T,
+    pub fn get(self: *@This) -> T {
+        return self.val;
+    }
+}
+
+fn genericFunc<T>(x: T) -> T {
+    return x;
+}
+
+extern fn printf(fmt:*u8, ...)->i32;
+
+fn main() -> void {
+    let s = GenericStruct<i32>{val: 42};
+    let v = s.get();
+    let r = genericFunc<i32>(10);
+
+    printf("%d\n", v);
+    printf("%d\n", r);
+}

@@ -431,7 +431,8 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 
     if (dynamic_cast<ResolvedMemberExpr *>(resolvedInitializer.get()) && !varDecl.isMutable) {
         if (auto structType = dynamic_cast<ResolvedTypeStruct *>(resolvedInitializer->type.get())) {
-            resolvedInitializer->type = makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl, structType->is_this);
+            resolvedInitializer->type =
+                makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl, structType->is_this);
         }
     }
 
@@ -524,6 +525,15 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
         auto prevModule = m_currentModule;
         m_currentModule = genstruct->saveCurrentModule;
         defer([&]() { m_currentModule = prevModule; });
+
+        for (auto &&gen : genstruct->genericTypeDecls) {
+            if (!insert_decl_to_current_scope(*gen, true)) return false;
+        }
+
+        for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
+            auto &resfunc = resolvedStructDecl.functions[i];
+            if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
+        }
 
         for (auto &&spec : genstruct->specializations) {
             // Specialize types
@@ -827,7 +837,6 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
         }
         if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(currentDecl)) {
             if (resolve_builtin_function(*fn)) continue;
-            if (dynamic_cast<ResolvedGenericFunctionDecl *>(fn)) continue;
 
             if (!resolve_func_body(*fn, *fn->functionDecl->body)) {
                 debug_msg("error resolve_func_body");
@@ -867,6 +876,11 @@ bool Sema::resolve_pending_body() {
 bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) {
     debug_func("");
     ScopeRAII paramScope(*this);
+    if (auto *genFn = dynamic_cast<ResolvedGenericFunctionDecl *>(&function)) {
+        for (auto &&genType : genFn->genericTypeDecls) {
+            insert_decl_to_current_scope(*genType, true);
+        }
+    }
     for (auto &&param : function.params) insert_decl_to_current_scope(*param);
     auto prevFunc = m_currentFunction;
     m_currentFunction = &function;

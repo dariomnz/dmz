@@ -9,6 +9,11 @@ fn print<T>(param: T) -> !void {
 // CHECK: ResolvedGenericFunctionDecl print fn(T)->!void
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedParamDecl:T param
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedCallExpr:i32
+// CHECK-NEXT:       ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:       ResolvedStringLiteral:*u8 'Pointer of type %d\n'
+// CHECK-NEXT:       ResolvedDeclRefExpr:T param
 // CHECK-NEXT:   ResolvedSpecializedFunctionDecl print<i32> fn(i32)->!void
 // CHECK-NEXT:     ResolvedParamDecl:i32 param
 // CHECK-NEXT:     ResolvedBlock

@@ -141,6 +141,15 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     }
 
     if (!fnType) {
+        if (functionType && functionType->kind == ResolvedTypeKind::Generic) {
+            std::vector<ptr<ResolvedExpr>> resolvedArguments;
+            for (auto &&arg : call.arguments) {
+                varOrReturn(resolvedArg, resolve_expr(*arg));
+                resolvedArguments.emplace_back(std::move(resolvedArg));
+            }
+            return makePtr<ResolvedCallExpr>(call.location, makePtr<ResolvedTypeGeneric>(call.location, nullptr),
+                                             std::move(resolvedCallee), std::move(resolvedArguments));
+        }
         // call.dump();
         return report(call.location, "calling non-function symbol");
     }
@@ -152,8 +161,15 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         errGeneric |= param->kind == ResolvedTypeKind::Generic;
     }
 
-    if (errGeneric) {
-        return report(call.location, "try to call a generic function without specialization");
+    if (errGeneric && !dynamic_cast<const GenericExpr *>(call.callee.get())) {
+        bool isRealgeneric = false;
+        if (auto *resolvedDeclRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(resolvedCallee.get())) {
+            isRealgeneric = dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedDeclRefExpr->decl) != nullptr;
+        }
+        if (auto *resolvedMemberExpr = dynamic_cast<const ResolvedMemberExpr *>(resolvedCallee.get())) {
+            isRealgeneric = dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedMemberExpr->member) != nullptr;
+        }
+        if (isRealgeneric) return report(call.location, "try to call a generic function without specialization");
     }
 
     size_t call_args_num = call.arguments.size();
@@ -348,12 +364,12 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
     if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Pointer) {
+        resolvedLHS->type->kind != ResolvedTypeKind::Pointer && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
     if (resolvedRHS->type->kind != ResolvedTypeKind::Number && resolvedRHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Pointer) {
+        resolvedRHS->type->kind != ResolvedTypeKind::Pointer && resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
@@ -560,7 +576,14 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
 
-    if (dynamic_cast<ResolvedGenericStructDecl *>(st)) {
+    bool is_this = false;
+    if (auto declRefExpr = dynamic_cast<const DeclRefExpr *>(structInstantiation.base.get())) {
+        if (declRefExpr->identifier == "@This") {
+            is_this = true;
+        }
+    }
+    if (is_this == false && !dynamic_cast<const GenericExpr *>(structInstantiation.base.get()) &&
+        dynamic_cast<ResolvedGenericStructDecl *>(st)) {
         return report(structInstantiation.location, "'" + st->identifier + "' is a generic and need specialization");
     }
 

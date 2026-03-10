@@ -273,7 +273,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 
     if (auto assigmentOperator = dynamic_cast<const AssignmentOperator *>(&assignment)) {
-        if (resolvedLHS->type->kind != ResolvedTypeKind::Number) {
+        if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
             return report(resolvedLHS->location, "cannot use operator '" + get_op_str(assigmentOperator->op) +
                                                      "' in type '" + resolvedLHS->type->to_str() + "'");
         }

@@ -88,12 +88,24 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     }
 
     if (const auto* fd = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
+        if (const auto* genFn = dynamic_cast<const ResolvedGenericFunctionDecl*>(fd)) {
+            for (const auto& gt : genFn->genericTypeDecls) {
+                find_in_decl(*gt);
+                if (found_decl) return;
+            }
+        }
         for (const auto& param : fd->params) {
             find_in_decl(*param);
             if (found_decl) return;
         }
         if (fd->body) find_in_stmt(*fd->body);
     } else if (const auto* sd = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
+        if (const auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(sd)) {
+            for (const auto& gt : genStru->genericTypeDecls) {
+                find_in_decl(*gt);
+                if (found_decl) return;
+            }
+        }
         for (const auto& field : sd->fields) {
             find_in_decl(*field);
             if (found_decl) return;

@@ -67,7 +67,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
 }
 
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
-    debug_func(stmt.expr->type->to_str());
+    debug_func(stmt.location);
     if (stmt.expr) {
         auto retType = m_currentFunction->getFnType()->returnType.get();
         if (stmt.expr->type->kind == ResolvedTypeKind::Error) {

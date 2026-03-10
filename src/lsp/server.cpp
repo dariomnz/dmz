@@ -103,23 +103,24 @@ void LSPServer::on_initialize(const std::string& id, const std::string& params) 
         std::cerr << "[LSP] Found std at: " << m_std_path << std::endl;
     }
 
-    send_response(id,
-                  "{\"capabilities\":{"
-                  "\"textDocumentSync\":1,"
-                  "\"definitionProvider\":true,"
-                  "\"hoverProvider\":true,"
-                  "\"semanticTokensProvider\":{"
-                  "\"legend\":{"
-                  "\"tokenTypes\":[\"type\",\"function\",\"parameter\",\"variable\",\"property\",\"namespace\",\"number\"],"
-                  "\"tokenModifiers\":[\"declaration\"]"
-                  "},"
-                  "\"full\":true"
-                  "},"
-                  "\"completionProvider\":{"
-                  "\"resolveProvider\":false,"
-                  "\"triggerCharacters\":[\".\"]"
-                  "}"
-                  "}}");
+    send_response(
+        id,
+        "{\"capabilities\":{"
+        "\"textDocumentSync\":1,"
+        "\"definitionProvider\":true,"
+        "\"hoverProvider\":true,"
+        "\"semanticTokensProvider\":{"
+        "\"legend\":{"
+        "\"tokenTypes\":[\"type\",\"function\",\"parameter\",\"variable\",\"property\",\"namespace\",\"number\"],"
+        "\"tokenModifiers\":[\"declaration\"]"
+        "},"
+        "\"full\":true"
+        "},"
+        "\"completionProvider\":{"
+        "\"resolveProvider\":false,"
+        "\"triggerCharacters\":[\".\"]"
+        "}"
+        "}}");
 }
 
 void LSPServer::on_shutdown(const std::string& id) {
@@ -234,6 +235,7 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
             ss << escape_json(finder.found_decl->type->to_str());
         }
         ss << "\\n```\"}}";
+        std::cerr << "[LSP] Sending hover response: " << ss.str() << std::endl;
         send_response(id, ss.str());
     } else {
         send_response(id, "null");

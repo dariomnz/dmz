@@ -40,6 +40,7 @@ struct ResolvedType {
     virtual void dump(size_t level = 0) const = 0;
     virtual std::string to_str() const = 0;
 
+    virtual bool is_generic() const;
     bool generate_struct() const;
 };
 
@@ -100,6 +101,7 @@ struct ResolvedTypeStructDecl : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedTypeStruct : public ResolvedType {
@@ -113,6 +115,7 @@ struct ResolvedTypeStruct : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedGenericTypeDecl;  // Forward declaration
@@ -126,6 +129,7 @@ struct ResolvedTypeGeneric : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedTypeSpecialized : public ResolvedType {
@@ -139,6 +143,7 @@ struct ResolvedTypeSpecialized : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedErrorDecl;  // Forward declaration
@@ -188,6 +193,7 @@ struct ResolvedTypeOptional : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 
     static ptr<ResolvedType> voidOptional(SourceLocation location);
 };
@@ -202,6 +208,7 @@ struct ResolvedTypePointer : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 
     static ptr<ResolvedType> opaquePtr(SourceLocation location);
 };
@@ -216,6 +223,7 @@ struct ResolvedTypeSlice : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedTypeRange : public ResolvedType {
@@ -241,6 +249,7 @@ struct ResolvedTypeArray : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override;
 };
 
 struct ResolvedFuncDecl;  // Forward declaration
@@ -262,6 +271,8 @@ struct ResolvedTypeFunction : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     std::string to_str_with_params(bool with_params = true) const;
+
+    bool is_generic() const override;
 };
 
 struct ResolvedTypeVarArg : public ResolvedType {

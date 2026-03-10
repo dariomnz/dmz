@@ -23,11 +23,6 @@ std::vector<SemanticToken> SemanticTokensCollector::collect(const std::vector<pt
 }
 
 void SemanticTokensCollector::traverse_module(const ResolvedModuleDecl& module) {
-    // if (module.location.file_name == m_target_file) {
-    //     add_token(module.location, module.identifier, SemanticTokenType::Namespace,
-    //               (uint32_t)SemanticTokenModifier::Declaration);
-    // }
-
     for (const auto& decl : module.declarations) {
         traverse_decl(*decl);
     }
@@ -38,6 +33,11 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
             add_token(structDecl->location, structDecl->identifier, SemanticTokenType::Type,
                       (uint32_t)SemanticTokenModifier::Declaration);
+            if (auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(structDecl)) {
+                for (const auto& gt : genStru->genericTypeDecls) {
+                    traverse_decl(*gt);
+                }
+            }
             for (const auto& field : structDecl->fields) {
                 traverse_decl(*field);
             }
@@ -58,6 +58,11 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             if (auto* functionDecl = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
                 if (functionDecl->body) {
                     traverse_stmt(*functionDecl->body);
+                }
+            }
+            if (auto* genFn = dynamic_cast<const ResolvedGenericFunctionDecl*>(&decl)) {
+                for (const auto& gt : genFn->genericTypeDecls) {
+                    traverse_decl(*gt);
                 }
             }
         } else if (auto* paramDecl = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
@@ -94,13 +99,9 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                 add_token(error->location, error->identifier, SemanticTokenType::Variable,
                           (uint32_t)SemanticTokenModifier::Declaration);
             }
-        }
-    } else {
-        // Even if the declaration is in another file, its body/initializer might have references in OUR file?
-        // No, declarations are entire units. But wait, what if it's a partially analyzed file?
-        // Let's just follow the bodies if they exist.
-        if (auto* funcDecl = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
-            if (funcDecl->body) traverse_stmt(*funcDecl->body);
+        } else if (auto* genericTypeDecl = dynamic_cast<const ResolvedGenericTypeDecl*>(&decl)) {
+            add_token(genericTypeDecl->location, genericTypeDecl->identifier, SemanticTokenType::Type,
+                      (uint32_t)SemanticTokenModifier::Declaration);
         }
     }
 }
@@ -163,69 +164,63 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
                 type = SemanticTokenType::Parameter;
             else if (dynamic_cast<const ResolvedModuleDecl*>(&declRef->decl))
                 type = SemanticTokenType::Namespace;
+            else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&declRef->decl))
+                type = SemanticTokenType::Type;
+            else if (declRef->type->kind == ResolvedTypeKind::Generic)
+                type = SemanticTokenType::Type;
 
-            if (declRef->type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
-
-            add_token(declRef->location, (is_this ? "@This" : declRef->decl.identifier), type);
-        } else if (auto* member = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
-            traverse_expr(*member->base);
-            // member is a property/function
+            add_token(declRef->location, is_this ? "@This" : declRef->decl.identifier, type);
+        } else if (auto* memberExpr = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
+            if (memberExpr->member.identifier.empty()) return;
+            // .member -> starts at location + 1
+            SourceLocation memberLoc = memberExpr->location;
+            memberLoc.col += 1;
             SemanticTokenType type = SemanticTokenType::Property;
-            if (member->member.type->kind == ResolvedTypeKind::Function) type = SemanticTokenType::Function;
-            if (member->member.type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
-            add_token(member->location, member->member.identifier, type);
-        } else if (auto* structInit = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
-            bool is_this = false;
-            if (auto* structType = dynamic_cast<const ResolvedTypeStructDecl*>(structInit->type.get()))
-                is_this = structType->is_this;
-            if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(structInit->type.get()))
-                is_this = structType->is_this;
-            add_token(structInit->location, (is_this ? "@This" : structInit->structDecl.identifier),
-                      SemanticTokenType::Type);
-            for (const auto& fieldInit : structInit->fieldInitializers) {
-                add_token(fieldInit->location, fieldInit->field.identifier, SemanticTokenType::Property);
-                traverse_expr(*fieldInit->initializer);
+            if (dynamic_cast<const ResolvedFuncDecl*>(&memberExpr->member)) type = SemanticTokenType::Function;
+            add_token(memberLoc, memberExpr->member.identifier, type);
+            traverse_expr(*memberExpr->base);
+        } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
+            add_token(instantiation->location, instantiation->structDecl.identifier, SemanticTokenType::Type);
+            for (const auto& init : instantiation->fieldInitializers) {
+                add_token(init->location, init->field.identifier, SemanticTokenType::Property);
+                traverse_expr(*init->initializer);
             }
+        } else if (auto* arrInstantiation = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
+            for (const auto& init : arrInstantiation->initializers) {
+                traverse_expr(*init);
+            }
+        } else if (auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
+            traverse_expr(*call->callee);
+            for (const auto& arg : call->arguments) {
+                traverse_expr(*arg);
+            }
+        } else if (auto* binary = dynamic_cast<const ResolvedBinaryOperator*>(&expr)) {
+            traverse_expr(*binary->lhs);
+            traverse_expr(*binary->rhs);
+        } else if (auto* unary = dynamic_cast<const ResolvedUnaryOperator*>(&expr)) {
+            traverse_expr(*unary->operand);
+        } else if (auto* group = dynamic_cast<const ResolvedGroupingExpr*>(&expr)) {
+            traverse_expr(*group->expr);
+        } else if (auto* arrayAt = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
+            traverse_expr(*arrayAt->array);
+            traverse_expr(*arrayAt->index);
+        } else if (auto* typeExpr = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
+            traverse_type(*typeExpr->resolvedType);
+        } else if (auto* ptrExpr = dynamic_cast<const ResolvedRefPtrExpr*>(&expr)) {
+            traverse_expr(*ptrExpr->expr);
+        } else if (auto* ptrExpr = dynamic_cast<const ResolvedDerefPtrExpr*>(&expr)) {
+            traverse_expr(*ptrExpr->expr);
+        } else if (auto* catchErr = dynamic_cast<const ResolvedCatchErrorExpr*>(&expr)) {
+            traverse_expr(*catchErr->errorToCatch);
+        } else if (auto* tryErr = dynamic_cast<const ResolvedTryErrorExpr*>(&expr)) {
+            traverse_expr(*tryErr->errorToTry);
+        } else if (auto* orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr*>(&expr)) {
+            traverse_expr(*orelseErr->errorToOrElse);
+            traverse_expr(*orelseErr->orElseExpr);
+        } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
+            traverse_type(*sizeofExpr->type);
+        } else if (dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         }
-    }
-
-    // Continue traversal for nested expressions
-    if (auto* binary = dynamic_cast<const ResolvedBinaryOperator*>(&expr)) {
-        traverse_expr(*binary->lhs);
-        traverse_expr(*binary->rhs);
-    } else if (auto* unary = dynamic_cast<const ResolvedUnaryOperator*>(&expr)) {
-        traverse_expr(*unary->operand);
-    } else if (auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
-        traverse_expr(*call->callee);
-        for (const auto& arg : call->arguments) traverse_expr(*arg);
-    } else if (auto* arrayAt = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
-        traverse_expr(*arrayAt->array);
-        traverse_expr(*arrayAt->index);
-    } else if (auto* grouping = dynamic_cast<const ResolvedGroupingExpr*>(&expr)) {
-        traverse_expr(*grouping->expr);
-    } else if (dynamic_cast<const ResolvedImportExpr*>(&expr)) {
-        return;
-    } else if (auto* catchExpr = dynamic_cast<const ResolvedCatchErrorExpr*>(&expr)) {
-        traverse_expr(*catchExpr->errorToCatch);
-    } else if (auto* errorInPlace = dynamic_cast<const ResolvedErrorInPlaceExpr*>(&expr)) {
-        add_token(errorInPlace->location, errorInPlace->identifier, SemanticTokenType::Variable);
-    } else if (auto* tryExpr = dynamic_cast<const ResolvedTryErrorExpr*>(&expr)) {
-        traverse_expr(*tryExpr->errorToTry);
-    } else if (auto* orElseExpr = dynamic_cast<const ResolvedOrElseErrorExpr*>(&expr)) {
-        traverse_expr(*orElseExpr->errorToOrElse);
-        traverse_expr(*orElseExpr->orElseExpr);
-    } else if (auto* refPtr = dynamic_cast<const ResolvedRefPtrExpr*>(&expr)) {
-        traverse_expr(*refPtr->expr);
-    } else if (auto* derefPtr = dynamic_cast<const ResolvedDerefPtrExpr*>(&expr)) {
-        traverse_expr(*derefPtr->expr);
-    } else if (auto* errorGroup = dynamic_cast<const ResolvedErrorGroupExprDecl*>(&expr)) {
-        traverse_decl(*errorGroup);
-    } else if (auto* array = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
-        for (auto&& init : array->initializers) {
-            traverse_expr(*init);
-        }
-    } else if (auto* typeExpr = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
-        traverse_type(*typeExpr->resolvedType);
     }
 }
 
