@@ -63,20 +63,29 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         } else if (auto* paramDecl = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
             add_token(paramDecl->location, paramDecl->identifier, SemanticTokenType::Parameter,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (paramDecl->type) traverse_type(*paramDecl->type);
+            if (paramDecl->resolvedTypeExpr)
+                traverse_expr(*paramDecl->resolvedTypeExpr);
+            else if (paramDecl->type)
+                traverse_type(*paramDecl->type);
         } else if (auto* declStmt = dynamic_cast<const ResolvedDeclStmt*>(&decl)) {
             traverse_decl(*declStmt->varDecl);
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
             add_token(varDecl->location, varDecl->identifier, SemanticTokenType::Variable,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (varDecl->varDecl->type) traverse_type(*varDecl->type);
+            if (varDecl->resolvedTypeExpr)
+                traverse_expr(*varDecl->resolvedTypeExpr);
+            else if (varDecl->varDecl->type)
+                traverse_type(*varDecl->type);
             if (varDecl->initializer) {
                 traverse_expr(*varDecl->initializer);
             }
         } else if (auto* fieldDecl = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
             add_token(fieldDecl->location, fieldDecl->identifier, SemanticTokenType::Property,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (fieldDecl->type) traverse_type(*fieldDecl->type);
+            if (fieldDecl->resolvedTypeExpr)
+                traverse_expr(*fieldDecl->resolvedTypeExpr);
+            else if (fieldDecl->type)
+                traverse_type(*fieldDecl->type);
             if (fieldDecl->default_initializer) {
                 traverse_expr(*fieldDecl->default_initializer);
             }
@@ -139,18 +148,25 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
     if (expr.location.file_name == m_target_file) {
         if (auto* declRef = dynamic_cast<const ResolvedDeclRefExpr*>(&expr)) {
             SemanticTokenType type = SemanticTokenType::Variable;
+            bool is_this = false;
             if (dynamic_cast<const ResolvedFuncDecl*>(&declRef->decl))
                 type = SemanticTokenType::Function;
-            else if (dynamic_cast<const ResolvedStructDecl*>(&declRef->decl))
+            else if (dynamic_cast<const ResolvedStructDecl*>(&declRef->decl)) {
                 type = SemanticTokenType::Type;
-            else if (dynamic_cast<const ResolvedParamDecl*>(&declRef->decl))
+                if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(declRef->type.get())) {
+                    is_this = structDeclType->is_this;
+                }
+                if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(declRef->type.get())) {
+                    is_this = structType->is_this;
+                }
+            } else if (dynamic_cast<const ResolvedParamDecl*>(&declRef->decl))
                 type = SemanticTokenType::Parameter;
             else if (dynamic_cast<const ResolvedModuleDecl*>(&declRef->decl))
                 type = SemanticTokenType::Namespace;
 
             if (declRef->type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
 
-            add_token(declRef->location, declRef->decl.identifier, type);
+            add_token(declRef->location, (is_this ? "@This" : declRef->decl.identifier), type);
         } else if (auto* member = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
             traverse_expr(*member->base);
             // member is a property/function
@@ -159,7 +175,13 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             if (member->member.type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
             add_token(member->location, member->member.identifier, type);
         } else if (auto* structInit = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
-            add_token(structInit->location, structInit->structDecl.identifier, SemanticTokenType::Type);
+            bool is_this = false;
+            if (auto* structType = dynamic_cast<const ResolvedTypeStructDecl*>(structInit->type.get()))
+                is_this = structType->is_this;
+            if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(structInit->type.get()))
+                is_this = structType->is_this;
+            add_token(structInit->location, (is_this ? "@This" : structInit->structDecl.identifier),
+                      SemanticTokenType::Type);
             for (const auto& fieldInit : structInit->fieldInitializers) {
                 add_token(fieldInit->location, fieldInit->field.identifier, SemanticTokenType::Property);
                 traverse_expr(*fieldInit->initializer);
@@ -202,21 +224,21 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         for (auto&& init : array->initializers) {
             traverse_expr(*init);
         }
+    } else if (auto* typeExpr = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
+        traverse_type(*typeExpr->resolvedType);
     }
 }
 
 void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
     if (auto* structTy = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         if (structTy->location.file_name == m_target_file) {
-            add_token(structTy->location, structTy->decl->identifier, SemanticTokenType::Type);
+            add_token(structTy->location, structTy->is_this ? "@This" : structTy->decl->identifier,
+                      SemanticTokenType::Type);
         }
     } else if (auto* structDecl = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
         if (structDecl->location.file_name == m_target_file) {
-            add_token(structDecl->location, structDecl->decl->identifier, SemanticTokenType::Type);
-        }
-    } else if (auto* genericTy = dynamic_cast<const ResolvedTypeGeneric*>(&type)) {
-        if (genericTy->location.file_name == m_target_file) {
-            add_token(genericTy->location, genericTy->decl->identifier, SemanticTokenType::Type);
+            add_token(structDecl->location, structDecl->is_this ? "@This" : structDecl->decl->identifier,
+                      SemanticTokenType::Type);
         }
     } else if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
                dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type)) {

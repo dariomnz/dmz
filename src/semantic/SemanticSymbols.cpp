@@ -102,6 +102,13 @@ void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
     dump_constant_value(level);
 }
 
+void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    resolvedType->dump(level + 1);
+    dump_constant_value(level);
+}
+
 void ResolvedDeclRefExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedDeclRefExpr:" << type->to_str() << " " << decl.identifier << '\n';
     if (onlySelf) return;

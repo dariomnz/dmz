@@ -61,7 +61,7 @@ bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeNumber::clone() const {
     debug_func("ResolvedTypeNumber " << location);
-    return makePtr<ResolvedTypeNumber>(location, numberKind, bitSize);
+    return makePtr<ResolvedTypeNumber>(location, numberKind, bitSize, isPlatformSize);
 }
 
 void ResolvedTypeNumber::dump(size_t level) const {
@@ -69,6 +69,10 @@ void ResolvedTypeNumber::dump(size_t level) const {
 }
 
 std::string ResolvedTypeNumber::to_str() const {
+    if (isPlatformSize) {
+        if (numberKind == ResolvedNumberKind::Int) return "isize";
+        if (numberKind == ResolvedNumberKind::UInt) return "usize";
+    }
     std::stringstream out;
     switch (numberKind) {
         case ResolvedNumberKind::Int:
@@ -87,11 +91,11 @@ std::string ResolvedTypeNumber::to_str() const {
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::isize(SourceLocation location) {
-    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, Driver::instance().ptrBitSize());
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, Driver::instance().ptrBitSize(), true);
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::usize(SourceLocation location) {
-    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize());
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize(), true);
 }
 
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {
@@ -146,7 +150,7 @@ bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeStructDecl::clone() const {
     debug_func("ResolvedTypeStructDecl " << location);
-    return makePtr<ResolvedTypeStructDecl>(location, decl);
+    return makePtr<ResolvedTypeStructDecl>(location, decl, is_this);
 }
 
 void ResolvedTypeStructDecl::dump(size_t level) const {
@@ -188,7 +192,7 @@ bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeStruct::clone() const {
     debug_func("ResolvedTypeStruct " << location);
-    return makePtr<ResolvedTypeStruct>(location, decl);
+    return makePtr<ResolvedTypeStruct>(location, decl, is_this);
 }
 
 void ResolvedTypeStruct::dump(size_t level) const {

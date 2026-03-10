@@ -96,6 +96,13 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     }
 
     auto type = decl->type->clone();
+    if (declRefExpr.identifier == "@This") {
+        if (auto *st = dynamic_cast<ResolvedTypeStruct *>(type.get())) {
+            st->is_this = true;
+        } else if (auto *std = dynamic_cast<ResolvedTypeStructDecl *>(type.get())) {
+            std->is_this = true;
+        }
+    }
     auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, std::move(type));
 
     resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
@@ -265,6 +272,10 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *assignableExpr = dynamic_cast<const AssignableExpr *>(&expr)) {
         return resolve_assignable_expr(*assignableExpr);
+    }
+    if (const auto *typeExpr = dynamic_cast<const Type *>(&expr)) {
+        varOrReturn(resolvedType, resolve_type(*typeExpr));
+        return makePtr<ResolvedTypeExpr>(typeExpr->location, std::move(resolvedType));
     }
     if (const auto *catchErrorExpr = dynamic_cast<const CatchErrorExpr *>(&expr)) {
         return resolve_catch_error_expr(*catchErrorExpr);
@@ -495,6 +506,23 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
 
     if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer &&
         resolvedBase->type->kind != ResolvedTypeKind::Slice) {
+        bool isTypeBase = dynamic_cast<ResolvedTypeExpr *>(resolvedBase.get()) != nullptr;
+        if (!isTypeBase) {
+            auto kind = resolvedBase->type->kind;
+            if (kind == ResolvedTypeKind::StructDecl || kind == ResolvedTypeKind::Module ||
+                kind == ResolvedTypeKind::ErrorGroup || kind == ResolvedTypeKind::Generic ||
+                kind == ResolvedTypeKind::Void || kind == ResolvedTypeKind::Number || kind == ResolvedTypeKind::Bool) {
+                isTypeBase = true;
+            }
+        }
+
+        if (isTypeBase) {
+            varOrReturn(arrayType, resolve_type(arrayAtExpr));
+            varOrReturn(index, resolve_expr(*arrayAtExpr.index));
+            return makePtr<ResolvedArrayAtExpr>(arrayAtExpr.location, std::move(arrayType), std::move(resolvedBase),
+                                                std::move(index));
+        }
+
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type->to_str() + '\'');
     }
     ptr<ResolvedType> derefType = nullptr;
@@ -613,7 +641,14 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
 
     if (error) return nullptr;
 
-    return makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, *st, std::move(resolvedFieldInits));
+    auto res =
+        makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, *st, std::move(resolvedFieldInits));
+    if (auxstruType->is_this) {
+        if (auto *resStruType = dynamic_cast<ResolvedTypeStruct *>(res->type.get())) {
+            resStruType->is_this = true;
+        }
+    }
+    return res;
 }
 
 ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(

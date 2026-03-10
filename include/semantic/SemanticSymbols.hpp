@@ -188,6 +188,7 @@ struct ResolvedSwitchStmt : public ResolvedStmt {
 struct ResolvedParamDecl : public ResolvedDecl {
     bool isVararg = false;
 
+    ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
     ResolvedParamDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                       bool isVararg = false)
         : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable, false), isVararg(isVararg) {}
@@ -199,6 +200,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     unsigned index;
     ptr<ResolvedExpr> default_initializer;
 
+    ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
     ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, unsigned index,
                       ptr<ResolvedExpr> default_initializer)
         : ResolvedDecl(location, std::move(identifier), std::move(type), false, true),
@@ -209,6 +211,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
 };
 
 struct ResolvedVarDecl : public ResolvedDependencies {
+    ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
     const VarDecl *varDecl;
     ptr<ResolvedExpr> initializer;
 
@@ -461,6 +464,15 @@ struct ResolvedSizeofExpr : public ResolvedExpr {
     ResolvedSizeofExpr(SourceLocation location, ptr<ResolvedType> sizeofType)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 64)),
           sizeofType(std::move(sizeofType)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeExpr : public ResolvedExpr {
+    ptr<ResolvedType> resolvedType;
+
+    ResolvedTypeExpr(SourceLocation location, ptr<ResolvedType> resolvedType)
+        : ResolvedExpr(location, resolvedType->clone()), resolvedType(std::move(resolvedType)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

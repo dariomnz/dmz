@@ -57,8 +57,12 @@ enum class ResolvedNumberKind { Int, UInt, Float };
 struct ResolvedTypeNumber : public ResolvedType {
     ResolvedNumberKind numberKind;
     int bitSize;
-    ResolvedTypeNumber(SourceLocation location, ResolvedNumberKind numberKind, int bitSize)
-        : ResolvedType(ResolvedTypeKind::Number, std::move(location)), numberKind(numberKind), bitSize(bitSize) {
+    bool isPlatformSize;
+    ResolvedTypeNumber(SourceLocation location, ResolvedNumberKind numberKind, int bitSize, bool isPlatformSize = false)
+        : ResolvedType(ResolvedTypeKind::Number, std::move(location)),
+          numberKind(numberKind),
+          bitSize(bitSize),
+          isPlatformSize(isPlatformSize) {
         if (numberKind == ResolvedNumberKind::Int && bitSize == 1) {
             kind = ResolvedTypeKind::Bool;
         }
@@ -87,8 +91,9 @@ struct ResolvedTypeBool : public ResolvedTypeNumber {
 struct ResolvedStructDecl;  // Forward declaration
 struct ResolvedTypeStructDecl : public ResolvedType {
     ResolvedStructDecl *decl;
-    ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl)
-        : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl) {}
+    bool is_this = false;
+    ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl, bool is_this = false)
+        : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl), is_this(is_this) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -99,8 +104,9 @@ struct ResolvedTypeStructDecl : public ResolvedType {
 
 struct ResolvedTypeStruct : public ResolvedType {
     ResolvedStructDecl *decl;
-    ResolvedTypeStruct(SourceLocation location, ResolvedStructDecl *decl)
-        : ResolvedType(ResolvedTypeKind::Struct, std::move(location)), decl(decl) {}
+    bool is_this = false;
+    ResolvedTypeStruct(SourceLocation location, ResolvedStructDecl *decl, bool is_this = false)
+        : ResolvedType(ResolvedTypeKind::Struct, std::move(location)), decl(decl), is_this(is_this) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

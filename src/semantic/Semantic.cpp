@@ -206,7 +206,8 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     if (auto numType = dynamic_cast<const TypeNumber *>(&type)) {
         auto num = numType->name.substr(1);
         int bitSize = 0;
-        if (num == "size") {
+        bool isPlatformSize = num == "size";
+        if (isPlatformSize) {
             bitSize = Driver::instance().ptrBitSize();
         } else {
             auto res = std::from_chars(num.data(), num.data() + num.size(), bitSize);
@@ -228,7 +229,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             default:
                 return report(type.location, "unexpected kind '" + numType->name + "' in number type");
         }
-        ret = makePtr<ResolvedTypeNumber>(type.location, kind, bitSize);
+        ret = makePtr<ResolvedTypeNumber>(type.location, kind, bitSize, isPlatformSize);
         retPtr = ret.get();
         return ret;
     }
@@ -297,7 +298,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         }
         if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl)) {
             if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(declStmt->type.get())) {
-                ret = makePtr<ResolvedTypeStruct>(struType->location, struType->decl);
+                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
             } else {
                 ret = declStmt->type->clone();
             }
@@ -305,7 +306,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             return ret;
         }
         if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
-            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl);
+            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl, declRefType->identifier == "@This");
             retPtr = ret.get();
             return ret;
         }

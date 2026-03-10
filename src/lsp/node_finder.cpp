@@ -29,12 +29,14 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
     if (found_decl) return;
 
     if (const auto* std = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
-        if (std->decl && is_at_location(std->location, std->decl->identifier.length())) {
+        if (std->decl &&
+            is_at_location(std->location, (std->is_this ? std::string("@This") : std->decl->identifier).length())) {
             found_decl = std->decl;
             return;
         }
     } else if (const auto* st = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
-        if (st->decl && is_at_location(st->location, st->decl->identifier.length())) {
+        if (st->decl &&
+            is_at_location(st->location, (st->is_this ? std::string("@This") : st->decl->identifier).length())) {
             found_decl = st->decl;
             return;
         }
@@ -71,6 +73,16 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     }
 
     if (decl.type) {
+        if (const auto* var = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
+            if (var->resolvedTypeExpr) find_in_expr(*var->resolvedTypeExpr);
+        } else if (const auto* param = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
+            if (param->resolvedTypeExpr) find_in_expr(*param->resolvedTypeExpr);
+        } else if (const auto* field = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
+            if (field->resolvedTypeExpr) find_in_expr(*field->resolvedTypeExpr);
+        }
+
+        if (found_decl) return;
+
         find_in_type(*decl.type);
         if (found_decl) return;
     }
@@ -168,11 +180,13 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             find_in_expr(*init->initializer);
             if (found_decl) return;
         }
-    } else if (const auto* aie = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
-        for (const auto& init : aie->initializers) {
+    } else if (const auto* re = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
+        for (const auto& init : re->initializers) {
             find_in_expr(*init);
             if (found_decl) return;
         }
+    } else if (const auto* te = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
+        find_in_type(*te->resolvedType);
     } else if (const auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
         find_in_expr(*call->callee);
         if (found_decl) return;

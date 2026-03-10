@@ -23,8 +23,12 @@ ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
         if (!type || type->kind == ResolvedTypeKind::Void)
             return report(param.location,
                           "parameter '" + param.identifier + "' has invalid '" + param.type->to_str() + "' type");
-    return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(type), param.isMutable,
-                                      param.isVararg);
+    auto ret =
+        makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(type), param.isMutable, param.isVararg);
+    if (!param.isVararg) {
+        ret->resolvedTypeExpr = resolve_expr(*param.type);
+    }
+    return ret;
 }
 
 ptr<ResolvedGenericTypeDecl> Sema::resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl) {
@@ -355,8 +359,12 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     }
 
     ptr<ResolvedType> type = resolvedvarType ? std::move(resolvedvarType) : nullptr;
-    return makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier, std::move(type),
-                                    varDecl.isMutable, nullptr);
+    auto ret = makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier,
+                                        std::move(type), varDecl.isMutable, nullptr);
+    if (varDecl.type) {
+        ret->resolvedTypeExpr = resolve_expr(*varDecl.type);
+    }
+    return ret;
 }
 
 bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
@@ -423,7 +431,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 
     if (dynamic_cast<ResolvedMemberExpr *>(resolvedInitializer.get()) && !varDecl.isMutable) {
         if (auto structType = dynamic_cast<ResolvedTypeStruct *>(resolvedInitializer->type.get())) {
-            resolvedInitializer->type = makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl);
+            resolvedInitializer->type = makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl, structType->is_this);
         }
     }
 
@@ -611,8 +619,10 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
             if (!default_initizlizer) return false;
         }
 
-        resolvedFields.emplace_back(std::make_unique<ResolvedFieldDecl>(
-            field->location, field->identifier, std::move(type), idx++, std::move(default_initizlizer)));
+        auto retField = std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++,
+                                                            std::move(default_initizlizer));
+        retField->resolvedTypeExpr = resolve_expr(*field->type);
+        resolvedFields.emplace_back(std::move(retField));
     }
 
     resolvedStructDecl.fields = std::move(resolvedFields);
