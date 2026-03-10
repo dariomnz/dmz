@@ -256,9 +256,12 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
         debug_msg("module_path " << module_path);
         if (!std::filesystem::exists(module_path)) {
             debug_msg("error: doesnt exists module_path " << module_path);
+            debug_msg("[Driver] Module not found: " << module_path << " (from imported=" << imported
+                                                    << " source=" << source << ")");
             return {"", ""};
         }
         module_path = std::filesystem::canonical(module_path);
+        debug_msg("[Driver] Registered module: " << module_path << " with source=" << source);
 
         std::filesystem::path parent_path = "";
         std::string module_path_str = module_path.string();
@@ -276,8 +279,7 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
             // if not in imports it need to be in the proyect dir
             std::filesystem::path proyect_path = d.m_options.source.parent_path();
             proyect_path = std::filesystem::canonical(proyect_path);
-            debug_msg("proyect_path " << proyect_path << " module_path_str " << module_path_str);
-            if (module_path_str.find(proyect_path) != std::string::npos) {
+            if (module_path_str.find(proyect_path.string()) != std::string::npos) {
                 parent_path = proyect_path;
             }
         }
@@ -341,18 +343,18 @@ void Driver::import_pass(ptr<ModuleDecl> &ast) {
         for (auto &&[k, v] : imported_modules) {
             if (!v) {
                 if (!std::filesystem::exists(k)) {
-                    debug_msg("error opening file " << k);
-                    std::cerr << "error: opening file '" << k << "'\n";
                     to_remove.emplace_back(k);
                     continue;
                 }
-                Lexer l(k.c_str());
+                Lexer l(k.string());
                 Parser p(l);
                 auto [parse_ast, success] = p.parse_source_file();
                 if (!success) {
-                    debug_msg("error parsing " << k);
-                    to_remove.emplace_back(k);
-                    continue;
+                    // Even if parsing failed, we might have an incomplete AST that we want to keep
+                    if (!parse_ast) {
+                        to_remove.emplace_back(k);
+                        continue;
+                    }
                 }
                 v = std::move(parse_ast);
             }

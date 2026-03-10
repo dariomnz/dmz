@@ -4,7 +4,8 @@
 
 namespace DMZ::lsp {
 
-SemanticTokensCollector::SemanticTokensCollector(const std::string& target_file, const std::string& source) : m_target_file(target_file), m_source(source) {}
+SemanticTokensCollector::SemanticTokensCollector(const std::string& target_file, const std::string& source)
+    : m_target_file(target_file), m_source(source) {}
 
 std::vector<SemanticToken> SemanticTokensCollector::collect(const std::vector<ptr<ResolvedModuleDecl>>& resolvedAST) {
     m_tokens.clear();
@@ -59,6 +60,8 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             add_token(paramDecl->location, paramDecl->identifier, SemanticTokenType::Parameter,
                       (uint32_t)SemanticTokenModifier::Declaration);
             if (paramDecl->type) traverse_type(*paramDecl->type);
+        } else if (auto* declStmt = dynamic_cast<const ResolvedDeclStmt*>(&decl)) {
+            traverse_decl(*declStmt->varDecl);
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
             add_token(varDecl->location, varDecl->identifier, SemanticTokenType::Variable,
                       (uint32_t)SemanticTokenModifier::Declaration);
@@ -168,12 +171,12 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         traverse_expr(*arrayAt->index);
     } else if (auto* grouping = dynamic_cast<const ResolvedGroupingExpr*>(&expr)) {
         traverse_expr(*grouping->expr);
-    } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
-        if (importExpr->location.file_name == m_target_file) {
-            add_token(importExpr->location, importExpr->moduleDecl.identifier, SemanticTokenType::Namespace);
-        }
+    } else if (dynamic_cast<const ResolvedImportExpr*>(&expr)) {
+        return;
     } else if (auto* catchExpr = dynamic_cast<const ResolvedCatchErrorExpr*>(&expr)) {
         traverse_expr(*catchExpr->errorToCatch);
+    } else if (auto* errorInPlace = dynamic_cast<const ResolvedErrorInPlaceExpr*>(&expr)) {
+        add_token(errorInPlace->location, errorInPlace->identifier, SemanticTokenType::Variable);
     } else if (auto* tryExpr = dynamic_cast<const ResolvedTryErrorExpr*>(&expr)) {
         traverse_expr(*tryExpr->errorToTry);
     } else if (auto* orElseExpr = dynamic_cast<const ResolvedOrElseErrorExpr*>(&expr)) {
@@ -187,7 +190,8 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
 }
 
 void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
-    std::cerr << "Traversing type: " << type.location.file_name << ":" << type.location.line << ":" << type.location.col << std::endl;
+    std::cerr << "Traversing type: " << type.location.file_name << ":" << type.location.line << ":" << type.location.col
+              << std::endl;
     type.dump();
     if (auto* structTy = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         if (structTy->location.file_name == m_target_file) {
@@ -233,12 +237,12 @@ void SemanticTokensCollector::add_token(const SourceLocation& loc, std::string_v
         if (line_start != std::string::npos) {
             size_t end_of_line = m_source.find('\n', line_start);
             if (end_of_line == std::string::npos) end_of_line = m_source.length();
-            
+
             std::string_view line_str(m_source.data() + line_start, end_of_line - line_start);
             size_t search_start = std::min(loc.col, line_str.length());
             size_t pos = line_str.find(identifier, search_start);
             if (pos == std::string_view::npos && search_start > 0) {
-                pos = line_str.find(identifier, 0); 
+                pos = line_str.find(identifier, 0);
             }
 
             if (pos != std::string_view::npos) {

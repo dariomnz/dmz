@@ -638,15 +638,18 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
                                                                  bool sourceModule) {
     bool error = false;
     debug_func("error " << (error ? "true" : "false"));
+    debug_msg("[Sema] resolve_modules_decls: resolving " << modules.size() << " modules");
     std::vector<ptr<ResolvedModuleDecl>> resolvedModules;
     for (auto &&module : modules) {
+        debug_msg("[Sema]   - module path: " << module->module_path);
         auto resolvedModule = resolve_module_decl(*module);
         if (!resolvedModule) {
             error = true;
             continue;
         }
         auto &resMod = resolvedModules.emplace_back(std::move(resolvedModule));
-        m_modules_for_import.emplace(module->module_path, resMod.get());
+        std::string key = module->module_path.string();
+        m_modules_for_import.emplace(std::move(key), resMod.get());
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {

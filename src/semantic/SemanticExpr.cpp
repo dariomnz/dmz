@@ -400,6 +400,18 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
     if (!resolvedBase) return nullptr;
+
+    if (memberExpr.field.empty()) {
+        static ResolvedFieldDecl dummyCompletionField(SourceLocation{}, "", makePtr<ResolvedTypeVoid>(SourceLocation{}),
+                                                      0, nullptr);
+        ResolvedType *baseType = resolvedBase->type.get();
+        if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(baseType)) {
+            baseType = ptrType->pointerType.get();
+            resolvedBase =
+                makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
+        }
+        return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), dummyCompletionField);
+    }
     bool baseIsPointer = false;
     ResolvedType *baseType = resolvedBase->type.get();
     if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(baseType)) {

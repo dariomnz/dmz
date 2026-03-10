@@ -32,6 +32,12 @@ class LSPServer {
     void on_semantic_tokens(const std::string& id, const std::string& params);
     void on_completion(const std::string& id, const std::string& params);
 
+    void collect_member_completions(const ResolvedStructDecl* decl, std::stringstream& items, bool& has_items);
+    void collect_module_completions(const ResolvedModuleDecl* decl, std::stringstream& items, bool& has_items);
+    void collect_completions_from_type(const ResolvedType* type, std::stringstream& items, bool& has_items);
+    const ResolvedType* find_incomplete_member_base_type(const std::vector<ptr<ResolvedModuleDecl>>& ast,
+                                                         const std::string& file, size_t line);
+
     void publish_diagnostics(const std::string& filename, const std::vector<SourceLocation>& errors,
                              const std::vector<std::string>& messages);
     void process_file(const std::string& filename, const std::string& source);

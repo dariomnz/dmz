@@ -12,6 +12,7 @@ class Parser {
     Lexer &m_lexer;
     Token m_nextToken;
     bool m_incompleteAST = false;
+    bool m_expectIncompleteStatement = false;
 
     using RestrictionType = unsigned char;
     RestrictionType restrictions = 0;

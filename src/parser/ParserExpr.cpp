@@ -208,7 +208,11 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
             eat_next_token();  // eat '*'
             return parse_postfix_expr(std::move(expr));
         } else {
-            return report(m_nextToken.loc, "expected member identifier or '*'");
+            m_incompleteAST = true;
+            m_expectIncompleteStatement = true;
+            expr = makePtr<MemberExpr>(location, std::move(expr), "");
+            report(m_nextToken.loc, "expected member identifier or '*'");
+            return parse_postfix_expr(std::move(expr));
         }
     }
     if (m_nextToken.type == TokenType::op_plusplus || m_nextToken.type == TokenType::op_minusminus) {

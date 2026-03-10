@@ -36,6 +36,7 @@ ptr<ReturnStmt> Parser::parse_return_stmt() {
 
 ptr<Stmt> Parser::parse_statement() {
     debug_func("");
+    m_expectIncompleteStatement = false;
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_for) return parse_for_stmt();
@@ -194,8 +195,19 @@ ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
         varOrReturn(expr, parse_expr_rhs(std::move(lhs), 0));
 
         if (expectSemicolon) {
-            matchOrReturn(TokenType::semicolon, "expected ';' at the end of expression");
-            eat_next_token();  // eat ';'
+            if (m_nextToken.type != TokenType::semicolon) {
+                if (m_expectIncompleteStatement) {
+                    m_expectIncompleteStatement = false;
+                    report(m_nextToken.loc, "expected ';' at the end of expression");
+                } else {
+                    return report(m_nextToken.loc, "expected ';' at the end of expression");
+                }
+            } else {
+                eat_next_token();  // eat ';'
+                m_expectIncompleteStatement = false;
+            }
+        } else {
+            m_expectIncompleteStatement = false;
         }
 
         return expr;
@@ -207,8 +219,19 @@ ptr<Stmt> Parser::parse_assignment_or_expr(bool expectSemicolon) {
     varOrReturn(assignment, parse_assignment_rhs(ptr<AssignableExpr>(dre)));
 
     if (expectSemicolon) {
-        matchOrReturn(TokenType::semicolon, "expected ';' at the end of assignment");
-        eat_next_token();  // eat ';'
+        if (m_nextToken.type != TokenType::semicolon) {
+            if (m_expectIncompleteStatement) {
+                m_expectIncompleteStatement = false;
+                report(m_nextToken.loc, "expected ';' at the end of assignment");
+            } else {
+                return report(m_nextToken.loc, "expected ';' at the end of assignment");
+            }
+        } else {
+            eat_next_token();  // eat ';'
+            m_expectIncompleteStatement = false;
+        }
+    } else {
+        m_expectIncompleteStatement = false;
     }
 
     return assignment;

@@ -409,7 +409,7 @@ bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_reso
     std::vector<ptr<ModuleDecl>> moduleDecls;
     std::vector<std::filesystem::path> moduleDeclsPaths;
     for (auto &&[k, v] : imported_modules) {
-        moduleDeclsPaths.emplace_back(std::move(k));
+        moduleDeclsPaths.emplace_back(k);  // k is const ref, so copy
         moduleDecls.emplace_back(std::move(v));
     }
     imported_modules.clear();
@@ -420,10 +420,6 @@ bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_reso
     }
 
     if (resolvedModuleDecl.size() != moduleDecls.size()) return false;
-    for (size_t i = 0; i < resolvedModuleDecl.size(); i++) {
-        debug_msg("register module " << moduleDeclsPaths[i] << " " << resolvedModuleDecl[i]->name());
-        m_modules_for_import.emplace(moduleDeclsPaths[i], resolvedModuleDecl[i].get());
-    }
     out_resolvedModules = std::move(resolvedModuleDecl);
     return true;
 }
