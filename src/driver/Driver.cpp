@@ -307,12 +307,37 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
     } else {
         auto it = d.m_options.imports.find(std::string(imported));
         if (it == d.m_options.imports.end()) {
-            debug_msg("error: not in imports");
-            return {"", ""};
+            if (imported == "std") {
+                // Try relative to the source file directory (project root candidate)
+                std::filesystem::path stdPath = d.m_options.source.parent_path() / "std" / "std.dmz";
+                if (std::filesystem::exists(stdPath)) {
+                    module_path = std::filesystem::canonical(stdPath);
+                }
+
+                if (module_path.empty()) {
+                    // Fallback to current working directory
+                    stdPath = std::filesystem::absolute("std/std.dmz");
+                    if (std::filesystem::exists(stdPath)) {
+                        module_path = std::filesystem::canonical(stdPath);
+                    }
+                }
+
+                if (!module_path.empty()) {
+                    debug_msg("[Driver] Found std at: " << module_path);
+                    d.m_options.imports.emplace("std", module_path);
+                }
+            }
+
+            if (module_path.empty()) {
+                debug_msg("error: not in imports");
+                return {"", ""};
+            }
+            identifier = imported;
+        } else {
+            module_path = (*it).second;
+            // The identifier is simply the imported module
+            identifier = imported;
         }
-        module_path = (*it).second;
-        // The identifier is simply the imported module
-        identifier = imported;
     }
 
     debug_msg("module_path " << module_path);
