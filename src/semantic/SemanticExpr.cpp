@@ -22,7 +22,7 @@ bool op_generate_bool(TokenType op) {
     return op_bool.count(op) != 0;
 }
 
-ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericExpr) {
+ptr<ResolvedGenericExpr> Sema::resolve_generic_expr(const GenericExpr &genericExpr) {
     debug_func(genericExpr.location);
     varOrReturn(resolvedBase, resolve_expr(*genericExpr.base));
 
@@ -80,7 +80,8 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
         return report(genericExpr.location,
                       "cannot specialize '" + resolvedBase->type->to_str() + "' with " + genericExpr.to_str());
     } else {
-        return makePtr<ResolvedDeclRefExpr>(resolvedBase->location, *decl, decl->type->clone());
+        return makePtr<ResolvedGenericExpr>(genericExpr.location, std::move(resolvedBase), *decl,
+                                            std::move(specializedType));
     }
 }
 
@@ -290,6 +291,16 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         return resolve_assignable_expr(*assignableExpr);
     }
     if (const auto *typeExpr = dynamic_cast<const Type *>(&expr)) {
+        if (auto typePtr = dynamic_cast<const TypePointer *>(typeExpr)) {
+            varOrReturn(resType, resolve_type(*typePtr));
+            varOrReturn(child, resolve_expr(*typePtr->pointerType));
+            return makePtr<ResolvedTypePointerExpr>(typePtr->location, std::move(resType), std::move(child));
+        }
+        if (auto typeSlice = dynamic_cast<const TypeSlice *>(typeExpr)) {
+            varOrReturn(resType, resolve_type(*typeSlice));
+            varOrReturn(child, resolve_expr(*typeSlice->sliceType));
+            return makePtr<ResolvedTypeSliceExpr>(typeSlice->location, std::move(resType), std::move(child));
+        }
         varOrReturn(resolvedType, resolve_type(*typeExpr));
         return makePtr<ResolvedTypeExpr>(typeExpr->location, std::move(resolvedType));
     }
@@ -515,14 +526,19 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
 }
 
-ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
+ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
     debug_func(arrayAtExpr.location);
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
 
     if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer &&
         resolvedBase->type->kind != ResolvedTypeKind::Slice) {
-        bool isTypeBase = dynamic_cast<ResolvedTypeExpr *>(resolvedBase.get()) != nullptr;
+        bool isTypeBase = dynamic_cast<ResolvedTypeExpr *>(resolvedBase.get()) != nullptr ||
+                          dynamic_cast<ResolvedTypePointerExpr *>(resolvedBase.get()) ||
+                          dynamic_cast<ResolvedTypeSliceExpr *>(resolvedBase.get()) ||
+                          dynamic_cast<ResolvedTypeOptionalExpr *>(resolvedBase.get()) ||
+                          dynamic_cast<ResolvedTypeArrayExpr *>(resolvedBase.get()) ||
+                          dynamic_cast<ResolvedGenericExpr *>(resolvedBase.get());
         if (!isTypeBase) {
             auto kind = resolvedBase->type->kind;
             if (kind == ResolvedTypeKind::StructDecl || kind == ResolvedTypeKind::Module ||
@@ -535,8 +551,8 @@ ptr<ResolvedArrayAtExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtE
         if (isTypeBase) {
             varOrReturn(arrayType, resolve_type(arrayAtExpr));
             varOrReturn(index, resolve_expr(*arrayAtExpr.index));
-            return makePtr<ResolvedArrayAtExpr>(arrayAtExpr.location, std::move(arrayType), std::move(resolvedBase),
-                                                std::move(index));
+            return makePtr<ResolvedTypeArrayExpr>(arrayAtExpr.location, std::move(arrayType), std::move(resolvedBase),
+                                                  std::move(index));
         }
 
         return report(arrayAtExpr.array->location, "cannot access element of '" + resolvedBase->type->to_str() + '\'');

@@ -88,7 +88,7 @@ class Sema {
     ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
     ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     ptr<ResolvedExpr> resolve_expr(const Expr &expr);
-    ptr<ResolvedDeclRefExpr> resolve_generic_expr(const GenericExpr &genericExpr);
+    ptr<ResolvedGenericExpr> resolve_generic_expr(const GenericExpr &genericExpr);
     ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
     ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
@@ -109,7 +109,7 @@ class Sema {
     bool check_variable_initialization(const CFG &cfg);
     ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
-    ptr<ResolvedArrayAtExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
+    ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
     ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);
     ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);

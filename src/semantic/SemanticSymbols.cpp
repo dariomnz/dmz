@@ -491,4 +491,37 @@ void ResolvedImportExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedTestDecl::dump(size_t level, bool onlySelf) const { ResolvedFunctionDecl::dump(level, onlySelf); }
+
+void ResolvedGenericExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedGenericExpr:" << type->to_str() << " " << decl.identifier << '\n';
+    if (onlySelf) return;
+    base->dump(level + 1, onlySelf);
+    specializedTypes->dump(level + 1);
+}
+
+void ResolvedTypePointerExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypePointerExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    pointerType->dump(level + 1, onlySelf);
+}
+
+void ResolvedTypeSliceExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeSliceExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    sliceType->dump(level + 1, onlySelf);
+}
+
+void ResolvedTypeOptionalExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeOptionalExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    optionalType->dump(level + 1, onlySelf);
+}
+
+void ResolvedTypeArrayExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeArrayExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    arrayType->dump(level + 1, onlySelf);
+    sizeExpr->dump(level + 1, onlySelf);
+}
+
 }  // namespace DMZ

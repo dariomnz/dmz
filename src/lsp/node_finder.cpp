@@ -34,11 +34,17 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
             found_decl = std->decl;
             return;
         }
+        if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(std->decl)) {
+            if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
+        }
     } else if (const auto* st = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         if (st->decl &&
             is_at_location(st->location, (st->is_this ? std::string("@This") : st->decl->identifier).length())) {
             found_decl = st->decl;
             return;
+        }
+        if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(st->decl)) {
+            if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
         }
     } else if (const auto* mdt = dynamic_cast<const ResolvedTypeModule*>(&type)) {
         if (mdt->moduleDecl && is_at_location(mdt->location, mdt->moduleDecl->identifier.length())) {
@@ -60,6 +66,11 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         if (errg->decl && is_at_location(errg->location, errg->decl->identifier.length())) {
             found_decl = errg->decl;
             return;
+        }
+    } else if (const auto* spect = dynamic_cast<const ResolvedTypeSpecialized*>(&type)) {
+        for (const auto& ty : spect->specializedTypes) {
+            find_in_type(*ty);
+            if (found_decl) return;
         }
     }
 }
@@ -172,6 +183,14 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             found_decl = &dr->decl;
             return;
         }
+    } else if (const auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
+        if (ge->specializedTypes) {
+            for (const auto& ty : ge->specializedTypes->specializedTypes) {
+                find_in_type(*ty);
+                if (found_decl) return;
+            }
+        }
+        find_in_expr(*ge->base);
     } else if (const auto* me = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
         // me->location is the dot. Its length is 1 + identifier length.
         if (is_at_location(me->location, 1 + me->member.identifier.length())) {
@@ -199,6 +218,16 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         }
     } else if (const auto* te = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
         find_in_type(*te->resolvedType);
+    } else if (const auto* pe = dynamic_cast<const ResolvedTypePointerExpr*>(&expr)) {
+        find_in_expr(*pe->pointerType);
+    } else if (const auto* se = dynamic_cast<const ResolvedTypeSliceExpr*>(&expr)) {
+        find_in_expr(*se->sliceType);
+    } else if (const auto* oe = dynamic_cast<const ResolvedTypeOptionalExpr*>(&expr)) {
+        find_in_expr(*oe->optionalType);
+    } else if (const auto* ae = dynamic_cast<const ResolvedTypeArrayExpr*>(&expr)) {
+        find_in_expr(*ae->arrayType);
+        if (found_decl) return;
+        find_in_expr(*ae->sizeExpr);
     } else if (const auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
         find_in_expr(*call->callee);
         if (found_decl) return;
@@ -234,9 +263,11 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*orelseErr->orElseExpr);
     } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
         find_in_type(*sizeofExpr->type);
+    } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
+        find_in_expr(*rangeExpr->startExpr);
+        find_in_expr(*rangeExpr->endExpr);
     } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         // 'import("' is 8 characters. We estimate the length to cover the string.
-        std::cerr << "import: " << importExpr->location << importExpr->moduleDecl.moduleDecl.identifier << std::endl;
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.moduleDecl.identifier.length())) {
             found_decl = &importExpr->moduleDecl;
         }

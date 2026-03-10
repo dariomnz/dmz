@@ -18,6 +18,25 @@ enum class SemanticTokenType {
     Number = 6,
 };
 
+inline std::ostream& operator<<(std::ostream& os, SemanticTokenType type) {
+    switch (type) {
+        case SemanticTokenType::Type:
+            return os << "Type";
+        case SemanticTokenType::Function:
+            return os << "Function";
+        case SemanticTokenType::Parameter:
+            return os << "Parameter";
+        case SemanticTokenType::Variable:
+            return os << "Variable";
+        case SemanticTokenType::Property:
+            return os << "Property";
+        case SemanticTokenType::Namespace:
+            return os << "Namespace";
+        case SemanticTokenType::Number:
+            return os << "Number";
+    }
+}
+
 enum class SemanticTokenModifier {
     None = 0,
     Declaration = 1 << 0,

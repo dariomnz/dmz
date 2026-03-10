@@ -477,6 +477,46 @@ struct ResolvedTypeExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedAssignableExpr : public ResolvedExpr {
+    ResolvedAssignableExpr(SourceLocation location, ptr<ResolvedType> type) : ResolvedExpr(location, std::move(type)) {}
+};
+
+struct ResolvedTypePointerExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> pointerType;
+    ResolvedTypePointerExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> pointerType)
+        : ResolvedExpr(location, std::move(type)), pointerType(std::move(pointerType)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeSliceExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> sliceType;
+    ResolvedTypeSliceExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> sliceType)
+        : ResolvedExpr(location, std::move(type)), sliceType(std::move(sliceType)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeOptionalExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> optionalType;
+    ResolvedTypeOptionalExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> optionalType)
+        : ResolvedExpr(location, std::move(type)), optionalType(std::move(optionalType)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeArrayExpr : public ResolvedAssignableExpr {
+    ptr<ResolvedExpr> arrayType;
+    ptr<ResolvedExpr> sizeExpr;
+    ResolvedTypeArrayExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> arrayType,
+                          ptr<ResolvedExpr> sizeExpr)
+        : ResolvedAssignableExpr(location, std::move(type)),
+          arrayType(std::move(arrayType)),
+          sizeExpr(std::move(sizeExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedCallExpr : public ResolvedExpr {
     ptr<ResolvedExpr> callee;
     std::vector<ptr<ResolvedExpr>> arguments;
@@ -486,10 +526,6 @@ struct ResolvedCallExpr : public ResolvedExpr {
         : ResolvedExpr(location, std::move(type)), callee(std::move(callee)), arguments(std::move(arguments)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
-};
-
-struct ResolvedAssignableExpr : public ResolvedExpr {
-    ResolvedAssignableExpr(SourceLocation location, ptr<ResolvedType> type) : ResolvedExpr(location, std::move(type)) {}
 };
 
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
@@ -507,6 +543,21 @@ struct ResolvedMemberExpr : public ResolvedAssignableExpr {
 
     ResolvedMemberExpr(SourceLocation location, ptr<ResolvedExpr> base, const ResolvedDecl &member)
         : ResolvedAssignableExpr(location, member.type->clone()), base(std::move(base)), member(member) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedGenericExpr : public ResolvedAssignableExpr {
+    ptr<ResolvedExpr> base;
+    const ResolvedDecl &decl;
+    ptr<ResolvedTypeSpecialized> specializedTypes;
+
+    ResolvedGenericExpr(SourceLocation location, ptr<ResolvedExpr> base, const ResolvedDecl &decl,
+                        ptr<ResolvedTypeSpecialized> specializedTypes)
+        : ResolvedAssignableExpr(location, decl.type->clone()),
+          base(std::move(base)),
+          decl(decl),
+          specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

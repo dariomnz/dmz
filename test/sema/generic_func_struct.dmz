@@ -48,4 +48,6 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:generic_func_struct.Point<i32>{}
-// CHECK-NEXT:       ResolvedDeclRefExpr:fn()->generic_func_struct.Point<i32>{} foo
+// CHECK-NEXT:       ResolvedGenericExpr:fn()->generic_func_struct.Point<i32>{} foo
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn()->generic_func_struct.Point<T>{} foo
+// CHECK-NEXT:         ResolvedTypeSpecialized <i32>

@@ -45,6 +45,16 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return generate_decl_ref_expr(*dre, keepPointer);
     }
+    if (auto *ge = dynamic_cast<const ResolvedGenericExpr *>(&expr)) {
+        if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&ge->decl)) {
+            return generate_function_decl(*fnDecl);
+        }
+        auto val = m_declarations[&ge->decl];
+        bool kp = keepPointer;
+        kp |= ge->type->generate_struct();
+        kp |= ge->type->kind == ResolvedTypeKind::Array;
+        return kp ? val : load_value(val, *ge->type);
+    }
     if (auto *call = dynamic_cast<const ResolvedCallExpr *>(&expr)) {
         return generate_call_expr(*call);
     }
