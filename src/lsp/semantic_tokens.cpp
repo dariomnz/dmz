@@ -44,17 +44,21 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             for (const auto& func : structDecl->functions) {
                 traverse_decl(*func);
             }
-        } else if (auto* funcDecl = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
-            add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,
-                      (uint32_t)SemanticTokenModifier::Declaration);
-            if (auto fnType = funcDecl->getFnType()) {
-                if (fnType->returnType) traverse_type(*fnType->returnType);
+        } else if (auto* funcDecl = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
+            if (!dynamic_cast<const ResolvedTestDecl*>(funcDecl)) {
+                add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,
+                          (uint32_t)SemanticTokenModifier::Declaration);
+                if (auto fnType = funcDecl->getFnType()) {
+                    if (fnType->returnType) traverse_type(*fnType->returnType);
+                }
+                for (const auto& param : funcDecl->params) {
+                    traverse_decl(*param);
+                }
             }
-            for (const auto& param : funcDecl->params) {
-                traverse_decl(*param);
-            }
-            if (funcDecl->body) {
-                traverse_stmt(*funcDecl->body);
+            if (auto* functionDecl = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
+                if (functionDecl->body) {
+                    traverse_stmt(*functionDecl->body);
+                }
             }
         } else if (auto* paramDecl = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
             add_token(paramDecl->location, paramDecl->identifier, SemanticTokenType::Parameter,
@@ -65,7 +69,7 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
             add_token(varDecl->location, varDecl->identifier, SemanticTokenType::Variable,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (varDecl->type) traverse_type(*varDecl->type);
+            if (varDecl->varDecl->type) traverse_type(*varDecl->type);
             if (varDecl->initializer) {
                 traverse_expr(*varDecl->initializer);
             }
@@ -75,6 +79,11 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             if (fieldDecl->type) traverse_type(*fieldDecl->type);
             if (fieldDecl->default_initializer) {
                 traverse_expr(*fieldDecl->default_initializer);
+            }
+        } else if (auto* errorGroup = dynamic_cast<const ResolvedErrorGroupExprDecl*>(&decl)) {
+            for (const auto& error : errorGroup->errors) {
+                add_token(error->location, error->identifier, SemanticTokenType::Variable,
+                          (uint32_t)SemanticTokenModifier::Declaration);
             }
         }
     } else {
@@ -119,6 +128,10 @@ void SemanticTokensCollector::traverse_stmt(const ResolvedStmt& stmt) {
         traverse_expr(*assignment->expr);
     } else if (auto* expr = dynamic_cast<const ResolvedExpr*>(&stmt)) {
         traverse_expr(*expr);
+    } else if (auto* deferStmt = dynamic_cast<const ResolvedDeferStmt*>(&stmt)) {
+        traverse_stmt(*deferStmt->block);
+    } else if (auto* deferStmt = dynamic_cast<const ResolvedFieldInitStmt*>(&stmt)) {
+        traverse_expr(*deferStmt->initializer);
     }
 }
 
@@ -135,13 +148,22 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             else if (dynamic_cast<const ResolvedModuleDecl*>(&declRef->decl))
                 type = SemanticTokenType::Namespace;
 
+            if (declRef->type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
+
             add_token(declRef->location, declRef->decl.identifier, type);
         } else if (auto* member = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
             traverse_expr(*member->base);
             // member is a property/function
             SemanticTokenType type = SemanticTokenType::Property;
-            if (dynamic_cast<const ResolvedFuncDecl*>(&member->member)) type = SemanticTokenType::Function;
+            if (member->member.type->kind == ResolvedTypeKind::Function) type = SemanticTokenType::Function;
+            if (member->member.type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
             add_token(member->location, member->member.identifier, type);
+        } else if (auto* structInit = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
+            add_token(structInit->location, structInit->structDecl.identifier, SemanticTokenType::Type);
+            for (const auto& fieldInit : structInit->fieldInitializers) {
+                add_token(fieldInit->location, fieldInit->field.identifier, SemanticTokenType::Property);
+                traverse_expr(*fieldInit->initializer);
+            }
         }
     }
 
@@ -154,18 +176,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
     } else if (auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
         traverse_expr(*call->callee);
         for (const auto& arg : call->arguments) traverse_expr(*arg);
-    } else if (auto* structInit = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
-        // structInit->structDecl is the struct being instantiated
-        if (structInit->location.file_name == m_target_file) {
-            add_token(structInit->location, structInit->structDecl.identifier, SemanticTokenType::Type);
-        }
-        for (const auto& fieldInit : structInit->fieldInitializers) {
-            // fieldInit->field is the ResolvedFieldDecl
-            if (fieldInit->location.file_name == m_target_file) {
-                add_token(fieldInit->location, fieldInit->field.identifier, SemanticTokenType::Property);
-            }
-            traverse_expr(*fieldInit->initializer);
-        }
     } else if (auto* arrayAt = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
         traverse_expr(*arrayAt->array);
         traverse_expr(*arrayAt->index);
@@ -186,13 +196,16 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         traverse_expr(*refPtr->expr);
     } else if (auto* derefPtr = dynamic_cast<const ResolvedDerefPtrExpr*>(&expr)) {
         traverse_expr(*derefPtr->expr);
+    } else if (auto* errorGroup = dynamic_cast<const ResolvedErrorGroupExprDecl*>(&expr)) {
+        traverse_decl(*errorGroup);
+    } else if (auto* array = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
+        for (auto&& init : array->initializers) {
+            traverse_expr(*init);
+        }
     }
 }
 
 void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
-    std::cerr << "Traversing type: " << type.location.file_name << ":" << type.location.line << ":" << type.location.col
-              << std::endl;
-    type.dump();
     if (auto* structTy = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         if (structTy->location.file_name == m_target_file) {
             add_token(structTy->location, structTy->decl->identifier, SemanticTokenType::Type);
@@ -204,6 +217,11 @@ void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
     } else if (auto* genericTy = dynamic_cast<const ResolvedTypeGeneric*>(&type)) {
         if (genericTy->location.file_name == m_target_file) {
             add_token(genericTy->location, genericTy->decl->identifier, SemanticTokenType::Type);
+        }
+    } else if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
+               dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type)) {
+        if (type.location.file_name == m_target_file) {
+            add_token(type.location, type.to_str(), SemanticTokenType::Type);
         }
     } else if (auto* ptrTy = dynamic_cast<const ResolvedTypePointer*>(&type)) {
         traverse_type(*ptrTy->pointerType);

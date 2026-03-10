@@ -255,6 +255,7 @@ struct ResolvedTypeFunction : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    std::string to_str_with_params(bool with_params = true) const;
 };
 
 struct ResolvedTypeVarArg : public ResolvedType {

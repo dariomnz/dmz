@@ -62,6 +62,12 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) 
     return true;
 }
 
+void Sema::remove_decl_to_current_scope(ResolvedDecl &decl) {
+    for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
+        std::erase_if(*it, [&decl](auto &pair) { return &decl == pair.second; });
+    }
+}
+
 bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl) {
     [[maybe_unused]] auto declPtr = decl.get();
     debug_func("module: '" << moduleDecl.name() << "' decl '" << declPtr->identifier << "' " << declPtr->location);

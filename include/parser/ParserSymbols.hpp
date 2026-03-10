@@ -640,7 +640,11 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
     bool haveTrailingComma;
 
     ErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ErrorDecl>> errs, bool haveTrailingComma)
-        : Expr(location), Decl(location, true, ""), errs(std::move(errs)), haveTrailingComma(haveTrailingComma) {}
+        : Expr(location),
+          Decl(location, true, ""),
+          location(location),
+          errs(std::move(errs)),
+          haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

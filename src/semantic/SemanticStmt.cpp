@@ -243,7 +243,10 @@ bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
     defer([&]() { m_currentStruct = prevStruct; });
     m_currentStruct = declStmt.saveCurrentStruct;
 
-    if (!resolve_var_decl_initialize(*declStmt.varDecl)) return false;
+    if (!resolve_var_decl_initialize(*declStmt.varDecl)) {
+        remove_decl_to_current_scope(*declStmt.varDecl);
+        return false;
+    }
     declStmt.type = declStmt.varDecl->type->clone();
     declStmt.initialized = true;
     return true;

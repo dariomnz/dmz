@@ -567,10 +567,18 @@ void ResolvedTypeFunction::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeFunction " << to_str() << "\n";
 }
 
-std::string ResolvedTypeFunction::to_str() const {
+std::string ResolvedTypeFunction::to_str() const { return to_str_with_params(false); }
+
+std::string ResolvedTypeFunction::to_str_with_params(bool with_params) const {
     std::stringstream out;
     out << "fn(";
+
     for (size_t i = 0; i < paramsTypes.size(); i++) {
+        if (with_params && fnDecl) {
+            if (!fnDecl->params[i]->isVararg) {
+                out << fnDecl->params[i]->identifier << ": ";
+            }
+        }
         out << paramsTypes[i]->to_str();
         if (i != paramsTypes.size() - 1) {
             out << ", ";

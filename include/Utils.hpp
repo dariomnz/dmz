@@ -13,9 +13,11 @@ namespace DMZ {
 #define dmz_unreachable(msg) ::DMZ::__internal_unreachable(msg, __FILE__, __LINE__)
 
 [[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(std::string msg, const char* source, int line) {
-    std::cerr << "UNREACHABLE at " << source << ':' << line << ": " << msg << std::endl;
-    ::raise(SIGTRAP);
-    std::exit(EXIT_FAILURE);
+    std::stringstream ss;
+    ss << "UNREACHABLE at " << source << ':' << line << ": " << msg;
+    std::string error_msg = ss.str();
+    std::cerr << error_msg << std::endl;
+    throw std::runtime_error(error_msg);
 }
 
 struct SourceLocation {

@@ -110,7 +110,7 @@ void LSPServer::on_initialize(const std::string& id, const std::string& params) 
                   "\"hoverProvider\":true,"
                   "\"semanticTokensProvider\":{"
                   "\"legend\":{"
-                  "\"tokenTypes\":[\"type\",\"function\",\"parameter\",\"variable\",\"property\",\"namespace\"],"
+                  "\"tokenTypes\":[\"type\",\"function\",\"parameter\",\"variable\",\"property\",\"namespace\",\"number\"],"
                   "\"tokenModifiers\":[\"declaration\"]"
                   "},"
                   "\"full\":true"
@@ -227,8 +227,13 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
     if (finder.found_decl) {
         std::stringstream ss;
         ss << "{\"contents\":{\"kind\":\"markdown\",\"value\":\"```dmz\\n"
-           << escape_json(finder.found_decl->identifier) << ": " << escape_json(finder.found_decl->type->to_str())
-           << "\\n```\"}}";
+           << escape_json(finder.found_decl->identifier) << ": ";
+        if (auto funcType = dynamic_cast<ResolvedTypeFunction*>(finder.found_decl->type.get())) {
+            ss << escape_json(funcType->to_str_with_params());
+        } else {
+            ss << escape_json(finder.found_decl->type->to_str());
+        }
+        ss << "\\n```\"}}";
         send_response(id, ss.str());
     } else {
         send_response(id, "null");
@@ -603,6 +608,9 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
     }
 
     std::cerr.rdbuf(old_cerr);
+
+    std::cerr << "[LSP] Captured errors:" << std::endl;
+    std::cerr << err_ss.str() << std::endl;
 
     // Simple parsing of captured errors
     std::string line;

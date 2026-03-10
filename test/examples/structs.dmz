@@ -1,4 +1,4 @@
-// RUN: dmz %s -I ops %S/../sema/module_ops.dmz -run | filecheck %s
+// RUN: dmz %s -run | filecheck %s
 
 // CHECK: 1
 // CHECK-NEXT: 2
@@ -8,30 +8,31 @@
 // CHECK-NEXT: 43
 
 // CHECK-NOT: {{.*}}
-const ops = import("ops");
+
 struct Color {
     r: i32,
     g: i32,
     b: i32,
+    pub fn print(n: *Color) -> void {
+        printf("%d\n", n.r);
+        printf("%d\n", n.g);
+        printf("%d\n", n.b);
+    }
+
+    pub fn add(n: *Color, value: i32) -> Color {
+        let aux: Color = {};
+        aux.r = n.r + value;
+        aux.g = n.g + value;
+        aux.b = n.b + value;
+        return aux;
+    }
 }
 
-fn print_color(n: Color) -> void {
-    ops.println(n.r);
-    ops.println(n.g);
-    ops.println(n.b);
-}
-
-fn add_color(n: Color, add: i32) -> Color {
-    let aux = n;
-    aux.r = n.r + add;
-    aux.g = n.g + add;
-    aux.b = n.b + add;
-    return aux;
-}
+extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
     let c = Color{r: 1, g: 2, b: 3};
-    print_color(c);
-    let c2 = add_color(c, 40);
-    print_color(c2);
+    c.print();
+    let c2 = c.add(40);
+    c2.print();
 }

@@ -15,6 +15,7 @@ enum class SemanticTokenType {
     Variable = 3,
     Property = 4,
     Namespace = 5,
+    Number = 6,
 };
 
 enum class SemanticTokenModifier {
