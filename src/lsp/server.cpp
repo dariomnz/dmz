@@ -23,7 +23,7 @@ void LSPServer::run() {
     while (m_running && std::cin) {
         std::string line;
         if (!std::getline(std::cin, line)) break;
-
+        std::cerr << "[LSP] Received: " << line << std::endl;
         if (line.starts_with("Content-Length: ")) {
             int length = std::stoi(line.substr(16));
 

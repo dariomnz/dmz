@@ -114,6 +114,7 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
 ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &location,
                                                        ResolvedGenericFunctionDecl &funcDecl,
                                                        const std::vector<ptr<ResolvedExpr>> &arguments) {
+    debug_func(location);
     std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> inferredTypes;
 
     for (size_t i = 0; i < funcDecl.params.size() && i < arguments.size(); ++i) {
@@ -261,7 +262,9 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         if (genFunc) {
             varOrReturn(specializedTypes, infer_generic_types(call.location, *genFunc, resolvedArguments));
             auto specializedFunc = specialize_generic_function(call.location, *genFunc, *specializedTypes);
-            if (!specializedFunc) return nullptr;
+            if (!specializedFunc){
+                return report(call.location, "failed to specialize generic function");
+            }
 
             // Re-resolve callee to point to the specialized function
             if (auto *resolvedDeclRefExpr = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallee.get())) {

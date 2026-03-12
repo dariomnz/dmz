@@ -45,6 +45,16 @@ pub struct Writer {
         return w.vtable_flush(w.vtable_ptr, w, bytes, 1);
     }
 
+    pub fn writeChar(w: *@This, c: u8) -> !usize {
+        if (w.end + 1 <= w.buffer.len) {
+            w.buffer[w.end] = c;
+            w.end += 1;
+            return 1;
+        }
+        const aux_slice: u8[1] = {c};
+        return w.vtable_flush(w.vtable_ptr, w, aux_slice[0..1], 1);
+    }
+
     pub fn flush(w: *@This) -> !usize {
         if (w.end == 0) {
             return 0;

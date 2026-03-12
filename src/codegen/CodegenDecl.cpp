@@ -44,6 +44,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
                 func->dump();
                 dmz_unreachable("internal error: unexpected declaration in specializations");
             }
+            if (func->specializedTypes->is_generic()) continue;
             generate_function_decl(*cast_func);
         }
         return nullptr;
@@ -123,6 +124,8 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
                 func->dump();
                 dmz_unreachable("internal error: unexpected declaration in specializations");
             }
+
+            if (func->specializedTypes->is_generic()) continue;
             generate_function_body(*cast_func);
         }
         return;

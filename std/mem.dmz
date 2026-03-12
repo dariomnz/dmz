@@ -1,21 +1,22 @@
-extern fn malloc(size: u64) -> *void;
-extern fn realloc(ptr: *void, size: u64) -> *void;
+extern fn malloc(size: usize) -> *void;
+extern fn realloc(ptr: *void, size: usize) -> *void;
 extern fn free(ptr: *void) -> void;
-pub extern fn memmove(dest: *void, src: *void, size: u64) -> *void;
-pub extern fn memcpy(dest: *void, src: *void, size: u64) -> *void;
-pub extern fn strlen(str: *void) -> usize;
+pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
+pub extern fn memcpy(dest: *void, src: *void, size: usize) -> *void;
+pub extern fn strlen(str: *u8) -> usize;
+pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
 
 pub struct Allocator {
     allocator: *void,
-    vtable_malloc: *fn(*void, u64)->*void,
-    vtable_realloc: *fn(*void, *void, u64)->*void,
+    vtable_malloc: *fn(*void, usize)->*void,
+    vtable_realloc: *fn(*void, *void, usize)->*void,
     vtable_free: *fn(*void, *void)->void,
 
-    pub fn malloc(self: *@This, size: u64) -> *void {
+    pub fn malloc(self: *@This, size: usize) -> *void {
         return self.vtable_malloc(self.allocator, size);
     }
 
-    pub fn realloc(self: *@This, ptr: *void, size: u64) -> *void {
+    pub fn realloc(self: *@This, ptr: *void, size: usize) -> *void {
         return self.vtable_realloc(self.allocator, ptr, size);
     }
 
@@ -25,8 +26,8 @@ pub struct Allocator {
 }
 
 pub struct libc_allocator {
-    allocated: u64,
-    allocated_count: u64,
+    allocated: usize,
+    allocated_count: usize,
 
     pub fn init() -> @This {
         return @This{
@@ -41,13 +42,13 @@ pub struct libc_allocator {
         }
     }
 
-    fn malloc(self: *@This, size: u64) -> *void {
+    fn malloc(self: *@This, size: usize) -> *void {
         self.allocated += size;
         self.allocated_count++;
         return malloc(size);
     }
 
-    fn realloc(self: *@This, ptr: *void, size: u64) -> *void {
+    fn realloc(self: *@This, ptr: *void, size: usize) -> *void {
         self.allocated += size;
         return realloc(ptr, size);
     }

@@ -3,35 +3,3 @@ pub extern fn printf(fmt: *u8, ...) -> i32;
 fn println(n: i32) -> i32 {
     return printf("%d\n", n);
 }
-
-pub fn print<T>(fmt: *u8, args: T) -> i32 {
-    let fmt_idx = 0;
-    let arg_tracker = 0;
-
-    while (fmt[fmt_idx] != 0) {
-        if (fmt[fmt_idx] == '{' && fmt[fmt_idx + 1] == '}') {
-            let current_arg = 0;
-            inline for (args) |arg| {
-                if (current_arg == arg_tracker) {
-                    printf("%d", arg);
-                }
-                current_arg = current_arg + 1;
-            }
-            arg_tracker = arg_tracker + 1;
-            fmt_idx = fmt_idx + 2;
-        } else {
-            printf("%c", fmt[fmt_idx]);
-            fmt_idx = fmt_idx + 1;
-        }
-    }
-
-    return 1;
-}
-
-const std = import("std");
-test "print int" {
-    let a = 6;
-    let b = 9;
-    print("Value a {} value b {}\n", .{a + 1, b});
-    std.testing.expect(true);
-}

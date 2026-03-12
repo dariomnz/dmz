@@ -1,7 +1,0 @@
-*
-!**/
-!**/*.dmz
-!CMakeLists.txt
-!*py
-!.gitignore
-!requirements.txt

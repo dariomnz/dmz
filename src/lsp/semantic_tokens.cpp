@@ -1,4 +1,4 @@
-#define DEBUG
+// #define DEBUG
 #include "lsp/semantic_tokens.hpp"
 
 #include <algorithm>

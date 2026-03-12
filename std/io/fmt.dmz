@@ -1,0 +1,64 @@
+const std = import("std");
+
+pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
+    let buffer: u8[1024] = {};
+    let i: i32 = 0;
+    let nb = n;
+    let ret: usize = 0;
+
+    if (nb == 0) {
+        return w.writeChar('0');
+    }
+
+    if (nb < 0) {
+        try w.writeChar('-');
+        ret++;
+        nb = -nb;
+    }
+
+    while (nb > 0) {
+        buffer[i++] = (nb % 10) + '0';
+        nb = nb / 10;
+    }
+
+    while (i > 0) {
+        i--;
+        try w.writeChar(buffer[i]);
+        ret++;
+    }
+    return ret;
+}
+
+pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
+    let fmt_idx = 0;
+    let arg_tracker = 0;
+    let ret: usize = 0;
+
+    while (format[fmt_idx] != 0) {
+        if (format[fmt_idx] == '{' && format[fmt_idx + 1] == '}') {
+            let current_arg = 0;
+            inline for (args) |arg| {
+                if (current_arg++ == arg_tracker) {
+                    ret += try fmt_integer(w, arg);
+                }
+            }
+            arg_tracker++;
+            fmt_idx += 2;
+        } else {
+            ret +=try w.writeChar(format[fmt_idx]);
+            fmt_idx = fmt_idx + 1;
+        }
+    }
+
+    return ret;
+}
+
+test "print integers" {
+    let a = 6;
+    let b = 10;
+    let buf: u8[1024] = {};
+    let w = std.io.Writer.fixed(buf[0..1024]);
+    let ret = try fmt(w, "Value a {} value b {}\n", .{a + 1, b});
+    let expected = "Value a 7 value b 10\n";
+    try std.testing.expect(std.mem.memcmp(&buf[0], expected, std.mem.strlen(expected)) == 0);
+}

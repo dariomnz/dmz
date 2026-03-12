@@ -398,10 +398,9 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         return ret;
     }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
-        type.kind == ResolvedTypeKind::Bool ||
-        type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
-        type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||
-        type.kind == ResolvedTypeKind::Function) {
+        type.kind == ResolvedTypeKind::Bool || type.kind == ResolvedTypeKind::StructDecl ||
+        type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::ErrorGroup ||
+        type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function) {
         ret = type.clone();
         retPtr = ret.get();
         return ret;
@@ -474,9 +473,9 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(bool needMain) {
 }
 
 bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
-    debug_func("");
-    ScopedTimer(StatType::Semantic_Body);
     bool error = false;
+    debug_func((error ? "error" : "no error"));
+    ScopedTimer(StatType::Semantic_Body);
     for (auto &&module : moduleDecls) {
         if (!resolve_module_body(*module)) {
             error = true;

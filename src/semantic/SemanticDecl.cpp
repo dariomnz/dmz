@@ -174,13 +174,6 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         if (!res) return report(gt->location, "cannot resolve type of " + gt->to_str());
         *gt = std::move(*res);
     }
-    // // Not specialize if generic types are no specialized
-    for (auto &gt : genericTypes.specializedTypes) {
-        if (gt->kind == ResolvedTypeKind::Generic) {
-            debug_msg("Not specialize generic types are no specialized");
-            return nullptr;
-        }
-    }
     // Search if is specified
     for (auto &&func : funcDecl.specializations) {
         if (genericTypes.equal(*func->specializedTypes)) {
