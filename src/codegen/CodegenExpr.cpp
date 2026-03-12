@@ -173,7 +173,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
                 dmz_unreachable("not expected type in op_plusplus");
             }
             store_value(ret, rhs, *typeNum, *typeNum);
-            return ret;
+            return rhs_value;
         } else {
             dmz_unreachable("not expected type in op_plusplus");
         }
@@ -190,7 +190,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
                 dmz_unreachable("not expected type in op_minusminus");
             }
             store_value(ret, rhs, *typeNum, *typeNum);
-            return ret;
+            return rhs_value;
         } else {
             dmz_unreachable("not expected type in op_minusminus");
         }
