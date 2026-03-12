@@ -51,6 +51,7 @@ class Formatter {
     ptr<Node> fmt_error_group_expr_decl(const ErrorGroupExprDecl& expr);
     ptr<Node> fmt_catch_error_expr(const CatchErrorExpr& expr);
     ptr<Node> fmt_struct_instantiation_expr(const StructInstantiationExpr& expr);
+    ptr<Node> fmt_tuple_instantiation_expr(const TupleInstantiationExpr& expr);
     ptr<Node> fmt_array_instantiation_expr(const ArrayInstantiationExpr& expr);
     ptr<Node> fmt_sizeof_expr(const SizeofExpr& expr);
     ptr<Node> fmt_array_at_expr(const ArrayAtExpr& expr);

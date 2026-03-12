@@ -149,13 +149,15 @@ struct ResolvedForStmt : public ResolvedStmt {
     std::vector<ptr<ResolvedExpr>> conditions;
     std::vector<ptr<ResolvedCaptureDecl>> captures;
     ptr<ResolvedBlock> body;
+    bool isInline;
 
     ResolvedForStmt(SourceLocation location, std::vector<ptr<ResolvedExpr>> conditions,
-                    std::vector<ptr<ResolvedCaptureDecl>> captures, ptr<ResolvedBlock> body)
+                    std::vector<ptr<ResolvedCaptureDecl>> captures, ptr<ResolvedBlock> body, bool isInline = false)
         : ResolvedStmt(location),
           conditions(std::move(conditions)),
           captures(std::move(captures)),
-          body(std::move(body)) {}
+          body(std::move(body)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -348,6 +350,7 @@ struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctio
 struct ResolvedStructDecl : public ResolvedDependencies {
     const StructDecl *structDecl;
     bool isPacked;
+    bool isTuple = false;
     std::vector<ptr<ResolvedFieldDecl>> fields;
     std::vector<ptr<ResolvedMemberFunctionDecl>> functions;
 
@@ -673,12 +676,14 @@ struct ResolvedFieldInitStmt : public ResolvedStmt {
 struct ResolvedStructInstantiationExpr : public ResolvedExpr {
     ResolvedStructDecl &structDecl;
     std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers;
+    bool isTuple;
 
     ResolvedStructInstantiationExpr(SourceLocation location, ResolvedStructDecl &structDecl,
-                                    std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers)
+                                    std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers, bool isTuple)
         : ResolvedExpr(location, makePtr<ResolvedTypeStruct>(structDecl.type->location, &structDecl)),
           structDecl(structDecl),
-          fieldInitializers(std::move(fieldInitializers)) {}
+          fieldInitializers(std::move(fieldInitializers)),
+          isTuple(isTuple) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -770,6 +775,7 @@ struct ResolvedModuleDecl : public ResolvedDependencies {
     const ModuleDecl &moduleDecl;
     std::filesystem::path module_path;
     std::vector<ptr<ResolvedDecl>> declarations;
+    int tuple_counter = 0;
 
     ResolvedModuleDecl(SourceLocation location, std::string_view identifier, const ModuleDecl &moduleDecl,
                        std::filesystem::path module_path, std::vector<ptr<ResolvedDecl>> declarations)

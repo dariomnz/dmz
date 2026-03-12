@@ -111,6 +111,64 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     return resolvedDeclRefExpr;
 }
 
+ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &location,
+                                                       ResolvedGenericFunctionDecl &funcDecl,
+                                                       const std::vector<ptr<ResolvedExpr>> &arguments) {
+    std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> inferredTypes;
+
+    for (size_t i = 0; i < funcDecl.params.size() && i < arguments.size(); ++i) {
+        if (!internal_infer_type(inferredTypes, *funcDecl.params[i]->type, *arguments[i]->type)) {
+            return report(arguments[i]->location, "type mismatch during generic inference: expected '" +
+                                                      funcDecl.params[i]->type->to_str() + "', actual '" +
+                                                      arguments[i]->type->to_str() + "'");
+        }
+    }
+
+    std::vector<ptr<ResolvedType>> specializedTypes;
+    for (auto &&gtDecl : funcDecl.genericTypeDecls) {
+        if (inferredTypes.count(gtDecl.get())) {
+            specializedTypes.emplace_back(inferredTypes[gtDecl.get()]->clone());
+        } else {
+            return report(location, "could not infer generic type for '" + gtDecl->identifier + "'");
+        }
+    }
+
+    return makePtr<ResolvedTypeSpecialized>(location, std::move(specializedTypes));
+}
+
+bool Sema::internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> &inferredTypes,
+                               const ResolvedType &paramType, const ResolvedType &argType) {
+    if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&paramType)) {
+        if (inferredTypes.count(genType->decl)) {
+            return inferredTypes[genType->decl]->compare(argType);
+        }
+        inferredTypes[genType->decl] = argType.clone();
+        return true;
+    }
+
+    if (paramType.kind == ResolvedTypeKind::Pointer && argType.kind == ResolvedTypeKind::Pointer) {
+        return internal_infer_type(inferredTypes, *static_cast<const ResolvedTypePointer &>(paramType).pointerType,
+                                   *static_cast<const ResolvedTypePointer &>(argType).pointerType);
+    }
+
+    if (paramType.kind == ResolvedTypeKind::Slice && argType.kind == ResolvedTypeKind::Slice) {
+        return internal_infer_type(inferredTypes, *static_cast<const ResolvedTypeSlice &>(paramType).sliceType,
+                                   *static_cast<const ResolvedTypeSlice &>(argType).sliceType);
+    }
+
+    if (paramType.kind == ResolvedTypeKind::Optional && argType.kind == ResolvedTypeKind::Optional) {
+        return internal_infer_type(inferredTypes, *static_cast<const ResolvedTypeOptional &>(paramType).optionalType,
+                                   *static_cast<const ResolvedTypeOptional &>(argType).optionalType);
+    }
+
+    if (paramType.kind == ResolvedTypeKind::Array && argType.kind == ResolvedTypeKind::Array) {
+        return internal_infer_type(inferredTypes, *static_cast<const ResolvedTypeArray &>(paramType).arrayType,
+                                   *static_cast<const ResolvedTypeArray &>(argType).arrayType);
+    }
+
+    return true;
+}
+
 ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     debug_func(call.location);
     bool isMemberCall = false;
@@ -162,29 +220,11 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         errGeneric |= param->kind == ResolvedTypeKind::Generic;
     }
 
-    if (errGeneric && !dynamic_cast<const GenericExpr *>(call.callee.get())) {
-        bool isRealgeneric = false;
-        if (auto *resolvedDeclRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(resolvedCallee.get())) {
-            isRealgeneric = dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedDeclRefExpr->decl) != nullptr;
-        }
-        if (auto *resolvedMemberExpr = dynamic_cast<const ResolvedMemberExpr *>(resolvedCallee.get())) {
-            isRealgeneric = dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedMemberExpr->member) != nullptr;
-        }
-        if (isRealgeneric) return report(call.location, "try to call a generic function without specialization");
-    }
-
     size_t call_args_num = call.arguments.size();
     size_t func_args_num = fnType->paramsTypes.size();
     if (isMemberCall) func_args_num -= 1;
     bool isVararg = (func_args_num != 0) ? fnType->paramsTypes.back()->kind == ResolvedTypeKind::VarArg : false;
     size_t funcDeclArgs = isVararg ? (func_args_num - 1) : func_args_num;
-    if (call_args_num != func_args_num) {
-        if (!isVararg || (isVararg && call_args_num < funcDeclArgs)) {
-            return report(call.location, "argument count mismatch in function call, expected " +
-                                             std::to_string(func_args_num) + " actual " +
-                                             std::to_string(call_args_num));
-        }
-    }
 
     std::vector<ptr<ResolvedExpr>> resolvedArguments;
     if (isMemberCall && resolvedBase) {
@@ -201,28 +241,73 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         }
     }
 
+    for (auto &&arg : call.arguments) {
+        varOrReturn(resolvedArg, resolve_expr(*arg));
+        resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
+        resolvedArguments.emplace_back(std::move(resolvedArg));
+    }
+
+    if (errGeneric && !dynamic_cast<const GenericExpr *>(call.callee.get())) {
+        ResolvedGenericFunctionDecl *genFunc = nullptr;
+        if (auto *resolvedDeclRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(resolvedCallee.get())) {
+            genFunc =
+                dynamic_cast<ResolvedGenericFunctionDecl *>(const_cast<ResolvedDecl *>(&resolvedDeclRefExpr->decl));
+        }
+        if (auto *resolvedMemberExpr = dynamic_cast<const ResolvedMemberExpr *>(resolvedCallee.get())) {
+            genFunc =
+                dynamic_cast<ResolvedGenericFunctionDecl *>(const_cast<ResolvedDecl *>(&resolvedMemberExpr->member));
+        }
+
+        if (genFunc) {
+            varOrReturn(specializedTypes, infer_generic_types(call.location, *genFunc, resolvedArguments));
+            auto specializedFunc = specialize_generic_function(call.location, *genFunc, *specializedTypes);
+            if (!specializedFunc) return nullptr;
+
+            // Re-resolve callee to point to the specialized function
+            if (auto *resolvedDeclRefExpr = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallee.get())) {
+                resolvedCallee = makePtr<ResolvedDeclRefExpr>(resolvedDeclRefExpr->location, *specializedFunc,
+                                                              specializedFunc->type->clone());
+            } else if (auto *resolvedMemberExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedCallee.get())) {
+                resolvedCallee = makePtr<ResolvedMemberExpr>(resolvedMemberExpr->location,
+                                                             std::move(resolvedMemberExpr->base), *specializedFunc);
+            }
+
+            fnType = specializedFunc->getFnType();
+            func_args_num = fnType->paramsTypes.size();
+            if (isMemberCall) func_args_num -= 1;
+            isVararg = (func_args_num != 0) ? fnType->paramsTypes.back()->kind == ResolvedTypeKind::VarArg : false;
+            funcDeclArgs = isVararg ? (func_args_num - 1) : func_args_num;
+        } else {
+            // is not really generic function but has generic types, maybe a function pointer?
+            // for now keep the error
+            // return report(call.location, "try to call a generic function without specialization");
+        }
+    }
+
+    if (call_args_num != func_args_num) {
+        if (!isVararg || (isVararg && call_args_num < funcDeclArgs)) {
+            return report(call.location, "argument count mismatch in function call, expected " +
+                                             std::to_string(func_args_num) + " actual " +
+                                             std::to_string(call_args_num));
+        }
+    }
+
     if (isMemberCall) {
         if (resolvedArguments.size() == 0) {
             call.dump();
             dmz_unreachable("unexpected member call without member pass as argument");
         }
     }
-    size_t idx = 0;
-    if (isMemberCall) idx += 1;
-    for (auto &&arg : call.arguments) {
-        varOrReturn(resolvedArg, resolve_expr(*arg));
-        // Only check until vararg
-        debug_msg("To compare " << resolvedArg->type->to_str() << " idx " << idx << " funcDeclArgs " << funcDeclArgs);
-        if ((isMemberCall ? idx - 1 : idx) < funcDeclArgs) {
-            if (!fnType->paramsTypes[idx]->compare(*resolvedArg->type)) {
-                return report(resolvedArg->location, "unexpected type of argument '" + resolvedArg->type->to_str() +
-                                                         "' expected '" + fnType->paramsTypes[idx]->to_str() + "'");
+
+    for (size_t i = 0; i < call_args_num; ++i) {
+        size_t paramIdx = isMemberCall ? i + 1 : i;
+        if (paramIdx < funcDeclArgs) {
+            if (!fnType->paramsTypes[paramIdx]->compare(*resolvedArguments[paramIdx]->type)) {
+                return report(resolvedArguments[paramIdx]->location,
+                              "unexpected type of argument '" + resolvedArguments[paramIdx]->type->to_str() +
+                                  "' expected '" + fnType->paramsTypes[paramIdx]->to_str() + "'");
             }
         }
-        resolvedArg->set_constant_value(cee.evaluate(*resolvedArg, false));
-
-        ++idx;
-        resolvedArguments.emplace_back(std::move(resolvedArg));
     }
 
     return makePtr<ResolvedCallExpr>(call.location, fnType->returnType->clone(), std::move(resolvedCallee),
@@ -283,6 +368,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *structInstantiation = dynamic_cast<const StructInstantiationExpr *>(&expr)) {
         return resolve_struct_instantiation(*structInstantiation);
+    }
+    if (const auto *tupleInstantiation = dynamic_cast<const TupleInstantiationExpr *>(&expr)) {
+        return resolve_tuple_instantiation(*tupleInstantiation);
     }
     if (const auto *arrayInstantiation = dynamic_cast<const ArrayInstantiationExpr *>(&expr)) {
         return resolve_array_instantiation(*arrayInstantiation);
@@ -680,14 +768,50 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
 
     if (error) return nullptr;
 
-    auto res =
-        makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, *st, std::move(resolvedFieldInits));
+    auto res = makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, *st,
+                                                        std::move(resolvedFieldInits), false);
     if (auxstruType->is_this) {
         if (auto *resStruType = dynamic_cast<ResolvedTypeStruct *>(res->type.get())) {
             resStruType->is_this = true;
         }
     }
     return res;
+}
+
+ptr<ResolvedStructInstantiationExpr> Sema::resolve_tuple_instantiation(
+    const TupleInstantiationExpr &tupleInstantiation) {
+    debug_func(tupleInstantiation.location);
+
+    std::vector<ptr<ResolvedFieldDecl>> tupleFields;
+    std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
+
+    unsigned index = 0;
+    for (auto &&element : tupleInstantiation.elements) {
+        varOrReturn(resolvedElement, resolve_expr(*element));
+        resolvedElement->set_constant_value(cee.evaluate(*resolvedElement, false));
+
+        std::string fieldName = "elem" + std::to_string(index);
+
+        auto fieldDecl = makePtr<ResolvedFieldDecl>(resolvedElement->location, fieldName,
+                                                    resolvedElement->type->clone(), index, nullptr);
+        auto initStmt =
+            makePtr<ResolvedFieldInitStmt>(resolvedElement->location, *fieldDecl, std::move(resolvedElement));
+        tupleFields.emplace_back(std::move(fieldDecl));
+        resolvedFieldInits.emplace_back(std::move(initStmt));
+        index++;
+    }
+
+    std::string tupleName = "tuple." + std::to_string(m_currentModule->tuple_counter++);
+    auto structDecl =
+        makePtr<ResolvedStructDecl>(tupleInstantiation.location, false, tupleName, nullptr, false,
+                                    std::move(tupleFields), std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+    structDecl->isTuple = true;
+    auto *structDeclPtr = structDecl.get();
+    m_currentModule->declarations.emplace_back(std::move(structDecl));
+    add_dependency(structDeclPtr);
+
+    return makePtr<ResolvedStructInstantiationExpr>(tupleInstantiation.location, *structDeclPtr,
+                                                    std::move(resolvedFieldInits), true);
 }
 
 ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(

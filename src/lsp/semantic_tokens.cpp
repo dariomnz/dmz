@@ -1,3 +1,4 @@
+#define DEBUG
 #include "lsp/semantic_tokens.hpp"
 
 #include <algorithm>
@@ -35,6 +36,7 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
     debug_msg(decl.location);
     if (decl.location.file_name == m_target_file) {
         if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
+            if (structDecl->isTuple) return;
             add_token(structDecl->location, structDecl->identifier, SemanticTokenType::Type,
                       (uint32_t)SemanticTokenModifier::Declaration);
             if (auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(structDecl)) {
@@ -81,9 +83,9 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
             add_token(varDecl->location, varDecl->identifier, SemanticTokenType::Variable,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (varDecl->resolvedTypeExpr)
+            if (varDecl->varDecl && varDecl->varDecl->type && varDecl->resolvedTypeExpr)
                 traverse_expr(*varDecl->resolvedTypeExpr);
-            else if (varDecl->varDecl->type)
+            else if (varDecl->varDecl && varDecl->varDecl->type)
                 traverse_type(*varDecl->type);
             if (varDecl->initializer) {
                 traverse_expr(*varDecl->initializer);
@@ -205,17 +207,25 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_expr(*memberExpr->base);
         } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedStructInstantiationExpr");
-            bool is_this = false;
-            if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(instantiation->type.get())) {
-                is_this = structDeclType->is_this;
+            std::cerr << "ResolvedStructInstantiationExpr: " << instantiation->structDecl.identifier
+                      << (instantiation->isTuple ? " tuple" : " struct") << std::endl;
+            if (!instantiation->isTuple) {
+                bool is_this = false;
+                if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(instantiation->type.get())) {
+                    is_this = structDeclType->is_this;
+                }
+                if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(instantiation->type.get())) {
+                    is_this = structType->is_this;
+                }
+
+                std::cerr << "color: " << (is_this ? "@This" : instantiation->structDecl.identifier) << std::endl;
+                add_token(instantiation->location, is_this ? "@This" : instantiation->structDecl.identifier,
+                          SemanticTokenType::Type);
             }
-            if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(instantiation->type.get())) {
-                is_this = structType->is_this;
-            }
-            add_token(instantiation->location, is_this ? "@This" : instantiation->structDecl.identifier,
-                      SemanticTokenType::Type);
             for (const auto& init : instantiation->fieldInitializers) {
-                add_token(init->location, init->field.identifier, SemanticTokenType::Property);
+                if (!instantiation->isTuple) {
+                    add_token(init->location, init->field.identifier, SemanticTokenType::Property);
+                }
                 traverse_expr(*init->initializer);
             }
         } else if (auto* arrInstantiation = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
@@ -359,7 +369,7 @@ void SemanticTokensCollector::add_token(const SourceLocation& loc, std::string_v
             }
         }
     }
-
+    debug_msg("add_token: " << type << " " << identifier << " " << loc.line << ":" << col);
     m_tokens.push_back({loc.line - 1, col, identifier.length(), type, modifiers});
 }
 

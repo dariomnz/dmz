@@ -120,11 +120,11 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
 std::optional<int> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
                                                                        bool allowSideEffects) {
     if (const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
-        if (rvd->isMutable || !rvd->varDecl->initializer) return std::nullopt;
+        if (rvd->isMutable || !rvd->initializer) return std::nullopt;
         return evaluate(*rvd->initializer, allowSideEffects);
-    } else if (const auto *rvd = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
-        if (!rvd->varDecl || rvd->isMutable || !rvd->varDecl->initializer) return std::nullopt;
-        return evaluate(*rvd->varDecl->initializer, allowSideEffects);
+    } else if (const auto *rds = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
+        if (!rds->varDecl || rds->isMutable || !rds->varDecl->initializer) return std::nullopt;
+        return evaluate(*rds->varDecl->initializer, allowSideEffects);
     }
 
     return std::nullopt;

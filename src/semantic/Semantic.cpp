@@ -398,6 +398,7 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         return ret;
     }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
+        type.kind == ResolvedTypeKind::Bool ||
         type.kind == ResolvedTypeKind::StructDecl || type.kind == ResolvedTypeKind::Struct ||
         type.kind == ResolvedTypeKind::ErrorGroup || type.kind == ResolvedTypeKind::Error ||
         type.kind == ResolvedTypeKind::Function) {

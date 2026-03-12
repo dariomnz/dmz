@@ -260,7 +260,7 @@ bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
     }
 }
 
-bool ResolvedTypeGeneric::compare(const ResolvedType &other) const {
+bool ResolvedTypeGeneric::compare([[maybe_unused]] const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);
     return debug_ret(true);
 }
@@ -274,7 +274,7 @@ void ResolvedTypeGeneric::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeGeneric " << to_str() << "\n";
 }
 
-std::string ResolvedTypeGeneric::to_str() const { return decl->name(); }
+std::string ResolvedTypeGeneric::to_str() const { return decl ? decl->name() : "generic"; }
 
 bool ResolvedTypeGeneric::is_generic() const { return debug_ret(true); }
 

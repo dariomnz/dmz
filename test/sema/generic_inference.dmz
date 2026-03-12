@@ -1,0 +1,15 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn id<T>(val: T) -> T {
+    return val;
+}
+
+fn main() -> void {
+    let a = id(10);
+    let b = id(true);
+}
+
+// CHECK: ResolvedCallExpr:i32
+// CHECK-NEXT:   ResolvedDeclRefExpr:fn(i32)->i32 id
+// CHECK: ResolvedCallExpr:bool
+// CHECK-NEXT:   ResolvedDeclRefExpr:fn(bool)->bool id

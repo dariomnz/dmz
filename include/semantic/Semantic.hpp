@@ -74,6 +74,12 @@ class Sema {
     ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
     std::vector<ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
         const std::vector<ptr<GenericTypeDecl>> &genericTypesDecl);
+    ptr<ResolvedTypeSpecialized> infer_generic_types(const SourceLocation &location,
+                                                     ResolvedGenericFunctionDecl &funcDecl,
+                                                     const std::vector<ptr<ResolvedExpr>> &arguments);
+    bool internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> &inferredTypes,
+                             const ResolvedType &paramType, const ResolvedType &argType);
+
     ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation &location,
                                                                  ResolvedGenericFunctionDecl &funcDecl,
                                                                  const ResolvedTypeSpecialized &specializedTypes);
@@ -98,7 +104,7 @@ class Sema {
     ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
     ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
     ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
-    ptr<ResolvedForStmt> resolve_for_stmt(const ForStmt &forStmt);
+    ptr<ResolvedStmt> resolve_for_stmt(const ForStmt &forStmt);
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);
     ptr<ResolvedDeclStmt> resolve_decl_stmt(const DeclStmt &declStmt);
@@ -112,6 +118,7 @@ class Sema {
     ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
     ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);
+    ptr<ResolvedStructInstantiationExpr> resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation);
     ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);
     ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);

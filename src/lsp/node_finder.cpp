@@ -111,6 +111,7 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
         }
         if (fd->body) find_in_stmt(*fd->body);
     } else if (const auto* sd = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
+        if (sd->isTuple) return;
         if (const auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(sd)) {
             for (const auto& gt : genStru->genericTypeDecls) {
                 find_in_decl(*gt);
@@ -199,12 +200,12 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         }
         find_in_expr(*me->base);
     } else if (const auto* sie = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
-        if (is_at_location(sie->location, sie->structDecl.identifier.length())) {
+        if (!sie->isTuple && is_at_location(sie->location, sie->structDecl.identifier.length())) {
             found_decl = &sie->structDecl;
             return;
         }
         for (const auto& init : sie->fieldInitializers) {
-            if (is_at_location(init->location, init->field.identifier.length())) {
+            if (!sie->isTuple && is_at_location(init->location, init->field.identifier.length())) {
                 found_decl = &init->field;
                 return;
             }

@@ -1,0 +1,20 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let t = .{1, 2, 3};
+}
+// CHECK: ResolvedModuleDecl tuple
+// CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt tuple.tuple.0{}
+// CHECK-NEXT:         ResolvedVarDecl:tuple.tuple.0{} t
+// CHECK-NEXT:           ResolvedTupleInstantiationExpr:tuple.tuple.0{}
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 elem0
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:               | value: 1
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 elem1
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:               | value: 2
+// CHECK-NEXT:             ResolvedFieldInitStmt:i32 elem2
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:               | value: 3

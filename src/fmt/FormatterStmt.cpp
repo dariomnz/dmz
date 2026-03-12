@@ -171,6 +171,10 @@ ptr<Node> Formatter::fmt_while_stmt(const WhileStmt& stmt) {
 
 ptr<Node> Formatter::fmt_for_stmt(const ForStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (stmt.isInline) {
+        ret->nodes.emplace_back(makePtr<Text>("inline"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
     ret->nodes.emplace_back(makePtr<Text>("for"));
     ret->nodes.emplace_back(makePtr<Space>());
     vec<ptr<Node>> conditions;

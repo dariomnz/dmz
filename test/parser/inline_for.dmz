@@ -1,0 +1,14 @@
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    inline for (.{1, 2}) |x| {}
+}
+// CHECK: ModuleDecl inline_for
+// CHECK-NEXT:   FunctionDecl main -> void
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       Inline ForStmt
+// CHECK-NEXT:         TupleInstantiationExpr 
+// CHECK-NEXT:           IntLiteral '1'
+// CHECK-NEXT:           IntLiteral '2'
+// CHECK-NEXT:         CaptureDecl x
+// CHECK-NEXT:         Block

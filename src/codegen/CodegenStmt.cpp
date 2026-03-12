@@ -146,6 +146,11 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
 
 llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     debug_func("");
+    if (stmt.isInline) {
+        generate_block(*stmt.body);
+        return nullptr;
+    }
+
     for (auto &&cond : stmt.conditions) {
         if (cond->type->kind != ResolvedTypeKind::Range && cond->type->kind != ResolvedTypeKind::Slice) {
             cond->type->dump();

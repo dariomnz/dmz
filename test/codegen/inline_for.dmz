@@ -1,0 +1,13 @@
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'SUCCESS\n')
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let sum = 0;
+    inline for (.{1, 2}) |x| {
+        sum += x;
+    }
+    if (sum == 3) {
+        printf("SUCCESS\n");
+    }
+}

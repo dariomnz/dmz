@@ -39,7 +39,7 @@ ptr<Stmt> Parser::parse_statement() {
     m_expectIncompleteStatement = false;
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
-    if (m_nextToken.type == TokenType::kw_for) return parse_for_stmt();
+    if (m_nextToken.type == TokenType::kw_for || (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for)) return parse_for_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
     if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
@@ -145,6 +145,11 @@ ptr<WhileStmt> Parser::parse_while_stmt() {
 ptr<ForStmt> Parser::parse_for_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
+    bool isInline = false;
+    if (m_nextToken.type == TokenType::kw_inline) {
+        isInline = true;
+        eat_next_token();
+    }
     eat_next_token();  // eat 'for'
 
     bool haveTrailingCommaCond;
@@ -159,7 +164,7 @@ ptr<ForStmt> Parser::parse_for_stmt() {
     matchOrReturn(TokenType::block_l, "expected 'for' body");
     varOrReturn(body, parse_block());
 
-    return makePtr<ForStmt>(location, std::move(*conditions), std::move(*captures), std::move(body));
+    return makePtr<ForStmt>(location, std::move(*conditions), std::move(*captures), std::move(body), isInline);
 }
 
 ptr<DeclStmt> Parser::parse_decl_stmt() {

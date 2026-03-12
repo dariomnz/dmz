@@ -53,6 +53,21 @@ ptr<Expr> Parser::parse_primary() {
         return makePtr<DeclRefExpr>(location, std::move(identifier));
     }
     if (!(restrictions & OnlyTypeExpr)) {
+        if (m_nextToken.type == TokenType::dot && peek_token().type == TokenType::block_l) {
+            SourceLocation location = m_nextToken.loc;
+            eat_next_token();  // eat '.'
+            bool haveTrailingComma;
+            auto elements = parse_list_with_trailing_comma<Expr>(
+                {TokenType::block_l, "expected '{'"}, [this]() { return parse_expr(); },
+                {TokenType::block_r, "expected '}'"}, haveTrailingComma);
+            if (!elements) {
+                synchronize_on({TokenType::block_r});
+                eat_next_token();  // eat '}'
+                return nullptr;
+            }
+
+            return makePtr<TupleInstantiationExpr>(location, std::move(*elements), haveTrailingComma);
+        }
         if (m_nextToken.type == TokenType::par_l) {
             eat_next_token();  // eat '('
 

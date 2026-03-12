@@ -161,8 +161,67 @@ ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     return makePtr<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
 }
 
-ptr<ResolvedForStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
+ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
     debug_func(forStmt.location);
+
+    if (forStmt.isInline) {
+        if (forStmt.conditions.size() != 1 || forStmt.captures.size() != 1) 
+            return report(forStmt.location, "inline for expects exactly 1 condition and 1 capture");
+        
+        varOrReturn(condTypeCheck, resolve_expr(*forStmt.conditions[0]));
+        auto structType = dynamic_cast<const ResolvedTypeStruct*>(condTypeCheck->type.get());
+        if (!structType) {
+            if (condTypeCheck->type->kind == ResolvedTypeKind::Generic) {
+                ScopeRAII iterationScope(*this);
+                auto captureType = condTypeCheck->type->clone(); 
+                auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
+                if (!insert_decl_to_current_scope(*resolvedCapture)) return nullptr;
+                
+                varOrReturn(resolvedBody, resolve_block(*forStmt.body));
+                
+                std::vector<ptr<ResolvedExpr>> conditions;
+                conditions.emplace_back(std::move(condTypeCheck));
+                std::vector<ptr<ResolvedCaptureDecl>> captures;
+                captures.emplace_back(std::move(resolvedCapture));
+                
+                return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures), std::move(resolvedBody), true);
+            }
+            return report(condTypeCheck->location, "inline for requires a tuple or struct iteration, but got: " + condTypeCheck->type->to_str());
+        }
+        
+        auto stDecl = structType->decl;
+        std::vector<ptr<ResolvedStmt>> unrolledBody;
+        
+        for (size_t i = 0; i < stDecl->fields.size(); i++) {
+            ScopeRAII iterationScope(*this);
+            varOrReturn(iterCond, resolve_expr(*forStmt.conditions[0]));
+            
+            auto fieldType = stDecl->fields[i]->type->clone();
+            auto fieldAccess = makePtr<ResolvedMemberExpr>(iterCond->location, std::move(iterCond), *stDecl->fields[i]);
+            
+            auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false, forStmt.captures[0]->identifier, fieldType->clone(), false, std::move(fieldAccess));
+            if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
+            
+            auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(), std::move(varDecl), m_currentModule, m_currentStruct);
+            resolvedDeclStmt->initialized = true;
+            
+            varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
+            resolvedIteration->statements.insert(resolvedIteration->statements.begin(), std::move(resolvedDeclStmt));
+            
+            unrolledBody.emplace_back(std::move(resolvedIteration));
+        }
+        
+        auto resolvedBody = makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{});
+        auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr); 
+        auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
+        
+        std::vector<ptr<ResolvedExpr>> conditions;
+        conditions.emplace_back(std::move(condTypeCheck));
+        std::vector<ptr<ResolvedCaptureDecl>> captures;
+        captures.emplace_back(std::move(resolvedCapture));
+        
+        return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures), std::move(resolvedBody), true);
+    }
 
     ScopeRAII forCapturesScope(*this);
     std::vector<ptr<ResolvedExpr>> conditions;

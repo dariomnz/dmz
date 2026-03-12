@@ -1,0 +1,10 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn foo<T>(param: i32) -> T {
+    return param;
+}
+
+fn main() -> void {
+    foo(2);
+    // CHECK: error: could not infer generic type for 'T'
+}

@@ -172,10 +172,11 @@ struct ForStmt : public Stmt {
     std::vector<ptr<Expr>> conditions;
     std::vector<ptr<CaptureDecl>> captures;
     ptr<Block> body;
+    bool isInline;
 
     ForStmt(SourceLocation location, std::vector<ptr<Expr>> conditions, std::vector<ptr<CaptureDecl>> captures,
-            ptr<Block> body)
-        : Stmt(location), conditions(std::move(conditions)), captures(std::move(captures)), body(std::move(body)) {}
+            ptr<Block> body, bool isInline = false)
+        : Stmt(location), conditions(std::move(conditions)), captures(std::move(captures)), body(std::move(body)), isInline(isInline) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -235,6 +236,17 @@ struct StructInstantiationExpr : public Expr {
           base(std::move(base)),
           fieldInitializers(std::move(fieldInitializers)),
           haveTrailingComma(haveTrailingComma) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct TupleInstantiationExpr : public Expr {
+    std::vector<ptr<Expr>> elements;
+    bool haveTrailingComma;
+
+    TupleInstantiationExpr(SourceLocation location, std::vector<ptr<Expr>> elements, bool haveTrailingComma)
+        : Expr(location), elements(std::move(elements)), haveTrailingComma(haveTrailingComma) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

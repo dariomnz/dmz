@@ -1,0 +1,14 @@
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    let t = .{1, 2, 3};
+}
+// CHECK: ModuleDecl tuple
+// CHECK-NEXT:   FunctionDecl main -> void
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       DeclStmt
+// CHECK-NEXT:         VarDecl: t
+// CHECK-NEXT:           TupleInstantiationExpr 
+// CHECK-NEXT:             IntLiteral '1'
+// CHECK-NEXT:             IntLiteral '2'
+// CHECK-NEXT:             IntLiteral '3'

@@ -62,6 +62,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_orelse_error_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const GenericExpr*>(&expr)) {
         node = fmt_generic_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const TupleInstantiationExpr*>(&expr)) {
+        node = fmt_tuple_instantiation_expr(*cast_expr);
     } else {
         println(expr.location.to_string());
         expr.dump();
@@ -189,6 +191,14 @@ ptr<Node> Formatter::fmt_struct_instantiation_expr(const StructInstantiationExpr
     ret->nodes.emplace_back(fmt_expr(*expr.base));
     ret->nodes.emplace_back(build.comma_separated_list("{", "}", std::move(arguments), expr.haveTrailingComma));
     return ret;
+}
+ptr<Node> Formatter::fmt_tuple_instantiation_expr(const TupleInstantiationExpr& expr) {
+    vec<ptr<Node>> arguments;
+    for (auto&& field : expr.elements) {
+        arguments.emplace_back(fmt_expr(*field));
+    }
+
+    return build.comma_separated_list(".{", "}", std::move(arguments), expr.haveTrailingComma);
 }
 
 ptr<Node> Formatter::fmt_array_instantiation_expr(const ArrayInstantiationExpr& expr) {

@@ -1,0 +1,10 @@
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'SUCCESS\n')
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let t = .{1, 2, 3};
+    if (t.elem0 == 1 && t.elem1 == 2 && t.elem2 == 3) {
+        printf("SUCCESS\n");
+    }
+}

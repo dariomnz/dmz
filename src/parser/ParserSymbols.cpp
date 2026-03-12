@@ -242,7 +242,7 @@ void CaptureDecl::dump(size_t level) const { std::cerr << indent(level) << "Capt
 std::string CaptureDecl::to_str() const { dmz_unreachable("TODO"); }
 
 void ForStmt::dump(size_t level) const {
-    std::cerr << indent(level) << "ForStmt\n";
+    std::cerr << indent(level) << (isInline ? "Inline ForStmt\n" : "ForStmt\n");
 
     for (auto &&cond : conditions) {
         cond->dump(level + 1);
@@ -382,6 +382,14 @@ void StructInstantiationExpr::dump(size_t level) const {
 }
 
 std::string StructInstantiationExpr::to_str() const { dmz_unreachable("TODO"); }
+
+void TupleInstantiationExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "TupleInstantiationExpr " << '\n';
+
+    for (auto &&element : elements) element->dump(level + 1);
+}
+
+std::string TupleInstantiationExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void ArrayInstantiationExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ArrayInstantiationExpr " << '\n';

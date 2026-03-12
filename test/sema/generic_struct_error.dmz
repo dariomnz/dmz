@@ -7,7 +7,7 @@ struct Point<T> {
     y: T,
 }
 
-fn add<T>(x: T) -> T {
+fn add<T>(x: i32) -> T {
     return x;
 }
 
@@ -16,5 +16,5 @@ fn main() -> void {
     // CHECK: [[# @LINE - 1 ]]:14: error: 'Point' is a generic and need specialization
 
     add(63);
-    // CHECK: [[# @LINE - 1 ]]:8: error: try to call a generic function without specialization
+    // CHECK: [[# @LINE - 1 ]]:8: error: could not infer generic type for 'T'
 }
