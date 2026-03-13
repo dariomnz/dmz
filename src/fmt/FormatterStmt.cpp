@@ -109,6 +109,10 @@ ptr<Node> Formatter::fmt_return_stmt(const ReturnStmt& stmt) {
 
 ptr<Node> Formatter::fmt_switch_stmt(const SwitchStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (stmt.isInline) {
+        ret->nodes.emplace_back(makePtr<Text>("inline"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
     ret->nodes.emplace_back(makePtr<Text>("switch"));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("("));

@@ -158,6 +158,13 @@ void TypeidExpr::dump(size_t level) const {
 
 std::string TypeidExpr::to_str() const { dmz_unreachable("TODO"); }
 
+void TypeinfoExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "Typeinfo\n";
+    typeinfoExpr->dump(level + 1);
+}
+
+std::string TypeinfoExpr::to_str() const { dmz_unreachable("TODO"); }
+
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
 std::string DeclRefExpr::to_str() const { return identifier; }

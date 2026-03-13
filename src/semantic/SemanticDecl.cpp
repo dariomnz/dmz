@@ -596,17 +596,21 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     }
 
     std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
+    std::vector<std::string> resolvedFunctions_strs;
     for (auto &&decl : resolvedStructDecl.structDecl->decls) {
         auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
         if (!function) continue;
         auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
         if (!memberFunc) return false;
         resolvedFunctions.emplace_back(std::move(memberFunc));
+        resolvedFunctions_strs.emplace_back(function->identifier);
     }
 
     resolvedStructDecl.functions = std::move(resolvedFunctions);
+    resolvedStructDecl.functions_strs = std::move(resolvedFunctions_strs);
 
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
+    std::vector<std::string> resolvedFields_strs;
     int idx = 0;
     for (auto &&decl : resolvedStructDecl.structDecl->decls) {
         auto field = dynamic_cast<const FieldDecl *>(decl.get());
@@ -626,9 +630,11 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
                                                             std::move(default_initizlizer));
         retField->resolvedTypeExpr = resolve_expr(*field->type);
         resolvedFields.emplace_back(std::move(retField));
+        resolvedFields_strs.emplace_back(field->identifier);
     }
 
     resolvedStructDecl.fields = std::move(resolvedFields);
+    resolvedStructDecl.fields_strs = std::move(resolvedFields_strs);
 
     return true;
 }

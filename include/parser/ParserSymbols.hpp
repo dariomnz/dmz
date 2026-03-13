@@ -351,6 +351,15 @@ struct TypeidExpr : public Expr {
     std::string to_str() const override;
 };
 
+struct TypeinfoExpr : public Expr {
+    ptr<Expr> typeinfoExpr;
+    TypeinfoExpr(SourceLocation location, ptr<Expr> typeinfoExpr)
+        : Expr(location), typeinfoExpr(std::move(typeinfoExpr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct CallExpr : public Expr {
     ptr<Expr> callee;
     std::vector<ptr<Expr>> arguments;

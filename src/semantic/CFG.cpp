@@ -164,6 +164,7 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
 
     size_t rechableIndex = -1;
     for (size_t i = 0; i < stmt.cases.size(); i++) {
+        if (!stmt.cases[i]->condition) continue;
         std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
         if (val && case_val && val == case_val) {
             rechableIndex = i;
@@ -171,6 +172,7 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
     }
 
     for (size_t i = 0; i < stmt.cases.size(); i++) {
+        if (!stmt.cases[i]->condition) continue;
         std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
         cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == i);
     }

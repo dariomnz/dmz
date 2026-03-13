@@ -355,6 +355,8 @@ struct ResolvedStructDecl : public ResolvedDependencies {
     bool isTuple = false;
     std::vector<ptr<ResolvedFieldDecl>> fields;
     std::vector<ptr<ResolvedMemberFunctionDecl>> functions;
+    std::vector<std::string> fields_strs;
+    std::vector<std::string> functions_strs;
 
     ResolvedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                        const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
@@ -479,6 +481,15 @@ struct ResolvedTypeidExpr : public ResolvedExpr {
     ResolvedTypeidExpr(SourceLocation location, ptr<ResolvedExpr> typeidExpr)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 32)),
           typeidExpr(std::move(typeidExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeinfoExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> typeinfoExpr;
+
+    ResolvedTypeinfoExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> typeinfoExpr)
+        : ResolvedExpr(location, std::move(type)), typeinfoExpr(std::move(typeinfoExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

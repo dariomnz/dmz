@@ -110,6 +110,7 @@ class Codegen {
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);
     llvm::Value *generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr);
+    llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
 };

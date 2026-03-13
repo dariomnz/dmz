@@ -103,6 +103,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
         return generate_typeid_expr(*typeidExpr);
     }
+    if (auto *typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr *>(&expr)) {
+        return generate_typeinfo_expr(*typeinfoExpr);
+    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -714,26 +717,51 @@ llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr)
     auto &type = *typeidExpr.typeidExpr->type;
     int typeId = 0;
     switch (type.kind) {
-        case ResolvedTypeKind::Void: typeId = 0; break;
+        case ResolvedTypeKind::Void:
+            typeId = 0;
+            break;
         case ResolvedTypeKind::Number: {
             auto &nt = static_cast<const ResolvedTypeNumber &>(type);
-            if (nt.numberKind == ResolvedNumberKind::Int) typeId = 1;
-            else if (nt.numberKind == ResolvedNumberKind::UInt) typeId = 2;
-            else if (nt.numberKind == ResolvedNumberKind::Float) typeId = 3;
+            if (nt.numberKind == ResolvedNumberKind::Int)
+                typeId = 1;
+            else if (nt.numberKind == ResolvedNumberKind::UInt)
+                typeId = 2;
+            else if (nt.numberKind == ResolvedNumberKind::Float)
+                typeId = 3;
             break;
         }
-        case ResolvedTypeKind::Bool: typeId = 4; break;
+        case ResolvedTypeKind::Bool:
+            typeId = 4;
+            break;
         case ResolvedTypeKind::Struct:
-        case ResolvedTypeKind::StructDecl: typeId = 5; break;
-        case ResolvedTypeKind::Pointer: typeId = 6; break;
-        case ResolvedTypeKind::Slice: typeId = 7; break;
-        case ResolvedTypeKind::Range: typeId = 8; break;
-        case ResolvedTypeKind::Array: typeId = 9; break;
-        case ResolvedTypeKind::Function: typeId = 10; break;
+        case ResolvedTypeKind::StructDecl:
+            typeId = 5;
+            break;
+        case ResolvedTypeKind::Pointer:
+            typeId = 6;
+            break;
+        case ResolvedTypeKind::Slice:
+            typeId = 7;
+            break;
+        case ResolvedTypeKind::Range:
+            typeId = 8;
+            break;
+        case ResolvedTypeKind::Array:
+            typeId = 9;
+            break;
+        case ResolvedTypeKind::Function:
+            typeId = 10;
+            break;
         case ResolvedTypeKind::Error:
-        case ResolvedTypeKind::ErrorGroup: typeId = 11; break;
-        case ResolvedTypeKind::Optional: typeId = 12; break;
-        default: typeId = 99; break;
+        case ResolvedTypeKind::ErrorGroup:
+            typeId = 11;
+            break;
+        case ResolvedTypeKind::Optional:
+            typeId = 12;
+            break;
+        default:
+            typeId = 99;
+            break;
     }
     return m_builder.getInt32(typeId);
 }
@@ -776,5 +804,112 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
     store_value(size, sliceSize, *range.startExpr->type, sizeType);
 
     return tmpSlice;
+}
+
+llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr) {
+    auto targetType = typeinfoExpr.typeinfoExpr->type.get();
+    auto returnStructPtrType = dynamic_cast<const ResolvedTypePointer *>(typeinfoExpr.type.get());
+    if (!returnStructPtrType) dmz_unreachable("unreachable: " + typeinfoExpr.type->to_str());
+    auto returnStructType = returnStructPtrType->pointerType.get();
+    auto llvmStructType = static_cast<llvm::StructType *>(generate_type(*returnStructType));
+    llvm::Type *sizeTy = llvm::Type::getIntNTy(*m_context, m_module->getDataLayout().getPointerSizeInBits());
+
+    std::string globalName = "TypeInfo." + targetType->to_str();
+    if (auto existingGlobal = m_module->getGlobalVariable(globalName)) {
+        return existingGlobal;
+    }
+
+    if (targetType->kind == ResolvedTypeKind::Number) {
+        auto numType = static_cast<const ResolvedTypeNumber *>(targetType);
+        auto bits = m_builder.getInt32(numType->bitSize);
+        auto isSigned = m_builder.getInt1(numType->numberKind == ResolvedNumberKind::Int);
+
+        llvm::Constant *init = llvm::ConstantStruct::get(
+            llvmStructType, {static_cast<llvm::Constant *>(bits), static_cast<llvm::Constant *>(isSigned)});
+
+        auto global = new llvm::GlobalVariable(*m_module, llvmStructType, true, llvm::GlobalValue::PrivateLinkage, init,
+                                               globalName);
+        return global;
+    } else if (targetType->kind == ResolvedTypeKind::StructDecl || targetType->kind == ResolvedTypeKind::Struct) {
+        ResolvedStructDecl *structDecl = nullptr;
+        if (auto sd = dynamic_cast<const ResolvedTypeStructDecl *>(targetType))
+            structDecl = sd->decl;
+        else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType))
+            structDecl = sd->decl;
+
+        auto &typeInfoStructDecl = *static_cast<const ResolvedTypeStructDecl *>(returnStructType)->decl;
+
+        // Fields setup
+        auto sliceFieldsType = static_cast<const ResolvedTypeSlice *>(typeInfoStructDecl.fields[1]->type.get());
+        auto structFieldType = sliceFieldsType->sliceType.get();
+        auto llvmStructFieldType = static_cast<llvm::StructType *>(generate_type(*structFieldType));
+        auto llvmSliceFieldsType = static_cast<llvm::StructType *>(generate_type(*sliceFieldsType));
+
+        auto sliceU8Type = static_cast<const ResolvedTypeSlice *>(
+            static_cast<const ResolvedTypeStructDecl *>(structFieldType)->decl->fields[0]->type.get());
+        auto llvmSliceU8Type = static_cast<llvm::StructType *>(generate_type(*sliceU8Type));
+
+        auto structNameGlobal = m_builder.CreateGlobalString(structDecl->name(), "typeinfo.name.str");
+        auto structNameLen = llvm::ConstantInt::get(sizeTy, structDecl->name().size());
+        auto structNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {structNameGlobal, structNameLen});
+
+        std::vector<llvm::Constant *> fieldsArrayVals;
+        for (auto &field : structDecl->fields_strs) {
+            auto nameGlobal = m_builder.CreateGlobalString(field, "typeinfo.str");
+            auto nameLen = llvm::ConstantInt::get(sizeTy, field.size());
+            auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
+            auto fieldInit = llvm::ConstantStruct::get(llvmStructFieldType, {nameSlice});
+            fieldsArrayVals.push_back(fieldInit);
+        }
+
+        llvm::Constant *fieldsSlice = llvm::Constant::getNullValue(llvmSliceFieldsType);
+        if (!fieldsArrayVals.empty()) {
+            llvm::ArrayType *fieldsArrayTy = llvm::ArrayType::get(llvmStructFieldType, fieldsArrayVals.size());
+            llvm::Constant *fieldsArrayInit = llvm::ConstantArray::get(fieldsArrayTy, fieldsArrayVals);
+            llvm::GlobalVariable *fieldsArrayGV =
+                new llvm::GlobalVariable(*m_module, fieldsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
+                                         fieldsArrayInit, globalName + ".fields");
+            llvm::Constant *fieldsLen = llvm::ConstantInt::get(sizeTy, fieldsArrayVals.size());
+            fieldsSlice = llvm::ConstantStruct::get(llvmSliceFieldsType, {fieldsArrayGV, fieldsLen});
+        }
+
+        // Methods setup
+        auto sliceMethodsType = static_cast<const ResolvedTypeSlice *>(typeInfoStructDecl.fields[2]->type.get());
+        auto structMethodType = sliceMethodsType->sliceType.get();
+        auto llvmStructMethodType = static_cast<llvm::StructType *>(generate_type(*structMethodType));
+        auto llvmSliceMethodsType = static_cast<llvm::StructType *>(generate_type(*sliceMethodsType));
+
+        std::vector<llvm::Constant *> methodsArrayVals;
+        for (auto &method : structDecl->functions_strs) {
+            auto nameGlobal = m_builder.CreateGlobalString(method, "typeinfo.str");
+            auto nameLen = llvm::ConstantInt::get(sizeTy, method.size());
+            auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
+            auto methodInit = llvm::ConstantStruct::get(llvmStructMethodType, {nameSlice});
+            methodsArrayVals.push_back(methodInit);
+        }
+
+        llvm::Constant *methodsSlice = llvm::Constant::getNullValue(llvmSliceMethodsType);
+        if (!methodsArrayVals.empty()) {
+            llvm::ArrayType *methodsArrayTy = llvm::ArrayType::get(llvmStructMethodType, methodsArrayVals.size());
+            llvm::Constant *methodsArrayInit = llvm::ConstantArray::get(methodsArrayTy, methodsArrayVals);
+            llvm::GlobalVariable *methodsArrayGV =
+                new llvm::GlobalVariable(*m_module, methodsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
+                                         methodsArrayInit, globalName + ".methods");
+            llvm::Constant *methodsLen = llvm::ConstantInt::get(sizeTy, methodsArrayVals.size());
+            methodsSlice = llvm::ConstantStruct::get(llvmSliceMethodsType, {methodsArrayGV, methodsLen});
+        }
+
+        llvm::Constant *init = llvm::ConstantStruct::get(llvmStructType, {structNameSlice, fieldsSlice, methodsSlice});
+        auto global = new llvm::GlobalVariable(*m_module, llvmStructType, true, llvm::GlobalValue::PrivateLinkage, init,
+                                               globalName);
+        return global;
+    } else {
+        llvm::Constant *init = llvm::ConstantStruct::get(llvmStructType, {});
+
+        auto global = new llvm::GlobalVariable(*m_module, llvmStructType, true, llvm::GlobalValue::PrivateLinkage, init,
+                                               globalName);
+        return global;
+    }
+    return nullptr;
 }
 }  // namespace DMZ

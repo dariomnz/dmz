@@ -269,6 +269,8 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_type(*sizeofExpr->type);
     } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
         find_in_expr(*typeidExpr->typeidExpr);
+    } else if (auto* typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr*>(&expr)) {
+        find_in_expr(*typeinfoExpr->typeinfoExpr);
     } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
         find_in_expr(*rangeExpr->startExpr);
         find_in_expr(*rangeExpr->endExpr);

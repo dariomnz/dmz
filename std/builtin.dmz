@@ -42,3 +42,25 @@ fn @strAsSlice(str: *u8) -> []u8 {
     ret.len = std.mem.strlen(str);
     return ret;
 }
+
+pub struct StructField {
+    name: []u8,
+}
+
+pub struct StructMethod {
+    name: []u8,
+}
+
+pub struct TypeInfoStruct {
+    name: []u8,
+    fields: []StructField,
+    methods: []StructMethod,
+}
+
+pub struct TypeInfoNumber {
+    bits: u32,
+    is_signed: bool,
+}
+
+pub struct TypeInfo {
+}

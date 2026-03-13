@@ -128,6 +128,8 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
     std::vector<ptr<ResolvedType>> specializedTypes;
     for (auto &&gtDecl : funcDecl.genericTypeDecls) {
         if (inferredTypes.count(gtDecl.get())) {
+            debug_msg(location << " func " << funcDecl.name() << " inferred type for '" << gtDecl->identifier
+                               << "' is '" << inferredTypes[gtDecl.get()]->to_str() << "'");
             specializedTypes.emplace_back(inferredTypes[gtDecl.get()]->clone());
         } else {
             return report(location, "could not infer generic type for '" + gtDecl->identifier + "'");
@@ -262,7 +264,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         if (genFunc) {
             varOrReturn(specializedTypes, infer_generic_types(call.location, *genFunc, resolvedArguments));
             auto specializedFunc = specialize_generic_function(call.location, *genFunc, *specializedTypes);
-            if (!specializedFunc){
+            if (!specializedFunc) {
                 return report(call.location, "failed to specialize generic function");
             }
 
@@ -418,6 +420,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *typeidExpr = dynamic_cast<const TypeidExpr *>(&expr)) {
         return resolve_typeid_expr(*typeidExpr);
+    }
+    if (const auto *typeinfoExpr = dynamic_cast<const TypeinfoExpr *>(&expr)) {
+        return resolve_typeinfo_expr(*typeinfoExpr);
     }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
@@ -925,6 +930,44 @@ ptr<ResolvedTypeidExpr> Sema::resolve_typeid_expr(const TypeidExpr &typeidExpr) 
     auto resolved = makePtr<ResolvedTypeidExpr>(typeidExpr.location, std::move(expr));
     resolved->set_constant_value(cee.evaluate(*resolved, false));
     return resolved;
+}
+
+ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr) {
+    debug_func(typeinfoExpr.location);
+    varOrReturn(expr, resolve_expr(*typeinfoExpr.typeinfoExpr));
+
+    std::string targetStructName;
+    if (expr->type->kind == ResolvedTypeKind::StructDecl || expr->type->kind == ResolvedTypeKind::Struct ||
+        expr->type->kind == ResolvedTypeKind::Generic) {
+        targetStructName = "TypeInfoStruct";
+    } else if (expr->type->kind == ResolvedTypeKind::Number) {
+        targetStructName = "TypeInfoNumber";
+    } else if (expr->type->kind == ResolvedTypeKind::Bool || expr->type->kind == ResolvedTypeKind::Void) {
+        targetStructName = "TypeInfo";
+    } else {
+        return report(typeinfoExpr.location, "unsupported type for @typeinfo: " + expr->type->to_str());
+    }
+
+    ResolvedTypeStructDecl *typeInfoDecl = nullptr;
+    for (auto &[path, mod] : m_modules_for_import) {
+        if (mod->name() == "std.builtin") {
+            for (auto &decl : mod->declarations) {
+                if (decl->identifier == targetStructName) {
+                    if (auto structDeclRef = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
+                        typeInfoDecl = structDeclRef;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!typeInfoDecl) {
+        return report(typeinfoExpr.location, "could not find " + targetStructName + " in builtin.dmz");
+    }
+    add_dependency(typeInfoDecl->decl);
+    auto returnType = makePtr<ResolvedTypePointer>(typeinfoExpr.location, typeInfoDecl->clone());
+    return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
 }
 
 ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {

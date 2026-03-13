@@ -1,5 +1,18 @@
 const std = import("std");
 
+pub fn fmt_type<T>(w: std.io.Writer, arg: T) -> !usize {
+    const t = @typeid(arg);
+    inline switch (t) {
+        case std.types.int_t => return fmt_integer(w, arg);
+        case std.types.uint_t => return fmt_integer(w, arg);
+        case std.types.float_t => return fmt_float(w, arg, 3);
+        case std.types.bool_t => return fmt_bool(w, arg);
+        case std.types.struct_t => return fmt_struct(w, arg);
+        else => return w.writeStr("unsupported type");
+    }
+    return 0;
+}
+
 pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
     if (n == 0) {
         return w.writeChar('0');
@@ -81,6 +94,24 @@ pub fn fmt_bool(w: std.io.Writer, b: bool) -> !usize {
     }
 }
 
+pub fn fmt_struct<T>(w: std.io.Writer, s: T) -> !usize {
+    const typeinfo = @typeinfo(s);
+    let ret: usize = 0;
+    ret += try w.writeAll(typeinfo.name);
+    ret += try w.writeChar('{');
+    let current_field = 0;
+    inline for (s) |field| {
+        if (current_field++ > 0) {
+            ret += try w.writeStr(", ");
+        }
+        ret += try w.writeAll(typeinfo.fields[current_field]);
+        ret += try w.writeStr(": ");
+        ret += try fmt_type(w, field);
+    }
+    ret += try w.writeChar('}');
+    return ret;
+}
+
 pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     let fmt_idx = 0;
     let arg_tracker = 0;
@@ -91,14 +122,7 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
             let current_arg = 0;
             inline for (args) |arg| {
                 if (current_arg++ == arg_tracker) {
-                    const t = @typeof(arg);
-                    inline switch (t) {
-                        case std.types.int_t => ret += try fmt_integer(w, arg);
-                        case std.types.uint_t => ret += try fmt_integer(w, arg);
-                        case std.types.float_t => ret += try fmt_float(w, arg, 3);
-                        case std.types.bool_t => ret += try fmt_bool(w, arg);
-                        else => ret += try w.writeStr("unsupported type");
-                    }
+                    ret += try fmt_type(w, arg);
                 }
             }
             arg_tracker++;
@@ -110,6 +134,11 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     }
 
     return ret;
+}
+
+struct Test_struct {
+    a: i32,
+    b: i32,
 }
 
 test "print integers" {
@@ -131,12 +160,12 @@ test "print integers" {
     big *= 1000000000;
     big += 123456789;
 
-    const tuple = .{big, 1.23, true, w2};
-    const t = @typeof(tuple);
-    const t0 = @typeof(tuple.elem0);
-    const t1 = @typeof(tuple.elem1);
-    const t2 = @typeof(tuple.elem2);
-    const t3 = @typeof(tuple.elem3);
-    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}'\n", tuple);
+    const tuple = .{big, 1.23, true, w2, Test_struct{a: 1, b: 2}};
+    const t = @typeid(tuple);
+    const t0 = @typeid(tuple.elem0);
+    const t1 = @typeid(tuple.elem1);
+    const t2 = @typeid(tuple.elem2);
+    const t3 = @typeid(tuple.elem3);
+    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}'\n", tuple);
     w2.flush();
 }

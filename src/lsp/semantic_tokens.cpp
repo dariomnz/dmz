@@ -291,6 +291,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
             debug_msg("ResolvedTypeidExpr");
             traverse_expr(*typeidExpr->typeidExpr);
+        } else if (auto* typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr*>(&expr)) {
+            debug_msg("ResolvedTypeinfoExpr");
+            traverse_expr(*typeinfoExpr->typeinfoExpr);
         } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
             debug_msg("ResolvedRangeExpr");
             traverse_expr(*rangeExpr->startExpr);

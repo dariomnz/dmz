@@ -55,6 +55,7 @@ class Formatter {
     ptr<Node> fmt_array_instantiation_expr(const ArrayInstantiationExpr& expr);
     ptr<Node> fmt_sizeof_expr(const SizeofExpr& expr);
     ptr<Node> fmt_typeid_expr(const TypeidExpr& expr);
+    ptr<Node> fmt_typeinfo_expr(const TypeinfoExpr& expr);
     ptr<Node> fmt_array_at_expr(const ArrayAtExpr& expr);
     ptr<Node> fmt_ref_ptr_expr(const RefPtrExpr& expr);
     ptr<Node> fmt_range_expr(const RangeExpr& expr);

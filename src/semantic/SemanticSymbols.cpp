@@ -109,6 +109,13 @@ void ResolvedTypeidExpr::dump(size_t level, bool onlySelf) const {
     typeidExpr->dump(level + 1, onlySelf);
 }
 
+void ResolvedTypeinfoExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeinfoExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+    typeinfoExpr->dump(level + 1, onlySelf);
+}
+
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
@@ -300,8 +307,8 @@ void ResolvedCaseStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCaseStmt\n";
 
     if (onlySelf) return;
-    condition->dump(level + 1, onlySelf);
-    block->dump(level + 1, onlySelf);
+    if (condition) condition->dump(level + 1, onlySelf);
+    if (block) block->dump(level + 1, onlySelf);
 }
 
 void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {

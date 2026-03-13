@@ -385,8 +385,8 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
         return report(condition->location, "inline switch condition must be a constant value");
     }
 
-    std::vector<ptr<ResolvedCaseStmt>> cases;
     bool caseMatched = false;
+    std::vector<ptr<ResolvedCaseStmt>> cases;
     for (auto &&cas : switchStmt.cases) {
         varOrReturn(tempCond, resolve_expr(*cas->condition));
         tempCond->set_constant_value(cee.evaluate(*tempCond, false));
@@ -394,8 +394,10 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
             return report(tempCond->location, "condition in case must be a constant value");
         }
 
+        bool currentCaseMatched = false;
         if (switchStmt.isInline) {
             if (tempCond->get_constant_value() == condition->get_constant_value()) {
+                currentCaseMatched = true;
                 caseMatched = true;
             } else {
                 auto emptyBlock = makePtr<ResolvedBlock>(cas->location, std::vector<ptr<ResolvedStmt>>{},
@@ -405,7 +407,7 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
             }
         }
 
-        if (!switchStmt.isInline || caseMatched) {
+        if (!switchStmt.isInline || currentCaseMatched) {
             varOrReturn(block, resolve_block(*cas->block));
             cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(tempCond), std::move(block)));
         }

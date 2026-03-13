@@ -159,6 +159,7 @@ class Sema {
     void add_dependency(ResolvedDecl *decl);
     ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
     ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
+    ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
 };
 }  // namespace DMZ
