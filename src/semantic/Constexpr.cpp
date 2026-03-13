@@ -39,8 +39,8 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
     if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
         return evaluate_decl(memberExpr->member, allowSideEffects);
     }
-    if (const auto *typeofExpr = dynamic_cast<const ResolvedTypeofExpr *>(&expr)) {
-        return evaluate(*typeofExpr, allowSideEffects);
+    if (const auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
+        return evaluate(*typeidExpr, allowSideEffects);
     }
     if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
         return evaluate(*typeExpr, allowSideEffects);
@@ -48,9 +48,9 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
     return std::nullopt;
 }
 
-std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeofExpr &expr,
+std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeidExpr &expr,
                                                          [[maybe_unused]] bool allowSideEffects) {
-    return evaluate_type(*expr.typeofExpr->type);
+    return evaluate_type(*expr.typeidExpr->type);
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeExpr &expr,

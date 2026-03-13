@@ -343,9 +343,9 @@ struct SizeofExpr : public Expr {
     std::string to_str() const override;
 };
 
-struct TypeofExpr : public Expr {
-    ptr<Expr> typeofExpr;
-    TypeofExpr(SourceLocation location, ptr<Expr> typeofExpr) : Expr(location), typeofExpr(std::move(typeofExpr)) {}
+struct TypeidExpr : public Expr {
+    ptr<Expr> typeidExpr;
+    TypeidExpr(SourceLocation location, ptr<Expr> typeidExpr) : Expr(location), typeidExpr(std::move(typeidExpr)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

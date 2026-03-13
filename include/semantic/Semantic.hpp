@@ -158,7 +158,7 @@ class Sema {
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
     void add_dependency(ResolvedDecl *decl);
     ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
-    ptr<ResolvedTypeofExpr> resolve_typeof_expr(const TypeofExpr &typeofExpr);
+    ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
 };
 }  // namespace DMZ

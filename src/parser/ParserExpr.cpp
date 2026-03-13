@@ -140,8 +140,8 @@ ptr<Expr> Parser::parse_primary() {
         if (m_nextToken.type == TokenType::kw_sizeof) {
             return parse_sizeof_expr();
         }
-        if (m_nextToken.type == TokenType::kw_typeof) {
-            return parse_typeof_expr();
+        if (m_nextToken.type == TokenType::kw_typeid) {
+            return parse_typeid_expr();
         }
     }
     if (restrictions & OnlyTypeExpr) {
@@ -405,11 +405,11 @@ ptr<SizeofExpr> Parser::parse_sizeof_expr() {
     return makePtr<SizeofExpr>(location, std::move(type));
 }
 
-ptr<TypeofExpr> Parser::parse_typeof_expr() {
+ptr<TypeidExpr> Parser::parse_typeid_expr() {
     debug_func("");
-    matchOrReturn(TokenType::kw_typeof, "expected @typeof");
+    matchOrReturn(TokenType::kw_typeid, "expected @typeid");
     auto location = m_nextToken.loc;
-    eat_next_token();  // eat @typeof
+    eat_next_token();  // eat @typeid
 
     matchOrReturn(TokenType::par_l, "expected '('");
     eat_next_token();  // eat (
@@ -419,6 +419,6 @@ ptr<TypeofExpr> Parser::parse_typeof_expr() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )
 
-    return makePtr<TypeofExpr>(location, std::move(expr));
+    return makePtr<TypeidExpr>(location, std::move(expr));
 }
 }  // namespace DMZ

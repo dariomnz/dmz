@@ -100,8 +100,8 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
-    if (auto *typeofExpr = dynamic_cast<const ResolvedTypeofExpr *>(&expr)) {
-        return generate_typeof_expr(*typeofExpr);
+    if (auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
+        return generate_typeid_expr(*typeidExpr);
     }
     expr.dump();
     dmz_unreachable("unexpected expression");
@@ -710,8 +710,8 @@ llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr)
     return size;
 }
 
-llvm::Value *Codegen::generate_typeof_expr(const ResolvedTypeofExpr &typeofExpr) {
-    auto &type = *typeofExpr.typeofExpr->type;
+llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr) {
+    auto &type = *typeidExpr.typeidExpr->type;
     int typeId = 0;
     switch (type.kind) {
         case ResolvedTypeKind::Void: typeId = 0; break;

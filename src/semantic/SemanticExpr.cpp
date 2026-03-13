@@ -416,8 +416,8 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *sizeofExpr = dynamic_cast<const SizeofExpr *>(&expr)) {
         return resolve_sizeof_expr(*sizeofExpr);
     }
-    if (const auto *typeofExpr = dynamic_cast<const TypeofExpr *>(&expr)) {
-        return resolve_typeof_expr(*typeofExpr);
+    if (const auto *typeidExpr = dynamic_cast<const TypeidExpr *>(&expr)) {
+        return resolve_typeid_expr(*typeidExpr);
     }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
@@ -919,10 +919,10 @@ ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) 
     return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type));
 }
 
-ptr<ResolvedTypeofExpr> Sema::resolve_typeof_expr(const TypeofExpr &typeofExpr) {
-    debug_func(typeofExpr.location);
-    varOrReturn(expr, resolve_expr(*typeofExpr.typeofExpr));
-    auto resolved = makePtr<ResolvedTypeofExpr>(typeofExpr.location, std::move(expr));
+ptr<ResolvedTypeidExpr> Sema::resolve_typeid_expr(const TypeidExpr &typeidExpr) {
+    debug_func(typeidExpr.location);
+    varOrReturn(expr, resolve_expr(*typeidExpr.typeidExpr));
+    auto resolved = makePtr<ResolvedTypeidExpr>(typeidExpr.location, std::move(expr));
     resolved->set_constant_value(cee.evaluate(*resolved, false));
     return resolved;
 }

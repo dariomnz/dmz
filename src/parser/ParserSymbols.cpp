@@ -151,12 +151,12 @@ void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeo
 
 std::string SizeofExpr::to_str() const { dmz_unreachable("TODO"); }
 
-void TypeofExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "Typeof\n";
-    typeofExpr->dump(level + 1);
+void TypeidExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "Typeid\n";
+    typeidExpr->dump(level + 1);
 }
 
-std::string TypeofExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string TypeidExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 

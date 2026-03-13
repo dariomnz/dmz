@@ -473,12 +473,12 @@ struct ResolvedSizeofExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedTypeofExpr : public ResolvedExpr {
-    ptr<ResolvedExpr> typeofExpr;
+struct ResolvedTypeidExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> typeidExpr;
 
-    ResolvedTypeofExpr(SourceLocation location, ptr<ResolvedExpr> typeofExpr)
+    ResolvedTypeidExpr(SourceLocation location, ptr<ResolvedExpr> typeidExpr)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 32)),
-          typeofExpr(std::move(typeofExpr)) {}
+          typeidExpr(std::move(typeidExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

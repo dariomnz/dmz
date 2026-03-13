@@ -288,9 +288,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
             debug_msg("ResolvedSizeofExpr");
             traverse_type(*sizeofExpr->sizeofType);
-        } else if (auto* typeofExpr = dynamic_cast<const ResolvedTypeofExpr*>(&expr)) {
-            debug_msg("ResolvedTypeofExpr");
-            traverse_expr(*typeofExpr->typeofExpr);
+        } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
+            debug_msg("ResolvedTypeidExpr");
+            traverse_expr(*typeidExpr->typeidExpr);
         } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
             debug_msg("ResolvedRangeExpr");
             traverse_expr(*rangeExpr->startExpr);

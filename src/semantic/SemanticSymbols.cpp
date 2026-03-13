@@ -102,11 +102,11 @@ void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
     dump_constant_value(level);
 }
 
-void ResolvedTypeofExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedTypeofExpr:" << type->to_str() << "\n";
+void ResolvedTypeidExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeidExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
     dump_constant_value(level);
-    typeofExpr->dump(level + 1, onlySelf);
+    typeidExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
