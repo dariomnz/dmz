@@ -220,6 +220,10 @@ llvm::Value *Codegen::generate_ref_ptr_expr(const ResolvedRefPtrExpr &expr) {
 llvm::Value *Codegen::generate_deref_ptr_expr(const ResolvedDerefPtrExpr &expr, bool keepPointer) {
     debug_func("");
     auto v = generate_expr(*expr.expr);
+
+    keepPointer |= expr.type->generate_struct();
+    keepPointer |= expr.type->kind == ResolvedTypeKind::Array;
+
     return keepPointer ? v : load_value(v, *expr.type);
 }
 
@@ -455,6 +459,10 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
         }
         llvm::Type *type = generate_type(*typeToGenerate);
         llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
+
+        keepPointer |= member->type->generate_struct();
+        keepPointer |= member->type->kind == ResolvedTypeKind::Array;
+
         return keepPointer ? field : load_value(field, *member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
         return m_declarations[errDecl];
