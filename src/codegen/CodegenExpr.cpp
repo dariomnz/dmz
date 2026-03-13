@@ -100,6 +100,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
+    if (auto *typeofExpr = dynamic_cast<const ResolvedTypeofExpr *>(&expr)) {
+        return generate_typeof_expr(*typeofExpr);
+    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -697,6 +700,34 @@ llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr)
     auto type = generate_type(*sizeofExpr.sizeofType);
     auto size = llvm::ConstantExpr::getSizeOf(type);
     return size;
+}
+
+llvm::Value *Codegen::generate_typeof_expr(const ResolvedTypeofExpr &typeofExpr) {
+    auto &type = *typeofExpr.typeofExpr->type;
+    int typeId = 0;
+    switch (type.kind) {
+        case ResolvedTypeKind::Void: typeId = 0; break;
+        case ResolvedTypeKind::Number: {
+            auto &nt = static_cast<const ResolvedTypeNumber &>(type);
+            if (nt.numberKind == ResolvedNumberKind::Int) typeId = 1;
+            else if (nt.numberKind == ResolvedNumberKind::UInt) typeId = 2;
+            else if (nt.numberKind == ResolvedNumberKind::Float) typeId = 3;
+            break;
+        }
+        case ResolvedTypeKind::Bool: typeId = 4; break;
+        case ResolvedTypeKind::Struct:
+        case ResolvedTypeKind::StructDecl: typeId = 5; break;
+        case ResolvedTypeKind::Pointer: typeId = 6; break;
+        case ResolvedTypeKind::Slice: typeId = 7; break;
+        case ResolvedTypeKind::Range: typeId = 8; break;
+        case ResolvedTypeKind::Array: typeId = 9; break;
+        case ResolvedTypeKind::Function: typeId = 10; break;
+        case ResolvedTypeKind::Error:
+        case ResolvedTypeKind::ErrorGroup: typeId = 11; break;
+        case ResolvedTypeKind::Optional: typeId = 12; break;
+        default: typeId = 99; break;
+    }
+    return m_builder.getInt32(typeId);
 }
 
 llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const ResolvedExpr &from,

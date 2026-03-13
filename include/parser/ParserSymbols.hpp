@@ -333,6 +333,14 @@ struct SizeofExpr : public Expr {
     std::string to_str() const override;
 };
 
+struct TypeofExpr : public Expr {
+    ptr<Expr> typeofExpr;
+    TypeofExpr(SourceLocation location, ptr<Expr> typeofExpr) : Expr(location), typeofExpr(std::move(typeofExpr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct CallExpr : public Expr {
     ptr<Expr> callee;
     std::vector<ptr<Expr>> arguments;

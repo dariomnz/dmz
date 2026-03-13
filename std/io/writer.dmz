@@ -28,11 +28,12 @@ pub struct Writer {
         return 0;
     }
 
-    pub fn writeAll(w: *@This, bytes: []u8) -> !void {
+    pub fn writeAll(w: *@This, bytes: []u8) -> !usize {
         let index: usize = 0;
         while (index < bytes.len) {
             index += try w.write(bytes[index..bytes.len]);
         }
+        return bytes.len;
     }
 
     pub fn write(w: *@This, bytes: []u8) -> !usize {

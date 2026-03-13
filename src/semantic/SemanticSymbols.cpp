@@ -102,11 +102,18 @@ void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
     dump_constant_value(level);
 }
 
+void ResolvedTypeofExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeofExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+    typeofExpr->dump(level + 1, onlySelf);
+}
+
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
-    resolvedType->dump(level + 1);
     dump_constant_value(level);
+    resolvedType->dump(level + 1);
 }
 
 void ResolvedDeclRefExpr::dump(size_t level, bool onlySelf) const {
@@ -376,8 +383,9 @@ void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type->to_str() << " " << member.identifier << '\n';
-
     if (onlySelf) return;
+    dump_constant_value(level);
+
     base->dump(level + 1, onlySelf);
 }
 
@@ -385,6 +393,7 @@ void ResolvedArrayAtExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedArrayAtExpr:" << type->to_str() << '\n';
 
     if (onlySelf) return;
+    dump_constant_value(level);
     array->dump(level + 1, onlySelf);
     index->dump(level + 1, onlySelf);
 }

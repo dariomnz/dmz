@@ -48,6 +48,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_array_instantiation_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const SizeofExpr*>(&expr)) {
         node = fmt_sizeof_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const TypeofExpr*>(&expr)) {
+        node = fmt_typeof_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ArrayAtExpr*>(&expr)) {
         node = fmt_array_at_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const RefPtrExpr*>(&expr)) {
@@ -215,6 +217,15 @@ ptr<Node> Formatter::fmt_sizeof_expr(const SizeofExpr& expr) {
     ret->nodes.emplace_back(makePtr<Text>("@sizeof"));
     ret->nodes.emplace_back(makePtr<Text>("("));
     ret->nodes.emplace_back(fmt_expr(*expr.sizeofType));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_typeof_expr(const TypeofExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@typeof"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.typeofExpr));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     return ret;
 }

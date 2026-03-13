@@ -1,31 +1,75 @@
 const std = import("std");
 
 pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
-    let buffer: u8[1024] = {};
-    let i: i32 = 0;
-    let nb = n;
-    let ret: usize = 0;
-
-    if (nb == 0) {
+    if (n == 0) {
         return w.writeChar('0');
     }
 
-    if (nb < 0) {
+    let ret: usize = 0;
+    let num = n;
+    if (num < 0) {
         try w.writeChar('-');
         ret++;
-        nb = -nb;
+        num = -num;
     }
 
-    while (nb > 0) {
-        buffer[i++] = (nb % 10) + '0';
-        nb = nb / 10;
+    let divisor: T = 1;
+
+    while (num / divisor >= 10) {
+        divisor *= 10;
     }
 
-    while (i > 0) {
-        i--;
-        try w.writeChar(buffer[i]);
-        ret++;
+    while (divisor > 0) {
+        let digito: u8 = (num / divisor) + '0';
+        ret += try w.writeChar(digito);
+
+        num = num % divisor;
+        divisor /= 10;
     }
+    return ret;
+}
+
+pub fn fmt_float<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
+    let ret: usize = 0;
+    let val = f;
+
+    if (val < 0.0) {
+        ret += try w.writeChar('-');
+        val = -val;
+    }
+
+    let parte_entera: usize = val;
+    let divisor: usize = 1;
+
+    if (parte_entera == 0) {
+        ret += try w.writeChar('0');
+    } else {
+        while (parte_entera / divisor >= 10) {
+            divisor *= 10;
+        }
+        while (divisor > 0) {
+            let digito: u8 = ((parte_entera / divisor) % 10) + '0';
+            ret += try w.writeChar(digito);
+            divisor /= 10;
+        }
+    }
+
+    if (precision > 0) {
+        ret += try w.writeChar('.');
+
+        let fraccion = val - parte_entera;
+
+        let i: usize = 0;
+        while (i < precision) {
+            fraccion *= 10.0;
+            let digito_int: u8 = fraccion;
+            ret += try w.writeChar(digito_int + '0');
+
+            fraccion -= digito_int;
+            i += 1;
+        }
+    }
+
     return ret;
 }
 
@@ -34,18 +78,26 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     let arg_tracker = 0;
     let ret: usize = 0;
 
+    let str = "unsupported type";
+    let str_slice = str[0..std.mem.strlen(str)];
     while (format[fmt_idx] != 0) {
         if (format[fmt_idx] == '{' && format[fmt_idx + 1] == '}') {
             let current_arg = 0;
             inline for (args) |arg| {
                 if (current_arg++ == arg_tracker) {
-                    ret += try fmt_integer(w, arg);
+                    let t = @typeof(arg);
+                    switch (t) {
+                        case std.types.int_t => ret += try fmt_integer(w, arg);
+                        case std.types.uint_t => ret += try fmt_integer(w, arg);
+                        case std.types.float_t => ret += try fmt_float(w, arg, 3);
+                        else => ret += try w.writeAll(str_slice);
+                    }
                 }
             }
             arg_tracker++;
             fmt_idx += 2;
         } else {
-            ret +=try w.writeChar(format[fmt_idx]);
+            ret += try w.writeChar(format[fmt_idx]);
             fmt_idx = fmt_idx + 1;
         }
     }
@@ -61,4 +113,16 @@ test "print integers" {
     let ret = try fmt(w, "Value a {} value b {}\n", .{a + 1, b});
     let expected = "Value a 7 value b 10\n";
     try std.testing.expect(std.mem.memcmp(&buf[0], expected, std.mem.strlen(expected)) == 0);
+
+    let buf2: u8[1024] = {};
+    let w2 = std.io.stdout.writer(buf2[0..1024]);
+    let big: i512 = 123456789;
+    big *= 1000000000;
+    big *= 1000000000;
+    big += 123456789;
+    big *= 1000000000;
+    big *= 1000000000;
+    big += 123456789;
+    let ret2 = try fmt(w2, "Big value {} {}\n", .{big, 1.23});
+    w2.flush();
 }

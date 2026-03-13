@@ -1,0 +1,13 @@
+pub const void_t = 0;
+pub const int_t = 1;
+pub const uint_t = 2;
+pub const float_t = 3;
+pub const bool_t = 4;
+pub const struct_t = 5;
+pub const pointer_t = 6;
+pub const slice_t = 7;
+pub const range_t = 8;
+pub const array_t = 9;
+pub const function_t = 10;
+pub const error_t = 11;
+pub const optional_t = 12;

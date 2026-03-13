@@ -140,6 +140,9 @@ ptr<Expr> Parser::parse_primary() {
         if (m_nextToken.type == TokenType::kw_sizeof) {
             return parse_sizeof_expr();
         }
+        if (m_nextToken.type == TokenType::kw_typeof) {
+            return parse_typeof_expr();
+        }
     }
     if (restrictions & OnlyTypeExpr) {
         return report(location, "expected type expression");
@@ -400,5 +403,22 @@ ptr<SizeofExpr> Parser::parse_sizeof_expr() {
     eat_next_token();  // eat )
 
     return makePtr<SizeofExpr>(location, std::move(type));
+}
+
+ptr<TypeofExpr> Parser::parse_typeof_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_typeof, "expected @typeof");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @typeof
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    varOrReturn(expr, parse_expr());
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return makePtr<TypeofExpr>(location, std::move(expr));
 }
 }  // namespace DMZ

@@ -36,7 +36,58 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
     if (const auto *declRefExpr = dynamic_cast<const ResolvedDeclRefExpr *>(&expr)) {
         return evaluate_decl_ref_expr(*declRefExpr, allowSideEffects);
     }
+    if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
+        if (auto varDecl = dynamic_cast<const ResolvedVarDecl *>(&memberExpr->member)) {
+            if (varDecl->isMutable || !varDecl->initializer) return std::nullopt;
+            return evaluate(*varDecl->initializer, allowSideEffects);
+        } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&memberExpr->member)) {
+            if (!declStmt->varDecl || declStmt->isMutable || !declStmt->varDecl->initializer) return std::nullopt;
+            return evaluate(*declStmt->varDecl->initializer, allowSideEffects);
+        }
+    }
+    if (const auto *typeofExpr = dynamic_cast<const ResolvedTypeofExpr *>(&expr)) {
+        return evaluate(*typeofExpr, allowSideEffects);
+    }
     return std::nullopt;
+}
+
+std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeofExpr &expr,
+                                                         [[maybe_unused]] bool allowSideEffects) {
+    auto &type = *expr.typeofExpr->type;
+    switch (type.kind) {
+        case ResolvedTypeKind::Void:
+            return 0;
+        case ResolvedTypeKind::Number: {
+            auto &nt = static_cast<const ResolvedTypeNumber &>(type);
+            if (nt.numberKind == ResolvedNumberKind::Int) return 1;
+            if (nt.numberKind == ResolvedNumberKind::UInt) return 2;
+            if (nt.numberKind == ResolvedNumberKind::Float) return 3;
+            break;
+        }
+        case ResolvedTypeKind::Bool:
+            return 4;
+        case ResolvedTypeKind::Struct:
+        case ResolvedTypeKind::StructDecl:
+            return 5;
+        case ResolvedTypeKind::Pointer:
+            return 6;
+        case ResolvedTypeKind::Slice:
+            return 7;
+        case ResolvedTypeKind::Range:
+            return 8;
+        case ResolvedTypeKind::Array:
+            return 9;
+        case ResolvedTypeKind::Function:
+            return 10;
+        case ResolvedTypeKind::Error:
+        case ResolvedTypeKind::ErrorGroup:
+            return 11;
+        case ResolvedTypeKind::Optional:
+            return 12;
+        default:
+            break;
+    }
+    return 99;
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_unary_operator(const ResolvedUnaryOperator &unop,

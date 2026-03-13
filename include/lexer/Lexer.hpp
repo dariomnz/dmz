@@ -88,6 +88,7 @@ enum class TokenType {
     kw_inline,
     // kw_static,
     kw_sizeof,
+    kw_typeof,
     kw_packed,
     kw_pub,
     unknown,
@@ -148,6 +149,7 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"inline", TokenType::kw_inline},
     // {"static", TokenType::kw_static},
     {"@sizeof", TokenType::kw_sizeof},
+    {"@typeof", TokenType::kw_typeof},
     {"packed", TokenType::kw_packed},
     {"pub", TokenType::kw_pub},
     // Types

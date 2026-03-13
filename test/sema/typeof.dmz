@@ -1,0 +1,8 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+fn main() -> void {
+    let a = 10;
+    let t = @typeof(a);
+}
+// CHECK:       ResolvedTypeofExpr:i32
+// CHECK-NEXT:  | value: 1
+// CHECK-NEXT:    ResolvedDeclRefExpr:i32 a

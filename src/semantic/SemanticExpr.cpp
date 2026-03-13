@@ -416,6 +416,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *sizeofExpr = dynamic_cast<const SizeofExpr *>(&expr)) {
         return resolve_sizeof_expr(*sizeofExpr);
     }
+    if (const auto *typeofExpr = dynamic_cast<const TypeofExpr *>(&expr)) {
+        return resolve_typeof_expr(*typeofExpr);
+    }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
     }
@@ -555,7 +558,6 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
-            dmz_unreachable("asdfasf");
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
@@ -614,7 +616,9 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     if (baseIsPointer) {
         resolvedBase = makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
     }
-    return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
+    auto res = makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
+    res->set_constant_value(cee.evaluate(*res, false));
+    return res;
 }
 
 ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
@@ -913,6 +917,14 @@ ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) 
         return report(sizeofExpr.sizeofType->location, "cannot resolve type '" + sizeofExpr.sizeofType->to_str() + "'");
 
     return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type));
+}
+
+ptr<ResolvedTypeofExpr> Sema::resolve_typeof_expr(const TypeofExpr &typeofExpr) {
+    debug_func(typeofExpr.location);
+    varOrReturn(expr, resolve_expr(*typeofExpr.typeofExpr));
+    auto resolved = makePtr<ResolvedTypeofExpr>(typeofExpr.location, std::move(expr));
+    resolved->set_constant_value(cee.evaluate(*resolved, false));
+    return resolved;
 }
 
 ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {

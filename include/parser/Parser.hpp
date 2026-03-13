@@ -154,5 +154,6 @@ class Parser {
     ptr<EmptyLine> parse_empty_line();
     ptr<TestDecl> parse_test_decl();
     ptr<SizeofExpr> parse_sizeof_expr();
+    ptr<TypeofExpr> parse_typeof_expr();
 };
 }  // namespace DMZ
