@@ -39,13 +39,17 @@ ptr<Stmt> Parser::parse_statement() {
     m_expectIncompleteStatement = false;
     if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
-    if (m_nextToken.type == TokenType::kw_for || (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for)) return parse_for_stmt();
+    if (m_nextToken.type == TokenType::kw_for ||
+        (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for))
+        return parse_for_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
     if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
         return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
-    if (m_nextToken.type == TokenType::kw_switch) return parse_switch_stmt();
+    if (m_nextToken.type == TokenType::kw_switch ||
+        (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_switch))
+        return parse_switch_stmt();
     if (m_nextToken.type == TokenType::comment) return parse_comment();
     if (m_nextToken.type == TokenType::empty_line) return parse_empty_line();
     return parse_assignment_or_expr();
@@ -294,6 +298,11 @@ ptr<DeferStmt> Parser::parse_defer_stmt() {
 
 ptr<SwitchStmt> Parser::parse_switch_stmt() {
     debug_func("");
+    bool isInline = false;
+    if (m_nextToken.type == TokenType::kw_inline) {
+        isInline = true;
+        eat_next_token();
+    }
     matchOrReturn(TokenType::kw_switch, "expected switch");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat switch
@@ -341,7 +350,7 @@ ptr<SwitchStmt> Parser::parse_switch_stmt() {
     matchOrReturn(TokenType::block_r, "expected '}'");
     eat_next_token();  // eat '}'
 
-    return makePtr<SwitchStmt>(location, std::move(condition), std::move(cases), std::move(elseBlock));
+    return makePtr<SwitchStmt>(location, std::move(condition), std::move(cases), std::move(elseBlock), isInline);
 }
 
 ptr<CaseStmt> Parser::parse_case_stmt() {

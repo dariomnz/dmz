@@ -1,0 +1,11 @@
+// RUN: (dmz %s 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let x = 1;
+    inline switch (x) {
+        case 0 => {}
+        case 1 => {}
+        else => {}
+    }
+}
+// CHECK: inline switch condition must be a constant value

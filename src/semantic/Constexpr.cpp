@@ -37,23 +37,28 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
         return evaluate_decl_ref_expr(*declRefExpr, allowSideEffects);
     }
     if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
-        if (auto varDecl = dynamic_cast<const ResolvedVarDecl *>(&memberExpr->member)) {
-            if (varDecl->isMutable || !varDecl->initializer) return std::nullopt;
-            return evaluate(*varDecl->initializer, allowSideEffects);
-        } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&memberExpr->member)) {
-            if (!declStmt->varDecl || declStmt->isMutable || !declStmt->varDecl->initializer) return std::nullopt;
-            return evaluate(*declStmt->varDecl->initializer, allowSideEffects);
-        }
+        return evaluate_decl(memberExpr->member, allowSideEffects);
     }
     if (const auto *typeofExpr = dynamic_cast<const ResolvedTypeofExpr *>(&expr)) {
         return evaluate(*typeofExpr, allowSideEffects);
+    }
+    if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
+        return evaluate(*typeExpr, allowSideEffects);
     }
     return std::nullopt;
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeofExpr &expr,
                                                          [[maybe_unused]] bool allowSideEffects) {
-    auto &type = *expr.typeofExpr->type;
+    return evaluate_type(*expr.typeofExpr->type);
+}
+
+std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeExpr &expr,
+                                                         [[maybe_unused]] bool allowSideEffects) {
+    return evaluate_type(*expr.resolvedType);
+}
+
+std::optional<int> ConstantExpressionEvaluator::evaluate_type(const ResolvedType &type) {
     switch (type.kind) {
         case ResolvedTypeKind::Void:
             return 0;
@@ -170,10 +175,14 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
                                                                        bool allowSideEffects) {
-    if (const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
+    return evaluate_decl(dre.decl, allowSideEffects);
+}
+
+std::optional<int> ConstantExpressionEvaluator::evaluate_decl(const ResolvedDecl &decl, bool allowSideEffects) {
+    if (const auto *rvd = dynamic_cast<const ResolvedVarDecl *>(&decl)) {
         if (rvd->isMutable || !rvd->initializer) return std::nullopt;
         return evaluate(*rvd->initializer, allowSideEffects);
-    } else if (const auto *rds = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
+    } else if (const auto *rds = dynamic_cast<const ResolvedDeclStmt *>(&decl)) {
         if (!rds->varDecl || rds->isMutable || !rds->varDecl->initializer) return std::nullopt;
         return evaluate(*rds->varDecl->initializer, allowSideEffects);
     }

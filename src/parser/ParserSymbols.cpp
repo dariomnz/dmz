@@ -249,7 +249,7 @@ void CaptureDecl::dump(size_t level) const { std::cerr << indent(level) << "Capt
 std::string CaptureDecl::to_str() const { dmz_unreachable("TODO"); }
 
 void ForStmt::dump(size_t level) const {
-    std::cerr << indent(level) << (isInline ? "Inline ForStmt\n" : "ForStmt\n");
+    std::cerr << indent(level) << (isInline ? "InlineForStmt\n" : "ForStmt\n");
 
     for (auto &&cond : conditions) {
         cond->dump(level + 1);
@@ -272,7 +272,7 @@ void CaseStmt::dump(size_t level) const {
 std::string CaseStmt::to_str() const { dmz_unreachable("TODO"); }
 
 void SwitchStmt::dump(size_t level) const {
-    std::cerr << indent(level) << "SwitchStmt\n";
+    std::cerr << indent(level) << (isInline ? "InlineSwitchStmt\n" : "SwitchStmt\n");
 
     condition->dump(level + 1);
 

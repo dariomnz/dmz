@@ -73,24 +73,31 @@ pub fn fmt_float<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
     return ret;
 }
 
+pub fn fmt_bool(w: std.io.Writer, b: bool) -> !usize {
+    if (b) {
+        return w.writeStr("true");
+    } else {
+        return w.writeStr("false");
+    }
+}
+
 pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     let fmt_idx = 0;
     let arg_tracker = 0;
     let ret: usize = 0;
-
-    let str = "unsupported type";
-    let str_slice = str[0..std.mem.strlen(str)];
-    while (format[fmt_idx] != 0) {
-        if (format[fmt_idx] == '{' && format[fmt_idx + 1] == '}') {
+    const format_len = std.mem.strlen(format);
+    while (fmt_idx < format_len) {
+        if (format[fmt_idx] == '{' && fmt_idx + 1 < format_len && format[fmt_idx + 1] == '}') {
             let current_arg = 0;
             inline for (args) |arg| {
                 if (current_arg++ == arg_tracker) {
-                    let t = @typeof(arg);
-                    switch (t) {
+                    const t = @typeof(arg);
+                    inline switch (t) {
                         case std.types.int_t => ret += try fmt_integer(w, arg);
                         case std.types.uint_t => ret += try fmt_integer(w, arg);
                         case std.types.float_t => ret += try fmt_float(w, arg, 3);
-                        else => ret += try w.writeAll(str_slice);
+                        case std.types.bool_t => ret += try fmt_bool(w, arg);
+                        else => ret += try w.writeStr("unsupported type");
                     }
                 }
             }
@@ -123,6 +130,13 @@ test "print integers" {
     big *= 1000000000;
     big *= 1000000000;
     big += 123456789;
-    let ret2 = try fmt(w2, "Big value {} {}\n", .{big, 1.23});
+
+    const tuple = .{big, 1.23, true, w2};
+    const t = @typeof(tuple);
+    const t0 = @typeof(tuple.elem0);
+    const t1 = @typeof(tuple.elem1);
+    const t2 = @typeof(tuple.elem2);
+    const t3 = @typeof(tuple.elem3);
+    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}'\n", tuple);
     w2.flush();
 }

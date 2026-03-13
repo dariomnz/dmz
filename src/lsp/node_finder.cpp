@@ -173,6 +173,9 @@ void NodeFinder::find_in_stmt(const ResolvedStmt& stmt) {
             find_in_stmt(*caseStmt);
         }
         if (switchStmt->elseBlock) find_in_stmt(*switchStmt->elseBlock);
+    } else if (const auto* caseStmt = dynamic_cast<const ResolvedCaseStmt*>(&stmt)) {
+        find_in_expr(*caseStmt->condition);
+        find_in_stmt(*caseStmt->block);
     }
 }
 

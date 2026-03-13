@@ -8,8 +8,10 @@
 namespace DMZ {
 
 class Sema {
-   private:
+   public:
     ConstantExpressionEvaluator cee;
+
+   private:
     ptr<ModuleDecl> m_ast;
     std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
@@ -147,7 +149,7 @@ class Sema {
     // bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
-    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt);
+    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
     bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);

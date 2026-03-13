@@ -291,6 +291,19 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
 
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
     debug_func("");
+    if (stmt.isInline) {
+        int condVal = *stmt.condition->get_constant_value();
+        for (auto &&cas : stmt.cases) {
+            int caseVal = *cas->condition->get_constant_value();
+            if (condVal == caseVal) {
+                generate_block(*cas->block);
+                return nullptr;
+            }
+        }
+        generate_block(*stmt.elseBlock);
+        return nullptr;
+    }
+
     llvm::Function *function = get_current_function();
     auto *elseBB = llvm::BasicBlock::Create(*m_context, "switch.else");
     auto *exitBB = llvm::BasicBlock::Create(*m_context, "switch.exit");

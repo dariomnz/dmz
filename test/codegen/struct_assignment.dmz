@@ -1,0 +1,20 @@
+// RUN:dmz %s -run 2>&1 | filecheck %s
+// CHECK: OK
+struct Point {
+    x: i32,
+}
+struct Point2 {
+    p: Point,
+}
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let a: Point = Point{x: 1};
+
+    let b = Point2{p: a};
+
+    let c: Point = b.p;
+
+    printf("OK\n");
+}

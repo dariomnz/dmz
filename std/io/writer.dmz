@@ -56,6 +56,18 @@ pub struct Writer {
         return w.vtable_flush(w.vtable_ptr, w, aux_slice[0..1], 1);
     }
 
+    pub fn writeStr(w: *@This, str: *u8) -> !usize {
+        const str_len = std.mem.strlen(str);
+        const str_slice: []u8 = str[0..str_len];
+        if (w.end + str_len <= w.buffer.len) {
+            let remaining = w.buffer[w.end..w.buffer.len];
+            std.mem.memcpy(remaining.ptr, str, str_len);
+            w.end += str_len;
+            return str_len;
+        }
+        return w.vtable_flush(w.vtable_ptr, w, str_slice, 1);
+    }
+
     pub fn flush(w: *@This) -> !usize {
         if (w.end == 0) {
             return 0;

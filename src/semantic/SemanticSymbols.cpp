@@ -284,7 +284,7 @@ void ResolvedCaptureDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedForStmt::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedForStmt\n";
+    std::cerr << indent(level) << (isInline ? "ResolvedInlineForStmt\n" : "ResolvedForStmt\n");
 
     if (onlySelf) return;
     for (auto &&cond : conditions) {
@@ -305,7 +305,7 @@ void ResolvedCaseStmt::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedSwitchStmt::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSwitchStmt\n";
+    std::cerr << indent(level) << (isInline ? "ResolvedInlineSwitchStmt\n" : "ResolvedSwitchStmt\n");
 
     if (onlySelf) return;
     condition->dump(level + 1, onlySelf);

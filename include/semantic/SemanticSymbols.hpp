@@ -27,7 +27,7 @@ struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
     void dump_constant_value(size_t level) const;
 };
 
-struct ResolvedDecl {
+struct ResolvedDecl : public ConstantValueContainer<int> {
     SourceLocation location;
     std::string identifier;
     std::string symbolName;
@@ -176,13 +176,15 @@ struct ResolvedSwitchStmt : public ResolvedStmt {
     ptr<ResolvedExpr> condition;
     std::vector<ptr<ResolvedCaseStmt>> cases;
     ptr<ResolvedBlock> elseBlock;
+    bool isInline;
 
     ResolvedSwitchStmt(SourceLocation location, ptr<ResolvedExpr> condition, std::vector<ptr<ResolvedCaseStmt>> cases,
-                       ptr<ResolvedBlock> elseBlock)
+                       ptr<ResolvedBlock> elseBlock, bool isInline = false)
         : ResolvedStmt(location),
           condition(std::move(condition)),
           cases(std::move(cases)),
-          elseBlock(std::move(elseBlock)) {}
+          elseBlock(std::move(elseBlock)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

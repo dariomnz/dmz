@@ -234,6 +234,9 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
         } else {
             ss << escape_json(finder.found_decl->type->to_str());
         }
+        if (auto val = doc.sema->cee.evaluate_decl(*finder.found_decl)) {
+            ss << " = " << *val;
+        }
         ss << "\\n```\"}}";
         std::cerr << "[LSP] Sending hover response: " << ss.str() << std::endl;
         send_response(id, ss.str());

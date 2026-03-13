@@ -165,62 +165,71 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
     debug_func(forStmt.location);
 
     if (forStmt.isInline) {
-        if (forStmt.conditions.size() != 1 || forStmt.captures.size() != 1) 
+        if (forStmt.conditions.size() != 1 || forStmt.captures.size() != 1)
             return report(forStmt.location, "inline for expects exactly 1 condition and 1 capture");
-        
+
         varOrReturn(condTypeCheck, resolve_expr(*forStmt.conditions[0]));
-        auto structType = dynamic_cast<const ResolvedTypeStruct*>(condTypeCheck->type.get());
+        auto structType = dynamic_cast<const ResolvedTypeStruct *>(condTypeCheck->type.get());
         if (!structType) {
             if (condTypeCheck->type->kind == ResolvedTypeKind::Generic) {
                 ScopeRAII iterationScope(*this);
-                auto captureType = condTypeCheck->type->clone(); 
-                auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
+                auto captureType = condTypeCheck->type->clone();
+                auto resolvedCapture = makePtr<ResolvedCaptureDecl>(
+                    forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
                 if (!insert_decl_to_current_scope(*resolvedCapture)) return nullptr;
-                
+
                 varOrReturn(resolvedBody, resolve_block(*forStmt.body));
-                
+
                 std::vector<ptr<ResolvedExpr>> conditions;
                 conditions.emplace_back(std::move(condTypeCheck));
                 std::vector<ptr<ResolvedCaptureDecl>> captures;
                 captures.emplace_back(std::move(resolvedCapture));
-                
-                return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures), std::move(resolvedBody), true);
+
+                return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
+                                                std::move(resolvedBody), true);
             }
-            return report(condTypeCheck->location, "inline for requires a tuple or struct iteration, but got: " + condTypeCheck->type->to_str());
+            return report(condTypeCheck->location,
+                          "inline for requires a tuple or struct iteration, but got: " + condTypeCheck->type->to_str());
         }
-        
+
         auto stDecl = structType->decl;
         std::vector<ptr<ResolvedStmt>> unrolledBody;
-        
+
         for (size_t i = 0; i < stDecl->fields.size(); i++) {
             ScopeRAII iterationScope(*this);
             varOrReturn(iterCond, resolve_expr(*forStmt.conditions[0]));
-            
+
             auto fieldType = stDecl->fields[i]->type->clone();
             auto fieldAccess = makePtr<ResolvedMemberExpr>(iterCond->location, std::move(iterCond), *stDecl->fields[i]);
-            
-            auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false, forStmt.captures[0]->identifier, fieldType->clone(), false, std::move(fieldAccess));
+
+            auto varDecl =
+                makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false, forStmt.captures[0]->identifier,
+                                         fieldType->clone(), false, std::move(fieldAccess));
             if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
-            
-            auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(), std::move(varDecl), m_currentModule, m_currentStruct);
+
+            auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(),
+                                                              std::move(varDecl), m_currentModule, m_currentStruct);
             resolvedDeclStmt->initialized = true;
-            
+
             varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
             resolvedIteration->statements.insert(resolvedIteration->statements.begin(), std::move(resolvedDeclStmt));
-            
+
             unrolledBody.emplace_back(std::move(resolvedIteration));
         }
-        
-        auto resolvedBody = makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{});
-        auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr); 
-        auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
-        
+
+        auto resolvedBody =
+            makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{});
+        auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr);
+        auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location,
+                                                            forStmt.captures[0]->identifier, std::move(captureType));
+
         std::vector<ptr<ResolvedExpr>> conditions;
         conditions.emplace_back(std::move(condTypeCheck));
         std::vector<ptr<ResolvedCaptureDecl>> captures;
         captures.emplace_back(std::move(resolvedCapture));
-        
-        return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures), std::move(resolvedBody), true);
+
+        return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
+                                        std::move(resolvedBody), true);
     }
 
     ScopeRAII forCapturesScope(*this);
@@ -332,7 +341,8 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     resolvedRHS->set_constant_value(cee.evaluate(*resolvedRHS, false));
 
     if (auto assigmentOperator = dynamic_cast<const AssignmentOperator *>(&assignment)) {
-        if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
+        if (resolvedLHS->type->kind != ResolvedTypeKind::Number &&
+            resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
             return report(resolvedLHS->location, "cannot use operator '" + get_op_str(assigmentOperator->op) +
                                                      "' in type '" + resolvedLHS->type->to_str() + "'");
         }
@@ -370,35 +380,69 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
     debug_func(switchStmt.location);
     varOrReturn(condition, resolve_expr(*switchStmt.condition));
 
-    auto typeToCompare = ResolvedTypeBool{SourceLocation{}};
-    if (!typeToCompare.compare(*condition->type)) {
-        return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
+    condition->set_constant_value(cee.evaluate(*condition, false));
+    if (switchStmt.isInline && !condition->get_constant_value()) {
+        return report(condition->location, "inline switch condition must be a constant value");
     }
 
     std::vector<ptr<ResolvedCaseStmt>> cases;
-
+    bool caseMatched = false;
     for (auto &&cas : switchStmt.cases) {
-        varOrReturn(c, resolve_case_stmt(*cas));
-        cases.emplace_back(std::move(c));
+        varOrReturn(tempCond, resolve_expr(*cas->condition));
+        tempCond->set_constant_value(cee.evaluate(*tempCond, false));
+        if (!tempCond->get_constant_value()) {
+            return report(tempCond->location, "condition in case must be a constant value");
+        }
+
+        if (switchStmt.isInline) {
+            if (tempCond->get_constant_value() == condition->get_constant_value()) {
+                caseMatched = true;
+            } else {
+                auto emptyBlock = makePtr<ResolvedBlock>(cas->location, std::vector<ptr<ResolvedStmt>>{},
+                                                         std::vector<ptr<ResolvedDeferRefStmt>>{});
+                cases.emplace_back(
+                    makePtr<ResolvedCaseStmt>(cas->location, std::move(tempCond), std::move(emptyBlock)));
+            }
+        }
+
+        if (!switchStmt.isInline || caseMatched) {
+            varOrReturn(block, resolve_block(*cas->block));
+            cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(tempCond), std::move(block)));
+        }
     }
 
-    varOrReturn(resolvedElseBlock, resolve_block(*switchStmt.elseBlock));
-
-    condition->set_constant_value(cee.evaluate(*condition, false));
+    ptr<ResolvedBlock> resolvedElseBlock = nullptr;
+    if (switchStmt.isInline && caseMatched) {
+        // Ignore else
+        resolvedElseBlock = makePtr<ResolvedBlock>(switchStmt.elseBlock->location, std::vector<ptr<ResolvedStmt>>{},
+                                                   std::vector<ptr<ResolvedDeferRefStmt>>{});
+    } else {
+        resolvedElseBlock = resolve_block(*switchStmt.elseBlock);
+        if (!resolvedElseBlock) return nullptr;
+    }
 
     return makePtr<ResolvedSwitchStmt>(switchStmt.location, std::move(condition), std::move(cases),
-                                       std::move(resolvedElseBlock));
+                                       std::move(resolvedElseBlock), switchStmt.isInline);
 }
 
-ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt) {
+ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value,
+                                              bool isInline) {
     debug_func(caseStmt.location);
     varOrReturn(condition, resolve_expr(*caseStmt.condition));
-
-    varOrReturn(block, resolve_block(*caseStmt.block));
 
     condition->set_constant_value(cee.evaluate(*condition, false));
     if (!condition->get_constant_value()) {
         return report(condition->location, "condition in case must be a constant value");
+    }
+
+    auto block = resolve_block(*caseStmt.block);
+    if (!block) {
+        if (isInline && condition->get_constant_value().value() != constant_value.value()) {
+            block = makePtr<ResolvedBlock>(caseStmt.location, std::vector<ptr<ResolvedStmt>>{},
+                                           std::vector<ptr<ResolvedDeferRefStmt>>{});
+        } else {
+            return nullptr;
+        }
     }
 
     return makePtr<ResolvedCaseStmt>(caseStmt.location, std::move(condition), std::move(block));

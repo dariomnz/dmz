@@ -1,0 +1,19 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn foo(x: Point) -> i32 {
+    return x.x;
+}
+
+fn main() -> void {
+    const x = 1;
+    inline switch (x) {
+        case 0 => foo(0);
+        case 1 => foo(Point{x: 1, y: 2});
+        else => let c = 2;
+    }
+}

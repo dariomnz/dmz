@@ -6,7 +6,7 @@ fn main() -> void {
 // CHECK: ModuleDecl inline_for
 // CHECK-NEXT:   FunctionDecl main -> void
 // CHECK-NEXT:     Block
-// CHECK-NEXT:       Inline ForStmt
+// CHECK-NEXT:       InlineForStmt
 // CHECK-NEXT:         TupleInstantiationExpr 
 // CHECK-NEXT:           IntLiteral '1'
 // CHECK-NEXT:           IntLiteral '2'

@@ -176,7 +176,11 @@ struct ForStmt : public Stmt {
 
     ForStmt(SourceLocation location, std::vector<ptr<Expr>> conditions, std::vector<ptr<CaptureDecl>> captures,
             ptr<Block> body, bool isInline = false)
-        : Stmt(location), conditions(std::move(conditions)), captures(std::move(captures)), body(std::move(body)), isInline(isInline) {}
+        : Stmt(location),
+          conditions(std::move(conditions)),
+          captures(std::move(captures)),
+          body(std::move(body)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -197,9 +201,15 @@ struct SwitchStmt : public Stmt {
     ptr<Expr> condition;
     std::vector<ptr<CaseStmt>> cases;
     ptr<Block> elseBlock;
+    bool isInline;
 
-    SwitchStmt(SourceLocation location, ptr<Expr> condition, std::vector<ptr<CaseStmt>> cases, ptr<Block> elseBlock)
-        : Stmt(location), condition(std::move(condition)), cases(std::move(cases)), elseBlock(std::move(elseBlock)) {}
+    SwitchStmt(SourceLocation location, ptr<Expr> condition, std::vector<ptr<CaseStmt>> cases, ptr<Block> elseBlock,
+               bool isInline = false)
+        : Stmt(location),
+          condition(std::move(condition)),
+          cases(std::move(cases)),
+          elseBlock(std::move(elseBlock)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
