@@ -1,0 +1,187 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn foo<K>(i: i32, arg: K) -> i32 {
+    printf("foo %d %d\n", i, arg);
+    if (i == 0) {
+        return 0;
+    }
+    const t = @typeid(arg);
+    inline switch (t) {
+        case 1 => return bar<arg>(i - 1, arg);
+        case 2 => return bar<arg>(i - 1, arg);
+        else => return bar<arg>(i - 1, arg);
+    }
+}
+
+fn bar<T>(i: i32, arg: T) -> i32 {
+    printf("bar %d %d\n", i, arg);
+    if (i == 0) {
+        return 0;
+    }
+    foo<arg>(i - 1, arg);
+    return 1;
+}
+
+fn main() -> void {
+    bar(10, 1);
+}
+// CHECK: ResolvedModuleDecl double_specialize
+// CHECK-NEXT:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
+// CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
+// CHECK-NEXT:     ResolvedParamDecl:vararg ...
+// CHECK-NEXT:   ResolvedGenericFunctionDecl foo fn(i32, K)->i32
+// CHECK-NEXT:     ResolvedGenericTypeDecl K
+// CHECK-NEXT:     ResolvedParamDecl:i32 i
+// CHECK-NEXT:     ResolvedParamDecl:K arg
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 'foo %d %d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:         ResolvedDeclRefExpr:K arg
+// CHECK-NEXT:       ResolvedIfStmt
+// CHECK-NEXT:         ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedReturnStmt
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:             | value: 0
+// CHECK-NEXT:       ResolvedDeclStmt i32
+// CHECK-NEXT:         ResolvedVarDecl:const i32 t
+// CHECK-NEXT:           ResolvedTypeidExpr:i32
+// CHECK-NEXT:           | value: 99
+// CHECK-NEXT:             ResolvedDeclRefExpr:K arg
+// CHECK-NEXT:       ResolvedInlineSwitchStmt
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 t
+// CHECK-NEXT:         | value: 99
+// CHECK-NEXT:         ResolvedCaseStmt
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:           | value: 1
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:         ResolvedCaseStmt
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:         ElseBlock
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:             ResolvedReturnStmt
+// CHECK-NEXT:               ResolvedCallExpr:i32
+// CHECK-NEXT:                 ResolvedGenericExpr:fn(i32, T)->i32 bar
+// CHECK-NEXT:                   ResolvedDeclRefExpr:fn(i32, T)->i32 bar
+// CHECK-NEXT:                   ResolvedTypeSpecialized <K>
+// CHECK-NEXT:                 ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:                   ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:                   ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                 ResolvedDeclRefExpr:K arg
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl foo<i32> fn(i32, i32)->i32
+// CHECK-NEXT:       ResolvedParamDecl:i32 i
+// CHECK-NEXT:       ResolvedParamDecl:i32 arg
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:           ResolvedStringLiteral:*u8 'foo %d %d\n'
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:         ResolvedIfStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:             ResolvedReturnStmt
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:               | value: 0
+// CHECK-NEXT:         ResolvedDeclStmt i32
+// CHECK-NEXT:           ResolvedVarDecl:const i32 t
+// CHECK-NEXT:             ResolvedTypeidExpr:i32
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:               ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:         ResolvedInlineSwitchStmt
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 t
+// CHECK-NEXT:           | value: 1
+// CHECK-NEXT:           ResolvedCaseStmt
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:               ResolvedReturnStmt
+// CHECK-NEXT:                 ResolvedCallExpr:i32
+// CHECK-NEXT:                   ResolvedGenericExpr:fn(i32, i32)->i32 bar
+// CHECK-NEXT:                     ResolvedDeclRefExpr:fn(i32, T)->i32 bar
+// CHECK-NEXT:                     ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:                   ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:                     ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:                     ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                   ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:           ResolvedCaseStmt
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:             | value: 2
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:           ElseBlock
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:   ResolvedGenericFunctionDecl bar fn(i32, T)->i32
+// CHECK-NEXT:     ResolvedGenericTypeDecl T
+// CHECK-NEXT:     ResolvedParamDecl:i32 i
+// CHECK-NEXT:     ResolvedParamDecl:T arg
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 'bar %d %d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:         ResolvedDeclRefExpr:T arg
+// CHECK-NEXT:       ResolvedIfStmt
+// CHECK-NEXT:         ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedReturnStmt
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:             | value: 0
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedGenericExpr:fn(i32, K)->i32 foo
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(i32, K)->i32 foo
+// CHECK-NEXT:           ResolvedTypeSpecialized <T>
+// CHECK-NEXT:         ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         ResolvedDeclRefExpr:T arg
+// CHECK-NEXT:       ResolvedReturnStmt
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl bar<i32> fn(i32, i32)->i32
+// CHECK-NEXT:       ResolvedParamDecl:i32 i
+// CHECK-NEXT:       ResolvedParamDecl:i32 arg
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:           ResolvedStringLiteral:*u8 'bar %d %d\n'
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:         ResolvedIfStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:bool '=='
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:             ResolvedReturnStmt
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:               | value: 0
+// CHECK-NEXT:         ResolvedCallExpr:i32
+// CHECK-NEXT:           ResolvedGenericExpr:fn(i32, i32)->i32 foo
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32, K)->i32 foo
+// CHECK-NEXT:             ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '-'
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 i
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:           ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:           | value: 1
+// CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32, i32)->i32 bar
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:         | value: 10
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1

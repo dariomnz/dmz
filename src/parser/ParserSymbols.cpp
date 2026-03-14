@@ -29,6 +29,10 @@ void TypeBool::dump(size_t level) const { std::cerr << indent(level) << "TypeBoo
 
 std::string TypeBool::to_str() const { return "bool"; }
 
+void TypeError::dump(size_t level) const { std::cerr << indent(level) << "TypeError " << to_str() << '\n'; }
+
+std::string TypeError::to_str() const { return "err"; }
+
 void TypeSlice::dump(size_t level) const { std::cerr << indent(level) << "TypeSlice " << to_str() << '\n'; }
 
 std::string TypeSlice::to_str() const { return "[]" + sliceType->to_str(); }

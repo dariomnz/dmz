@@ -198,6 +198,11 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return ret;
     }
+    if (dynamic_cast<const TypeError *>(&type)) {
+        ret = makePtr<ResolvedTypeError>(type.location);
+        retPtr = ret.get();
+        return ret;
+    }
     if (dynamic_cast<const TypeBool *>(&type)) {
         ret = makePtr<ResolvedTypeBool>(type.location);
         retPtr = ret.get();
@@ -296,17 +301,14 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             dump_scopes();
             return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
         }
-        if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl)) {
-            if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(declStmt->type.get())) {
+        if (dynamic_cast<ResolvedDeclStmt *>(decl) || dynamic_cast<ResolvedParamDecl *>(decl) ||
+            dynamic_cast<ResolvedStructDecl *>(decl) || dynamic_cast<ResolvedCaptureDecl *>(decl) ||
+            dynamic_cast<ResolvedVarDecl *>(decl)) {
+            if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
             } else {
-                ret = declStmt->type->clone();
+                ret = decl->type->clone();
             }
-            retPtr = ret.get();
-            return ret;
-        }
-        if (auto struDecl = dynamic_cast<ResolvedStructDecl *>(decl)) {
-            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl, declRefType->identifier == "@This");
             retPtr = ret.get();
             return ret;
         }
@@ -367,7 +369,7 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     ResolvedType *retPtr = nullptr;
     debug_func("'" << type.to_str() << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
-        if (genType->decl->specializedType) {
+        if (genType->decl && genType->decl->specializedType) {
             ret = re_resolve_type(*genType->decl->specializedType);
             retPtr = ret.get();
             return ret;

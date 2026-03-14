@@ -3,14 +3,21 @@ const std = import("std");
 pub fn fmt_type<T>(w: std.io.Writer, arg: T) -> !usize {
     const t = @typeid(arg);
     inline switch (t) {
-        case std.types.int_t => return fmt_integer(w, arg);
-        case std.types.uint_t => return fmt_integer(w, arg);
-        case std.types.float_t => return fmt_float(w, arg, 3);
+        case std.types.int_t => return fmt_integer<T>(w, arg);
+        case std.types.uint_t => return fmt_integer<T>(w, arg);
+        case std.types.float_t => return fmt_float<T>(w, arg, 3);
         case std.types.bool_t => return fmt_bool(w, arg);
-        case std.types.struct_t => return fmt_struct(w, arg);
+        case std.types.struct_t => return fmt_struct<T>(w, arg);
+        case std.types.void_t => return w.writeStr("unsupported void");
+        case std.types.pointer_t => return fmt_pointer(w, arg);
+        case std.types.slice_t => return fmt_slice<T>(w, arg);
+        case std.types.range_t => return w.writeStr("unsupported range");
+        case std.types.array_t => return w.writeStr("unsupported array");
+        case std.types.function_t => return w.writeStr("unsupported function");
+        case std.types.error_t => return fmt_error(w, arg);
+        case std.types.optional_t => return w.writeStr("unsupported optional");
         else => return w.writeStr("unsupported type");
     }
-    return 0;
 }
 
 pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
@@ -101,14 +108,62 @@ pub fn fmt_struct<T>(w: std.io.Writer, s: T) -> !usize {
     ret += try w.writeChar('{');
     let current_field = 0;
     inline for (s) |field| {
-        if (current_field++ > 0) {
+        if (current_field > 0) {
             ret += try w.writeStr(", ");
         }
         ret += try w.writeAll(typeinfo.fields[current_field]);
         ret += try w.writeStr(": ");
-        ret += try fmt_type(w, field);
+        ret += try fmt_type<field>(w, field);
+        current_field++;
     }
     ret += try w.writeChar('}');
+    return ret;
+}
+
+pub fn fmt_pointer(w: std.io.Writer, ptr: *void) -> !usize {
+    let ret: usize = 0;
+    const addr: usize = ptr;
+
+    ret += try w.writeStr("0x");
+
+    let i: i32 = (@sizeof(ptr) * 2) - 1;
+
+    while (i >= 0) {
+        let temp_addr = addr;
+        let j: i32 = 0;
+
+        while (j < i) {
+            temp_addr /= 16;
+            j++;
+        }
+
+        const digito = temp_addr % 16;
+
+        if (digito < 10) {
+            ret += try w.writeChar(digito + '0');
+        } else {
+            ret += try w.writeChar((digito - 10) + 'a');
+        }
+        i--;
+    }
+
+    return ret;
+}
+
+pub fn fmt_slice<T>(w: std.io.Writer, s: T) -> !usize {
+    let ret: usize = 0;
+    ret += try w.writeStr("[ptr: ");
+    ret += try fmt_pointer(w, s.ptr);
+    ret += try w.writeStr(", len: ");
+    ret += try fmt_integer<s.len>(w, s.len);
+    ret += try w.writeChar(']');
+    return ret;
+}
+
+pub fn fmt_error(w: std.io.Writer, e: err) -> !usize {
+    let ret: usize = 0;
+    ret += try w.writeStr("error.");
+    ret += try w.writeStr(e);
     return ret;
 }
 
@@ -122,7 +177,7 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
             let current_arg = 0;
             inline for (args) |arg| {
                 if (current_arg++ == arg_tracker) {
-                    ret += try fmt_type(w, arg);
+                    ret += try fmt_type<arg>(w, arg);
                 }
             }
             arg_tracker++;
@@ -139,6 +194,14 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
 struct Test_struct {
     a: i32,
     b: i32,
+    c: i32,
+}
+
+struct Test_struct2 {
+    a: i32,
+    b: i32,
+    c2: i32,
+    tst: Test_struct,
 }
 
 test "print integers" {
@@ -152,20 +215,18 @@ test "print integers" {
 
     let buf2: u8[1024] = {};
     let w2 = std.io.stdout.writer(buf2[0..1024]);
-    let big: i512 = 123456789;
-    big *= 1000000000;
-    big *= 1000000000;
-    big += 123456789;
+    let big: i128 = 123456789;
     big *= 1000000000;
     big *= 1000000000;
     big += 123456789;
 
-    const tuple = .{big, 1.23, true, w2, Test_struct{a: 1, b: 2}};
+    const test_struct: Test_struct2 = {};
+    const tuple = .{big, 1.23, true, w2, w, test_struct, error.InplaceError};
     const t = @typeid(tuple);
     const t0 = @typeid(tuple.elem0);
     const t1 = @typeid(tuple.elem1);
     const t2 = @typeid(tuple.elem2);
     const t3 = @typeid(tuple.elem3);
-    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}'\n", tuple);
+    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}'\n", tuple);
     w2.flush();
 }

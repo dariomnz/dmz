@@ -174,6 +174,13 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         if (!res) return report(gt->location, "cannot resolve type of " + gt->to_str());
         *gt = std::move(*res);
     }
+    // Not specialize if generic types are no specialized
+    for (auto &gt : genericTypes.specializedTypes) {
+        if (gt->kind == ResolvedTypeKind::Generic) {
+            debug_msg("Not specialize generic types are no specialized");
+            return nullptr;
+        }
+    }
     // Search if is specified
     for (auto &&func : funcDecl.specializations) {
         if (genericTypes.equal(*func->specializedTypes)) {
@@ -240,11 +247,10 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         funcDecl.functionDecl, nullptr, castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
     resolvedFunc->getFnType()->fnDecl = resolvedFunc.get();
     // auto &retFunc = resolvedFunc;
-    auto &retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc));
-
+    auto *retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc)).get();
     bool error = false;
     auto prevFunc = m_currentFunction;
-    m_currentFunction = retFunc.get();
+    m_currentFunction = retFunc;
     auto body = funcDecl.functionDecl->body.get();
     if (auto resolvedBody = resolve_block(*body)) {
         retFunc->body = std::move(resolvedBody);
@@ -255,8 +261,8 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     m_currentFunction = prevFunc;
     // println("m_currentFunction " << m_currentFunction->identifier << " prev " << prevFunc->identifier);
     if (error) return nullptr;
-    add_dependency(retFunc.get());
-    return retFunc.get();
+    add_dependency(retFunc);
+    return retFunc;
 }
 
 ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocation &location,
@@ -318,19 +324,19 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
         std::move(resolvedFields), std::move(resolvedFunctions), &struDecl,
         castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
 
-    auto &retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct));
+    auto *retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct)).get();
     retStruct->specializedTypes = castPtr<ResolvedTypeSpecialized>(genericTypes.clone());
-    add_dependency(retStruct.get());
+    add_dependency(retStruct);
 
     auto prevStruct = m_currentStruct;
-    m_currentStruct = retStruct.get();
+    m_currentStruct = retStruct;
     defer([&]() { m_currentStruct = prevStruct; });
 
     if (!resolve_struct_members(*retStruct)) return nullptr;
     if (!resolve_struct_decl_funcs(*retStruct)) return nullptr;
-    m_pending_decls.emplace_back(retStruct.get());
+    m_pending_decls.emplace_back(retStruct);
 
-    return retStruct.get();
+    return retStruct;
 }
 
 ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
@@ -666,9 +672,9 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
             error = true;
             continue;
         }
-        auto &resMod = resolvedModules.emplace_back(std::move(resolvedModule));
+        auto *resMod = resolvedModules.emplace_back(std::move(resolvedModule)).get();
         std::string key = module->module_path.string();
-        m_modules_for_import.emplace(std::move(key), resMod.get());
+        m_modules_for_import.emplace(std::move(key), resMod);
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {

@@ -21,7 +21,12 @@ ptr<Expr> Parser::parse_primary() {
     }
     if (m_nextToken.type == TokenType::ty_bool) {
         auto literal = makePtr<TypeBool>(location);
-        eat_next_token();  // eat void
+        eat_next_token();  // eat bool
+        return literal;
+    }
+    if (m_nextToken.type == TokenType::ty_err) {
+        auto literal = makePtr<TypeError>(location);
+        eat_next_token();  // eat err
         return literal;
     }
     if (m_nextToken.type == TokenType::ty_iN || m_nextToken.type == TokenType::ty_uN ||

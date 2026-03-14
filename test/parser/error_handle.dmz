@@ -48,16 +48,16 @@ extern fn printf(fmt:*u8, ...) -> i32;
 fn main() -> void {
     let result = foo(1);
     
-    let err = catch result;
-    if (err) {
-        printf(&"%s\n", err);
+    let err1 = catch result;
+    if (err1) {
+        printf("%s\n", err1);
     }
     
     let result2 = try foo(1);
     
-    printf(&"No error %d\n", result);
+    printf("No error %d\n", result);
 
-    printf(&"No safe error %d\n", try foo(10));
+    printf("No safe error %d\n", try foo(10));
 }
 // CHECK: FunctionDecl main -> void
 // CHECK-NEXT:     Block
@@ -67,17 +67,16 @@ fn main() -> void {
 // CHECK-NEXT:             DeclRefExpr foo
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:       DeclStmt
-// CHECK-NEXT:         VarDecl: err
+// CHECK-NEXT:         VarDecl: err1
 // CHECK-NEXT:           CatchErrorExpr 
 // CHECK-NEXT:             DeclRefExpr result
 // CHECK-NEXT:       IfStmt
-// CHECK-NEXT:         DeclRefExpr err
+// CHECK-NEXT:         DeclRefExpr err1
 // CHECK-NEXT:         Block
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr printf
-// CHECK-NEXT:             RefPtrExpr
-// CHECK-NEXT:               StringLiteral '"%s\n"'
-// CHECK-NEXT:             DeclRefExpr err
+// CHECK-NEXT:             StringLiteral '"%s\n"'
+// CHECK-NEXT:             DeclRefExpr err1
 // CHECK-NEXT:       DeclStmt
 // CHECK-NEXT:         VarDecl: result2
 // CHECK-NEXT:           TryErrorExpr 
@@ -86,13 +85,11 @@ fn main() -> void {
 // CHECK-NEXT:               IntLiteral '1'
 // CHECK-NEXT:       CallExpr
 // CHECK-NEXT:         DeclRefExpr printf
-// CHECK-NEXT:         RefPtrExpr
-// CHECK-NEXT:           StringLiteral '"No error %d\n"'
+// CHECK-NEXT:         StringLiteral '"No error %d\n"'
 // CHECK-NEXT:         DeclRefExpr result
 // CHECK-NEXT:       CallExpr
 // CHECK-NEXT:         DeclRefExpr printf
-// CHECK-NEXT:         RefPtrExpr
-// CHECK-NEXT:           StringLiteral '"No safe error %d\n"'
+// CHECK-NEXT:         StringLiteral '"No safe error %d\n"'
 // CHECK-NEXT:         TryErrorExpr 
 // CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr foo

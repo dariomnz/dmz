@@ -1,0 +1,70 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+pub fn foo<T>(arg: T) -> !usize {
+    const t = @typeid(arg);
+    inline switch (t) {
+        case 1 => return 1;
+        case 2 => return 2;
+        else => return 0;
+    }
+}
+
+fn main() -> void {
+    foo(123);
+}
+// CHECK: ResolvedModuleDecl inline_switch_return
+// CHECK-NEXT: ResolvedGenericFunctionDecl foo fn(T)->!usize
+// CHECK-NEXT:      ResolvedGenericTypeDecl T
+// CHECK-NEXT:      ResolvedParamDecl:T arg
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedDeclStmt i32
+// CHECK-NEXT:          ResolvedVarDecl:const i32 t
+// CHECK-NEXT:            ResolvedTypeidExpr:i32
+// CHECK-NEXT:            | value: 99
+// CHECK-NEXT:              ResolvedDeclRefExpr:T arg
+// CHECK-NEXT:        ResolvedInlineSwitchStmt
+// CHECK-NEXT:          ResolvedDeclRefExpr:i32 t
+// CHECK-NEXT:          | value: 99
+// CHECK-NEXT:          ResolvedCaseStmt
+// CHECK-NEXT:            ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:            | value: 1
+// CHECK-NEXT:            ResolvedBlock
+// CHECK-NEXT:          ResolvedCaseStmt
+// CHECK-NEXT:            ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:            | value: 2
+// CHECK-NEXT:            ResolvedBlock
+// CHECK-NEXT:          ElseBlock
+// CHECK-NEXT:            ResolvedBlock
+// CHECK-NEXT:              ResolvedReturnStmt
+// CHECK-NEXT:                ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:                | value: 0
+// CHECK-NEXT:      ResolvedSpecializedFunctionDecl foo<i32> fn(i32)->!usize
+// CHECK-NEXT:        ResolvedParamDecl:i32 arg
+// CHECK-NEXT:        ResolvedBlock
+// CHECK-NEXT:          ResolvedDeclStmt i32
+// CHECK-NEXT:            ResolvedVarDecl:const i32 t
+// CHECK-NEXT:              ResolvedTypeidExpr:i32
+// CHECK-NEXT:              | value: 1
+// CHECK-NEXT:                ResolvedDeclRefExpr:i32 arg
+// CHECK-NEXT:          ResolvedInlineSwitchStmt
+// CHECK-NEXT:            ResolvedDeclRefExpr:i32 t
+// CHECK-NEXT:            | value: 1
+// CHECK-NEXT:            ResolvedCaseStmt
+// CHECK-NEXT:              ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:              | value: 1
+// CHECK-NEXT:              ResolvedBlock
+// CHECK-NEXT:                ResolvedReturnStmt
+// CHECK-NEXT:                  ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                  | value: 1
+// CHECK-NEXT:            ResolvedCaseStmt
+// CHECK-NEXT:              ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:              | value: 2
+// CHECK-NEXT:              ResolvedBlock
+// CHECK-NEXT:            ElseBlock
+// CHECK-NEXT:              ResolvedBlock
+// CHECK-NEXT:    ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedCallExpr:!usize
+// CHECK-NEXT:          ResolvedDeclRefExpr:fn(i32)->!usize foo
+// CHECK-NEXT:          ResolvedIntLiteral:i32 '123'
+// CHECK-NEXT:          | value: 123

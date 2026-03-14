@@ -274,6 +274,13 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
     } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
         find_in_expr(*rangeExpr->startExpr);
         find_in_expr(*rangeExpr->endExpr);
+    } else if (auto* genericExpr = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
+        find_in_expr(*genericExpr->base);
+        if (found_decl) return;
+        for (const auto& gt : genericExpr->specializedTypes->specializedTypes) {
+            find_in_type(*gt);
+            if (found_decl) return;
+        }
     } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         // 'import("' is 8 characters. We estimate the length to cover the string.
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.moduleDecl.identifier.length())) {

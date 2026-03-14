@@ -1,4 +1,4 @@
-// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Call foo false\nfoo normal defer\nCall foo true\nfoo err defer\nfoo normal defer\nmain normal defer\n")
 
 const e = error {
@@ -33,7 +33,7 @@ fn foo(n: bool) -> !void {
 // CHECK-NEXT:           ResolvedBoolLiteral:bool 'true'
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
-// CHECK-NEXT:             ResolvedMemberExpr:error ERROR_ONE
+// CHECK-NEXT:             ResolvedMemberExpr:err ERROR_ONE
 // CHECK-NEXT:               ResolvedDeclRefExpr:errorGroup  e
 // CHECK-NEXT:             ResolvedDeferRefStmt
 // CHECK-NEXT:               ResolvedBlock

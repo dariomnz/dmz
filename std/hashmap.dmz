@@ -163,8 +163,8 @@ test "HashMap<i32, i32>" {
 
     for (0..num_items) |i| {
         let getted = hm.get(i);
-        let err = catch getted;
-        if (err) {
+        let erro = catch getted;
+        if (erro) {
             std.io.printf("HashMap cannot get %d\n", i);
         }
         let getted_value = try getted;

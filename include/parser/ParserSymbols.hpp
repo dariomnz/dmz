@@ -99,6 +99,13 @@ struct TypeBool : public Type {
     std::string to_str() const override;
 };
 
+struct TypeError : public Type {
+    TypeError(SourceLocation location) : Type(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct TypeSlice : public Type {
     ptr<Expr> sliceType;
     TypeSlice(SourceLocation location, ptr<Expr> sliceType) : Type(location), sliceType(std::move(sliceType)) {}

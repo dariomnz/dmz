@@ -20,75 +20,72 @@ fn main() -> void {
     }
 }
 // CHECK: main:
-// CHECK-NEXT: [11 (entry)]
+// CHECK-NEXT: [10 (entry)]
 // CHECK-NEXT:   preds: 
-// CHECK-NEXT:   succs: 10 
+// CHECK-NEXT:   succs: 9 
 // CHECK-NEXT: 
-// CHECK-NEXT: [10]
-// CHECK-NEXT:   preds: 11 
-// CHECK-NEXT:   succs: 8(U) 9(U) 
+// CHECK-NEXT: [9]
+// CHECK-NEXT:   preds: 10 
+// CHECK-NEXT:   succs: 7(U) 8 
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '10'
-// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedDeclStmt i32
 // CHECK-NEXT:   ResolvedIntLiteral:i32 '10'
-// CHECK-NEXT:   ResolvedDeclStmt
+// CHECK-NEXT:   ResolvedDeclStmt i32
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedSwitchStmt
 // CHECK-NEXT: 
-// CHECK-NEXT: [9]
-// CHECK-NEXT:   preds: 10(U) 
-// CHECK-NEXT:   succs: 7 
+// CHECK-NEXT: [8]
+// CHECK-NEXT:   preds: 9 
+// CHECK-NEXT:   succs: 6 
 // CHECK-NEXT:   ResolvedStringLiteral:*u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedCallExpr:i32
-// CHECK-NEXT: 
-// CHECK-NEXT: [8]
-// CHECK-NEXT:   preds: 10(U) 
-// CHECK-NEXT:   succs: 7 
-// CHECK-NEXT:   ResolvedStringLiteral:*u8 '1\n'
 // CHECK-NEXT:   ResolvedCallExpr:i32
 // CHECK-NEXT: 
 // CHECK-NEXT: [7]
-// CHECK-NEXT:   preds: 8 9 
-// CHECK-NEXT:   succs: 5 6(U) 
+// CHECK-NEXT:   preds: 9(U) 
+// CHECK-NEXT:   succs: 6 
+// CHECK-NEXT:   ResolvedStringLiteral:*u8 '1\n'
+// CHECK-NEXT:   ResolvedCallExpr:i32
+// CHECK-NEXT: 
+// CHECK-NEXT: [6]
+// CHECK-NEXT:   preds: 7 8 
+// CHECK-NEXT:   succs: 4 5(U) 
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:   ResolvedSwitchStmt
 // CHECK-NEXT: 
-// CHECK-NEXT: [6]
-// CHECK-NEXT:   preds: 7(U) 
-// CHECK-NEXT:   succs: 4 
+// CHECK-NEXT: [5]
+// CHECK-NEXT:   preds: 6(U) 
+// CHECK-NEXT:   succs: 3 
 // CHECK-NEXT:   ResolvedStringLiteral:*u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedCallExpr:i32 
-// CHECK-NEXT: 
-// CHECK-NEXT: [5]
-// CHECK-NEXT:   preds: 7 
-// CHECK-NEXT:   succs: 4 
-// CHECK-NEXT:   ResolvedStringLiteral:*u8 '10\n'
-// CHECK-NEXT:   ResolvedCallExpr:i32 
+// CHECK-NEXT:   ResolvedCallExpr:i32
 // CHECK-NEXT: 
 // CHECK-NEXT: [4]
-// CHECK-NEXT:   preds: 5 6 
-// CHECK-NEXT:   succs: 2 3 
+// CHECK-NEXT:   preds: 6 
+// CHECK-NEXT:   succs: 3 
+// CHECK-NEXT:   ResolvedStringLiteral:*u8 '10\n'
+// CHECK-NEXT:   ResolvedCallExpr:i32
+// CHECK-NEXT: 
+// CHECK-NEXT: [3]
+// CHECK-NEXT:   preds: 4 5 
+// CHECK-NEXT:   succs: 1 2 
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:   ResolvedSwitchStmt
 // CHECK-NEXT: 
-// CHECK-NEXT: [3]
-// CHECK-NEXT:   preds: 4 
-// CHECK-NEXT:   succs: 1 
+// CHECK-NEXT: [2]
+// CHECK-NEXT:   preds: 3 
+// CHECK-NEXT:   succs: 0 
 // CHECK-NEXT:   ResolvedStringLiteral:*u8 'else %d\n'
 // CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedCallExpr:i32 
-// CHECK-NEXT: 
-// CHECK-NEXT: [2]
-// CHECK-NEXT:   preds: 4 
-// CHECK-NEXT:   succs: 1 
-// CHECK-NEXT:   ResolvedStringLiteral:*u8 '10\n'
-// CHECK-NEXT:   ResolvedCallExpr:i32 
+// CHECK-NEXT:   ResolvedCallExpr:i32
 // CHECK-NEXT: 
 // CHECK-NEXT: [1]
-// CHECK-NEXT:   preds: 2 3 
+// CHECK-NEXT:   preds: 3 
 // CHECK-NEXT:   succs: 0 
+// CHECK-NEXT:   ResolvedStringLiteral:*u8 '10\n'
+// CHECK-NEXT:   ResolvedCallExpr:i32
 // CHECK-NEXT: 
 // CHECK-NEXT: [0 (exit)]
-// CHECK-NEXT:   preds: 1 
+// CHECK-NEXT:   preds: 1 2 
 // CHECK-NEXT:   succs: 
+// CHECK-NEXT: 

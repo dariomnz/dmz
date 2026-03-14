@@ -1,4 +1,4 @@
-// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Defered foo\nDefered foo\nDefered foo\nDefered bar\nDefered foo\nDefered foo\nDefered bar\n")
 
 const e = error {
@@ -58,7 +58,7 @@ fn foo(x:i32) -> !i32 {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedReturnStmt
-// CHECK-NEXT:             ResolvedMemberExpr:error ERROR_ONE
+// CHECK-NEXT:             ResolvedMemberExpr:err ERROR_ONE
 // CHECK-NEXT:               ResolvedDeclRefExpr:errorGroup  e
 // CHECK-NEXT:             ResolvedDeferRefStmt
 // CHECK-NEXT:               ResolvedBlock

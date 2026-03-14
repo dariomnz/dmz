@@ -614,6 +614,14 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             }
         }
         if (!decl) return report(memberExpr.location, "error group has no member called '" + memberExpr.field + '\'');
+    } else if (baseType->kind == ResolvedTypeKind::Generic) {
+        // Return a dummy member expression for generic types to allow LSP highlighting
+        static std::map<std::string, ptr<ResolvedFieldDecl>> genericFields;
+        if (genericFields.find(memberExpr.field) == genericFields.end()) {
+            genericFields[memberExpr.field] = makePtr<ResolvedFieldDecl>(
+                SourceLocation{}, memberExpr.field, makePtr<ResolvedTypeGeneric>(SourceLocation{}, nullptr), 0, nullptr);
+        }
+        return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *genericFields[memberExpr.field]);
     } else {
         return report(memberExpr.base->location, "cannot access member of '" + resolvedBase->type->to_str() + '\'');
     }
@@ -836,7 +844,7 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
     bool only_first = true;
     for (auto &&initializer : arrayInstantiation.initializers) {
         varOrReturn(resolvedExpr, resolve_expr(*initializer));
-        auto &resolved = resolvedinitializers.emplace_back(std::move(resolvedExpr));
+        auto *resolved = resolvedinitializers.emplace_back(std::move(resolvedExpr)).get();
 
         resolved->set_constant_value(cee.evaluate(*resolved, false));
 

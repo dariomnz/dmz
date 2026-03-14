@@ -1,3 +1,8 @@
+#ifdef DEBUG_SEMANTIC
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
 #include "semantic/CFG.hpp"
 
 #include "Stats.hpp"
@@ -16,7 +21,8 @@ CFG CFGBuilder::build(const ResolvedBlock &block) {
 
 static inline bool is_terminator(const ResolvedStmt &stmt) {
     return dynamic_cast<const ResolvedIfStmt *>(&stmt) || dynamic_cast<const ResolvedWhileStmt *>(&stmt) ||
-           dynamic_cast<const ResolvedReturnStmt *>(&stmt);
+           dynamic_cast<const ResolvedReturnStmt *>(&stmt) || dynamic_cast<const ResolvedSwitchStmt *>(&stmt) ||
+           dynamic_cast<const ResolvedForStmt *>(&stmt);
 }
 
 int CFGBuilder::insert_block(const ResolvedBlock &block, int succ) {
@@ -162,7 +168,7 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
 
     int entry = cfg.insert_new_block();
 
-    size_t rechableIndex = -1;
+    int rechableIndex = -1;
     for (size_t i = 0; i < stmt.cases.size(); i++) {
         if (!stmt.cases[i]->condition) continue;
         std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
@@ -174,10 +180,10 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
     for (size_t i = 0; i < stmt.cases.size(); i++) {
         if (!stmt.cases[i]->condition) continue;
         std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
-        cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == i);
+        cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == static_cast<int>(i));
     }
 
-    cfg.insert_edge(entry, casesBlocks[stmt.cases.size()], !val || rechableIndex == -1u);
+    cfg.insert_edge(entry, casesBlocks[stmt.cases.size()], !val || rechableIndex == -1);
 
     cfg.insert_stmt(&stmt, entry);
     return insert_expr(*stmt.condition, entry);

@@ -404,6 +404,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
     if (from.kind == ResolvedTypeKind::Pointer) {
         if (to.kind == ResolvedTypeKind::Pointer) {
             return v;
+        } else if (to.kind == ResolvedTypeKind::Number) {
+            return m_builder.CreatePtrToInt(v, generate_type(to), "ptr.to.int");
         } else {
             dmz_unreachable("unsuported type from ptr");
         }

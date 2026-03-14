@@ -101,9 +101,9 @@ fn main() -> void {
     let result_e = catch result2;
     dprintf(1, "%s\n", result_e);
 
-    let err = catch result;
-    if (err){
-        dprintf(1, "%s\n", err);
+    let err1 = catch result;
+    if (err1){
+        dprintf(1, "%s\n", err1);
     } else {
         dprintf(1, "There was no error\n");
     }
@@ -127,7 +127,7 @@ fn main() -> void {
 // CHECK-NEXT:   %result2 = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   %struct.ret.tmp1 = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   %result_e = alloca ptr, align 8
-// CHECK-NEXT:   %err = alloca ptr, align 8
+// CHECK-NEXT:   %err1 = alloca ptr, align 8
 // CHECK-NEXT:   %struct.ret.tmp9 = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   %struct.ret.tmp16 = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result, i8 0, i64 16, i1 false)
@@ -135,7 +135,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result2, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp1, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %result_e, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %err, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %err1, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp9, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp16, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 10)
@@ -164,14 +164,14 @@ fn main() -> void {
 // CHECK-NEXT:   %10 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.1, ptr %9)
 // CHECK-NEXT:   %11 = getelementptr inbounds nuw %error.struct.i32, ptr %result, i32 0, i32 1
 // CHECK-NEXT:   %12 = load ptr, ptr %11, align 8
-// CHECK-NEXT:   store ptr %12, ptr %err, align 8
-// CHECK-NEXT:   %13 = load ptr, ptr %err, align 8
+// CHECK-NEXT:   store ptr %12, ptr %err1, align 8
+// CHECK-NEXT:   %13 = load ptr, ptr %err1, align 8
 // CHECK-NEXT:   %14 = ptrtoint ptr %13 to i64
 // CHECK-NEXT:   %ptr.to.bool2 = icmp ne i64 %14, 0
 // CHECK-NEXT:   br i1 %ptr.to.bool2, label %if.true, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %if.exit.try
-// CHECK-NEXT:   %15 = load ptr, ptr %err, align 8
+// CHECK-NEXT:   %15 = load ptr, ptr %err1, align 8
 // CHECK-NEXT:   %16 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @global.str.2, ptr %15)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 

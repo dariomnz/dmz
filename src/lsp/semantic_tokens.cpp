@@ -326,7 +326,8 @@ void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
             if (specStru->specializedTypes) traverse_type(*specStru->specializedTypes);
         }
     } else if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
-               dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type)) {
+               dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type) ||
+               dynamic_cast<const ResolvedTypeError*>(&type)) {
         if (type.location.file_name == m_target_file) {
             add_token(type.location, type.to_str(), SemanticTokenType::Type);
         }

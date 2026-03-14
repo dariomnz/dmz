@@ -54,6 +54,9 @@ bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::Pointer && isPlatformSize) {
+        return debug_ret(true);
+    }
     if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Bool ||
         other.kind == ResolvedTypeKind::Generic) {
         // TODO think if is ok to ignore size
@@ -360,7 +363,7 @@ void ResolvedTypeError::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeError " << to_str() << "\n";
 }
 
-std::string ResolvedTypeError::to_str() const { return "error"; }
+std::string ResolvedTypeError::to_str() const { return "err"; }
 
 bool ResolvedTypeErrorGroup::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeErrorGroup " << to_str() << " " << other.to_str() << " " << location);
