@@ -52,6 +52,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_typeid_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const TypeinfoExpr*>(&expr)) {
         node = fmt_typeinfo_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const HasMethodExpr*>(&expr)) {
+        node = fmt_hasmethod_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ArrayAtExpr*>(&expr)) {
         node = fmt_array_at_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const RefPtrExpr*>(&expr)) {
@@ -237,6 +239,17 @@ ptr<Node> Formatter::fmt_typeinfo_expr(const TypeinfoExpr& expr) {
     ret->nodes.emplace_back(makePtr<Text>("@typeinfo"));
     ret->nodes.emplace_back(makePtr<Text>("("));
     ret->nodes.emplace_back(fmt_expr(*expr.typeinfoExpr));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_hasmethod_expr(const HasMethodExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@hasMethod"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.structType));
+    ret->nodes.emplace_back(makePtr<Text>(", "));
+    ret->nodes.emplace_back(build.string(expr.methodName));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     return ret;
 }

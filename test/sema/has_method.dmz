@@ -1,0 +1,20 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+struct S {
+    a: i32,
+    pub fn foo(s: *@This) -> void {}
+}
+
+fn main() -> void {
+    let s: S = {};
+    const hasFoo = @hasMethod(s, "foo");
+    const hasBar = @hasMethod(s, "bar");
+}
+
+// CHECK:       ResolvedVarDecl:const bool hasFoo
+// CHECK-NEXT:  ResolvedHasMethodExpr:bool foo
+// CHECK-NEXT:  | value: 1
+
+// CHECK:       ResolvedVarDecl:const bool hasBar
+// CHECK-NEXT:  ResolvedHasMethodExpr:bool bar
+// CHECK-NEXT:  | value: 0

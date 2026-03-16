@@ -146,12 +146,15 @@ struct IfStmt : public Stmt {
     ptr<Expr> condition;
     ptr<Block> trueBlock;
     ptr<Block> falseBlock;
+    bool isInline;
 
-    IfStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> trueBlock, ptr<Block> falseBlock = nullptr)
+    IfStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> trueBlock, ptr<Block> falseBlock = nullptr,
+           bool isInline = false)
         : Stmt(location),
           condition(std::move(condition)),
           trueBlock(std::move(trueBlock)),
-          falseBlock(std::move(falseBlock)) {}
+          falseBlock(std::move(falseBlock)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -362,6 +365,16 @@ struct TypeinfoExpr : public Expr {
     ptr<Expr> typeinfoExpr;
     TypeinfoExpr(SourceLocation location, ptr<Expr> typeinfoExpr)
         : Expr(location), typeinfoExpr(std::move(typeinfoExpr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct HasMethodExpr : public Expr {
+    ptr<Expr> structType;
+    std::string methodName;
+    HasMethodExpr(SourceLocation location, ptr<Expr> structType, std::string methodName)
+        : Expr(location), structType(std::move(structType)), methodName(std::move(methodName)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

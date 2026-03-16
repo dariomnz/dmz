@@ -131,18 +131,44 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
         return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
     }
 
-    varOrReturn(resolvedTrueBlock, resolve_block(*ifStmt.trueBlock));
-
-    ptr<ResolvedBlock> resolvedFalseBlock;
-    if (ifStmt.falseBlock) {
-        resolvedFalseBlock = resolve_block(*ifStmt.falseBlock);
-        if (!resolvedFalseBlock) return nullptr;
+    condition->set_constant_value(cee.evaluate(*condition, false));
+    if (ifStmt.isInline && !condition->get_constant_value()) {
+        return report(condition->location, "inline if condition must be a constant value");
     }
 
-    condition->set_constant_value(cee.evaluate(*condition, false));
+    ptr<ResolvedBlock> resolvedTrueBlock;
+    ptr<ResolvedBlock> resolvedFalseBlock;
+
+    if (ifStmt.isInline) {
+        bool condVal = condition->get_constant_value().value() != 0;
+        if (condVal) {
+            varOrReturn(trueBlock, resolve_block(*ifStmt.trueBlock));
+            resolvedTrueBlock = std::move(trueBlock);
+            if (ifStmt.falseBlock) {
+                resolvedFalseBlock =
+                    makePtr<ResolvedBlock>(ifStmt.falseBlock->location, std::vector<ptr<ResolvedStmt>>{},
+                                           std::vector<ptr<ResolvedDeferRefStmt>>{});
+            }
+        } else {
+            resolvedTrueBlock = makePtr<ResolvedBlock>(ifStmt.trueBlock->location, std::vector<ptr<ResolvedStmt>>{},
+                                                       std::vector<ptr<ResolvedDeferRefStmt>>{});
+            if (ifStmt.falseBlock) {
+                varOrReturn(falseBlock, resolve_block(*ifStmt.falseBlock));
+                resolvedFalseBlock = std::move(falseBlock);
+            }
+        }
+    } else {
+        varOrReturn(trueBlock, resolve_block(*ifStmt.trueBlock));
+        resolvedTrueBlock = std::move(trueBlock);
+
+        if (ifStmt.falseBlock) {
+            resolvedFalseBlock = resolve_block(*ifStmt.falseBlock);
+            if (!resolvedFalseBlock) return nullptr;
+        }
+    }
 
     return makePtr<ResolvedIfStmt>(ifStmt.location, std::move(condition), std::move(resolvedTrueBlock),
-                                   std::move(resolvedFalseBlock));
+                                   std::move(resolvedFalseBlock), ifStmt.isInline);
 }
 
 ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {

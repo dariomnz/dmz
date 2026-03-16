@@ -274,6 +274,8 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
     } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
         find_in_expr(*rangeExpr->startExpr);
         find_in_expr(*rangeExpr->endExpr);
+    } else if (auto* hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr*>(&expr)) {
+        find_in_expr(*hasMethodExpr->structTypeExpr);
     } else if (auto* genericExpr = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
         find_in_expr(*genericExpr->base);
         if (found_decl) return;

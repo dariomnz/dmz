@@ -45,6 +45,9 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
     if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
         return evaluate(*typeExpr, allowSideEffects);
     }
+    if (const auto *hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr *>(&expr)) {
+        return hasMethodExpr->get_constant_value();
+    }
     return std::nullopt;
 }
 

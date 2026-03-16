@@ -424,6 +424,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *typeinfoExpr = dynamic_cast<const TypeinfoExpr *>(&expr)) {
         return resolve_typeinfo_expr(*typeinfoExpr);
     }
+    if (const auto *hasMethodExpr = dynamic_cast<const HasMethodExpr *>(&expr)) {
+        return resolve_has_method_expr(*hasMethodExpr);
+    }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
     }
@@ -976,6 +979,46 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     add_dependency(typeInfoDecl->decl);
     auto returnType = makePtr<ResolvedTypePointer>(typeinfoExpr.location, typeInfoDecl->clone());
     return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
+}
+
+ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &hasMethodExpr) {
+    debug_func(hasMethodExpr.location);
+    varOrReturn(structTypeExpr, resolve_expr(*hasMethodExpr.structType));
+
+    ResolvedType *baseType = structTypeExpr->type.get();
+    if (auto ptrType = dynamic_cast<ResolvedTypePointer *>(baseType)) {
+        baseType = ptrType->pointerType.get();
+    }
+
+    bool hasMethod = false;
+    if (auto struDeclType = dynamic_cast<ResolvedTypeStructDecl *>(baseType)) {
+        if (struDeclType->decl) {
+            for (auto &&func : struDeclType->decl->functions) {
+                if (func->identifier == hasMethodExpr.methodName) {
+                    hasMethod = true;
+                    break;
+                }
+            }
+        }
+    } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(baseType)) {
+        if (struType->decl) {
+            for (auto &&func : struType->decl->functions) {
+                if (func->identifier == hasMethodExpr.methodName) {
+                    hasMethod = true;
+                    break;
+                }
+            }
+        }
+    } else if (baseType->kind == ResolvedTypeKind::Generic) {
+        hasMethod = false;
+    } else {
+        return report(hasMethodExpr.location, "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
+    }
+
+    auto resolved = makePtr<ResolvedHasMethodExpr>(
+        hasMethodExpr.location, makePtr<ResolvedTypeBool>(hasMethodExpr.location), std::move(structTypeExpr), hasMethodExpr.methodName);
+    resolved->set_constant_value(hasMethod ? 1 : 0);
+    return resolved;
 }
 
 ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {

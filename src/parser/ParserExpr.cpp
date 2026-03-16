@@ -151,6 +151,9 @@ ptr<Expr> Parser::parse_primary() {
         if (m_nextToken.type == TokenType::kw_typeinfo) {
             return parse_typeinfo_expr();
         }
+        if (m_nextToken.type == TokenType::kw_hasmethod) {
+            return parse_hasmethod_expr();
+        }
     }
     if (restrictions & OnlyTypeExpr) {
         return report(location, "expected type expression");
@@ -445,5 +448,30 @@ ptr<TypeinfoExpr> Parser::parse_typeinfo_expr() {
     eat_next_token();  // eat )
 
     return makePtr<TypeinfoExpr>(location, std::move(type));
+}
+
+ptr<Expr> Parser::parse_hasmethod_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_hasmethod, "expected @hasMethod");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @hasMethod
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    varOrReturn(expr, parse_expr());
+
+    matchOrReturn(TokenType::comma, "expected ','");
+    eat_next_token();  // eat ,
+
+    matchOrReturn(TokenType::lit_string, "expected string literal for method name");
+    varOrReturn(methodNameOpt, str_from_source(m_nextToken.str.substr(1, m_nextToken.str.size() - 2)));
+    auto methodName = methodNameOpt.value();
+    eat_next_token();  // eat method name
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return makePtr<HasMethodExpr>(location, std::move(expr), std::move(methodName));
 }
 }  // namespace DMZ

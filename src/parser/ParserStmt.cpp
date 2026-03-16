@@ -37,7 +37,8 @@ ptr<ReturnStmt> Parser::parse_return_stmt() {
 ptr<Stmt> Parser::parse_statement() {
     debug_func("");
     m_expectIncompleteStatement = false;
-    if (m_nextToken.type == TokenType::kw_if) return parse_if_stmt();
+    if (m_nextToken.type == TokenType::kw_if || (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_if))
+        return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_for ||
         (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for))
@@ -90,6 +91,11 @@ ptr<Block> Parser::parse_block(bool oneStmt) {
 ptr<IfStmt> Parser::parse_if_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
+    bool isInline = false;
+    if (m_nextToken.type == TokenType::kw_inline) {
+        isInline = true;
+        eat_next_token();
+    }
     eat_next_token();  // eat 'if'
 
     matchOrReturn(TokenType::par_l, "expected '('");
@@ -105,7 +111,7 @@ ptr<IfStmt> Parser::parse_if_stmt() {
     varOrReturn(trueBlock, parse_block());
 
     if (m_nextToken.type != TokenType::kw_else)
-        return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock));
+        return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock), nullptr, isInline);
     eat_next_token();  // eat 'else'
 
     ptr<Block> falseBlock;
@@ -124,7 +130,7 @@ ptr<IfStmt> Parser::parse_if_stmt() {
 
     if (!falseBlock) return nullptr;
 
-    return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock), std::move(falseBlock));
+    return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock), std::move(falseBlock), isInline);
 }
 
 ptr<WhileStmt> Parser::parse_while_stmt() {

@@ -102,6 +102,9 @@ pub fn fmt_bool(w: std.io.Writer, b: bool) -> !usize {
 }
 
 pub fn fmt_struct<T>(w: std.io.Writer, s: T) -> !usize {
+    inline if (@hasMethod(s, "fmt")) {
+        return s.fmt(w);
+    }
     const typeinfo = @typeinfo(s);
     let ret: usize = 0;
     ret += try w.writeAll(typeinfo.name);
@@ -195,6 +198,17 @@ struct Test_struct {
     a: i32,
     b: i32,
     c: i32,
+
+    pub fn fmt(s: *@This, w: std.io.Writer) -> !usize {
+        let ret: usize = 0;
+        ret += try w.writeStr("Test_struct a ");
+        ret += try fmt_integer<s.a>(w, s.a);
+        ret += try w.writeStr(" b ");
+        ret += try fmt_integer<s.b>(w, s.b);
+        ret += try w.writeStr(" c ");
+        ret += try fmt_integer<s.c>(w, s.c);
+        return ret;
+    }
 }
 
 struct Test_struct2 {
@@ -221,12 +235,7 @@ test "print integers" {
     big += 123456789;
 
     const test_struct: Test_struct2 = {};
-    const tuple = .{big, 1.23, true, w2, w, test_struct, error.InplaceError};
-    const t = @typeid(tuple);
-    const t0 = @typeid(tuple.elem0);
-    const t1 = @typeid(tuple.elem1);
-    const t2 = @typeid(tuple.elem2);
-    const t3 = @typeid(tuple.elem3);
+    const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError};
     let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}'\n", tuple);
     w2.flush();
 }

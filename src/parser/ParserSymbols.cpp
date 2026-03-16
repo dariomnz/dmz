@@ -169,6 +169,13 @@ void TypeinfoExpr::dump(size_t level) const {
 
 std::string TypeinfoExpr::to_str() const { dmz_unreachable("TODO"); }
 
+void HasMethodExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "HasMethod " << methodName << "\n";
+    structType->dump(level + 1);
+}
+
+std::string HasMethodExpr::to_str() const { return "@hasMethod(" + structType->to_str() + ", \"" + methodName + "\")"; }
+
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
 std::string DeclRefExpr::to_str() const { return identifier; }
@@ -237,7 +244,7 @@ void GroupingExpr::dump(size_t level) const {
 std::string GroupingExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void IfStmt::dump(size_t level) const {
-    std::cerr << indent(level) << "IfStmt\n";
+    std::cerr << indent(level) << (isInline ? "InlineIfStmt\n" : "IfStmt\n");
 
     condition->dump(level + 1);
     trueBlock->dump(level + 1);

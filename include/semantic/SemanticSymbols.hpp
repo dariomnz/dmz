@@ -117,13 +117,15 @@ struct ResolvedIfStmt : public ResolvedStmt {
     ptr<ResolvedExpr> condition;
     ptr<ResolvedBlock> trueBlock;
     ptr<ResolvedBlock> falseBlock;
+    bool isInline;
 
     ResolvedIfStmt(SourceLocation location, ptr<ResolvedExpr> condition, ptr<ResolvedBlock> trueBlock,
-                   ptr<ResolvedBlock> falseBlock = nullptr)
+                   ptr<ResolvedBlock> falseBlock = nullptr, bool isInline = false)
         : ResolvedStmt(location),
           condition(std::move(condition)),
           trueBlock(std::move(trueBlock)),
-          falseBlock(std::move(falseBlock)) {}
+          falseBlock(std::move(falseBlock)),
+          isInline(isInline) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -490,6 +492,19 @@ struct ResolvedTypeinfoExpr : public ResolvedExpr {
 
     ResolvedTypeinfoExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> typeinfoExpr)
         : ResolvedExpr(location, std::move(type)), typeinfoExpr(std::move(typeinfoExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedHasMethodExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> structTypeExpr;
+    std::string methodName;
+
+    ResolvedHasMethodExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> structTypeExpr,
+                          std::string methodName)
+        : ResolvedExpr(location, std::move(type)),
+          structTypeExpr(std::move(structTypeExpr)),
+          methodName(std::move(methodName)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

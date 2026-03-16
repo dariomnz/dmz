@@ -116,6 +116,13 @@ void ResolvedTypeinfoExpr::dump(size_t level, bool onlySelf) const {
     typeinfoExpr->dump(level + 1, onlySelf);
 }
 
+void ResolvedHasMethodExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedHasMethodExpr:" << type->to_str() << " " << methodName << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+    structTypeExpr->dump(level + 1, onlySelf);
+}
+
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
@@ -269,7 +276,7 @@ void ResolvedGroupingExpr::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedIfStmt::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedIfStmt\n";
+    std::cerr << indent(level) << (isInline ? "ResolvedInlineIfStmt\n" : "ResolvedIfStmt\n");
 
     if (onlySelf) return;
     condition->dump(level + 1, onlySelf);
