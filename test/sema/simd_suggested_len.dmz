@@ -1,0 +1,57 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let size_bool = @simdSize(bool);
+    let size_i32 = @simdSize(i32);
+    let size_i64 = @simdSize(i64);
+    let size_f16 = @simdSize(f16);
+    let size_u8 = @simdSize(u8);
+    let size_void_ptr = @simdSize(*void);
+
+    printf("simdSize bool %d\n", size_bool);
+    printf("simdSize i32 %d\n", size_i32);
+    printf("simdSize i64 %d\n", size_i64);
+    printf("simdSize f16 %d\n", size_f16);
+    printf("simdSize u8 %d\n", size_u8);
+    printf("simdSize *void %d\n", size_void_ptr);
+}
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_bool
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 256
+// CHECK-NEXT:           ResolvedTypeExpr:bool
+// CHECK-NEXT:             ResolvedTypeBool bool
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_i32
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 8
+// CHECK-NEXT:           ResolvedTypeExpr:i32
+// CHECK-NEXT:             ResolvedTypeNumber i32
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_i64
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 4
+// CHECK-NEXT:           ResolvedTypeExpr:i64
+// CHECK-NEXT:             ResolvedTypeNumber i64
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_f16
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 16
+// CHECK-NEXT:           ResolvedTypeExpr:f16
+// CHECK-NEXT:             ResolvedTypeNumber f16
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_u8
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 32
+// CHECK-NEXT:           ResolvedTypeExpr:u8
+// CHECK-NEXT:             ResolvedTypeNumber u8
+// CHECK-NEXT:     ResolvedDeclStmt usize
+// CHECK-NEXT:       ResolvedVarDecl:usize size_void_ptr
+// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
+// CHECK-NEXT:         | value: 4
+// CHECK-NEXT:           ResolvedTypePointerExpr:*void
+// CHECK-NEXT:             ResolvedTypeExpr:void
+// CHECK-NEXT:               ResolvedTypeVoid void

@@ -14,27 +14,27 @@ void Driver::display_help() {
     println("Usage:");
     println("  dmz [options] <source_file>\n");
     println("Options:");
-    println("  -h, -help          display this message");
-    println("  -I <module> <path> include <module> <path> to search for modules");
-    println("  -o <file>          write executable to <file>");
-    println("  -lexer-dump        print the lexer dump");
-    println("  -ast-dump          print the abstract syntax tree");
-    println("  -lsp               start the language server");
-    println("  -fmt-dump          print the fmt syntax tree");
-    println("  -import-dump       print the abstract syntax tree after import");
-    println("  -no-remove-unused  disable the removal of unused code");
-    println("  -res-dump          print the resolved syntax tree");
-    println("  -deps-dump         print the resolved syntax tree with dependencies");
-    println("  -cfg-dump          print the control flow graph");
-    println("  -llvm-dump         print the llvm module");
-    println("  -print-stats       print the time stats");
-    println("  -module            compile a module to .o file");
-    println("  -g                 generate debug symbols");
-    println("  -run               runs the program with lli (Just In Time)");
-    println("  -test              runs the test with lli (Just In Time)");
+    println("  -h, -help            display this message");
+    println("  -I <module> <path>   include <module> <path> to search for modules");
+    println("  -o <file>            write executable to <file>");
+    println("  -lexer-dump          print the lexer dump");
+    println("  -ast-dump            print the abstract syntax tree");
+    println("  -lsp                 start the language server");
+    println("  -fmt-dump            print the fmt syntax tree");
+    println("  -import-dump         print the abstract syntax tree after import");
+    println("  -no-remove-unused    disable the removal of unused code");
+    println("  -res-dump            print the resolved syntax tree");
+    println("  -deps-dump           print the resolved syntax tree with dependencies");
+    println("  -cfg-dump            print the control flow graph");
+    println("  -llvm-dump           print the llvm module");
+    println("  -print-stats         print the time stats");
+    println("  -module              compile a module to .o file");
+    println("  -g                   generate debug symbols");
+    println("  -run                 runs the program with lli (Just In Time)");
+    println("  -test                runs the test with lli (Just In Time)");
     println("  -test-compiler [dir] runs the compiler tests in [dir] (default: ./test)");
-    println("  -fmt               format the dmz source file");
-    println("  -quiet             suppress output for successful tests");
+    println("  -fmt                 format the dmz source file");
+    println("  -quiet               suppress output for successful tests");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -75,6 +75,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.depsDump = true;
             } else if (arg == "-llvm-dump") {
                 options.llvmDump = true;
+            } else if (arg == "-asm-dump") {
+                options.asmDump = true;
             } else if (arg == "-cfg-dump") {
                 options.cfgDump = true;
             } else if (arg == "-run") {
@@ -582,10 +584,117 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
     }
 }
 
+int Driver::asm_pass(ptr<llvm::Module> &module) {
+    debug_func("");
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        return 1;
+    }
+
+    pid_t pid = fork();
+
+    int status;
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    } else if (pid == 0) {
+        // child
+        close(pipefd[1]);
+
+        dup2(pipefd[0], STDIN_FILENO);
+        close(pipefd[0]);
+
+        const char *cmd = nullptr;
+        std::vector<const char *> args;
+
+        cmd = "clang";
+        args.emplace_back("clang");
+        args.emplace_back("-O0");
+        args.emplace_back("-g");
+        args.emplace_back("-x");
+        args.emplace_back("ir");
+        args.emplace_back("-");
+        args.emplace_back("-S");
+        if (m_options.isModule) {
+            args.emplace_back("-c");
+        }
+        args.emplace_back("-o");
+        args.emplace_back("-");
+        args.emplace_back(nullptr);
+
+        execvp(cmd, const_cast<char *const *>(args.data()));
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    } else {
+        // parent
+        close(pipefd[0]);
+
+        llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
+
+        module->print(pipe_stream, nullptr);
+
+        close(pipefd[1]);
+
+        waitpid(pid, &status, 0);
+        return WEXITSTATUS(status);
+    }
+}
+
 int Driver::ptrBitSize() {
+    static int ptrSize = -1;
+    if (ptrSize >= 0) {
+        return ptrSize;
+    }
     llvm::LLVMContext context;
     llvm::Module module("tmp", context);
-    return module.getDataLayout().getPointerSizeInBits();
+    ptrSize = module.getDataLayout().getPointerSizeInBits();
+    return ptrSize;
+}
+
+int Driver::typeBitSize(const ResolvedType &type) {
+    llvm::LLVMContext context;
+    llvm::Module module("tmp", context);
+    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false).generate_type(type);
+    return module.getDataLayout().getTypeSizeInBits(llvmType);
+}
+
+int Driver::target_simd_size() {
+    static int simdSize = -1;
+    if (simdSize >= 0) {
+        return simdSize;
+    }
+
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    std::string TripleStr = llvm::sys::getDefaultTargetTriple();
+    std::string Error;
+    const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(TripleStr, Error);
+
+    // 3. Crear el TargetMachine (aquí es donde defines CPU y Features)
+    llvm::TargetOptions opt;
+    auto RM = std::optional<llvm::Reloc::Model>();
+    std::string CPU = llvm::sys::getHostCPUName().str();
+    std::string Features;
+    auto allFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &feature : allFeatures) {
+        if (feature.second) {
+            Features += "+" + feature.first().str() + ",";
+        }
+    }
+    llvm::TargetMachine *TM = Target->createTargetMachine(TripleStr, CPU, Features, opt, RM);
+    llvm::LLVMContext ctx;
+    llvm::Module mod("tmp", ctx);
+    llvm::FunctionType *FTy = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), false);
+    llvm::Function *TempF = llvm::Function::Create(FTy, llvm::Function::ExternalLinkage, "__temp_tti", &mod);
+    llvm::TargetTransformInfo TTI = TM->getTargetTransformInfo(*TempF);
+
+    simdSize = TTI.getRegisterBitWidth(llvm::TargetTransformInfo::RGK_FixedWidthVector);
+
+    debug_msg("El ancho de banda SIMD para '" << TripleStr << "' cpu: '" << CPU << "' features: '" << Features
+                                              << "' es: " << vectorSize << " bits");
+    return simdSize;
 }
 
 int Driver::main() {
@@ -634,6 +743,10 @@ int Driver::main() {
 
     auto module = codegen_pass(std::move(resolvedTrees));
     if (need_exit()) return exit_code();
+
+    if (m_options.asmDump) {
+        return asm_pass(module.second);
+    }
 
     if (m_options.run) {
         return jit_pass(module.second);

@@ -1,0 +1,41 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> void;
+
+fn main() -> void {
+    let arr: i32[4] = {10, 20, 30, 40};
+    let v: @simd<i32, 4> = @simd<i32, 4>.load(&arr[0]);
+    let sum: i32 = v.reduceAdd();
+
+    printf("Sum: %d\n", sum);
+}
+
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %arr = alloca [4 x i32], align 4
+// CHECK-NEXT:   %"array.i32[4].tmp" = alloca [4 x i32], align 4
+// CHECK-NEXT:   %v = alloca <4 x i32>, align 16
+// CHECK-NEXT:   %sum = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %arr, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.i32[4].tmp", i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %v, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %sum, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   %0 = getelementptr [4 x i32], ptr %"array.i32[4].tmp", i32 0, i32 0
+// CHECK-NEXT:   store i32 10, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr [4 x i32], ptr %"array.i32[4].tmp", i32 0, i32 1
+// CHECK-NEXT:   store i32 20, ptr %1, align 4
+// CHECK-NEXT:   %2 = getelementptr [4 x i32], ptr %"array.i32[4].tmp", i32 0, i32 2
+// CHECK-NEXT:   store i32 30, ptr %2, align 4
+// CHECK-NEXT:   %3 = getelementptr [4 x i32], ptr %"array.i32[4].tmp", i32 0, i32 3
+// CHECK-NEXT:   store i32 40, ptr %3, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %arr, ptr align 4 %"array.i32[4].tmp", i64 16, i1 false)
+// CHECK-NEXT:   %4 = getelementptr [4 x i32], ptr %arr, i32 0, i32 0
+// CHECK-NEXT:   %simd.load = load <4 x i32>, ptr %4, align 16
+// CHECK-NEXT:   store <4 x i32> %simd.load, ptr %v, align 16
+// CHECK-NEXT:   %5 = load <4 x i32>, ptr %v, align 16
+// CHECK-NEXT:   %6 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %5)
+// CHECK-NEXT:   store i32 %6, ptr %sum, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %7)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

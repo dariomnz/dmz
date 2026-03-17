@@ -123,6 +123,13 @@ void ResolvedHasMethodExpr::dump(size_t level, bool onlySelf) const {
     structTypeExpr->dump(level + 1, onlySelf);
 }
 
+void ResolvedSimdSizeExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSimdSizeExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+    typeExpr->dump(level + 1, onlySelf);
+}
+
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
@@ -545,6 +552,13 @@ void ResolvedTypeArrayExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeArrayExpr:" << type->to_str() << '\n';
     if (onlySelf) return;
     arrayType->dump(level + 1, onlySelf);
+    sizeExpr->dump(level + 1, onlySelf);
+}
+
+void ResolvedTypeSimdExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedTypeSimdExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    simdType->dump(level + 1, onlySelf);
     sizeExpr->dump(level + 1, onlySelf);
 }
 

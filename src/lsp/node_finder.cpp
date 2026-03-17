@@ -62,6 +62,8 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         find_in_type(*art->arrayType);
     } else if (const auto* opt = dynamic_cast<const ResolvedTypeOptional*>(&type)) {
         find_in_type(*opt->optionalType);
+    } else if (const auto* simdTy = dynamic_cast<const ResolvedTypeSimd*>(&type)) {
+        find_in_type(*simdTy->simdType);
     } else if (const auto* errg = dynamic_cast<const ResolvedTypeErrorGroup*>(&type)) {
         if (errg->decl && is_at_location(errg->location, errg->decl->identifier.length())) {
             found_decl = errg->decl;
@@ -276,6 +278,8 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*rangeExpr->endExpr);
     } else if (auto* hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr*>(&expr)) {
         find_in_expr(*hasMethodExpr->structTypeExpr);
+    } else if (auto* simdSizeExpr = dynamic_cast<const ResolvedSimdSizeExpr*>(&expr)) {
+        find_in_expr(*simdSizeExpr->typeExpr);
     } else if (auto* genericExpr = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
         find_in_expr(*genericExpr->base);
         if (found_decl) return;

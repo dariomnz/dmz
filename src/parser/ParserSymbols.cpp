@@ -37,6 +37,10 @@ void TypeSlice::dump(size_t level) const { std::cerr << indent(level) << "TypeSl
 
 std::string TypeSlice::to_str() const { return "[]" + sliceType->to_str(); }
 
+void TypeSimd::dump(size_t level) const { std::cerr << indent(level) << "TypeSimd " << to_str() << '\n'; }
+
+std::string TypeSimd::to_str() const { return "@simd<" + simdType->to_str() + ", " + simdSize->to_str() + ">"; }
+
 void TypeFunction::dump(size_t level) const { std::cerr << indent(level) << "TypeFunction " << to_str() << '\n'; }
 
 std::string TypeFunction::to_str() const {
@@ -175,6 +179,13 @@ void HasMethodExpr::dump(size_t level) const {
 }
 
 std::string HasMethodExpr::to_str() const { return "@hasMethod(" + structType->to_str() + ", \"" + methodName + "\")"; }
+
+void SimdSizeExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "SimdSizeExpr\n";
+    simdType->dump(level + 1);
+}
+
+std::string SimdSizeExpr::to_str() const { return "@simdSize(" + simdType->to_str() + ")"; }
 
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 

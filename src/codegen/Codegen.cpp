@@ -121,6 +121,9 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             fieldTypes.emplace_back(llvm::PointerType::get(*m_context, 0));
             static_cast<llvm::StructType *>(ret)->setBody(fieldTypes);
         }
+    } else if (auto typeVec = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
+        auto baseType = generate_type(*typeVec->simdType, true);
+        ret = llvm::FixedVectorType::get(baseType, typeVec->simdSize);
     } else if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
         debug_msg(fnType->to_str());
         std::vector<llvm::Type *> paramsTypes;
@@ -182,6 +185,15 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
     } else if (auto typePtr = dynamic_cast<const ResolvedTypePointer *>(&type)) {
         return m_debugBuilder.createPointerType(generate_debug_type(*typePtr->pointerType),
                                                 m_module->getDataLayout().getPointerSizeInBits());
+    } else if (auto typeVec = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
+        std::vector<llvm::Metadata *> Subscripts;
+        Subscripts.push_back(m_debugBuilder.getOrCreateSubrange(0, typeVec->simdSize));
+        auto elementDebugType = generate_debug_type(*typeVec->simdType);
+        auto elementType = generate_type(*typeVec->simdType);
+        auto sizeInBits = m_module->getDataLayout().getTypeSizeInBits(elementType) * typeVec->simdSize;
+        auto alignInBits = m_module->getDataLayout().getPrefTypeAlign(elementType).value() * 8;
+        return m_debugBuilder.createVectorType(sizeInBits, alignInBits, elementDebugType,
+                                               m_debugBuilder.getOrCreateArray(Subscripts));
     } else if (auto typeError = dynamic_cast<const ResolvedTypeError *>(&type)) {
         return generate_debug_type(*ResolvedTypePointer::opaquePtr(typeError->location));
     } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {

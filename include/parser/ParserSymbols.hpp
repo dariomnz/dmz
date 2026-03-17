@@ -114,6 +114,16 @@ struct TypeSlice : public Type {
     std::string to_str() const override;
 };
 
+struct TypeSimd : public Type {
+    ptr<Expr> simdType;
+    ptr<Expr> simdSize;
+    TypeSimd(SourceLocation location, ptr<Expr> simdType, ptr<Expr> simdSize)
+        : Type(location), simdType(std::move(simdType)), simdSize(std::move(simdSize)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct TypeFunction : public Type {
     std::vector<ptr<Expr>> paramsTypes;
     ptr<Expr> returnType;
@@ -375,6 +385,14 @@ struct HasMethodExpr : public Expr {
     std::string methodName;
     HasMethodExpr(SourceLocation location, ptr<Expr> structType, std::string methodName)
         : Expr(location), structType(std::move(structType)), methodName(std::move(methodName)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct SimdSizeExpr : public Expr {
+    ptr<Expr> simdType;
+    SimdSizeExpr(SourceLocation location, ptr<Expr> simdType) : Expr(location), simdType(std::move(simdType)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

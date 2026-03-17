@@ -100,6 +100,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
+    if (dynamic_cast<const ResolvedTypeSimdExpr *>(&expr)) {
+        return nullptr;  // Type expressions don't have values
+    }
     if (auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
         return generate_typeid_expr(*typeidExpr);
     }
@@ -112,6 +115,16 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     debug_func("");
+    if (auto memberExpr = dynamic_cast<const ResolvedMemberExpr *>(call.callee.get())) {
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(memberExpr->base->type.get())) {
+            auto &name = memberExpr->member.identifier;
+            if (name == "load" || name == "store" || name == "reduceAdd" || name == "reduceMul" ||
+                name == "reduceAnd" || name == "reduceOr" || name == "reduceXor" || name == "reduceMin" ||
+                name == "reduceMax") {
+                return generate_simd_builtin(call, *memberExpr, *simdType);
+            }
+        }
+    }
     llvm::Value *callee = generate_expr(*call.callee);
     ResolvedTypeFunction *fnType = dynamic_cast<ResolvedTypeFunction *>(call.callee->type.get());
     if (!fnType) {
@@ -279,9 +292,14 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
     rhs = cast_to(rhs, *binop.rhs->type, *binop.lhs->type);
     auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(binop.lhs->type.get());
     if (!typeNum) {
-        binop.lhs->type->dump();
-        println(binop.location);
-        dmz_unreachable("not expected type in binop");
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(binop.lhs->type.get())) {
+            typeNum = dynamic_cast<const ResolvedTypeNumber *>(simdType->simdType.get());
+        }
+        if (!typeNum) {
+            binop.lhs->type->dump();
+            println(binop.location);
+            dmz_unreachable("not expected type in binop");
+        }
     }
     if (binop.op == TokenType::op_plus || binop.op == TokenType::op_plus_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
@@ -515,6 +533,9 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Array) {
         type = generate_type(*arrayAtExpr.array->type);
         idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
+    } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Simd) {
+        type = generate_type(*arrayAtExpr.array->type);
+        idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Slice) {
         auto slicetype = generate_type(*arrayAtExpr.array->type);
         base = m_builder.CreateStructGEP(slicetype, base, 0);
@@ -714,56 +735,13 @@ llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr)
 }
 
 llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr) {
-    auto &type = *typeidExpr.typeidExpr->type;
-    int typeId = 0;
-    switch (type.kind) {
-        case ResolvedTypeKind::Void:
-            typeId = 0;
-            break;
-        case ResolvedTypeKind::Number: {
-            auto &nt = static_cast<const ResolvedTypeNumber &>(type);
-            if (nt.numberKind == ResolvedNumberKind::Int)
-                typeId = 1;
-            else if (nt.numberKind == ResolvedNumberKind::UInt)
-                typeId = 2;
-            else if (nt.numberKind == ResolvedNumberKind::Float)
-                typeId = 3;
-            break;
-        }
-        case ResolvedTypeKind::Bool:
-            typeId = 4;
-            break;
-        case ResolvedTypeKind::Struct:
-        case ResolvedTypeKind::StructDecl:
-            typeId = 5;
-            break;
-        case ResolvedTypeKind::Pointer:
-            typeId = 6;
-            break;
-        case ResolvedTypeKind::Slice:
-            typeId = 7;
-            break;
-        case ResolvedTypeKind::Range:
-            typeId = 8;
-            break;
-        case ResolvedTypeKind::Array:
-            typeId = 9;
-            break;
-        case ResolvedTypeKind::Function:
-            typeId = 10;
-            break;
-        case ResolvedTypeKind::Error:
-        case ResolvedTypeKind::ErrorGroup:
-            typeId = 11;
-            break;
-        case ResolvedTypeKind::Optional:
-            typeId = 12;
-            break;
-        default:
-            typeId = 99;
-            break;
+    auto typeId = typeidExpr.get_constant_value();
+    if (typeId) {
+        return m_builder.getInt32(typeId.value());
+    } else {
+        dmz_unreachable("this should not happend");
+        return m_builder.getInt32(-1);
     }
-    return m_builder.getInt32(typeId);
 }
 
 llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const ResolvedExpr &from,
@@ -819,6 +797,10 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         return existingGlobal;
     }
 
+    ResolvedTypeSlice sliceU8Type(typeinfoExpr.location,
+                                  makePtr<ResolvedTypeNumber>(typeinfoExpr.location, ResolvedNumberKind::UInt, 8));
+    auto llvmSliceU8Type = static_cast<llvm::StructType *>(generate_type(sliceU8Type));
+
     if (targetType->kind == ResolvedTypeKind::Number) {
         auto numType = static_cast<const ResolvedTypeNumber *>(targetType);
         auto bits = m_builder.getInt32(numType->bitSize);
@@ -837,69 +819,71 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType))
             structDecl = sd->decl;
 
-        auto &typeInfoStructDecl = *static_cast<const ResolvedTypeStructDecl *>(returnStructType)->decl;
-
-        // Fields setup
-        auto sliceFieldsType = static_cast<const ResolvedTypeSlice *>(typeInfoStructDecl.fields[1]->type.get());
-        auto structFieldType = sliceFieldsType->sliceType.get();
-        auto llvmStructFieldType = static_cast<llvm::StructType *>(generate_type(*structFieldType));
-        auto llvmSliceFieldsType = static_cast<llvm::StructType *>(generate_type(*sliceFieldsType));
-
-        auto sliceU8Type = static_cast<const ResolvedTypeSlice *>(
-            static_cast<const ResolvedTypeStructDecl *>(structFieldType)->decl->fields[0]->type.get());
-        auto llvmSliceU8Type = static_cast<llvm::StructType *>(generate_type(*sliceU8Type));
-
         auto structNameGlobal = m_builder.CreateGlobalString(structDecl->name(), "typeinfo.name.str");
         auto structNameLen = llvm::ConstantInt::get(sizeTy, structDecl->name().size());
         auto structNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {structNameGlobal, structNameLen});
 
+        ResolvedTypeSlice sliceSliceU8Type(typeinfoExpr.location,
+                                           makePtr<ResolvedTypeSlice>(typeinfoExpr.location, sliceU8Type.clone()));
+        auto llvmSliceSliceU8Type = static_cast<llvm::StructType *>(generate_type(sliceSliceU8Type));
+
+        // Fields setup
         std::vector<llvm::Constant *> fieldsArrayVals;
         for (auto &field : structDecl->fields_strs) {
             auto nameGlobal = m_builder.CreateGlobalString(field, "typeinfo.str");
             auto nameLen = llvm::ConstantInt::get(sizeTy, field.size());
             auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
-            auto fieldInit = llvm::ConstantStruct::get(llvmStructFieldType, {nameSlice});
-            fieldsArrayVals.push_back(fieldInit);
+            fieldsArrayVals.push_back(nameSlice);
         }
 
-        llvm::Constant *fieldsSlice = llvm::Constant::getNullValue(llvmSliceFieldsType);
+        llvm::Constant *fieldsSlice = llvm::Constant::getNullValue(llvmSliceSliceU8Type);
         if (!fieldsArrayVals.empty()) {
-            llvm::ArrayType *fieldsArrayTy = llvm::ArrayType::get(llvmStructFieldType, fieldsArrayVals.size());
+            llvm::ArrayType *fieldsArrayTy = llvm::ArrayType::get(llvmSliceU8Type, fieldsArrayVals.size());
             llvm::Constant *fieldsArrayInit = llvm::ConstantArray::get(fieldsArrayTy, fieldsArrayVals);
             llvm::GlobalVariable *fieldsArrayGV =
                 new llvm::GlobalVariable(*m_module, fieldsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
                                          fieldsArrayInit, globalName + ".fields");
             llvm::Constant *fieldsLen = llvm::ConstantInt::get(sizeTy, fieldsArrayVals.size());
-            fieldsSlice = llvm::ConstantStruct::get(llvmSliceFieldsType, {fieldsArrayGV, fieldsLen});
+            fieldsSlice = llvm::ConstantStruct::get(llvmSliceSliceU8Type, {fieldsArrayGV, fieldsLen});
         }
 
         // Methods setup
-        auto sliceMethodsType = static_cast<const ResolvedTypeSlice *>(typeInfoStructDecl.fields[2]->type.get());
-        auto structMethodType = sliceMethodsType->sliceType.get();
-        auto llvmStructMethodType = static_cast<llvm::StructType *>(generate_type(*structMethodType));
-        auto llvmSliceMethodsType = static_cast<llvm::StructType *>(generate_type(*sliceMethodsType));
-
         std::vector<llvm::Constant *> methodsArrayVals;
         for (auto &method : structDecl->functions_strs) {
             auto nameGlobal = m_builder.CreateGlobalString(method, "typeinfo.str");
             auto nameLen = llvm::ConstantInt::get(sizeTy, method.size());
             auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
-            auto methodInit = llvm::ConstantStruct::get(llvmStructMethodType, {nameSlice});
-            methodsArrayVals.push_back(methodInit);
+            methodsArrayVals.push_back(nameSlice);
         }
 
-        llvm::Constant *methodsSlice = llvm::Constant::getNullValue(llvmSliceMethodsType);
+        llvm::Constant *methodsSlice = llvm::Constant::getNullValue(llvmSliceSliceU8Type);
         if (!methodsArrayVals.empty()) {
-            llvm::ArrayType *methodsArrayTy = llvm::ArrayType::get(llvmStructMethodType, methodsArrayVals.size());
+            llvm::ArrayType *methodsArrayTy = llvm::ArrayType::get(llvmSliceU8Type, methodsArrayVals.size());
             llvm::Constant *methodsArrayInit = llvm::ConstantArray::get(methodsArrayTy, methodsArrayVals);
             llvm::GlobalVariable *methodsArrayGV =
                 new llvm::GlobalVariable(*m_module, methodsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
                                          methodsArrayInit, globalName + ".methods");
             llvm::Constant *methodsLen = llvm::ConstantInt::get(sizeTy, methodsArrayVals.size());
-            methodsSlice = llvm::ConstantStruct::get(llvmSliceMethodsType, {methodsArrayGV, methodsLen});
+            methodsSlice = llvm::ConstantStruct::get(llvmSliceSliceU8Type, {methodsArrayGV, methodsLen});
         }
 
         llvm::Constant *init = llvm::ConstantStruct::get(llvmStructType, {structNameSlice, fieldsSlice, methodsSlice});
+        auto global = new llvm::GlobalVariable(*m_module, llvmStructType, true, llvm::GlobalValue::PrivateLinkage, init,
+                                               globalName);
+        return global;
+    } else if (targetType->kind == ResolvedTypeKind::Simd) {
+        auto simdType = static_cast<const ResolvedTypeSimd *>(targetType);
+
+        auto elementName = simdType->to_str();
+        auto elementNameGlobal = m_builder.CreateGlobalString(elementName, "typeinfo.simd.element.str");
+        auto elementNameLen = llvm::ConstantInt::get(sizeTy, elementName.size());
+        auto elementNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {elementNameGlobal, elementNameLen});
+
+        auto simdLen = m_builder.getInt32(simdType->simdSize);
+
+        llvm::Constant *init = llvm::ConstantStruct::get(
+            llvmStructType, {static_cast<llvm::Constant *>(elementNameSlice), static_cast<llvm::Constant *>(simdLen)});
+
         auto global = new llvm::GlobalVariable(*m_module, llvmStructType, true, llvm::GlobalValue::PrivateLinkage, init,
                                                globalName);
         return global;
@@ -910,6 +894,71 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
                                                globalName);
         return global;
     }
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
+                                            const ResolvedTypeSimd &simdType) {
+    debug_func(memberExpr.location);
+    auto name = memberExpr.member.identifier;
+    if (name == "load") {
+        // load(ptr)
+        llvm::Value *ptr = generate_expr(*call.arguments[0]);
+        llvm::Type *llvmSimdType = generate_type(simdType);
+        return m_builder.CreateLoad(llvmSimdType, ptr, "simd.load");
+    } else if (name == "store") {
+        // store(self_ptr, ptr)
+        // arguments[0] is self_ptr (from resolve_call_expr), arguments[1] is dest ptr
+        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
+        llvm::Value *destPtr = generate_expr(*call.arguments[1]);
+        llvm::Value *simdVal = load_value(selfPtr, simdType);
+        return m_builder.CreateStore(simdVal, destPtr);
+    } else if (name == "reduceAdd" || name == "reduceMul" || name == "reduceMin" || name == "reduceMax" ||
+               name == "reduceAnd" || name == "reduceOr" || name == "reduceXor") {
+        // reduce(self_ptr)
+        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
+        llvm::Value *simdVal = load_value(selfPtr, simdType);
+
+        auto elementType = simdType.simdType.get();
+        auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
+        bool isFloat = numType->numberKind == ResolvedNumberKind::Float;
+        bool isSigned = numType->numberKind == ResolvedNumberKind::Int;
+
+        if (name == "reduceAdd") {
+            if (isFloat) {
+                llvm::Type *scalarTy = generate_type(*numType);
+                return m_builder.CreateFAddReduce(llvm::ConstantFP::get(scalarTy, 0.0), simdVal);
+            } else {
+                return m_builder.CreateAddReduce(simdVal);
+            }
+        } else if (name == "reduceMul") {
+            if (isFloat) {
+                llvm::Type *scalarTy = generate_type(*numType);
+                return m_builder.CreateFMulReduce(llvm::ConstantFP::get(scalarTy, 1.0), simdVal);
+            } else {
+                return m_builder.CreateMulReduce(simdVal);
+            }
+        } else if (name == "reduceMin") {
+            if (isFloat) {
+                return m_builder.CreateFPMinReduce(simdVal);
+            } else {
+                return m_builder.CreateIntMinReduce(simdVal, isSigned);
+            }
+        } else if (name == "reduceMax") {
+            if (isFloat) {
+                return m_builder.CreateFPMaxReduce(simdVal);
+            } else {
+                return m_builder.CreateIntMaxReduce(simdVal, isSigned);
+            }
+        } else if (name == "reduceAnd") {
+            return m_builder.CreateAndReduce(simdVal);
+        } else if (name == "reduceOr") {
+            return m_builder.CreateOrReduce(simdVal);
+        } else if (name == "reduceXor") {
+            return m_builder.CreateXorReduce(simdVal);
+        }
+    }
+    dmz_unreachable("unknown simd builtin");
     return nullptr;
 }
 }  // namespace DMZ

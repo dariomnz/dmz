@@ -584,6 +584,37 @@ std::string ResolvedTypeArray::to_str() const { return arrayType->to_str() + "["
 
 bool ResolvedTypeArray::is_generic() const { return debug_ret(arrayType->is_generic()); }
 
+bool ResolvedTypeSimd::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
+    if (auto vecType = dynamic_cast<const ResolvedTypeSimd *>(&other)) {
+        return debug_ret(simdSize == vecType->simdSize && simdType->equal(*vecType->simdType));
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeSimd::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeSimd::clone() const {
+    debug_func("ResolvedTypeSimd " << location);
+    return makePtr<ResolvedTypeSimd>(location, simdType->clone(), simdSize);
+}
+
+void ResolvedTypeSimd::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeSimd " << to_str() << "\n";
+}
+
+std::string ResolvedTypeSimd::to_str() const {
+    return "@simd<" + simdType->to_str() + ", " + std::to_string(simdSize) + ">";
+}
+
+bool ResolvedTypeSimd::is_generic() const { return debug_ret(simdType->is_generic()); }
+
 bool ResolvedTypeFunction::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeFunction " << to_str() << " " << other.to_str() << " " << location);
     if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&other)) {

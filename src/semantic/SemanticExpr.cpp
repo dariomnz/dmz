@@ -232,10 +232,12 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     std::vector<ptr<ResolvedExpr>> resolvedArguments;
     if (isMemberCall && resolvedBase) {
         ptr<ResolvedExpr> argsToAdd = nullptr;
-        if (resolvedBase->type->kind == ResolvedTypeKind::Struct) {
+        if (resolvedBase->type->kind == ResolvedTypeKind::Struct ||
+            resolvedBase->type->kind == ResolvedTypeKind::Simd) {
             argsToAdd = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
         } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
-            if (ptrType->pointerType->kind == ResolvedTypeKind::Struct) {
+            if (ptrType->pointerType->kind == ResolvedTypeKind::Struct ||
+                ptrType->pointerType->kind == ResolvedTypeKind::Simd) {
                 argsToAdd = std::move(resolvedBase);
             }
         }
@@ -394,6 +396,13 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
             varOrReturn(child, resolve_expr(*typeSlice->sliceType));
             return makePtr<ResolvedTypeSliceExpr>(typeSlice->location, std::move(resType), std::move(child));
         }
+        if (auto typeVec = dynamic_cast<const TypeSimd *>(typeExpr)) {
+            varOrReturn(resType, resolve_type(*typeVec));
+            varOrReturn(simdType, resolve_expr(*typeVec->simdType));
+            varOrReturn(simdSize, resolve_expr(*typeVec->simdSize));
+            return makePtr<ResolvedTypeSimdExpr>(typeVec->location, std::move(resType), std::move(simdType),
+                                                 std::move(simdSize));
+        }
         varOrReturn(resolvedType, resolve_type(*typeExpr));
         return makePtr<ResolvedTypeExpr>(typeExpr->location, std::move(resolvedType));
     }
@@ -426,6 +435,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *hasMethodExpr = dynamic_cast<const HasMethodExpr *>(&expr)) {
         return resolve_has_method_expr(*hasMethodExpr);
+    }
+    if (const auto *simdSizeExpr = dynamic_cast<const SimdSizeExpr *>(&expr)) {
+        return resolve_simd_size_expr(*simdSizeExpr);
     }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
@@ -477,12 +489,14 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
     if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Pointer && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
+        resolvedLHS->type->kind != ResolvedTypeKind::Pointer && resolvedLHS->type->kind != ResolvedTypeKind::Simd &&
+        resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
     if (resolvedRHS->type->kind != ResolvedTypeKind::Number && resolvedRHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Pointer && resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
+        resolvedRHS->type->kind != ResolvedTypeKind::Pointer && resolvedRHS->type->kind != ResolvedTypeKind::Simd &&
+        resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
@@ -582,6 +596,90 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         } else {
             return report(memberExpr.location, "slice only support 'len' and 'ptr' members");
         }
+    } else if (auto vecType = dynamic_cast<const ResolvedTypeSimd *>(baseType)) {
+        if (memberExpr.field == "load") {
+            if (!dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
+                return report(memberExpr.location, "cannot call static member 'load' on vector instance");
+            }
+            std::string key = "load:" + vecType->to_str();
+            // println(key);
+            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+                std::vector<ptr<ResolvedParamDecl>> params;
+                params.emplace_back(makePtr<ResolvedParamDecl>(
+                    SourceLocation{}, "ptr", makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone()),
+                    false));
+                std::vector<ptr<ResolvedType>> paramsTypes;
+                paramsTypes.emplace_back(makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone()));
+                auto fnType =
+                    makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType->clone());
+                m_vectorBuiltins[key] =
+                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "load", std::move(fnType),
+                                                        std::move(params), nullptr, nullptr, nullptr, true);
+            }
+            decl = m_vectorBuiltins[key].get();
+        } else if (memberExpr.field == "store") {
+            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
+                return report(memberExpr.location, "cannot call instance member 'store' on vector type");
+            }
+            std::string key = "store:" + vecType->to_str();
+            // println(key);
+            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+                std::vector<ptr<ResolvedParamDecl>> params;
+                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
+                auto ptrType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone());
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "ptr", ptrType->clone(), false));
+                std::vector<ptr<ResolvedType>> paramsTypes;
+                paramsTypes.emplace_back(selfType->clone());
+                paramsTypes.emplace_back(ptrType->clone());
+                auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
+                                                            makePtr<ResolvedTypeVoid>(SourceLocation{}));
+                m_vectorBuiltins[key] =
+                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "store", std::move(fnType),
+                                                        std::move(params), nullptr, nullptr, nullptr, false);
+            }
+            decl = m_vectorBuiltins[key].get();
+        } else if (memberExpr.field == "reduceAdd" || memberExpr.field == "reduceMul" ||
+                   memberExpr.field == "reduceMin" || memberExpr.field == "reduceMax" ||
+                   memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" ||
+                   memberExpr.field == "reduceXor") {
+            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
+                return report(memberExpr.location,
+                              "cannot call instance member '" + memberExpr.field + "' on vector type");
+            }
+
+            auto elementType = vecType->simdType.get();
+            auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
+            if (!numType) {
+                return report(memberExpr.location, "reduction operations only supported for numeric vector elements");
+            }
+
+            if (memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" || memberExpr.field == "reduceXor") {
+                if (numType->numberKind == ResolvedNumberKind::Float) {
+                    return report(memberExpr.location,
+                                  "bitwise reduction '" + memberExpr.field + "' only supported for integer vectors");
+                }
+            }
+
+            std::string key = memberExpr.field + ":" + vecType->to_str();
+            // println(key);
+            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+                std::vector<ptr<ResolvedParamDecl>> params;
+                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+                std::vector<ptr<ResolvedType>> paramsTypes;
+                paramsTypes.emplace_back(selfType->clone());
+                auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
+                                                            vecType->simdType->clone());
+                m_vectorBuiltins[key] =
+                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, memberExpr.field, std::move(fnType),
+                                                        std::move(params), nullptr, nullptr, nullptr, false);
+            }
+            decl = m_vectorBuiltins[key].get();
+        } else {
+            return report(memberExpr.location, "vector type \'" + resolvedBase->type->to_str() +
+                                                   "' only support 'load', 'store', and reduction members");
+        }
     } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
@@ -621,10 +719,12 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         // Return a dummy member expression for generic types to allow LSP highlighting
         static std::map<std::string, ptr<ResolvedFieldDecl>> genericFields;
         if (genericFields.find(memberExpr.field) == genericFields.end()) {
-            genericFields[memberExpr.field] = makePtr<ResolvedFieldDecl>(
-                SourceLocation{}, memberExpr.field, makePtr<ResolvedTypeGeneric>(SourceLocation{}, nullptr), 0, nullptr);
+            genericFields[memberExpr.field] =
+                makePtr<ResolvedFieldDecl>(SourceLocation{}, memberExpr.field,
+                                           makePtr<ResolvedTypeGeneric>(SourceLocation{}, nullptr), 0, nullptr);
         }
-        return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *genericFields[memberExpr.field]);
+        return makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase),
+                                           *genericFields[memberExpr.field]);
     } else {
         return report(memberExpr.base->location, "cannot access member of '" + resolvedBase->type->to_str() + '\'');
     }
@@ -643,7 +743,7 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
     if (!resolvedBase) return nullptr;
 
     if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer &&
-        resolvedBase->type->kind != ResolvedTypeKind::Slice) {
+        resolvedBase->type->kind != ResolvedTypeKind::Slice && resolvedBase->type->kind != ResolvedTypeKind::Simd) {
         bool isTypeBase = dynamic_cast<ResolvedTypeExpr *>(resolvedBase.get()) != nullptr ||
                           dynamic_cast<ResolvedTypePointerExpr *>(resolvedBase.get()) ||
                           dynamic_cast<ResolvedTypeSliceExpr *>(resolvedBase.get()) ||
@@ -675,6 +775,8 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
         derefType = ptrType->pointerType->clone();
     } else if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(resolvedBase->type.get())) {
         derefType = sliceType->sliceType->clone();
+    } else if (auto vectorType = dynamic_cast<const ResolvedTypeSimd *>(resolvedBase->type.get())) {
+        derefType = vectorType->simdType->clone();
     } else {
         dmz_unreachable("TODO");
     }
@@ -948,13 +1050,15 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     varOrReturn(expr, resolve_expr(*typeinfoExpr.typeinfoExpr));
 
     std::string targetStructName;
-    if (expr->type->kind == ResolvedTypeKind::StructDecl || expr->type->kind == ResolvedTypeKind::Struct ||
-        expr->type->kind == ResolvedTypeKind::Generic) {
-        targetStructName = "TypeInfoStruct";
-    } else if (expr->type->kind == ResolvedTypeKind::Number) {
+    if (expr->type->kind == ResolvedTypeKind::Number) {
         targetStructName = "TypeInfoNumber";
+    } else if (expr->type->kind == ResolvedTypeKind::Simd) {
+        targetStructName = "TypeInfoSimd";
     } else if (expr->type->kind == ResolvedTypeKind::Bool || expr->type->kind == ResolvedTypeKind::Void) {
         targetStructName = "TypeInfo";
+    } else if (expr->type->kind == ResolvedTypeKind::StructDecl || expr->type->kind == ResolvedTypeKind::Struct ||
+               expr->type->kind == ResolvedTypeKind::Generic) {
+        targetStructName = "TypeInfoStruct";
     } else {
         return report(typeinfoExpr.location, "unsupported type for @typeinfo: " + expr->type->to_str());
     }
@@ -1012,12 +1116,28 @@ ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &ha
     } else if (baseType->kind == ResolvedTypeKind::Generic) {
         hasMethod = false;
     } else {
-        return report(hasMethodExpr.location, "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
+        return report(hasMethodExpr.location,
+                      "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
     }
 
-    auto resolved = makePtr<ResolvedHasMethodExpr>(
-        hasMethodExpr.location, makePtr<ResolvedTypeBool>(hasMethodExpr.location), std::move(structTypeExpr), hasMethodExpr.methodName);
+    auto resolved =
+        makePtr<ResolvedHasMethodExpr>(hasMethodExpr.location, std::move(structTypeExpr), hasMethodExpr.methodName);
     resolved->set_constant_value(hasMethod ? 1 : 0);
+    return resolved;
+}
+
+ptr<ResolvedSimdSizeExpr> Sema::resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr) {
+    debug_func(simdSizeExpr.location);
+    varOrReturn(typeExpr, resolve_expr(*simdSizeExpr.simdType));
+
+    int bit_simd_size = Driver::instance().target_simd_size();
+
+    int bit_type_size = Driver::instance().typeBitSize(*typeExpr->type);
+    debug_msg("bit_simd_size: " << bit_simd_size << " bit_type_size: " << bit_type_size
+                                << " type: " << typeExpr->type->to_str());
+
+    auto resolved = makePtr<ResolvedSimdSizeExpr>(simdSizeExpr.location, std::move(typeExpr));
+    resolved->set_constant_value(bit_simd_size / bit_type_size);
     return resolved;
 }
 

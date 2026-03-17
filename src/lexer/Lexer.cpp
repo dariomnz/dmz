@@ -66,6 +66,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(ty_iN);
         CASE_TYPE(ty_uN);
         CASE_TYPE(ty_bool);
+        CASE_TYPE(ty_err);
         CASE_TYPE(ty_isize);
         CASE_TYPE(ty_usize);
         CASE_TYPE(ty_slice);
@@ -98,6 +99,9 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_sizeof);
         CASE_TYPE(kw_typeid);
         CASE_TYPE(kw_typeinfo);
+        CASE_TYPE(kw_hasmethod);
+        CASE_TYPE(kw_simd);
+        CASE_TYPE(kw_simdsize);
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
         CASE_TYPE(unknown);

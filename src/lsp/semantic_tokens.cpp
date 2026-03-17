@@ -297,6 +297,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr*>(&expr)) {
             debug_msg("ResolvedHasMethodExpr");
             traverse_expr(*hasMethodExpr->structTypeExpr);
+        } else if (auto* simdSizeExpr = dynamic_cast<const ResolvedSimdSizeExpr*>(&expr)) {
+            debug_msg("ResolvedSimdSizeExpr");
+            traverse_expr(*simdSizeExpr->typeExpr);
         } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
             debug_msg("ResolvedRangeExpr");
             traverse_expr(*rangeExpr->startExpr);
@@ -342,6 +345,8 @@ void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
         traverse_type(*arrayTy->arrayType);
     } else if (auto* optTy = dynamic_cast<const ResolvedTypeOptional*>(&type)) {
         traverse_type(*optTy->optionalType);
+    } else if (auto* simdTy = dynamic_cast<const ResolvedTypeSimd*>(&type)) {
+        traverse_type(*simdTy->simdType);
     } else if (auto* specTy = dynamic_cast<const ResolvedTypeSpecialized*>(&type)) {
         for (const auto& spec : specTy->specializedTypes) traverse_type(*spec);
     } else if (auto* funcTy = dynamic_cast<const ResolvedTypeFunction*>(&type)) {

@@ -1,10 +1,18 @@
 pub const file = import("file.dmz");
-pub const print = import("print.dmz");
-pub const printf = print.printf;
+pub const printf = import("print.dmz").printf;
 pub const Writer = import("writer.dmz").Writer;
 pub const Reader = import("reader.dmz").Reader;
 
 const std = import("std");
+
+pub fn print<T>(data: *u8, tuple:T) -> !usize {
+    let buf: u8[1024] = {};
+    const w = stdout.writer(buf[0..1024]);
+    defer try w.flush();
+    let ret = try std.fmt.fmt<T>(w, data, tuple);
+    return ret;
+}
+
 pub struct stdout {
     pub fn writer(buf: []u8) -> Writer {
         let ret = Writer{

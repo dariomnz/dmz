@@ -44,6 +44,8 @@ class Sema {
     std::unordered_set<ResolvedDecl *> m_removed_decls;
     std::vector<ResolvedDecl *> m_pending_decls;
 
+    static std::unordered_map<std::string, ptr<ResolvedDecl>> m_vectorBuiltins;
+
    public:
     explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
@@ -71,6 +73,7 @@ class Sema {
     // bool insert_decl_to_modules(ResolvedDecl &decl);
     // ref<ResolvedFunctionDecl> create_builtin_println();
     ptr<ResolvedType> resolve_type(const Expr &parsedType);
+    ptr<ResolvedType> resolve_simd_type(const TypeSimd &simdType);
     ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericExpr &parsedType);
     ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
     ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
@@ -161,6 +164,7 @@ class Sema {
     ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
     ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
+    ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
 };
 }  // namespace DMZ

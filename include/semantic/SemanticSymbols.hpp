@@ -500,11 +500,20 @@ struct ResolvedHasMethodExpr : public ResolvedExpr {
     ptr<ResolvedExpr> structTypeExpr;
     std::string methodName;
 
-    ResolvedHasMethodExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> structTypeExpr,
-                          std::string methodName)
-        : ResolvedExpr(location, std::move(type)),
+    ResolvedHasMethodExpr(SourceLocation location, ptr<ResolvedExpr> structTypeExpr, std::string methodName)
+        : ResolvedExpr(location, makePtr<ResolvedTypeBool>(location)),
           structTypeExpr(std::move(structTypeExpr)),
           methodName(std::move(methodName)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedSimdSizeExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> typeExpr;
+
+    ResolvedSimdSizeExpr(SourceLocation location, ptr<ResolvedExpr> typeExpr)
+        : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 64, true)),
+          typeExpr(std::move(typeExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -554,6 +563,16 @@ struct ResolvedTypeArrayExpr : public ResolvedAssignableExpr {
         : ResolvedAssignableExpr(location, std::move(type)),
           arrayType(std::move(arrayType)),
           sizeExpr(std::move(sizeExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedTypeSimdExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> simdType;
+    ptr<ResolvedExpr> sizeExpr;
+    ResolvedTypeSimdExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> simdType,
+                         ptr<ResolvedExpr> sizeExpr)
+        : ResolvedExpr(location, std::move(type)), simdType(std::move(simdType)), sizeExpr(std::move(sizeExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

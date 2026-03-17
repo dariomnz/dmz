@@ -19,6 +19,8 @@
 
 namespace DMZ {
 
+std::unordered_map<std::string, ptr<ResolvedDecl>> Sema::m_vectorBuiltins{};
+
 void Sema::dump_scopes() const {
     debug_msg("m_scopes.size " << m_scopes.size());
     size_t level = 0;
@@ -326,6 +328,9 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         decl->dump();
         dmz_unreachable("TODO");
     }
+    if (auto vecType = dynamic_cast<const TypeSimd *>(&type)) {
+        return resolve_simd_type(*vecType);
+    }
     if (auto genType = dynamic_cast<const GenericExpr *>(&type)) {
         varOrReturn(specExpr, resolve_generic_expr(*genType));
         if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(specExpr->type.get())) {
@@ -350,6 +355,27 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     type.dump();
     dmz_unreachable("TODO");
     (void)retPtr;
+}
+
+ptr<ResolvedType> Sema::resolve_simd_type(const TypeSimd &simdType) {
+    debug_func(simdType.location);
+    varOrReturn(resType, resolve_type(*simdType.simdType));
+
+    varOrReturn(sizeExpr, resolve_expr(*simdType.simdSize));
+    int vectorSize = 0;
+    if (auto as = sizeExpr->get_constant_value()) {
+        vectorSize = as.value();
+    } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(sizeExpr.get())) {
+        vectorSize = intLit->value;
+    } else {
+        return report(sizeExpr->location, "cannot deduce vector size, expected constant integer");
+    }
+
+    if (vectorSize <= 0) {
+        return report(simdType.location, "vector size must be greater than 0");
+    }
+
+    return makePtr<ResolvedTypeSimd>(simdType.location, std::move(resType), vectorSize);
 }
 
 ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {
@@ -396,6 +422,12 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     }
     if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
         ret = makePtr<ResolvedTypeSlice>(sliceType->location, re_resolve_type(*sliceType->sliceType));
+        retPtr = ret.get();
+        return ret;
+    }
+    if (auto vectorType = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
+        ret = makePtr<ResolvedTypeSimd>(vectorType->location, re_resolve_type(*vectorType->simdType),
+                                        vectorType->simdSize);
         retPtr = ret.get();
         return ret;
     }
@@ -568,11 +600,12 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
     bool isReasonRecurse = false;
     debug_func(resolvedDeps.name() << " " << (ret ? "true" : "false"));
     defer([&]() {
-        recurse_check.erase(&resolvedDeps);
+        if (m_removed_decls.contains(&resolvedDeps)) return;
         if (ret == false && isReasonRecurse == false) {
             debug_msg(resolvedDeps.name() << " cached not needed");
             resolvedDeps.cachedIsNotNeeded = true;
         }
+        recurse_check.erase(&resolvedDeps);
     });
 
     if (m_removed_decls.find(&resolvedDeps) != m_removed_decls.end()) {
@@ -587,13 +620,13 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
-    if (!buildTest && dynamic_cast<ResolvedTestDecl *>(&resolvedDeps)) {
+    if (!buildTest && dynamic_cast<const ResolvedTestDecl *>(&resolvedDeps)) {
         debug_msg("ResolvedDecl is a test and not necesary");
         ret = false;
         return ret;
     }
 
-    if (dynamic_cast<ResolvedModuleDecl *>(&resolvedDeps)) {
+    if (dynamic_cast<const ResolvedModuleDecl *>(&resolvedDeps)) {
         debug_msg("ResolvedModuleDecl is empty");
         ret = false;
         return ret;
@@ -613,6 +646,7 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
 
     size_t reasonRecurse = 0;
     for (auto &&decl : resolvedDeps.isUsedBy) {
+        if (m_removed_decls.contains(decl)) continue;
         debug_msg(decl->name() << " in isUsedBy " << resolvedDeps.name());
         if (!recurse_check.emplace(decl).second) {
             debug_msg(resolvedDeps.name() << " is not needed recurse check");
@@ -645,31 +679,31 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
 
     auto add_to_remove = [&](ptr<DMZ::ResolvedDecl> &d) {
         if (auto deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
-            if (m_removed_decls.find(deps) != m_removed_decls.end()) return;
-            // debug_msg_func("add_to_remove", deps->identifier);
-            // debug_msg_func("add_to_remove",
-            //                "Removing all " << deps->dependsOn.size() << " dependsOn of " << deps->identifier);
-            // for (auto &&decl : deps->dependsOn) {
-            //     if (m_removed_decls.find(decl) != m_removed_decls.end()) continue;
-            //     if (decl->isUsedBy.find(deps) == decl->isUsedBy.end()) continue;
-            //     debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-            //     if (!decl->isUsedBy.erase(deps)) {
-            //         debug_msg_func("add_to_remove", "Error erasing");
-            //     }
-            // }
-            // deps->dependsOn.clear();
+            if (m_removed_decls.contains(deps)) return;
+            debug_msg_func("add_to_remove", deps->identifier);
+            debug_msg_func("add_to_remove",
+                           "Removing all " << deps->dependsOn.size() << " dependsOn of " << deps->identifier);
+            for (auto &&decl : deps->dependsOn) {
+                if (m_removed_decls.contains(decl)) continue;
+                if (!decl->isUsedBy.contains(deps)) continue;
+                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
+                if (!decl->isUsedBy.erase(deps)) {
+                    debug_msg_func("add_to_remove", "Error erasing");
+                }
+            }
+            deps->dependsOn.clear();
 
-            // debug_msg_func("add_to_remove",
-            //                "Removing all " << deps->isUsedBy.size() << " isUsedBy of " << deps->identifier);
-            // for (auto &&decl : deps->isUsedBy) {
-            //     if (m_removed_decls.find(decl) != m_removed_decls.end()) continue;
-            //     if (decl->dependsOn.find(deps) == decl->dependsOn.end()) continue;
-            //     debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-            //     if (!decl->dependsOn.erase(deps)) {
-            //         debug_msg_func("add_to_remove", "Error erasing");
-            //     }
-            // }
-            // deps->isUsedBy.clear();
+            debug_msg_func("add_to_remove",
+                           "Removing all " << deps->isUsedBy.size() << " isUsedBy of " << deps->identifier);
+            for (auto &&decl : deps->isUsedBy) {
+                if (m_removed_decls.contains(decl)) continue;
+                if (!decl->dependsOn.contains(deps)) continue;
+                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
+                if (!decl->dependsOn.erase(deps)) {
+                    debug_msg_func("add_to_remove", "Error erasing");
+                }
+            }
+            deps->isUsedBy.clear();
             m_removed_decls.emplace(deps);
             d.reset();
         } else {

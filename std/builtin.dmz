@@ -43,23 +43,20 @@ fn @strAsSlice(str: *u8) -> []u8 {
     return ret;
 }
 
-pub struct StructField {
-    name: []u8,
-}
-
-pub struct StructMethod {
-    name: []u8,
-}
-
 pub struct TypeInfoStruct {
     name: []u8,
-    fields: []StructField,
-    methods: []StructMethod,
+    fields: [][]u8,
+    methods: [][]u8,
 }
 
 pub struct TypeInfoNumber {
     bits: u32,
     is_signed: bool,
+}
+
+pub struct TypeInfoSimd {
+    type: []u8,
+    len: u32,
 }
 
 pub struct TypeInfo {

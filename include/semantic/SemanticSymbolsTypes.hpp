@@ -23,6 +23,7 @@ enum class ResolvedTypeKind {
     Slice,
     Range,
     Array,
+    Simd,
     Function,
     VarArg,
     DefaultInit,
@@ -243,6 +244,22 @@ struct ResolvedTypeArray : public ResolvedType {
         : ResolvedType(ResolvedTypeKind::Array, std::move(location)),
           arrayType(std::move(arrayType)),
           arraySize(std::move(arraySize)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    bool is_generic() const override;
+};
+
+struct ResolvedTypeSimd : public ResolvedType {
+    ptr<ResolvedType> simdType;
+    int simdSize;
+    ResolvedTypeSimd(SourceLocation location, ptr<ResolvedType> vectorType, int vectorSize)
+        : ResolvedType(ResolvedTypeKind::Simd, std::move(location)),
+          simdType(std::move(vectorType)),
+          simdSize(vectorSize) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

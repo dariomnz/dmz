@@ -16,6 +16,7 @@ pub fn fmt_type<T>(w: std.io.Writer, arg: T) -> !usize {
         case std.types.function_t => return w.writeStr("unsupported function");
         case std.types.error_t => return fmt_error(w, arg);
         case std.types.optional_t => return w.writeStr("unsupported optional");
+        case std.types.simd_t => return fmt_simd<T>(w, arg);
         else => return w.writeStr("unsupported type");
     }
 }
@@ -170,6 +171,26 @@ pub fn fmt_error(w: std.io.Writer, e: err) -> !usize {
     return ret;
 }
 
+pub fn fmt_simd<T>(w: std.io.Writer, v: T) -> !usize {
+    let ret: usize = 0;
+    let current_element = 0;
+    inline if (@typeid(v) == std.types.simd_t) {
+        const typeinfo = @typeinfo(v);
+        ret += try w.writeAll(typeinfo.type);
+        ret += try w.writeChar('(');
+        while (current_element < typeinfo.len) {
+            if (current_element > 0) {
+                ret += try w.writeStr(", ");
+            }
+            const element = v[current_element];
+            ret += try fmt_type<element>(w, element);
+            current_element++;
+        }
+    }
+    ret += try w.writeChar(')');
+    return ret;
+}
+
 pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     let fmt_idx = 0;
     let arg_tracker = 0;
@@ -178,10 +199,14 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
     while (fmt_idx < format_len) {
         if (format[fmt_idx] == '{' && fmt_idx + 1 < format_len && format[fmt_idx + 1] == '}') {
             let current_arg = 0;
-            inline for (args) |arg| {
-                if (current_arg++ == arg_tracker) {
-                    ret += try fmt_type<arg>(w, arg);
+            inline if (@typeid(args) == std.types.tuple_t) {
+                inline for (args) |arg| {
+                    if (current_arg++ == arg_tracker) {
+                        ret += try fmt_type<arg>(w, arg);
+                    }
                 }
+            } else {
+                ret += try fmt_type<args>(w, args);
             }
             arg_tracker++;
             fmt_idx += 2;
@@ -235,7 +260,9 @@ test "print integers" {
     big += 123456789;
 
     const test_struct: Test_struct2 = {};
-    const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError};
-    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}'\n", tuple);
+    const aux_arr: i32[4] = {1, 2, 3, 4};
+    const simd = @simd<i32, 4>.load(&aux_arr[0]);
+    const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError, simd};
+    let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}' simd '{}'\n", tuple);
     w2.flush();
 }

@@ -216,6 +216,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         break_into_bb(retBB);
         retBB->insertInto(function);
         m_builder.SetInsertPoint(retBB);
+    } else {
+        delete retBB;
+        retBB = nullptr;
     }
 
     m_allocaInsertPoint->eraseFromParent();

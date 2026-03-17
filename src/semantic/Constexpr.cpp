@@ -74,24 +74,33 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_type(const ResolvedType
         }
         case ResolvedTypeKind::Bool:
             return 4;
-        case ResolvedTypeKind::Struct:
-        case ResolvedTypeKind::StructDecl:
+        case ResolvedTypeKind::Struct: {
+            auto &st = static_cast<const ResolvedTypeStruct &>(type);
+            if (st.decl->isTuple) return 6;
             return 5;
+        }
+        case ResolvedTypeKind::StructDecl: {
+            auto &st = static_cast<const ResolvedTypeStructDecl &>(type);
+            if (st.decl->isTuple) return 6;
+            return 5;
+        }
         case ResolvedTypeKind::Pointer:
-            return 6;
-        case ResolvedTypeKind::Slice:
             return 7;
-        case ResolvedTypeKind::Range:
+        case ResolvedTypeKind::Slice:
             return 8;
-        case ResolvedTypeKind::Array:
+        case ResolvedTypeKind::Range:
             return 9;
-        case ResolvedTypeKind::Function:
+        case ResolvedTypeKind::Array:
             return 10;
+        case ResolvedTypeKind::Function:
+            return 11;
         case ResolvedTypeKind::Error:
         case ResolvedTypeKind::ErrorGroup:
-            return 11;
-        case ResolvedTypeKind::Optional:
             return 12;
+        case ResolvedTypeKind::Optional:
+            return 13;
+        case ResolvedTypeKind::Simd:
+            return 14;
         default:
             break;
     }

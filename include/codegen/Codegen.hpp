@@ -113,5 +113,7 @@ class Codegen {
     llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
+    llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
+                                       const ResolvedTypeSimd &vecType);
 };
 }  // namespace DMZ

@@ -54,6 +54,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_typeinfo_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const HasMethodExpr*>(&expr)) {
         node = fmt_hasmethod_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const SimdSizeExpr*>(&expr)) {
+        node = fmt_simdsize_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ArrayAtExpr*>(&expr)) {
         node = fmt_array_at_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const RefPtrExpr*>(&expr)) {
@@ -250,6 +252,15 @@ ptr<Node> Formatter::fmt_hasmethod_expr(const HasMethodExpr& expr) {
     ret->nodes.emplace_back(fmt_expr(*expr.structType));
     ret->nodes.emplace_back(makePtr<Text>(", "));
     ret->nodes.emplace_back(build.string(expr.methodName));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_simdsize_expr(const SimdSizeExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@simdSize"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.simdType));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     return ret;
 }

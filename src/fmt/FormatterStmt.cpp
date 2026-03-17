@@ -202,6 +202,10 @@ ptr<Node> Formatter::fmt_for_stmt(const ForStmt& stmt) {
 
 ptr<Node> Formatter::fmt_if_stmt(const IfStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (stmt.isInline) {
+        ret->nodes.emplace_back(makePtr<Text>("inline"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
     ret->nodes.emplace_back(makePtr<Text>("if"));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("("));

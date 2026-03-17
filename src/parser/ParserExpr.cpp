@@ -11,7 +11,8 @@
 namespace DMZ {
 
 ptr<Expr> Parser::parse_primary() {
-    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "' " << restiction_to_str(restrictions));
+    debug_func(m_nextToken.loc << " " << m_nextToken.type << " '" << m_nextToken.str << "' "
+                               << restiction_to_str(restrictions));
     SourceLocation location = m_nextToken.loc;
 
     if (m_nextToken.type == TokenType::ty_void) {
@@ -36,6 +37,9 @@ ptr<Expr> Parser::parse_primary() {
         auto literal = makePtr<TypeNumber>(location, m_nextToken.str);
         eat_next_token();  // eat number
         return literal;
+    }
+    if (m_nextToken.type == TokenType::kw_simd) {
+        return parse_simd_type();
     }
     if (m_nextToken.type == TokenType::kw_fn && peek_token().type == TokenType::par_l) {
         eat_next_token();  // eat fn
@@ -153,6 +157,9 @@ ptr<Expr> Parser::parse_primary() {
         }
         if (m_nextToken.type == TokenType::kw_hasmethod) {
             return parse_hasmethod_expr();
+        }
+        if (m_nextToken.type == TokenType::kw_simdsize) {
+            return parse_simdsize_expr();
         }
     }
     if (restrictions & OnlyTypeExpr) {
@@ -450,7 +457,7 @@ ptr<TypeinfoExpr> Parser::parse_typeinfo_expr() {
     return makePtr<TypeinfoExpr>(location, std::move(type));
 }
 
-ptr<Expr> Parser::parse_hasmethod_expr() {
+ptr<HasMethodExpr> Parser::parse_hasmethod_expr() {
     debug_func("");
     matchOrReturn(TokenType::kw_hasmethod, "expected @hasMethod");
     auto location = m_nextToken.loc;
@@ -473,5 +480,43 @@ ptr<Expr> Parser::parse_hasmethod_expr() {
     eat_next_token();  // eat )
 
     return makePtr<HasMethodExpr>(location, std::move(expr), std::move(methodName));
+}
+ptr<TypeSimd> Parser::parse_simd_type() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    matchOrReturn(TokenType::kw_simd, "expected @simd");
+    eat_next_token();  // eat @simd
+
+    matchOrReturn(TokenType::op_less, "expected '<' after @simd");
+    eat_next_token();  // eat <
+
+    varOrReturn(type, parse_type());
+
+    matchOrReturn(TokenType::comma, "expected ',' after vector type");
+    eat_next_token();  // eat ,
+
+    varOrReturn(size, with_no_restrictions<ptr<Expr>>([&]() { return parse_primary(); }));
+
+    matchOrReturn(TokenType::op_more, "expected '>' after vector size");
+    eat_next_token();  // eat >
+
+    return makePtr<TypeSimd>(location, std::move(type), std::move(size));
+}
+
+ptr<SimdSizeExpr> Parser::parse_simdsize_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_simdsize, "expected @simdsize");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @simdsize
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    varOrReturn(type, parse_type());
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return makePtr<SimdSizeExpr>(location, std::move(type));
 }
 }  // namespace DMZ

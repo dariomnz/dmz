@@ -92,6 +92,8 @@ enum class TokenType {
     kw_typeid,
     kw_typeinfo,
     kw_hasmethod,
+    kw_simd,
+    kw_simdsize,
     kw_packed,
     kw_pub,
     unknown,
@@ -155,6 +157,8 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"@typeid", TokenType::kw_typeid},
     {"@typeinfo", TokenType::kw_typeinfo},
     {"@hasMethod", TokenType::kw_hasmethod},
+    {"@simd", TokenType::kw_simd},
+    {"@simdSize", TokenType::kw_simdsize},
     {"packed", TokenType::kw_packed},
     {"pub", TokenType::kw_pub},
     // Types
