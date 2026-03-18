@@ -3,6 +3,7 @@
   "displayName": "DMZ language support",
   "description": "DMZ programming language support extension",
   "version": "0.0.1",
+  "icon": "assets/dmz_logo.svg",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -21,6 +22,10 @@
         "extensions": [
           ".dmz"
         ],
+        "icon": {
+          "light": "./assets/dmz_logo.svg",
+          "dark": "./assets/dmz_logo.svg"
+        },
         "configuration": "./language-configuration.json"
       }
     ],
