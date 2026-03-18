@@ -5,8 +5,8 @@ extern fn printf(fmt:*u8, ...) -> i32;
 
 let num = 24;
 const cnum = 100;
-// CHECK: @num = internal global i32 24
-// CHECK: @cnum = internal constant i32 100
+// CHECK: @global_var.num = internal global i32 24
+// CHECK: @global_var.cnum = internal constant i32 100
 
 fn main() -> void {
     num = 320;
@@ -15,11 +15,11 @@ fn main() -> void {
 }
 // CHECK:define void @__builtin_main() {
 // CHECK-NEXT:entry:
-// CHECK-NEXT:  store i32 320, ptr @num, align 4
-// CHECK-NEXT:  %0 = load i32, ptr @num, align 4
+// CHECK-NEXT:  store i32 320, ptr @global_var.num, align 4
+// CHECK-NEXT:  %0 = load i32, ptr @global_var.num, align 4
 // CHECK-NEXT:  %1 = add i32 %0, 100
-// CHECK-NEXT:  store i32 %1, ptr @num, align 4
-// CHECK-NEXT:  %2 = load i32, ptr @num, align 4
+// CHECK-NEXT:  store i32 %1, ptr @global_var.num, align 4
+// CHECK-NEXT:  %2 = load i32, ptr @global_var.num, align 4
 // CHECK-NEXT:  %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %2, i32 100)
 // CHECK-NEXT:  ret void
 // CHECK-NEXT:}

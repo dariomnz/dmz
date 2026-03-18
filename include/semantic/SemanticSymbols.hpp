@@ -63,7 +63,7 @@ struct ResolvedDependencies : public ResolvedDecl {
         : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {
         isDependency = true;
     }
-    virtual ~ResolvedDependencies() = default;
+    virtual ~ResolvedDependencies();
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
     void dump_dependencies(size_t level = 0) const override;

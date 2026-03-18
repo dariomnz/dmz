@@ -443,7 +443,7 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     }
     auto globalVar =
         new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
-                                 llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.identifier);
+                                 llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.name());
     m_module->insertGlobalVariable(globalVar);
     m_declarations[&stmt] = globalVar;
 }

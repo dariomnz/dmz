@@ -41,7 +41,6 @@ class Sema {
 
     std::vector<ResolvedTestDecl *> m_tests;
 
-    std::unordered_set<ResolvedDecl *> m_removed_decls;
     std::vector<ResolvedDecl *> m_pending_decls;
 
     static std::unordered_map<std::string, ptr<ResolvedDecl>> m_vectorBuiltins;

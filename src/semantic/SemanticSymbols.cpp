@@ -1,6 +1,6 @@
 #include "semantic/SemanticSymbols.hpp"
 
-#include <fcntl.h>
+#include "Debug.hpp"
 
 namespace DMZ {
 
@@ -8,6 +8,28 @@ void ResolvedExpr::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';
     }
+}
+
+ResolvedDependencies::~ResolvedDependencies() {
+    debug_msg("Removing all " << dependsOn.size() << " dependsOn of " << name());
+    for (auto &&decl : dependsOn) {
+        if (!decl->isUsedBy.contains(this)) continue;
+        debug_msg("Removing " << name() << " from " << decl->name());
+        if (!decl->isUsedBy.erase(this)) {
+            debug_msg("Error erasing");
+        }
+    }
+    dependsOn.clear();
+
+    debug_msg("Removing all " << isUsedBy.size() << " isUsedBy of " << name());
+    for (auto &&decl : isUsedBy) {
+        if (!decl->dependsOn.contains(this)) continue;
+        debug_msg("Removing " << name() << " from " << decl->name());
+        if (!decl->dependsOn.erase(this)) {
+            debug_msg("Error erasing");
+        }
+    }
+    isUsedBy.clear();
 }
 
 void ResolvedDependencies::dump_dependencies(size_t level) const {

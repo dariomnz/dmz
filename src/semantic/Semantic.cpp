@@ -600,19 +600,12 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
     bool isReasonRecurse = false;
     debug_func(resolvedDeps.name() << " " << (ret ? "true" : "false"));
     defer([&]() {
-        if (m_removed_decls.contains(&resolvedDeps)) return;
         if (ret == false && isReasonRecurse == false) {
             debug_msg(resolvedDeps.name() << " cached not needed");
             resolvedDeps.cachedIsNotNeeded = true;
         }
         recurse_check.erase(&resolvedDeps);
     });
-
-    if (m_removed_decls.find(&resolvedDeps) != m_removed_decls.end()) {
-        debug_msg("ResolvedDecl is already removed");
-        ret = false;
-        return ret;
-    }
 
     if (resolvedDeps.cachedIsNotNeeded) {
         debug_msg("ResolvedDecl cached is not needed");
@@ -646,7 +639,6 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
 
     size_t reasonRecurse = 0;
     for (auto &&decl : resolvedDeps.isUsedBy) {
-        if (m_removed_decls.contains(decl)) continue;
         debug_msg(decl->name() << " in isUsedBy " << resolvedDeps.name());
         if (!recurse_check.emplace(decl).second) {
             debug_msg(resolvedDeps.name() << " is not needed recurse check");
@@ -678,33 +670,7 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
     debug_func("");
 
     auto add_to_remove = [&](ptr<DMZ::ResolvedDecl> &d) {
-        if (auto deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
-            if (m_removed_decls.contains(deps)) return;
-            debug_msg_func("add_to_remove", deps->identifier);
-            debug_msg_func("add_to_remove",
-                           "Removing all " << deps->dependsOn.size() << " dependsOn of " << deps->identifier);
-            for (auto &&decl : deps->dependsOn) {
-                if (m_removed_decls.contains(decl)) continue;
-                if (!decl->isUsedBy.contains(deps)) continue;
-                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-                if (!decl->isUsedBy.erase(deps)) {
-                    debug_msg_func("add_to_remove", "Error erasing");
-                }
-            }
-            deps->dependsOn.clear();
-
-            debug_msg_func("add_to_remove",
-                           "Removing all " << deps->isUsedBy.size() << " isUsedBy of " << deps->identifier);
-            for (auto &&decl : deps->isUsedBy) {
-                if (m_removed_decls.contains(decl)) continue;
-                if (!decl->dependsOn.contains(deps)) continue;
-                debug_msg_func("add_to_remove", "Removing " << deps->identifier << " from " << decl->identifier);
-                if (!decl->dependsOn.erase(deps)) {
-                    debug_msg_func("add_to_remove", "Error erasing");
-                }
-            }
-            deps->isUsedBy.clear();
-            m_removed_decls.emplace(deps);
+        if (dynamic_cast<ResolvedDependencies *>(d.get())) {
             d.reset();
         } else {
             d->dump();
@@ -714,7 +680,7 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
     std::unordered_set<ResolvedDependencies *> recurse_check;
     for (auto &&decl : decls) {
         recurse_check.clear();
-        if (!decl || m_removed_decls.find(decl.get()) != m_removed_decls.end()) {
+        if (!decl) {
             debug_msg("Continue in to_remove");
             continue;
         }
