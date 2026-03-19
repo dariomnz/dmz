@@ -512,4 +512,19 @@ std::string ImportExpr::to_str() const { dmz_unreachable("TODO"); }
 void TestDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
 std::string TestDecl::to_str() const { dmz_unreachable("TODO"); }
+
+void LambdaExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "LambdaExpr\n";
+    std::cerr << indent(level + 1) << "Lambda captures\n";
+    for (auto &&cap : captures) cap->dump(level + 2);
+    std::cerr << indent(level + 1) << "Lambda params\n";
+    for (auto &&param : params) param->dump(level + 2);
+    std::cerr << indent(level + 1) << "Lambda returnType\n";
+    returnType->dump(level + 2);
+    std::cerr << indent(level + 1) << "Lambda body\n";
+    body->dump(level + 2);
+}
+
+std::string LambdaExpr::to_str() const { dmz_unreachable("TODO"); }
+
 }  // namespace DMZ

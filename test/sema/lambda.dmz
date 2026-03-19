@@ -1,0 +1,29 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let x = 10;
+    let y = 20;
+
+    let f = [x, y](a: i32) -> i32 {
+        return x + y + a;
+    };
+}
+// CHECK: ResolvedDeclStmt *fn(i32)->i32
+// CHECK-NEXT:   ResolvedVarDecl:*fn(i32)->i32 f
+// CHECK-NEXT:     ResolvedLambdaExpr:*fn(i32)->i32
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:       ResolvedLambdaFunctionDecl lambda_7_12 fn(i32)->i32
+// CHECK-NEXT:         Lambda captures
+// CHECK-NEXT:           ResolvedCaptureDecl:i32 x
+// CHECK-NEXT:           ResolvedCaptureDecl:i32 y
+// CHECK-NEXT:         Lambda params
+// CHECK-NEXT:           ResolvedParamDecl:i32 a
+// CHECK-NEXT:         Lambda body
+// CHECK-NEXT:           ResolvedBlock
+// CHECK-NEXT:             ResolvedReturnStmt
+// CHECK-NEXT:               ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:                 ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:                   ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:                   ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 a

@@ -1,0 +1,23 @@
+// RUN: dmz %s -run | filecheck %s
+
+// CHECK: 1
+// CHECK: 2
+// CHECK: 3
+// CHECK: 4
+// CHECK: 5
+
+const std = import("std");
+
+fn forEach(arr: []i32, func: *fn(usize, i32) -> void) -> void {
+    for (0..arr.len) |idx| {
+        func(idx, arr[idx]);
+    }
+}
+
+fn main() -> void {
+    let arr = {1, 2, 3, 4, 5};
+    let lambda = [](idx: usize, x: i32) -> void {
+        std.io.print("{}: {}\n", .{idx, x});
+    };
+    forEach(arr[0..5], lambda);
+}

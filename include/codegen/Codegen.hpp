@@ -13,7 +13,8 @@ class Codegen {
     llvm::IRBuilder<> m_builder;
     ptr<llvm::Module> m_module;
 
-    std::map<const ResolvedDecl *, llvm::Value *> m_declarations;
+    const ResolvedModuleDecl *m_currentModule = nullptr;
+    std::unordered_map<const ResolvedDecl *, llvm::Value *> m_declarations;
     llvm::Instruction *m_allocaInsertPoint = nullptr;
     llvm::Instruction *m_memsetInsertPoint = nullptr;
     const ResolvedFuncDecl *m_currentFunction = nullptr;
@@ -68,6 +69,7 @@ class Codegen {
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
+    llvm::Value *generate_lambda_expr(const ResolvedLambdaExpr &expr);
     void generate_main_wrapper(bool runTest);
     llvm::AttributeList construct_attr_list(const ResolvedTypeFunction &fnType);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);

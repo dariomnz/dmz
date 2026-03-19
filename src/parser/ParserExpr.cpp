@@ -130,6 +130,36 @@ ptr<Expr> Parser::parse_primary() {
 
             return makePtr<ArrayInstantiationExpr>(location, std::move(*initList), haveTrailingComma);
         }
+        if (m_nextToken.type == TokenType::bracket_l) {
+            bool haveTrailingComma;
+            std::vector<ptr<Expr>> captures;
+            if (peek_token().type == TokenType::bracket_r) {
+                eat_next_token();  // eat [
+                eat_next_token();  // eat ]
+            } else {
+                varOrReturn(capturesPtr, parse_list_with_trailing_comma<Expr>(
+                                             {TokenType::bracket_l, "expected '['"}, [this]() { return parse_expr(); },
+                                             {TokenType::bracket_r, "expected ']'"}, haveTrailingComma));
+                captures = std::move(*capturesPtr);
+            }
+
+            if (m_nextToken.type != TokenType::par_l) {
+                return report(m_nextToken.loc, "expected '(' after lambda captures");
+            }
+            varOrReturn(paramsList, parse_list_with_trailing_comma<ParamDecl>(
+                                        {TokenType::par_l, "expected '('"}, [this]() { return parse_param_decl(); },
+                                        {TokenType::par_r, "expected ')'"}, haveTrailingComma));
+
+            matchOrReturn(TokenType::return_arrow, "expected '->'");
+            eat_next_token();  // eat '->'
+
+            varOrReturn(returnType, parse_type());
+
+            varOrReturn(body, parse_block());
+
+            return makePtr<LambdaExpr>(location, std::move(captures), std::move(*paramsList), std::move(returnType),
+                                       std::move(body));
+        }
         if (m_nextToken.type == TokenType::kw_catch) {
             return parse_catch_error_expr();
         }
@@ -272,10 +302,26 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
 }
 
 ptr<Expr> Parser::parse_prefix_expr() {
-    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'");
+    debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'" << m_nextToken.type);
     Token tok = m_nextToken;
+
+    if (tok.type == TokenType::bracket_l && peek_token().type == TokenType::bracket_r &&
+        peek_token(1).type != TokenType::par_l) {
+        SourceLocation loc = m_nextToken.loc;
+        eat_next_token();  // eat [
+        eat_next_token();  // eat ]
+        varOrReturn(rhs, parse_prefix_expr());
+        if (restrictions & OnlyTypeExpr) {
+            return makePtr<TypeSlice>(loc, std::move(rhs));
+        }
+        return report(loc, "unexpected '[]' in expression");
+    }
+
     std::unordered_set<TokenType> unaryOps = {
-        TokenType::op_minus, TokenType::amp, TokenType::op_excla_mark, TokenType::asterisk, TokenType::ty_slice,
+        TokenType::op_minus,
+        TokenType::amp,
+        TokenType::op_excla_mark,
+        TokenType::asterisk,
     };
 
     if (unaryOps.count(tok.type) == 0) {
@@ -287,9 +333,6 @@ ptr<Expr> Parser::parse_prefix_expr() {
     varOrReturn(rhs, parse_prefix_expr());
 
     if (restrictions & OnlyTypeExpr) {
-        if (tok.type == TokenType::ty_slice) {
-            return makePtr<TypeSlice>(tok.loc, std::move(rhs));
-        }
         if (tok.type == TokenType::asterisk) {
             return makePtr<TypePointer>(tok.loc, std::move(rhs));
         }

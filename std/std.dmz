@@ -9,3 +9,4 @@ pub const list = import("list.dmz");
 pub const HashMap = import("hashmap.dmz").HashMap;
 pub const time = import("time.dmz");
 pub const types = import("types.dmz");
+pub const algorithm = import("algorithm.dmz");

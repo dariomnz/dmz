@@ -99,6 +99,7 @@ class Sema {
     ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     ptr<ResolvedExpr> resolve_expr(const Expr &expr);
     ptr<ResolvedGenericExpr> resolve_generic_expr(const GenericExpr &genericExpr);
+    ptr<ResolvedLambdaExpr> resolve_lambda_expr(const LambdaExpr &expr);
     ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
     ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);

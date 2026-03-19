@@ -5,6 +5,11 @@
 #include "SemanticSymbolsTypes.hpp"
 #include "lexer/Lexer.hpp"
 
+// Forward declaration
+namespace llvm {
+class GlobalVariable;
+}
+
 namespace DMZ {
 
 struct ResolvedStmt {
@@ -262,6 +267,21 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
         : ResolvedFuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)),
           functionDecl(functionDecl),
           body(std::move(body)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedLambdaFunctionDecl : public ResolvedFunctionDecl {
+    std::vector<ptr<ResolvedDecl>> captures;
+
+    llvm::GlobalVariable *globalCaptureBuffer = nullptr;
+
+    ResolvedLambdaFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
+                               std::vector<ptr<ResolvedParamDecl>> params, ptr<ResolvedBlock> body,
+                               std::vector<ptr<ResolvedDecl>> captures)
+        : ResolvedFunctionDecl(location, false, identifier, std::move(type), std::move(params), nullptr,
+                               std::move(body)),
+          captures(std::move(captures)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -584,6 +604,19 @@ struct ResolvedCallExpr : public ResolvedExpr {
     ResolvedCallExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> callee,
                      std::vector<ptr<ResolvedExpr>> arguments)
         : ResolvedExpr(location, std::move(type)), callee(std::move(callee)), arguments(std::move(arguments)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedLambdaExpr : public ResolvedExpr {
+    ptr<ResolvedLambdaFunctionDecl> lambdaFunc;
+    std::vector<ptr<ResolvedExpr>> captureInitializers;
+
+    ResolvedLambdaExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedLambdaFunctionDecl> lambdaFunc,
+                       std::vector<ptr<ResolvedExpr>> captureInitializers)
+        : ResolvedExpr(location, std::move(type)),
+          lambdaFunc(std::move(lambdaFunc)),
+          captureInitializers(std::move(captureInitializers)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

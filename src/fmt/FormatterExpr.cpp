@@ -72,6 +72,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_generic_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const TupleInstantiationExpr*>(&expr)) {
         node = fmt_tuple_instantiation_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const LambdaExpr*>(&expr)) {
+        node = fmt_lambda_expr(*cast_expr);
     } else {
         println(expr.location.to_string());
         expr.dump();
@@ -322,6 +324,27 @@ ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
         gens.emplace_back(fmt_expr(*gen));
     }
     ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_lambda_expr(const LambdaExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    vec<ptr<Node>> captures;
+    for (auto&& capture : expr.captures) {
+        captures.emplace_back(fmt_expr(*capture));
+    }
+    ret->nodes.emplace_back(build.comma_separated_list("[", "]", std::move(captures)));
+    vec<ptr<Node>> params;
+    for (auto&& param : expr.params) {
+        params.emplace_back(fmt_decl(*param));
+    }
+    ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(params)));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("->"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*expr.returnType));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_block(*expr.body));
     return ret;
 }
 }  // namespace fmt

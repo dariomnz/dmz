@@ -175,6 +175,14 @@ void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);
 }
 
+void ResolvedLambdaExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedLambdaExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    dump_constant_value(level);
+    for (auto &&init : captureInitializers) init->dump(level + 1, onlySelf);
+    lambdaFunc->dump(level + 1, onlySelf);
+}
+
 void ResolvedBlock::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedBlock\n";
 
@@ -219,6 +227,17 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     for (auto &&param : params) param->dump(level + 1, onlySelf);
 
     if (body) body->dump(level + 1, onlySelf);
+}
+
+void ResolvedLambdaFunctionDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedLambdaFunctionDecl " << identifier << " " << type->to_str() << '\n';
+    if (onlySelf) return;
+    std::cerr << indent(level + 1) << "Lambda captures\n";
+    for (auto &&cap : captures) cap->dump(level + 2, onlySelf);
+    std::cerr << indent(level + 1) << "Lambda params\n";
+    for (auto &&param : params) param->dump(level + 2, onlySelf);
+    std::cerr << indent(level + 1) << "Lambda body\n";
+    if (body) body->dump(level + 2, onlySelf);
 }
 
 void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {

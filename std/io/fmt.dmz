@@ -1,27 +1,27 @@
 const std = import("std");
 
-pub fn fmt_type<T>(w: std.io.Writer, arg: T) -> !usize {
+pub fn fmtType<T>(w: std.io.Writer, arg: T) -> !usize {
     const t = @typeid(arg);
     inline switch (t) {
-        case std.types.int_t => return fmt_integer<T>(w, arg);
-        case std.types.uint_t => return fmt_integer<T>(w, arg);
-        case std.types.float_t => return fmt_float<T>(w, arg, 3);
-        case std.types.bool_t => return fmt_bool(w, arg);
-        case std.types.struct_t => return fmt_struct<T>(w, arg);
+        case std.types.int_t => return fmtInteger<T>(w, arg);
+        case std.types.uint_t => return fmtInteger<T>(w, arg);
+        case std.types.float_t => return fmtFloat<T>(w, arg, 3);
+        case std.types.bool_t => return fmtBool(w, arg);
+        case std.types.struct_t => return fmtStruct<T>(w, arg);
         case std.types.void_t => return w.writeStr("unsupported void");
-        case std.types.pointer_t => return fmt_pointer(w, arg);
-        case std.types.slice_t => return fmt_slice<T>(w, arg);
+        case std.types.pointer_t => return fmtPointer(w, arg);
+        case std.types.slice_t => return fmtSlice<T>(w, arg);
         case std.types.range_t => return w.writeStr("unsupported range");
         case std.types.array_t => return w.writeStr("unsupported array");
         case std.types.function_t => return w.writeStr("unsupported function");
-        case std.types.error_t => return fmt_error(w, arg);
+        case std.types.error_t => return fmtError(w, arg);
         case std.types.optional_t => return w.writeStr("unsupported optional");
-        case std.types.simd_t => return fmt_simd<T>(w, arg);
+        case std.types.simd_t => return fmtSimd<T>(w, arg);
         else => return w.writeStr("unsupported type");
     }
 }
 
-pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
+pub fn fmtInteger<T>(w: std.io.Writer, n: T) -> !usize {
     if (n == 0) {
         return w.writeChar('0');
     }
@@ -50,7 +50,7 @@ pub fn fmt_integer<T>(w: std.io.Writer, n: T) -> !usize {
     return ret;
 }
 
-pub fn fmt_float<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
+pub fn fmtFloat<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
     let ret: usize = 0;
     let val = f;
 
@@ -94,7 +94,7 @@ pub fn fmt_float<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
     return ret;
 }
 
-pub fn fmt_bool(w: std.io.Writer, b: bool) -> !usize {
+pub fn fmtBool(w: std.io.Writer, b: bool) -> !usize {
     if (b) {
         return w.writeStr("true");
     } else {
@@ -102,7 +102,7 @@ pub fn fmt_bool(w: std.io.Writer, b: bool) -> !usize {
     }
 }
 
-pub fn fmt_struct<T>(w: std.io.Writer, s: T) -> !usize {
+pub fn fmtStruct<T>(w: std.io.Writer, s: T) -> !usize {
     inline if (@hasMethod(s, "fmt")) {
         return s.fmt(w);
     }
@@ -117,14 +117,14 @@ pub fn fmt_struct<T>(w: std.io.Writer, s: T) -> !usize {
         }
         ret += try w.writeAll(typeinfo.fields[current_field]);
         ret += try w.writeStr(": ");
-        ret += try fmt_type<field>(w, field);
+        ret += try fmtType<field>(w, field);
         current_field++;
     }
     ret += try w.writeChar('}');
     return ret;
 }
 
-pub fn fmt_pointer(w: std.io.Writer, ptr: *void) -> !usize {
+pub fn fmtPointer(w: std.io.Writer, ptr: *void) -> !usize {
     let ret: usize = 0;
     const addr: usize = ptr;
 
@@ -154,24 +154,34 @@ pub fn fmt_pointer(w: std.io.Writer, ptr: *void) -> !usize {
     return ret;
 }
 
-pub fn fmt_slice<T>(w: std.io.Writer, s: T) -> !usize {
+pub fn fmtSlice<T>(w: std.io.Writer, s: T) -> !usize {
     let ret: usize = 0;
-    ret += try w.writeStr("[ptr: ");
-    ret += try fmt_pointer(w, s.ptr);
-    ret += try w.writeStr(", len: ");
-    ret += try fmt_integer<s.len>(w, s.len);
-    ret += try w.writeChar(']');
+    ret += try w.writeStr("[len: ");
+    ret += try fmtInteger<s.len>(w, s.len);
+    ret += try w.writeStr(", {");
+    let idx: usize = 0;
+    inline if (@typeid(s) == std.types.slice_t) {
+        while (idx < s.len) {
+            if (idx > 0) {
+                ret += try w.writeStr(", ");
+            }
+            const element = s[idx];
+            ret += try fmtType<element>(w, element);
+            idx++;
+        }
+    }
+    ret += try w.writeStr("}]");
     return ret;
 }
 
-pub fn fmt_error(w: std.io.Writer, e: err) -> !usize {
+pub fn fmtError(w: std.io.Writer, e: err) -> !usize {
     let ret: usize = 0;
     ret += try w.writeStr("error.");
     ret += try w.writeStr(e);
     return ret;
 }
 
-pub fn fmt_simd<T>(w: std.io.Writer, v: T) -> !usize {
+pub fn fmtSimd<T>(w: std.io.Writer, v: T) -> !usize {
     let ret: usize = 0;
     let current_element = 0;
     inline if (@typeid(v) == std.types.simd_t) {
@@ -183,7 +193,7 @@ pub fn fmt_simd<T>(w: std.io.Writer, v: T) -> !usize {
                 ret += try w.writeStr(", ");
             }
             const element = v[current_element];
-            ret += try fmt_type<element>(w, element);
+            ret += try fmtType<element>(w, element);
             current_element++;
         }
     }
@@ -202,11 +212,11 @@ pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
             inline if (@typeid(args) == std.types.tuple_t) {
                 inline for (args) |arg| {
                     if (current_arg++ == arg_tracker) {
-                        ret += try fmt_type<arg>(w, arg);
+                        ret += try fmtType<arg>(w, arg);
                     }
                 }
             } else {
-                ret += try fmt_type<args>(w, args);
+                ret += try fmtType<args>(w, args);
             }
             arg_tracker++;
             fmt_idx += 2;
@@ -227,11 +237,11 @@ struct Test_struct {
     pub fn fmt(s: *@This, w: std.io.Writer) -> !usize {
         let ret: usize = 0;
         ret += try w.writeStr("Test_struct a ");
-        ret += try fmt_integer<s.a>(w, s.a);
+        ret += try fmtInteger<s.a>(w, s.a);
         ret += try w.writeStr(" b ");
-        ret += try fmt_integer<s.b>(w, s.b);
+        ret += try fmtInteger<s.b>(w, s.b);
         ret += try w.writeStr(" c ");
-        ret += try fmt_integer<s.c>(w, s.c);
+        ret += try fmtInteger<s.c>(w, s.c);
         return ret;
     }
 }

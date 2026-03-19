@@ -1,0 +1,73 @@
+pub fn bubbleSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
+    if (slice.len == 0) {
+        return;
+    }
+    let n = slice.len;
+    for (0..(n - 1)) |i| {
+        for (0..(n - i - 1)) |j| {
+            if (cmp(slice[j + 1], slice[j])) {
+                let temp = slice[j];
+                slice[j] = slice[j + 1];
+                slice[j + 1] = temp;
+            }
+        }
+    }
+}
+
+pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
+    if (slice.len < 2) {
+        return;
+    }
+    const ptr: *T = slice.ptr;
+    const swap = [ptr](a: usize, b: usize) -> void {
+        let temp = ptr[a];
+        ptr[a] = ptr[b];
+        ptr[b] = temp;
+    };
+    const mid = slice.len / 2;
+    const last = slice.len - 1;
+
+    if (cmp(slice[mid], slice[0])) {
+        swap(0, mid);
+    }
+    if (cmp(slice[last], slice[0])) {
+        swap(0, last);
+    }
+    if (cmp(slice[last], slice[mid])) {
+        swap(mid, last);
+    }
+    swap(mid, last);
+
+    const piv_idx = slice.len - 1;
+    // const piv_idx = slice.len / 2;
+
+    let piv = slice[piv_idx];
+    let i = -1;
+
+    for (0..piv_idx) |j| {
+        if (cmp(slice[j], piv)) {
+            i++;
+            swap(i, j);
+        }
+    }
+    swap(i + 1, piv_idx);
+
+    let pivot_idx = i + 1;
+    quickSort<T>(slice[0..pivot_idx], cmp);
+    quickSort<T>(slice[(pivot_idx + 1)..slice.len], cmp);
+}
+
+const std = import("std");
+
+test "sort slice" {
+    let v = {3, 1, 5, 4, 2};
+    let v2 = v;
+    bubbleSort<i32>(v[0..5], [](a: i32, b: i32) -> bool { return a < b; });
+    quickSort<i32>(v2[0..5], [](a: i32, b: i32) -> bool { return a < b; });
+
+    let expected = {1, 2, 3, 4, 5};
+    std.io.print("v {}\n", v[0..5]);
+    std.io.print("v2 {}\n", v2[0..5]);
+    try std.testing.expectEqualSlice<i32>(v[0..5], expected[0..5]);
+    try std.testing.expectEqualSlice<i32>(v2[0..5], expected[0..5]);
+}

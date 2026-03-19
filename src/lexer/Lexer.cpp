@@ -69,7 +69,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(ty_err);
         CASE_TYPE(ty_isize);
         CASE_TYPE(ty_usize);
-        CASE_TYPE(ty_slice);
         CASE_TYPE(kw_fn);
         CASE_TYPE(kw_true);
         CASE_TYPE(kw_false);
@@ -287,10 +286,6 @@ Token Lexer::next_token() {
         t.type = TokenType::par_r;
         t.str = line_content.substr(0, 1);
         advance();
-    } else if (line_content.substr(0, 2) == "[]") {
-        t.type = TokenType::ty_slice;
-        t.str = line_content.substr(0, 2);
-        advance(2);
     } else if (line_content.substr(0, 1) == "[") {
         t.type = TokenType::bracket_l;
         t.str = line_content.substr(0, 1);

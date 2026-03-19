@@ -100,6 +100,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
+    if (auto *lambda = dynamic_cast<const ResolvedLambdaExpr *>(&expr)) {
+        return generate_lambda_expr(*lambda);
+    }
     if (dynamic_cast<const ResolvedTypeSimdExpr *>(&expr)) {
         return nullptr;  // Type expressions don't have values
     }
@@ -961,4 +964,57 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
     dmz_unreachable("unknown simd builtin");
     return nullptr;
 }
+
+llvm::Value *Codegen::generate_lambda_expr(const ResolvedLambdaExpr &expr) {
+    debug_func(expr.location);
+
+    // 1. Create capture struct and global buffer
+    std::vector<llvm::Type *> captureTypes;
+    for (auto &&cap : expr.lambdaFunc->captures) {
+        captureTypes.push_back(generate_type(*cap->type));
+    }
+    std::string lambda_name = generate_decl_name(*expr.lambdaFunc);
+
+    if (!expr.captureInitializers.empty()) {
+        auto captureStructType = llvm::StructType::create(*m_context, captureTypes, lambda_name + "_captures");
+
+        auto globalCaptureBuffer =
+            new llvm::GlobalVariable(*m_module, captureStructType, false, llvm::GlobalValue::InternalLinkage,
+                                     llvm::Constant::getNullValue(captureStructType), lambda_name + "_buffer");
+
+        expr.lambdaFunc->globalCaptureBuffer = globalCaptureBuffer;
+
+        // 2. Store current capture values into the global buffer
+        for (size_t i = 0; i < expr.captureInitializers.size(); i++) {
+            auto val = generate_expr(*expr.captureInitializers[i]);
+            auto gep = m_builder.CreateStructGEP(captureStructType, globalCaptureBuffer, i);
+            m_builder.CreateStore(val, gep);
+        }
+    }
+
+    // 3. Generate function declaration
+    auto llvmFn = generate_function_decl(*expr.lambdaFunc);
+
+    // 4. Generate the function body NOW
+    // We need to save and restore the builder state if we are currently inside another function
+    auto savedIP = m_builder.saveIP();
+    auto savedFn = m_currentFunction;
+    auto savedAllocaIP = m_allocaInsertPoint;
+    auto savedMemsetIP = m_memsetInsertPoint;
+    auto savedRetVal = retVal;
+    auto savedRetBB = retBB;
+
+    generate_function_body(*expr.lambdaFunc);
+
+    // Restore
+    m_builder.restoreIP(savedIP);
+    m_currentFunction = savedFn;
+    m_allocaInsertPoint = savedAllocaIP;
+    m_memsetInsertPoint = savedMemsetIP;
+    retVal = savedRetVal;
+    retBB = savedRetBB;
+
+    return llvmFn;
+}
+
 }  // namespace DMZ

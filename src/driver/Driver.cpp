@@ -549,7 +549,7 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
 
         cmd = "clang";
         args.emplace_back("clang");
-        args.emplace_back("-O0");
+        args.emplace_back("-O3");
         args.emplace_back("-g");
         args.emplace_back("-x");
         args.emplace_back("ir");

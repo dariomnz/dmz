@@ -5,3 +5,14 @@ pub fn expect(v: i1) -> !void {
         return testingError.EXPECT;
     }
 }
+
+pub fn expectEqualSlice<T>(a: []T, b: []T) -> !void {
+    if (a.len != b.len) {
+        return error.DIFFERENT_LENGHT;
+    }
+    for (0..a.len) |i| {
+        if (a[i] != b[i]) {
+            return error.DIFFERENT_ELEMENTS;
+        }
+    }
+}

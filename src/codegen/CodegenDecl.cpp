@@ -25,6 +25,14 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
             name = decl.identifier;
             return name;
         }
+        if (dynamic_cast<const ResolvedLambdaFunctionDecl *>(&decl)) {
+            if (m_currentModule) {
+                name = m_currentModule->identifier + "." + decl.identifier;
+            } else {
+                name = decl.identifier;
+            }
+            return name;
+        }
     }
     if (!decl.symbolName.empty()) {
         name = decl.symbolName;
@@ -155,6 +163,27 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     llvm::Value *undef = llvm::UndefValue::get(m_builder.getInt32Ty());
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
+
+    if (auto lambdaFunc = dynamic_cast<const ResolvedLambdaFunctionDecl *>(&functionDecl)) {
+        if (!lambdaFunc->captures.empty()) {
+            auto globalCaptureBuffer = lambdaFunc->globalCaptureBuffer;
+            if (globalCaptureBuffer) {
+                auto captureStructType = llvm::cast<llvm::StructType>(globalCaptureBuffer->getValueType());
+                for (size_t i = 0; i < lambdaFunc->captures.size(); i++) {
+                    auto cap = lambdaFunc->captures[i].get();
+                    auto localAlloca = allocate_stack_variable(cap->location, cap->identifier, *cap->type);
+                    m_declarations[cap] = localAlloca;
+
+                    auto gep = m_builder.CreateStructGEP(captureStructType, globalCaptureBuffer, i);
+                    auto val = m_builder.CreateLoad(captureStructType->getElementType(i), gep);
+                    m_builder.CreateStore(val, localAlloca);
+                }
+            } else {
+                lambdaFunc->dump();
+                dmz_unreachable("unreachable");
+            }
+        }
+    }
 
     bool returnsVoid = fnType->returnType->generate_struct() || fnType->returnType->kind == ResolvedTypeKind::Void;
 
@@ -330,6 +359,9 @@ void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &E
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
+    auto prevModule = m_currentModule;
+    defer([&]() mutable { m_currentModule = prevModule; });
+    m_currentModule = &moduleDecl;
     ptr<DebugScopeRAII> debugScope = nullptr;
     if (m_debugSymbols) {
         m_currentDebugFile = m_debugBuilder.createFile(moduleDecl.module_path.filename().string(),
@@ -341,6 +373,9 @@ void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
 
 void Codegen::generate_module_body(const ResolvedModuleDecl &moduleDecl) {
     debug_func("");
+    auto prevModule = m_currentModule;
+    defer([&]() mutable { m_currentModule = prevModule; });
+    m_currentModule = &moduleDecl;
     ptr<DebugScopeRAII> debugScope = nullptr;
     if (m_debugSymbols) {
         m_currentDebugFile = m_debugBuilder.createFile(moduleDecl.module_path.filename().string(),

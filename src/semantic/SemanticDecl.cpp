@@ -825,8 +825,9 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     }
     if (error) return false;
 
-    for (auto &&currentDeclRef : moduleDecl.declarations) {
-        auto currentDecl = currentDeclRef.get();
+    // for (auto &&currentDeclRef : moduleDecl.declarations) {
+    for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
+        auto currentDecl = moduleDecl.declarations[i].get();
         if (auto *st = dynamic_cast<ResolvedStructDecl *>(currentDecl)) {
             if (!resolve_struct_members(*st)) {
                 debug_msg("error resolve_struct_members");

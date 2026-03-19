@@ -1,0 +1,82 @@
+// RUN: dmz %s -run | filecheck %s
+
+const std = import("std");
+
+extern fn rand() -> i32;
+
+fn checkSorted(slice: []i32, cmp: *fn(i32, i32)->bool) -> !void {
+    for (0..slice.len - 1) |i| {
+        if (!cmp(slice[i], slice[i + 1])) {
+            std.io.print("Error: idx {}:{} values {}:{}\n", .{i, i + 1, slice[i], slice[i + 1]});
+            return error.NotSorted;
+        }
+    }
+}
+
+fn main() -> void {
+    let libc_alloc = std.mem.libc_allocator.init();
+    let allocator = libc_alloc.Allocator();
+
+    const iters = 1000;
+    {
+        const start_allocated = libc_alloc.allocated;
+        let v = std.vec<i32>.init(allocator);
+        defer v.deinit();
+
+        const start_vector = std.time.get();
+        for (0..iters) |i| {
+            v.add(rand() % iters);
+        }
+        const end_vector = std.time.get();
+        std.io.printf("Allocated in vector = %ld\n", libc_alloc.allocated - start_allocated);
+        std.io.printf("Time taken in vector %ld: %f ms\n", v.size(), (end_vector - start_vector) * 1000.0);
+
+        {
+            const start_sort = std.time.get();
+            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
+            std.algorithm.bubbleSort<i32>(v.slice(), comp);
+            const end_sort = std.time.get();
+            std.io.print("Vector = {}\n", v.slice()[0..100]);
+            std.io.printf("Time taken in sort vector %ld: %f ms\n", v.size(), (end_sort - start_sort) * 1000.0);
+            try checkSorted(v.slice(), comp);
+        }
+        {
+            const start_sort = std.time.get();
+            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
+            std.algorithm.bubbleSort<i32>(v.slice(), comp);
+            const end_sort = std.time.get();
+            std.io.printf("Time taken in sort vector %ld: %f ms\n", v.size(), (end_sort - start_sort) * 1000.0);
+            try checkSorted(v.slice(), comp);
+        }
+    }
+    {
+        const start_allocated = libc_alloc.allocated;
+        let v = std.vec<i32>.init(allocator);
+        defer v.deinit();
+
+        const start_vector = std.time.get();
+        for (0..iters) |i| {
+            v.add(rand() % iters);
+        }
+        const end_vector = std.time.get();
+        std.io.printf("Allocated in vector = %ld\n", libc_alloc.allocated - start_allocated);
+        std.io.printf("Time taken in vector %ld: %f ms\n", v.size(), (end_vector - start_vector) * 1000.0);
+        {
+            const start_sort = std.time.get();
+            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
+            std.algorithm.quickSort<i32>(v.slice(), comp);
+            const end_sort = std.time.get();
+            std.io.print("Vector = {}\n", v.slice()[0..100]);
+            std.io.printf("Time taken in sort vector %ld: %f ms\n", v.size(), (end_sort - start_sort) * 1000.0);
+            try checkSorted(v.slice(), comp);
+        }
+        {
+            const start_sort = std.time.get();
+            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
+            std.algorithm.quickSort<i32>(v.slice(), comp);
+            const end_sort = std.time.get();
+            std.io.printf("Time taken in sort vector %ld: %f ms\n", v.size(), (end_sort - start_sort) * 1000.0);
+            try checkSorted(v.slice(), comp);
+        }
+    }
+}

@@ -5,12 +5,11 @@ pub const Reader = import("reader.dmz").Reader;
 
 const std = import("std");
 
-pub fn print<T>(data: *u8, tuple:T) -> !usize {
+pub fn print<T>(fmt: *u8, args: T) -> !usize {
     let buf: u8[1024] = {};
     const w = stdout.writer(buf[0..1024]);
     defer try w.flush();
-    let ret = try std.fmt.fmt<T>(w, data, tuple);
-    return ret;
+    return std.fmt.fmt<T>(w, fmt, args);
 }
 
 pub struct stdout {

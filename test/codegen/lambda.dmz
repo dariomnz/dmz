@@ -1,0 +1,15 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let x = 10;
+    let f1 = [x](a: i32) -> i32 { return x + a; };
+
+    let y = 20;
+    let f2 = [y](a: i32) -> i32 { return y + a; };
+
+    // CHECK: 15
+    printf("%d\n", f1(5));
+    // CHECK: 25
+    printf("%d\n", f2(5));
+}

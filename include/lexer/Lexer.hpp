@@ -61,7 +61,6 @@ enum class TokenType {
     ty_err,
     ty_usize,
     ty_isize,
-    ty_slice,
     kw_true,
     kw_false,
     kw_null,

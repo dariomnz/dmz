@@ -194,6 +194,9 @@ bool ResolvedTypeStructDecl::is_generic() const {
     if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
         return debug_ret(spec->specializedTypes->is_generic());
     }
+    for (auto &&field : decl->fields) {
+        if (field->type->is_generic()) return debug_ret(true);
+    }
     return debug_ret(false);
 }
 
@@ -250,6 +253,9 @@ bool ResolvedTypeStruct::is_generic() const {
     }
     if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
         return debug_ret(spec->specializedTypes->is_generic());
+    }
+    for (auto &&field : decl->fields) {
+        if (field->type->is_generic()) return debug_ret(true);
     }
     return debug_ret(false);
 }
@@ -507,7 +513,7 @@ bool ResolvedTypeSlice::equal(const ResolvedType &other) const {
 bool ResolvedTypeSlice::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSlice " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
 
     if (auto ptrType = dynamic_cast<const ResolvedTypeSlice *>(&other)) {
         if (sliceType->compare(*ptrType->sliceType)) return debug_ret(true);

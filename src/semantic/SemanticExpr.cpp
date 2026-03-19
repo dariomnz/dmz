@@ -442,6 +442,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
     }
+    if (const auto *lambdaExpr = dynamic_cast<const LambdaExpr *>(&expr)) {
+        return resolve_lambda_expr(*lambdaExpr);
+    }
     expr.dump();
     dmz_unreachable("unexpected expression");
 }
@@ -790,6 +793,78 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
                                         std::move(index));
 }
 
+ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
+    debug_func(expr.location);
+    std::string lambdaName = "lambda_" + std::to_string(expr.location.line) + "_" + std::to_string(expr.location.col);
+
+    std::vector<ptr<ResolvedExpr>> captureInitializers;
+    std::vector<ptr<ResolvedDecl>> resolvedCaptures;
+
+    for (auto &&cap : expr.captures) {
+        varOrReturn(resolvedCap, resolve_expr(*cap));
+
+        // Ensure it's a variable reference (DeclRefExpr)
+        auto dre = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCap.get());
+        if (!dre) {
+            return report(cap->location, "only variable captures are supported for now");
+        }
+
+        resolvedCaptures.push_back(
+            makePtr<ResolvedCaptureDecl>(cap->location, dre->decl.identifier, resolvedCap->type->clone()));
+        captureInitializers.push_back(std::move(resolvedCap));
+    }
+
+    // Create a new scope for the lambda
+    ScopeRAII lambdaScope(*this);
+
+    // Inject captures into the scope
+    for (auto &&cap : resolvedCaptures) {
+        if (!insert_decl_to_current_scope(*cap, true)) return nullptr;
+    }
+
+    // Resolve parameters using the existing helper
+    std::vector<ptr<ResolvedParamDecl>> resolvedParams;
+    std::vector<ptr<ResolvedType>> resolvedParamsTypes;
+    for (auto &&param : expr.params) {
+        varOrReturn(resolvedParam, resolve_param_decl(*param));
+        if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam, true)) return nullptr;
+        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
+        resolvedParams.emplace_back(std::move(resolvedParam));
+    }
+
+    // Resolve return type
+    ptr<ResolvedType> returnType = nullptr;
+    if (expr.returnType) {
+        returnType = resolve_type(*expr.returnType);
+    } else {
+        returnType = makePtr<ResolvedTypeVoid>(expr.location);
+    }
+    if (!returnType) return nullptr;
+
+    auto fnType =
+        makePtr<ResolvedTypeFunction>(expr.location, nullptr, std::move(resolvedParamsTypes), std::move(returnType));
+
+    auto lambdaFunc = makePtr<ResolvedLambdaFunctionDecl>(
+        expr.location, lambdaName, fnType->clone(), std::move(resolvedParams), nullptr, std::move(resolvedCaptures));
+    lambdaFunc->getFnType()->fnDecl = lambdaFunc.get();
+    add_dependency(lambdaFunc.get());
+
+    auto prevFunc = m_currentFunction;
+    m_currentFunction = lambdaFunc.get();
+    auto savedDefers = std::move(m_defers);
+    auto resolvedBody = resolve_block(*expr.body);
+    m_defers = std::move(savedDefers);
+    m_currentFunction = prevFunc;
+
+    if (!resolvedBody) return nullptr;
+    lambdaFunc->body = std::move(resolvedBody);
+
+    auto resType = makePtr<ResolvedTypePointer>(expr.location, fnType->clone());
+
+    return makePtr<ResolvedLambdaExpr>(expr.location, std::move(resType), std::move(lambdaFunc),
+                                       std::move(captureInitializers));
+}
+
 ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
@@ -1065,8 +1140,10 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
 
     ResolvedTypeStructDecl *typeInfoDecl = nullptr;
     for (auto &[path, mod] : m_modules_for_import) {
-        if (mod->name() == "std.builtin") {
+        debug_msg("Module " << mod->name() << " path " << path);
+        if (path.ends_with("std/builtin.dmz")) {
             for (auto &decl : mod->declarations) {
+                debug_msg("Target " << targetStructName << " search " << decl->identifier);
                 if (decl->identifier == targetStructName) {
                     if (auto structDeclRef = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
                         typeInfoDecl = structDeclRef;

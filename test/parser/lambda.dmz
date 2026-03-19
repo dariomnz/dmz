@@ -1,0 +1,22 @@
+// RUN: dmz %s -ast-dump | filecheck %s
+
+fn main() -> void {
+    let x = 1;
+    let f = [x](a: i32) -> i32 {
+        return x + a;
+    };
+}
+// CHECK:         VarDecl: f
+// CHECK-NEXT:           LambdaExpr
+// CHECK-NEXT:             Lambda captures
+// CHECK-NEXT:               DeclRefExpr x
+// CHECK-NEXT:             Lambda params
+// CHECK-NEXT:               ParamDecl:i32 a
+// CHECK-NEXT:             Lambda returnType
+// CHECK-NEXT:               TypeNumber i32
+// CHECK-NEXT:             Lambda body
+// CHECK-NEXT:               Block
+// CHECK-NEXT:                 ReturnStmt
+// CHECK-NEXT:                   BinaryOperator '+'
+// CHECK-NEXT:                     DeclRefExpr x
+// CHECK-NEXT:                     DeclRefExpr a

@@ -52,8 +52,10 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             }
         } else if (auto* funcDecl = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
             if (!dynamic_cast<const ResolvedTestDecl*>(funcDecl)) {
-                add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,
-                          (uint32_t)SemanticTokenModifier::Declaration);
+                if (!dynamic_cast<const ResolvedLambdaFunctionDecl*>(funcDecl)) {
+                    add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,
+                              (uint32_t)SemanticTokenModifier::Declaration);
+                }
                 if (auto fnType = funcDecl->getFnType()) {
                     if (fnType->returnType) traverse_type(*fnType->returnType);
                 }
@@ -239,6 +241,12 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             for (const auto& arg : call->arguments) {
                 traverse_expr(*arg);
             }
+        } else if (auto* lambda = dynamic_cast<const ResolvedLambdaExpr*>(&expr)) {
+            debug_msg("ResolvedLambdaExpr");
+            for (const auto& init : lambda->captureInitializers) {
+                traverse_expr(*init);
+            }
+            traverse_decl(*lambda->lambdaFunc);
         } else if (auto* binary = dynamic_cast<const ResolvedBinaryOperator*>(&expr)) {
             debug_msg("ResolvedBinaryOperator");
             traverse_expr(*binary->lhs);
