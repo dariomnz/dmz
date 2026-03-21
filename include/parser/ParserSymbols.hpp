@@ -245,7 +245,8 @@ struct ReturnStmt : public Stmt {
 };
 
 struct BreakStmt : public Stmt {
-    BreakStmt(SourceLocation location) : Stmt(location) {}
+    ptr<Expr> expr;
+    BreakStmt(SourceLocation location, ptr<Expr> expr = nullptr) : Stmt(location), expr(std::move(expr)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -745,9 +746,14 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
 
 struct CatchErrorExpr : public Expr {
     ptr<Expr> errorToCatch;
+    std::string captureIdentifier;
+    ptr<Stmt> handler;
 
-    CatchErrorExpr(SourceLocation location, ptr<Expr> errorToCatch)
-        : Expr(location), errorToCatch(std::move(errorToCatch)) {}
+    CatchErrorExpr(SourceLocation location, ptr<Expr> errorToCatch, std::string captureIdentifier, ptr<Stmt> handler)
+        : Expr(location),
+          errorToCatch(std::move(errorToCatch)),
+          captureIdentifier(std::move(captureIdentifier)),
+          handler(std::move(handler)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

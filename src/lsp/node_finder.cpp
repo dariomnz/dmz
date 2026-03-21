@@ -264,6 +264,12 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         return;
     } else if (auto* catchErr = dynamic_cast<const ResolvedCatchErrorExpr*>(&expr)) {
         find_in_expr(*catchErr->errorToCatch);
+        if (found_decl) return;
+        if (catchErr->errorVar) {
+            find_in_decl(*catchErr->errorVar);
+            if (found_decl) return;
+        }
+        find_in_stmt(*catchErr->handler);
     } else if (auto* tryErr = dynamic_cast<const ResolvedTryErrorExpr*>(&expr)) {
         find_in_expr(*tryErr->errorToTry);
     } else if (auto* orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr*>(&expr)) {

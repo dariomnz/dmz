@@ -351,11 +351,31 @@ llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
 }
 llvm::Value *Codegen::generate_break_stmt(const ResolvedBreakStmt &stmt) {
     debug_func(stmt.location);
-    for (auto &&d : stmt.defers) {
-        generate_block(*d->resolvedDefer.block);
+
+    if (stmt.expr) {
+        auto it = m_catchBreakTargets.find(stmt.targetCatch);
+        assert(it != m_catchBreakTargets.end());
+
+        llvm::Value *val = generate_expr(*stmt.expr);
+        if (it->second.valueAddr) {
+            store_value(val, it->second.valueAddr, *stmt.expr->type, *stmt.targetCatch->type);
+        }
+
+        for (auto &&d : stmt.defers) {
+            generate_stmt(*d);
+        }
+
+        m_builder.CreateBr(it->second.exitBB);
+        return nullptr;
     }
-    assert(!m_loopExitStack.empty() && "break statement outside a loop");
-    break_into_bb(m_loopExitStack.top());
+
+    if (m_loopExitStack.empty()) dmz_unreachable("unexpected break statement outside a loop");
+
+    for (auto &&d : stmt.defers) {
+        generate_stmt(*d);
+    }
+
+    m_builder.CreateBr(m_loopExitStack.top());
     return nullptr;
 }
 

@@ -160,9 +160,6 @@ ptr<Expr> Parser::parse_primary() {
             return makePtr<LambdaExpr>(location, std::move(captures), std::move(*paramsList), std::move(returnType),
                                        std::move(body));
         }
-        if (m_nextToken.type == TokenType::kw_catch) {
-            return parse_catch_error_expr();
-        }
         if (m_nextToken.type == TokenType::kw_try) {
             return parse_try_error_expr();
         }
@@ -297,6 +294,10 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         expr = makePtr<OrElseErrorExpr>(expr->location, std::move(expr), std::move(orelse));
         return parse_postfix_expr(std::move(expr));
     }
+    if (!(restrictions & OnlyTypeExpr) && m_nextToken.type == TokenType::kw_catch) {
+        expr = parse_catch_error_expr(std::move(expr));
+        return parse_postfix_expr(std::move(expr));
+    }
 
     return expr;
 }
@@ -407,15 +408,31 @@ ptr<Expr> Parser::parse_expr_rhs(ptr<Expr> lhs, int precedence) {
     }
 }
 
-ptr<CatchErrorExpr> Parser::parse_catch_error_expr() {
+ptr<Expr> Parser::parse_catch_error_expr(ptr<Expr> expr) {
     debug_func("");
     matchOrReturn(TokenType::kw_catch, "expected 'catch'");
     auto location = m_nextToken.loc;
     eat_next_token();  // eat catch
 
-    varOrReturn(errorToCatch, parse_expr());
+    std::string captureIdentifier = "";
+    if (m_nextToken.type == TokenType::pipe) {
+        eat_next_token();  // eat |
+        matchOrReturn(TokenType::id, "expected identifier");
+        captureIdentifier = m_nextToken.str;
+        eat_next_token();  // eat identifier
+        matchOrReturn(TokenType::pipe, "expected '|'");
+        eat_next_token();  // eat |
+    }
 
-    return makePtr<CatchErrorExpr>(location, std::move(errorToCatch));
+    ptr<Stmt> handler;
+    if (m_nextToken.type == TokenType::block_l) {
+        handler = parse_block();
+    } else {
+        handler = parse_expr();
+    }
+    if (!handler) return nullptr;
+
+    return makePtr<CatchErrorExpr>(location, std::move(expr), captureIdentifier, std::move(handler));
 }
 
 ptr<TryErrorExpr> Parser::parse_try_error_expr() {

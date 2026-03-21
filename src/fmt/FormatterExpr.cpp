@@ -185,9 +185,17 @@ ptr<Node> Formatter::fmt_error_group_expr_decl(const ErrorGroupExprDecl& expr) {
 
 ptr<Node> Formatter::fmt_catch_error_expr(const CatchErrorExpr& expr) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(fmt_expr(*expr.errorToCatch));
+    ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("catch"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_expr(*expr.errorToCatch));
+    if (!expr.captureIdentifier.empty()) {
+        ret->nodes.emplace_back(makePtr<Text>("|"));
+        ret->nodes.emplace_back(makePtr<Text>(expr.captureIdentifier));
+        ret->nodes.emplace_back(makePtr<Text>("|"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
+    ret->nodes.emplace_back(fmt_stmt(*expr.handler));
     return ret;
 }
 

@@ -1047,8 +1047,46 @@ ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
 
 ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr &catchErrorExpr) {
     debug_func(catchErrorExpr.location);
-    auto resolvedErr = resolve_expr(*catchErrorExpr.errorToCatch);
-    return makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, std::move(resolvedErr));
+    varOrReturn(errorToCatch, resolve_expr(*catchErrorExpr.errorToCatch));
+
+    if (errorToCatch->type->kind != ResolvedTypeKind::Optional) {
+        return report(catchErrorExpr.location, "catch operator must be used with an error union type, got '" +
+                                                   errorToCatch->type->to_str() + "'");
+    }
+    auto optionalType = static_cast<const ResolvedTypeOptional *>(errorToCatch->type.get());
+    auto resultType = optionalType->optionalType->clone();
+
+    auto resolvedCatch = makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, resultType->clone());
+    m_catchStack.push_back(resolvedCatch.get());
+    defer([&]() { m_catchStack.pop_back(); });
+
+    ptr<ResolvedVarDecl> errorVar = nullptr;
+    std::unique_ptr<ScopeRAII> captureScope;
+    if (!catchErrorExpr.captureIdentifier.empty()) {
+        captureScope = std::make_unique<ScopeRAII>(*this);
+        auto errorType = makePtr<ResolvedTypeError>(catchErrorExpr.location);
+        errorVar = makePtr<ResolvedVarDecl>(catchErrorExpr.location, nullptr, true, catchErrorExpr.captureIdentifier,
+                                            std::move(errorType), false);
+        insert_decl_to_current_scope(*errorVar);
+    }
+
+    ptr<ResolvedStmt> handler = resolve_stmt(*catchErrorExpr.handler);
+
+    if (!handler) return nullptr;
+
+    if (auto resolvedHandlerExpr = dynamic_cast<const ResolvedExpr *>(handler.get())) {
+        if (!resultType->compare(*resolvedHandlerExpr->type)) {
+            return report(catchErrorExpr.location, "unexpected mismatch of types in catch expression '" +
+                                                       resultType->to_str() + "' and '" +
+                                                       resolvedHandlerExpr->type->to_str() + "'");
+        }
+    }
+
+    resolvedCatch->errorToCatch = std::move(errorToCatch);
+    resolvedCatch->errorVar = std::move(errorVar);
+    resolvedCatch->handler = std::move(handler);
+
+    return resolvedCatch;
 }
 
 ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryErrorExpr) {

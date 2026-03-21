@@ -8,11 +8,8 @@ pub fn scanInteger<T>(r: std.io.Reader) -> !T {
 
     while (true) {
         // Leemos byte por byte
-        const byte_opt = r.readByte();
-        const byte_error = catch byte_opt;
-        if (byte_error) {
-            const e = error.EndOfStream;
-            if (byte_error == e) {
+        const byte = r.readByte() catch |byte_error| {
+            if (byte_error == error.EndOfStream) {
                 if (started) {
                     if (negative) {
                         return -result;
@@ -25,8 +22,7 @@ pub fn scanInteger<T>(r: std.io.Reader) -> !T {
             } else {
                 return byte_error;
             }
-        }
-        const byte = try byte_opt;
+        };
         switch (byte) {
             case ' ', '\n', '\r', '\t' => {
                 // Ignorar espacios en blanco iniciales

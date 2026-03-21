@@ -22,11 +22,10 @@ fn __builtin_main_test() -> void {
         result = result + 1;
         const test_name = @builtin_test_name(i);
         std.io.printf("Run test [%d/%d] '%s'.\n", i + 1, num_test, test_name);
-        let e = catch @builtin_test_run(i);
-        if (e) {
-            std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, e);
+        @builtin_test_run(i) catch |er| {
+            std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, er);
             result = result - 1;
-        }
+        };
     }
 
     if (result == num_test) {

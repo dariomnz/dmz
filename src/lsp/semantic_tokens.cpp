@@ -288,6 +288,10 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* catchErr = dynamic_cast<const ResolvedCatchErrorExpr*>(&expr)) {
             debug_msg("ResolvedCatchErrorExpr");
             traverse_expr(*catchErr->errorToCatch);
+            if (catchErr->errorVar) {
+                traverse_decl(*catchErr->errorVar);
+            }
+            traverse_stmt(*catchErr->handler);
         } else if (auto* tryErr = dynamic_cast<const ResolvedTryErrorExpr*>(&expr)) {
             debug_msg("ResolvedTryErrorExpr");
             traverse_expr(*tryErr->errorToTry);

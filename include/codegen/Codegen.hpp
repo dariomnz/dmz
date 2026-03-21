@@ -20,6 +20,12 @@ class Codegen {
     const ResolvedFuncDecl *m_currentFunction = nullptr;
     llvm::Value *m_success = nullptr;
 
+    struct CatchBreakTarget {
+        llvm::Value *valueAddr;
+        llvm::BasicBlock *exitBB;
+    };
+    std::unordered_map<const ResolvedCatchErrorExpr *, CatchBreakTarget> m_catchBreakTargets;
+
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
 

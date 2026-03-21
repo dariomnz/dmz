@@ -624,13 +624,73 @@ llvm::Value *Codegen::generate_error_in_place_expr(const ResolvedErrorInPlaceExp
 llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer) {
     llvm::Value *ret = nullptr;
     debug_func(Dumper([&]() {
-        if (ret) ret->print(llvm::errs());
+        if (ret) ret->print(llvm::errs(), true);
     }));
+
+    llvm::Function *function = get_current_function();
+    auto *noErrorBB = llvm::BasicBlock::Create(*m_context, "catch.no_error", function);
+    auto *hasErrorBB = llvm::BasicBlock::Create(*m_context, "catch.has_error", function);
+    auto *exitBB = llvm::BasicBlock::Create(*m_context, "catch.exit", function);
+
+    // Create alloca for result if not void
+    llvm::Value *resultAddr = nullptr;
+    if (catchErrorExpr.type->kind != ResolvedTypeKind::Void) {
+        resultAddr = allocate_stack_variable(catchErrorExpr.location, "catch_result", *catchErrorExpr.type);
+    }
+
+    // Evaluate operand
     llvm::Value *error_struct = generate_expr(*catchErrorExpr.errorToCatch, true);
     ResolvedType *error_type = catchErrorExpr.errorToCatch->type.get();
     llvm::Value *error_value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 1);
 
-    ret = keepPointer ? error_value_ptr : load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
+    // Check if error is NOT null
+    llvm::Value *has_error = m_builder.CreateIsNotNull(m_builder.CreateLoad(m_builder.getPtrTy(), error_value_ptr));
+    m_builder.CreateCondBr(has_error, hasErrorBB, noErrorBB);
+
+    // --- No error case ---
+    m_builder.SetInsertPoint(noErrorBB);
+    if (resultAddr) {
+        llvm::Value *value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 0);
+        llvm::Value *value = load_value(value_ptr, *catchErrorExpr.type);
+        store_value(value, resultAddr, *catchErrorExpr.type, *catchErrorExpr.type);
+    }
+    m_builder.CreateBr(exitBB);
+
+    // --- Has error case ---
+    m_builder.SetInsertPoint(hasErrorBB);
+
+    // Register break target
+    m_catchBreakTargets[&catchErrorExpr] = {resultAddr, exitBB};
+    defer([&]() { m_catchBreakTargets.erase(&catchErrorExpr); });
+
+    if (catchErrorExpr.errorVar) {
+        llvm::Value *var_ptr = allocate_stack_variable(catchErrorExpr.errorVar->location, catchErrorExpr.errorVar->identifier,
+                                                       *catchErrorExpr.errorVar->type);
+        m_declarations[catchErrorExpr.errorVar.get()] = var_ptr;
+        llvm::Value *error_val = load_value(error_value_ptr, *catchErrorExpr.errorVar->type);
+        store_value(error_val, var_ptr, *catchErrorExpr.errorVar->type, *catchErrorExpr.errorVar->type);
+    }
+
+    if (auto resolvedHandlerExpr = dynamic_cast<const ResolvedExpr *>(catchErrorExpr.handler.get())) {
+        llvm::Value *handler_val = generate_expr(*resolvedHandlerExpr, keepPointer);
+        if (resultAddr && handler_val) {
+            store_value(handler_val, resultAddr, *catchErrorExpr.type, *catchErrorExpr.type);
+        }
+    } else {
+        generate_stmt(*catchErrorExpr.handler);
+    }
+
+    // Only jump to exit if the block didn't already terminate (e.g. via break or return)
+    if (!m_builder.GetInsertBlock()->getTerminator()) {
+        m_builder.CreateBr(exitBB);
+    }
+
+    // --- Exit ---
+    m_builder.SetInsertPoint(exitBB);
+    if (resultAddr) {
+        ret = load_value(resultAddr, *catchErrorExpr.type);
+    }
+
     return ret;
 }
 

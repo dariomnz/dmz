@@ -12,6 +12,8 @@ class GlobalVariable;
 
 namespace DMZ {
 
+struct ResolvedCatchErrorExpr;
+
 struct ResolvedStmt {
     SourceLocation location;
 
@@ -149,8 +151,12 @@ struct ResolvedWhileStmt : public ResolvedStmt {
 
 struct ResolvedBreakStmt : public ResolvedStmt {
     std::vector<ptr<ResolvedDeferRefStmt>> defers;
-    ResolvedBreakStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers)
-        : ResolvedStmt(location), defers(std::move(defers)) {}
+    ptr<ResolvedExpr> expr;
+    ResolvedCatchErrorExpr* targetCatch;
+
+    ResolvedBreakStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers, 
+                      ptr<ResolvedExpr> expr = nullptr, ResolvedCatchErrorExpr* targetCatch = nullptr)
+        : ResolvedStmt(location), defers(std::move(defers)), expr(std::move(expr)), targetCatch(targetCatch) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -853,9 +859,15 @@ struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDependen
 
 struct ResolvedCatchErrorExpr : public ResolvedExpr {
     ptr<ResolvedExpr> errorToCatch;
+    ptr<ResolvedVarDecl> errorVar;
+    ptr<ResolvedStmt> handler;
 
-    ResolvedCatchErrorExpr(SourceLocation location, ptr<ResolvedExpr> errorToCatch)
-        : ResolvedExpr(location, makePtr<ResolvedTypeError>(location)), errorToCatch(std::move(errorToCatch)) {}
+    ResolvedCatchErrorExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> errorToCatch = nullptr,
+                           ptr<ResolvedVarDecl> errorVar = nullptr, ptr<ResolvedStmt> handler = nullptr)
+        : ResolvedExpr(location, std::move(type)),
+          errorToCatch(std::move(errorToCatch)),
+          errorVar(std::move(errorVar)),
+          handler(std::move(handler)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

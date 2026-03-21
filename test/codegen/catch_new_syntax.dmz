@@ -1,0 +1,71 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+
+const e = error {
+    ERROR_ONE,
+    ERROR_TWO,
+};
+
+extern fn printf(format: *u8, ...) -> i32;
+
+fn foo(x: i32) -> !i32 {
+    if (x == 1) {
+        return e.ERROR_ONE;
+    }
+    return x;
+}
+
+fn test_catch_basic() -> void {
+    let x = foo(1) catch 10;
+    // CHECK: Basic catch: 10
+    printf("Basic catch: %d\n", x);
+
+    let y = foo(2) catch 10;
+    // CHECK: Basic catch no error: 2
+    printf("Basic catch no error: %d\n", y);
+}
+
+fn test_catch_capture() -> void {
+    let x = foo(1) catch |er| {
+        if (er == e.ERROR_ONE) {
+            break 20;
+        }
+        break 30;
+    };
+    // CHECK: Capture catch: 20
+    printf("Capture catch: %d\n", x);
+}
+
+fn test_catch_block() -> void {
+    let x = foo(1) catch {
+        printf("Inside catch block\n");
+        break 40;
+    };
+    // CHECK: Inside catch block
+    // CHECK: Block catch: 40
+    printf("Block catch: %d\n", x);
+}
+
+fn bar(fail: bool) -> !void {
+    if (fail) return e.ERROR_TWO;
+}
+
+fn test_catch_void() -> void {
+
+    bar(true) catch |er| {
+        // CHECK: Void catch error: ERROR_TWO
+        printf("Void catch error: %s\n", er);
+    };
+
+    bar(false) catch |er| {
+         printf("Should not happen\n");
+    };
+    // CHECK: After void catch
+    printf("After void catch\n");
+}
+
+fn main() -> void {
+    test_catch_basic();
+    test_catch_capture();
+    test_catch_block();
+    test_catch_void();
+}

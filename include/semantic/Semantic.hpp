@@ -23,6 +23,7 @@ class Sema {
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;
     int m_loopDepth = 0;
+    std::vector<ResolvedCatchErrorExpr *> m_catchStack;
 
     class ScopeRAII {
         Sema &m_sema;

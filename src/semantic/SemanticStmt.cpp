@@ -197,11 +197,30 @@ ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
 
 ptr<ResolvedBreakStmt> Sema::resolve_break_stmt(const BreakStmt &breakStmt) {
     debug_func(breakStmt.location);
-    if (m_loopDepth <= 0) {
-        return report(breakStmt.location, "unexpected break statement outside a loop");
+
+    ptr<ResolvedExpr> resolvedExpr = nullptr;
+    ResolvedCatchErrorExpr *targetCatch = nullptr;
+
+    if (breakStmt.expr) {
+        if (m_catchStack.empty()) {
+            return report(breakStmt.location, "unexpected break with value outside a catch block");
+        }
+        resolvedExpr = resolve_expr(*breakStmt.expr);
+        if (!resolvedExpr) return nullptr;
+
+        targetCatch = m_catchStack.back();
+        if (!targetCatch->type->compare(*resolvedExpr->type)) {
+            return report(breakStmt.location, "unexpected break value type, expected '" + targetCatch->type->to_str() +
+                                                  "' actual '" + resolvedExpr->type->to_str() + "'");
+        }
+    } else {
+        if (m_loopDepth <= 0) {
+            return report(breakStmt.location, "unexpected break statement outside a loop");
+        }
     }
+
     auto defers = resolve_defer_ref_stmt(true, false);
-    return makePtr<ResolvedBreakStmt>(breakStmt.location, std::move(defers));
+    return makePtr<ResolvedBreakStmt>(breakStmt.location, std::move(defers), std::move(resolvedExpr), targetCatch);
 }
 
 ptr<ResolvedContinueStmt> Sema::resolve_continue_stmt(const ContinueStmt &continueStmt) {

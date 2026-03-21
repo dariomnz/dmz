@@ -382,6 +382,8 @@ void ResolvedWhileStmt::dump(size_t level, bool onlySelf) const {
 
 void ResolvedBreakStmt::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedBreakStmt\n";
+    if (expr) expr->dump(level + 1, onlySelf);
+    for (auto &&d : defers) d->dump(level + 1, onlySelf);
 }
 
 void ResolvedContinueStmt::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
@@ -589,6 +591,8 @@ void ResolvedCatchErrorExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     if (errorToCatch) errorToCatch->dump(level + 1, onlySelf);
+    if (errorVar) errorVar->dump(level + 1, onlySelf);
+    if (handler) handler->dump(level + 1, onlySelf);
 }
 
 void ResolvedTryErrorExpr::dump(size_t level, bool onlySelf) const {

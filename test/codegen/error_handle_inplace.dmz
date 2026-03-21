@@ -50,8 +50,10 @@ fn foo(x: i32) -> !i32 {
 extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
-    let err1 = catch foo(1);
-    printf("Error 1 %s\n", err1);
-    let err2 = catch foo(2);
-    printf("Error 2 %s\n", err2);
+    foo(1) catch |err1| {
+        printf("Error 1 %s\n", err1);
+    };
+    foo(2) catch |err2| {
+        printf("Error 2 %s\n", err2);
+    };
 }

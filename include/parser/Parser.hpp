@@ -145,7 +145,7 @@ class Parser {
     ptr<ErrorGroupExprDecl> parse_error_group_expr_decl();
     ptr<ErrorInPlaceExpr> parse_error_in_place_expr();
     ptr<ErrorDecl> parse_error_decl();
-    ptr<CatchErrorExpr> parse_catch_error_expr();
+    ptr<Expr> parse_catch_error_expr(ptr<Expr> expr);
     ptr<TryErrorExpr> parse_try_error_expr();
     ptr<ModuleDecl> parse_module_decl();
     std::vector<ptr<Decl>> parse_in_module_decl();

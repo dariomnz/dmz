@@ -92,12 +92,10 @@ test "Reader init" {
 
     for (0..11) |i| {
         let readed_err = r.readByte();
-        let readed_catch = catch readed_err;
-        if (readed_catch) {
-            std.io.printf("There are an error: %s\n", readed_catch);
-        } else {
-            let readed: u8 = try readed_err;
-            std.io.printf("Readed %d: %c\n", i, readed);
-        }
+        readed_err catch |er| {
+            std.io.printf("There are an error: %s\n", er);
+        };
+        let readed: u8 = try readed_err;
+        std.io.printf("Readed %d: %c\n", i, readed);
     }
 }

@@ -149,7 +149,7 @@ std::string BoolLiteral::to_str() const { dmz_unreachable("TODO"); }
 
 void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "StringLiteral '" << value << "'\n"; }
 
-std::string StringLiteral::to_str() const { dmz_unreachable("TODO"); }
+std::string StringLiteral::to_str() const { return "\"" + value + "\""; }
 
 void NullLiteral::dump(size_t level) const { std::cerr << indent(level) << "NullLiteral\n"; }
 
@@ -483,12 +483,17 @@ void ErrorGroupExprDecl::dump(size_t level) const {
 std::string ErrorGroupExprDecl::to_str() const { dmz_unreachable("TODO"); }
 
 void CatchErrorExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "CatchErrorExpr " << '\n';
+    std::cerr << indent(level) << "CatchErrorExpr " << (captureIdentifier.empty() ? "" : "|") << captureIdentifier
+              << (captureIdentifier.empty() ? "" : "|") << '\n';
 
     if (errorToCatch) errorToCatch->dump(level + 1);
+    if (handler) handler->dump(level + 1);
 }
 
-std::string CatchErrorExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string CatchErrorExpr::to_str() const {
+    return errorToCatch->to_str() + " catch " + (captureIdentifier.empty() ? "" : "|" + captureIdentifier + "| ") +
+           handler->to_str();
+}
 
 void TryErrorExpr::dump(size_t level) const {
     std::cerr << indent(level) << "TryErrorExpr " << '\n';

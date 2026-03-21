@@ -155,9 +155,13 @@ ptr<BreakStmt> Parser::parse_break_stmt() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
     eat_next_token();  // eat 'break'
+    ptr<Expr> expr = nullptr;
+    if (m_nextToken.type != TokenType::semicolon) {
+        expr = parse_expr();
+    }
     matchOrReturn(TokenType::semicolon, "expected ';' after break");
     eat_next_token();  // eat ';'
-    return makePtr<BreakStmt>(location);
+    return makePtr<BreakStmt>(location, std::move(expr));
 }
 
 ptr<ContinueStmt> Parser::parse_continue_stmt() {
