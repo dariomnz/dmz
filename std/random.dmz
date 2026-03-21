@@ -1,0 +1,14 @@
+let seed: u32 = 12345;
+pub fn simpleRand() -> u32 {
+    seed = seed * 1103515245 + 12345;
+    return seed;
+}
+
+test "simple random" {
+    const std = import("std");
+    const len = 100;
+    for (0..len) |i| {
+        std.io.print("{} ", .{simpleRand() % len});
+    }
+    std.io.print("\n", .{});
+}

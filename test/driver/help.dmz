@@ -7,6 +7,7 @@
 // CHECK-NEXT:   -h, -help          display this message
 // CHECK-NEXT:   -I <module> <path> include <module> <path> to search for modules
 // CHECK-NEXT:   -o <file>          write executable to <file>
+// CHECK-NEXT:   -O0,-O1,-O2,-O3      set the optimization level (default: -O0)
 // CHECK-NEXT:   -lexer-dump        print the lexer dump
 // CHECK-NEXT:   -ast-dump          print the abstract syntax tree
 // CHECK-NEXT:   -lsp               start the language server
@@ -15,6 +16,7 @@
 // CHECK-NEXT:   -no-remove-unused  disable the removal of unused code
 // CHECK-NEXT:   -res-dump          print the resolved syntax tree
 // CHECK-NEXT:   -deps-dump         print the resolved syntax tree with dependencies
+// CHECK-NEXT:   -deps-dot-dump       print the resolved syntax tree with dependencies in dot format
 // CHECK-NEXT:   -cfg-dump          print the control flow graph
 // CHECK-NEXT:   -llvm-dump         print the llvm module
 // CHECK-NEXT:   -print-stats       print the time stats

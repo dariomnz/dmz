@@ -165,7 +165,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
 }
 
 llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
-    debug_func("");
+    debug_func(type.to_str());
     if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(&type)) {
         unsigned int Encoding;
         switch (typeNum->numberKind) {
@@ -196,27 +196,51 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
                                                m_debugBuilder.getOrCreateArray(Subscripts));
     } else if (auto typeError = dynamic_cast<const ResolvedTypeError *>(&type)) {
         return generate_debug_type(*ResolvedTypePointer::opaquePtr(typeError->location));
-    } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
-        std::vector<llvm::Metadata *> Elements;
-        uint64_t offset = 0;
-        auto structFile = generate_debug_file(typeStruct->decl->location);
-        for (auto &&field : typeStruct->decl->fields) {
-            auto llvmMemberType = generate_type(*field->type, true);
-            auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType);
-            auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType).value() * 8;
-            auto memberFile = generate_debug_file(field->location);
-            auto memberType = m_debugBuilder.createMemberType(
-                memberFile, field->name(), memberFile, field->location.line, bitSize, alingSize, offset,
-                llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
-            Elements.emplace_back(memberType);
-            offset += bitSize;
+    } else if (type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::StructDecl) {
+        ResolvedStructDecl *decl = nullptr;
+        if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+            decl = typeStruct->decl;
+        } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStructDecl *>(&type)) {
+            decl = typeStruct->decl;
         }
+        if (!decl) dmz_unreachable("unexpected error");
+
+        if (auto it = m_debugTypes.find(decl->name()); it != m_debugTypes.end()) {
+            return it->second;
+        }
+
+        auto structFile = generate_debug_file(decl->location);
         auto llvmStructType = generate_type(type, true);
         auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmStructType);
         auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmStructType).value() * 8;
-        return m_debugBuilder.createStructType(
-            structFile, typeStruct->decl->name(), structFile, typeStruct->decl->location.line, bitSize, alingSize,
+
+        auto forwardDecl = m_debugBuilder.createReplaceableCompositeType(
+            llvm::dwarf::DW_TAG_structure_type, decl->name(), structFile, structFile, decl->location.line, 0, bitSize,
+            alingSize, llvm::DINode::DIFlags::FlagFwdDecl);
+
+        m_debugTypes[decl->name()] = forwardDecl;
+
+        std::vector<llvm::Metadata *> Elements;
+        uint64_t offset = 0;
+        for (auto &&field : decl->fields) {
+            auto llvmMemberType = generate_type(*field->type, true);
+            auto fieldBitSize = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType);
+            auto fieldAlingSize = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType).value() * 8;
+            auto memberFile = generate_debug_file(field->location);
+            auto memberType = m_debugBuilder.createMemberType(
+                memberFile, field->name(), memberFile, field->location.line, fieldBitSize, fieldAlingSize, offset,
+                llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
+            Elements.emplace_back(memberType);
+            offset += fieldBitSize;
+        }
+
+        auto finalType = m_debugBuilder.createStructType(
+            structFile, decl->name(), structFile, decl->location.line, bitSize, alingSize,
             llvm::DINode::DIFlags::FlagPrototyped, nullptr, m_debugBuilder.getOrCreateArray(Elements));
+
+        m_debugBuilder.replaceTemporary(llvm::TempDICompositeType(forwardDecl), finalType);
+        m_debugTypes[decl->name()] = finalType;
+        return finalType;
     } else if (auto typeFn = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
         std::vector<llvm::Metadata *> Elements;
         Elements.emplace_back(generate_debug_type(*typeFn->returnType));

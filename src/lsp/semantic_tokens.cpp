@@ -139,7 +139,9 @@ void SemanticTokensCollector::traverse_stmt(const ResolvedStmt& stmt) {
     } else if (auto* switchStmt = dynamic_cast<const ResolvedSwitchStmt*>(&stmt)) {
         traverse_expr(*switchStmt->condition);
         for (const auto& cas : switchStmt->cases) {
-            traverse_expr(*cas->condition);
+            for (const auto& cond : cas->conditions) {
+                traverse_expr(*cond);
+            }
             traverse_stmt(*cas->block);
         }
         if (switchStmt->elseBlock) traverse_stmt(*switchStmt->elseBlock);

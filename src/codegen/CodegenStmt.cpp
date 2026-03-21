@@ -294,10 +294,12 @@ llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
     if (stmt.isInline) {
         int condVal = *stmt.condition->get_constant_value();
         for (auto &&cas : stmt.cases) {
-            int caseVal = *cas->condition->get_constant_value();
-            if (condVal == caseVal) {
-                generate_block(*cas->block);
-                return nullptr;
+            for (auto &&cond : cas->conditions) {
+                int caseVal = *cond->get_constant_value();
+                if (condVal == caseVal) {
+                    generate_block(*cas->block);
+                    return nullptr;
+                }
             }
         }
         generate_block(*stmt.elseBlock);
@@ -318,8 +320,10 @@ llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
         generate_block(*cas->block);
         break_into_bb(exitBB);
 
-        llvm::ConstantInt *cond = static_cast<llvm::ConstantInt *>(generate_expr(*cas->condition));
-        generatedSwitch->addCase(cond, caseBB);
+        for (auto &&cond : cas->conditions) {
+            llvm::ConstantInt *val = static_cast<llvm::ConstantInt *>(generate_expr(*cond));
+            generatedSwitch->addCase(val, caseBB);
+        }
     }
 
     elseBB->insertInto(function);

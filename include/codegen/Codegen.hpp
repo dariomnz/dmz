@@ -29,6 +29,7 @@ class Codegen {
     llvm::DIFile *m_currentDebugFile = nullptr;
     llvm::DIScope *m_currentDebugScope = nullptr;
     std::vector<llvm::DIScope *> m_debugScopes = {};
+    std::unordered_map<std::string, llvm::DIType *> m_debugTypes;
     std::stack<llvm::DILocation *> m_DebugScopeStack = {};
 
     class DebugScopeRAII {

@@ -17,3 +17,31 @@ fn main() -> void {
         else => let c = 2;
     }
 }
+// CHECK: ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedDeclStmt i32
+// CHECK-NEXT:       ResolvedVarDecl:const i32 x
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1
+// CHECK-NEXT:     ResolvedInlineSwitchStmt
+// CHECK-NEXT:       ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:       | value: 1
+// CHECK-NEXT:       ResolvedCaseStmt
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '0'
+// CHECK-NEXT:         | value: 0
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:       ResolvedCaseStmt
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:         | value: 1
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(inline_switch_generic.Point{})->i32 foo
+// CHECK-NEXT:             ResolvedStructInstantiationExpr:inline_switch_generic.Point{}
+// CHECK-NEXT:               ResolvedFieldInitStmt:i32 x
+// CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                 | value: 1
+// CHECK-NEXT:               ResolvedFieldInitStmt:i32 y
+// CHECK-NEXT:                 ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:                 | value: 2
+// CHECK-NEXT:       ElseBlock
+// CHECK-NEXT:         ResolvedBlock

@@ -39,7 +39,6 @@ struct ResolvedDecl : public ConstantValueContainer<int> {
     ptr<ResolvedType> type;
     bool isMutable;
     bool isPublic;
-    bool isDependency = false;
 
     ResolvedDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                  bool isPublic)
@@ -51,27 +50,30 @@ struct ResolvedDecl : public ConstantValueContainer<int> {
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
-    virtual void dump_dependencies(size_t level = 0) const {};
-    inline std::string name() const {
+    virtual void dump_dependencies(size_t level = 0, bool dot_format = false) const {};
+    virtual std::string name() const {
         if (symbolName.empty()) return identifier;
         return symbolName;
     }
+
+    bool is_needed();
 };
 
 struct ResolvedDependencies : public ResolvedDecl {
+    bool isNeeded = true;
     std::unordered_set<ResolvedDependencies *> dependsOn;
     std::unordered_set<ResolvedDependencies *> isUsedBy;
     bool cachedIsNotNeeded = false;
 
     ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                          bool isPublic)
-        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {
-        isDependency = true;
-    }
+        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {}
     virtual ~ResolvedDependencies();
 
+    void clean_dependencies();
+
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 struct ResolvedGenericTypeDecl : public ResolvedDecl {
@@ -170,11 +172,11 @@ struct ResolvedForStmt : public ResolvedStmt {
 };
 
 struct ResolvedCaseStmt : public ResolvedStmt {
-    ptr<ResolvedExpr> condition;
+    std::vector<ptr<ResolvedExpr>> conditions;
     ptr<ResolvedBlock> block;
 
-    ResolvedCaseStmt(SourceLocation location, ptr<ResolvedExpr> condition, ptr<ResolvedBlock> block)
-        : ResolvedStmt(location), condition(std::move(condition)), block(std::move(block)) {}
+    ResolvedCaseStmt(SourceLocation location, std::vector<ptr<ResolvedExpr>> conditions, ptr<ResolvedBlock> block)
+        : ResolvedStmt(location), conditions(std::move(conditions)), block(std::move(block)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -225,12 +227,15 @@ struct ResolvedVarDecl : public ResolvedDependencies {
     ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
     const VarDecl *varDecl;
     ptr<ResolvedExpr> initializer;
+    bool isGlobal;
 
     ResolvedVarDecl(SourceLocation location, const VarDecl *varDecl, bool isPublic, std::string_view identifier,
-                    ptr<ResolvedType> type, bool isMutable, ptr<ResolvedExpr> initializer = nullptr)
+                    ptr<ResolvedType> type, bool isMutable, ptr<ResolvedExpr> initializer = nullptr,
+                    bool isGlobal = false)
         : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable, isPublic),
           varDecl(varDecl),
-          initializer(std::move(initializer)) {}
+          initializer(std::move(initializer)),
+          isGlobal(isGlobal) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
@@ -297,6 +302,7 @@ struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    std::string name() const override;
 };
 
 struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
@@ -319,7 +325,7 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
           saveCurrentModule(saveCurrentModule),
           saveCurrentStruct(saveCurrentStruct) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 // Forward declaration
@@ -354,7 +360,7 @@ struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
                                       saveCurrentModule, saveCurrentStruct),
           structDecl(structDecl) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctionDecl {
@@ -391,7 +397,7 @@ struct ResolvedStructDecl : public ResolvedDependencies {
           functions(std::move(functions)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 // Forward declaration
@@ -410,6 +416,7 @@ struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    std::string name() const override;
 };
 
 struct ResolvedGenericStructDecl : public ResolvedStructDecl {
@@ -430,7 +437,7 @@ struct ResolvedGenericStructDecl : public ResolvedStructDecl {
           saveCurrentModule(saveCurrentModule) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 struct ResolvedIntLiteral : public ResolvedExpr {
@@ -875,7 +882,7 @@ struct ResolvedModuleDecl : public ResolvedDependencies {
           declarations(std::move(declarations)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
-    void dump_dependencies(size_t level = 0) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 struct ResolvedImportExpr : public ResolvedExpr {

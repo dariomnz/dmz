@@ -359,7 +359,7 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
 
     ptr<ResolvedType> type = resolvedvarType ? std::move(resolvedvarType) : nullptr;
     auto ret = makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier,
-                                        std::move(type), varDecl.isMutable, nullptr);
+                                        std::move(type), varDecl.isMutable, nullptr, varDecl.isGlobal);
     if (varDecl.type) {
         ret->resolvedTypeExpr = resolve_expr(*varDecl.type);
     }
@@ -952,7 +952,9 @@ void Sema::resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl) {
         retBlockStmts.emplace_back(std::move(retStmt));
         auto retBlock = makePtr<ResolvedBlock>(loc, std::move(retBlockStmts), std::vector<ptr<ResolvedDeferRefStmt>>{});
         auto caseCondition = makePtr<ResolvedIntLiteral>(loc, i);
-        auto caseStmt = makePtr<ResolvedCaseStmt>(loc, std::move(caseCondition), std::move(retBlock));
+        std::vector<ptr<ResolvedExpr>> caseConditions;
+        caseConditions.emplace_back(std::move(caseCondition));
+        auto caseStmt = makePtr<ResolvedCaseStmt>(loc, std::move(caseConditions), std::move(retBlock));
         cases.emplace_back(std::move(caseStmt));
     }
 
@@ -992,7 +994,9 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
         auto caseBlock =
             makePtr<ResolvedBlock>(loc, std::move(caseBlockStmts), std::vector<ptr<ResolvedDeferRefStmt>>{});
         auto caseCondition = makePtr<ResolvedIntLiteral>(loc, i);
-        auto caseStmt = makePtr<ResolvedCaseStmt>(loc, std::move(caseCondition), std::move(caseBlock));
+        std::vector<ptr<ResolvedExpr>> caseConditions;
+        caseConditions.emplace_back(std::move(caseCondition));
+        auto caseStmt = makePtr<ResolvedCaseStmt>(loc, std::move(caseConditions), std::move(caseBlock));
         cases.emplace_back(std::move(caseStmt));
     }
 

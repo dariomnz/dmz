@@ -132,8 +132,8 @@ class Parser {
     ptr<WhileStmt> parse_while_stmt();
     ptr<CaptureDecl> parse_capture_decl();
     ptr<ForStmt> parse_for_stmt();
-    ptr<DeclStmt> parse_decl_stmt();
-    ptr<VarDecl> parse_var_decl(bool isPublic, bool isConst);
+    ptr<DeclStmt> parse_decl_stmt(bool isGlobal);
+    ptr<VarDecl> parse_var_decl(bool isPublic, bool isConst, bool isGlobal);
     ptr<Stmt> parse_assignment_or_expr(bool expectSemicolon = true);
     ptr<Assignment> parse_assignment_rhs(ptr<AssignableExpr> lhs);
     ptr<StructDecl> parse_struct_decl();
@@ -150,6 +150,7 @@ class Parser {
     ptr<ImportExpr> parse_import_expr();
     ptr<SwitchStmt> parse_switch_stmt();
     ptr<CaseStmt> parse_case_stmt();
+    ptr<Block> parse_else_stmt();
     ptr<Comment> parse_comment();
     ptr<EmptyLine> parse_empty_line();
     ptr<TestDecl> parse_test_decl();

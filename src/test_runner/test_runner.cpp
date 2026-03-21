@@ -161,6 +161,8 @@ static bool match_pattern(const std::string& text, const std::string& pattern, s
 
 static std::pair<bool, std::string> verify_checks(const std::string& output,
                                                   const std::vector<CheckDirective>& checks) {
+    if (checks.empty()) return {false, "No checks found"};
+
     auto lines = split_lines(output);
     size_t current_line_idx = 0;
     size_t current_col_idx = 0;

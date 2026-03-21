@@ -1,12 +1,12 @@
 // RUN: dmz %s -run | filecheck %s
 
 fn memset_simd(buf: []u8, val: u8) -> void {
-    const vec_len = 1024;
+    const vec_len = @simdSize(u8);
     let arr: u8[vec_len] = {};
     for (arr[0..vec_len]) |b| {
         b.* = val;
     }
-    let v: @vec<u8, vec_len> = @vec<u8, vec_len>.load(&arr[0]);
+    let v: @simd<u8, vec_len> = @simd<u8, vec_len>.load(&arr[0]);
 
     const iters = buf.len / vec_len;
     for (0..iters) |i| {
@@ -34,9 +34,7 @@ fn main() -> void {
     const len = 1024 * 1024 + 123;
     let buf: *u8 = malloc(len);
     memset_simd(buf[0..len], 123);
-    // for (buf[0..len]) |b| {
-    //     printf("%d ", b.*);
-    // }
-    // printf("\n");
+    printf("%d %d %d\n", buf[0], buf[len / 2], buf[len - 1]);
+    // CHECK: 123 123 123
     free(buf);
 }

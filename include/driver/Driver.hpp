@@ -14,6 +14,7 @@ struct CompilerOptions {
     std::filesystem::path source;
     std::unordered_map<std::string, std::filesystem::path> imports;
     std::filesystem::path output;
+    std::string optimizationLevel = "-O0";
     bool displayHelp = false;
     bool lexerDump = false;
     bool astDump = false;
@@ -21,6 +22,7 @@ struct CompilerOptions {
     bool noRemoveUnused = false;
     bool resDump = false;
     bool depsDump = false;
+    bool depsDotDump = false;
     bool llvmDump = false;
     bool asmDump = false;
     bool cfgDump = false;

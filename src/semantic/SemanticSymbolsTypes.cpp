@@ -171,21 +171,7 @@ void ResolvedTypeStructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeStructDecl " << to_str() << "\n";
 }
 
-std::string ResolvedTypeStructDecl::to_str() const {
-    std::stringstream out;
-    if (decl->symbolName.empty()) {
-        out << decl->identifier;
-        if (auto genStru = dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
-            out << ResolvedGenericTypeDecl::generic_types_to_str(genStru->genericTypeDecls);
-        }
-        if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
-            out << speStru->specializedTypes->to_str();
-        }
-    } else {
-        out << decl->symbolName;
-    }
-    return out.str();
-}
+std::string ResolvedTypeStructDecl::to_str() const { return decl->name(); }
 
 bool ResolvedTypeStructDecl::is_generic() const {
     if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
@@ -231,21 +217,7 @@ void ResolvedTypeStruct::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeStruct " << to_str() << "\n";
 }
 
-std::string ResolvedTypeStruct::to_str() const {
-    std::stringstream out;
-    if (decl->symbolName.empty()) {
-        out << decl->identifier;
-        if (auto genStru = dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
-            out << ResolvedGenericTypeDecl::generic_types_to_str(genStru->genericTypeDecls);
-        }
-        if (auto speStru = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
-            out << speStru->specializedTypes->to_str();
-        }
-    } else {
-        out << decl->symbolName;
-    }
-    return out.str() + "{}";
-}
+std::string ResolvedTypeStruct::to_str() const { return decl->name() + "{}"; }
 
 bool ResolvedTypeStruct::is_generic() const {
     if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {

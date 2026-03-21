@@ -394,6 +394,12 @@ const ResolvedType* LSPServer::find_incomplete_member_base_type(const std::vecto
                     visit_stmt(*caseStmt);
                 }
                 if (switchStmt->elseBlock) visit_stmt(*switchStmt->elseBlock);
+            } else if (const auto* caseStmt = dynamic_cast<const ResolvedCaseStmt*>(&stmt)) {
+                for (const auto& cond : caseStmt->conditions) {
+                    visit_expr(*cond);
+                    if (result) return;
+                }
+                visit_stmt(*caseStmt->block);
             } else if (const auto* expr = dynamic_cast<const ResolvedExpr*>(&stmt)) {
                 visit_expr(*expr);
             }
@@ -593,7 +599,7 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
             Driver::instance().import_pass(ast);
 
             auto sema = makePtr<Sema>(std::move(ast));
-            auto resolvedTree = sema->resolve_ast_decl(false);
+            auto resolvedTree = sema->resolve_ast_decl(filename, false);
             if (!resolvedTree.empty()) {
                 bool bodySuccess = sema->resolve_ast_body(resolvedTree);
                 std::cerr << "[LSP] resolve_ast_body success=" << bodySuccess << " size=" << resolvedTree.size()

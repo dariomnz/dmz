@@ -1,0 +1,41 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let x = 4;
+    switch (x) {
+        case 1, 2, 3 => printf("small\n");
+        case 4, 5, 6 => printf("medium\n");
+        else => printf("large\n");
+    }
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   store i32 4, ptr %x, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
+// CHECK-NEXT:   switch i32 %0, label %switch.else [
+// CHECK-NEXT:     i32 1, label %switch.case
+// CHECK-NEXT:     i32 2, label %switch.case
+// CHECK-NEXT:     i32 3, label %switch.case
+// CHECK-NEXT:     i32 4, label %switch.case1
+// CHECK-NEXT:     i32 5, label %switch.case1
+// CHECK-NEXT:     i32 6, label %switch.case1
+// CHECK-NEXT:   ]
+// CHECK-NEXT: 
+// CHECK-NEXT: switch.case:                                      ; preds = %entry, %entry, %entry
+// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str)
+// CHECK-NEXT:   br label %switch.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: switch.case1:                                     ; preds = %entry, %entry, %entry
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1)
+// CHECK-NEXT:   br label %switch.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: switch.else:                                      ; preds = %entry
+// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2)
+// CHECK-NEXT:   br label %switch.exit
+// CHECK-NEXT: 
+// CHECK-NEXT: switch.exit:                                      ; preds = %switch.else, %switch.case1, %switch.case
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

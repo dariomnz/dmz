@@ -48,8 +48,8 @@ class Sema {
    public:
     explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
-    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(bool needMain);
-    bool resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules);
+    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
+    bool resolve_import_modules(std::filesystem::path sourcePath, std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
@@ -61,9 +61,9 @@ class Sema {
    private:
     ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true);
     ResolvedDecl *lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
-                                   const std::string_view id);
+                                   const std::string_view id, bool needAddDeps = true);
     ResolvedDecl *lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
-                                   const std::string_view id);
+                                   const std::string_view id, bool needAddDeps = true);
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound = false);
     void remove_decl_to_current_scope(ResolvedDecl &decl);

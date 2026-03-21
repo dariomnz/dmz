@@ -34,24 +34,21 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
             return name;
         }
     }
-    if (!decl.symbolName.empty()) {
-        name = decl.symbolName;
-    } else {
-        name = decl.identifier;
-    }
-
+    name = decl.name();
     return name;
 }
 
 llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
-    debug_func(functionDecl.symbolName);
+    debug_func(functionDecl.name());
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
+            debug_msg("Function specialization decl: " << func->name());
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
             if (!cast_func) {
                 func->dump();
                 dmz_unreachable("internal error: unexpected declaration in specializations");
             }
+            if (!func->is_needed()) continue;
             if (func->specializedTypes->is_generic()) continue;
             generate_function_decl(*cast_func);
         }
@@ -124,7 +121,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
 }
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
-    debug_func(functionDecl.symbolName << " " << functionDecl.type->to_str());
+    debug_func(functionDecl.name() << " " << functionDecl.type->to_str());
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
@@ -133,6 +130,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
                 dmz_unreachable("internal error: unexpected declaration in specializations");
             }
 
+            if (!func->is_needed()) continue;
             if (func->specializedTypes->is_generic()) continue;
             generate_function_body(*cast_func);
         }
@@ -276,9 +274,10 @@ llvm::StructType *Codegen::get_struct_decl(const ResolvedStructDecl &structDecl)
 }
 
 llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
-    debug_func(structDecl.symbolName);
+    debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (!espec->is_needed()) continue;
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_decl(*espec);
         }
@@ -295,9 +294,10 @@ llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &struct
 }
 
 void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
-    debug_func(structDecl.symbolName);
+    debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (!espec->is_needed()) continue;
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_fields(*espec);
         }
@@ -306,7 +306,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
     auto *type = static_cast<llvm::StructType *>(generate_type(*structDecl.type));
 
     if (!type->isOpaque()) {
-        debug_msg("already generated " << structDecl.symbolName);
+        debug_msg("already generated " << structDecl.name());
         return;
     }
 
@@ -320,9 +320,10 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 }
 
 void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
-    debug_func(structDecl.symbolName);
+    debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
+            if (!espec->is_needed()) continue;
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_functions(*espec);
         }
@@ -389,6 +390,7 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
     debug_func("");
     generate_error_no_err();
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
@@ -403,11 +405,13 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
     }
 
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             generate_module_decl(*modDecl);
         }
     }
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_decl(*fn);
         } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
@@ -424,6 +428,7 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
 void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) || dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
             dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
@@ -435,12 +440,14 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
         }
     }
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             generate_module_body(*modDecl);
         }
     }
     debug_msg("Finish structs bodys");
     for (auto &&decl : declarations) {
+        if (!decl->is_needed()) continue;
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
             dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
             dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {

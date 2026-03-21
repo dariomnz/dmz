@@ -116,7 +116,7 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false);
 }
 
-ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst) {
+ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst, bool isGlobal) {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
 
@@ -132,13 +132,13 @@ ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst) {
     }
 
     if (m_nextToken.type != TokenType::op_assign) {
-        return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst);
+        return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, isGlobal);
     }
     eat_next_token();  // eat '='
 
     varOrReturn(initializer, parse_expr());
 
-    return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, std::move(initializer));
+    return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, isGlobal, std::move(initializer));
 }
 
 // <structDecl>
@@ -327,7 +327,7 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
                 continue;
             }
         } else if (ttype == TokenType::kw_const || ttype == TokenType::kw_let) {
-            if (auto st = parse_decl_stmt()) {
+            if (auto st = parse_decl_stmt(true)) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }

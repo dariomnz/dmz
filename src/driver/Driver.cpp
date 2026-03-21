@@ -17,6 +17,7 @@ void Driver::display_help() {
     println("  -h, -help            display this message");
     println("  -I <module> <path>   include <module> <path> to search for modules");
     println("  -o <file>            write executable to <file>");
+    println("  -O0,-O1,-O2,-O3      set the optimization level (default: -O0)");
     println("  -lexer-dump          print the lexer dump");
     println("  -ast-dump            print the abstract syntax tree");
     println("  -lsp                 start the language server");
@@ -25,6 +26,7 @@ void Driver::display_help() {
     println("  -no-remove-unused    disable the removal of unused code");
     println("  -res-dump            print the resolved syntax tree");
     println("  -deps-dump           print the resolved syntax tree with dependencies");
+    println("  -deps-dot-dump       print the resolved syntax tree with dependencies in dot format");
     println("  -cfg-dump            print the control flow graph");
     println("  -llvm-dump           print the llvm module");
     println("  -print-stats         print the time stats");
@@ -50,6 +52,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.displayHelp = true;
             } else if (arg == "-o") {
                 options.output = ++idx >= argc ? "" : argv[idx];
+            } else if (arg.starts_with("-O")) {
+                options.optimizationLevel = arg;
             } else if (arg == "-I") {
                 std::string module_id;
                 std::string module_path;
@@ -73,6 +77,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.resDump = true;
             } else if (arg == "-deps-dump") {
                 options.depsDump = true;
+            } else if (arg == "-deps-dot-dump") {
+                options.depsDotDump = true;
             } else if (arg == "-llvm-dump") {
                 options.llvmDump = true;
             } else if (arg == "-asm-dump") {
@@ -411,16 +417,16 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree;
     Sema sema(std::move(ast));
     bool needMain = !m_options.isModule && !m_options.test;
-    resolvedTree = sema.resolve_ast_decl(needMain);
+    resolvedTree = sema.resolve_ast_decl(m_options.source, needMain);
     if (resolvedTree.empty()) m_haveError = true;
 
     if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
     if (!m_haveError && !m_options.noRemoveUnused) sema.remove_unused(resolvedTree, m_options.test);
 
-    if (m_options.depsDump) {
+    if (m_options.depsDump || m_options.depsDotDump) {
         if (!m_haveError) {
             for (auto &&fn : resolvedTree) {
-                fn->dump_dependencies();
+                fn->dump_dependencies(0, m_options.depsDotDump);
             }
         }
         m_haveNormalExit = true;
@@ -501,7 +507,11 @@ int Driver::jit_pass(ptr<llvm::Module> &module) {
 
         cmd = "lli";
         args.emplace_back("lli");
-        args.emplace_back("-O0");
+        if (!m_options.optimizationLevel.empty()) {
+            args.emplace_back(m_options.optimizationLevel.c_str());
+        } else {
+            args.emplace_back("-O0");
+        }
         args.emplace_back(nullptr);
 
         execvp(cmd, const_cast<char *const *>(args.data()));
@@ -549,8 +559,14 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
 
         cmd = "clang";
         args.emplace_back("clang");
-        args.emplace_back("-O3");
-        args.emplace_back("-g");
+        if (!m_options.optimizationLevel.empty()) {
+            args.emplace_back(m_options.optimizationLevel.c_str());
+        } else {
+            args.emplace_back("-O0");
+        }
+        if (m_options.debugSymbols) {
+            args.emplace_back("-g");
+        }
         args.emplace_back("-x");
         args.emplace_back("ir");
         args.emplace_back("-");

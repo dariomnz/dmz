@@ -151,7 +151,13 @@ ptr<Node> Formatter::fmt_case_stmt(const CaseStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
     ret->nodes.emplace_back(makePtr<Text>("case"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_expr(*stmt.condition));
+
+    vec<ptr<Node>> conditions;
+    for (auto&& cond : stmt.conditions) {
+        conditions.emplace_back(fmt_expr(*cond));
+    }
+    ret->nodes.emplace_back(build.comma_separated_list("", "", std::move(conditions)));
+
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("=>"));
     ret->nodes.emplace_back(makePtr<Space>());

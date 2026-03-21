@@ -134,12 +134,12 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
     }
 
     if (m_currentModule) {
-        auto ret = lookup_in_module(loc, *m_currentModule, id);
+        auto ret = lookup_in_module(loc, *m_currentModule, id, needAddDeps);
         if (ret) return ret;
     }
 
     if (m_currentStruct) {
-        auto ret = lookup_in_struct(loc, *m_currentStruct, id);
+        auto ret = lookup_in_struct(loc, *m_currentStruct, id, needAddDeps);
         if (ret) return ret;
     }
 
@@ -147,9 +147,9 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
 }
 
 ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
-                                     const std::string_view id) {
+                                     const std::string_view id, bool needAddDeps) {
     debug_func("Module: " << moduleDecl.identifier << " id: " << id);
-    add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
+    if (needAddDeps) add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
         debug_msg("Search: " << decl->identifier << " in " << moduleDecl.identifier << " to find " << id);
@@ -164,23 +164,23 @@ ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedMo
                 if (!resolve_decl_stmt_initialize(*declStmt)) return nullptr;
             }
         }
-        add_dependency(declPtr);
+        if (needAddDeps) add_dependency(declPtr);
         return declPtr;
     }
     return nullptr;
 }
 
 ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
-                                     const std::string_view id) {
+                                     const std::string_view id, bool needAddDeps) {
     debug_func("Struct " << structDecl.identifier << " " << id);
-    add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
+    if (needAddDeps) add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
     for (auto &&decl : structDecl.functions) {
         if (id != decl->identifier) continue;
         if (&structDecl != m_currentStruct && !decl->isPublic) {
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
         }
-        add_dependency(decl.get());
+        if (needAddDeps) add_dependency(decl.get());
         return decl.get();
     }
     for (auto &&decl : structDecl.fields) {
@@ -444,12 +444,18 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable("TODO");
 }
 
-bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules) {
+bool Sema::resolve_import_modules(std::filesystem::path sourcePath,
+                                  std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules) {
     debug_func("");
     auto &imported_modules = Driver::instance().imported_modules;
     std::vector<ptr<ModuleDecl>> moduleDecls;
     std::vector<std::filesystem::path> moduleDeclsPaths;
+    std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
     for (auto &&[k, v] : imported_modules) {
+        debug_msg("Resolving imported module: " << k);
+        if (std::filesystem::canonical(k) == sourceAbsPath) {
+            continue;
+        }
         moduleDeclsPaths.emplace_back(k);  // k is const ref, so copy
         moduleDecls.emplace_back(std::move(v));
     }
@@ -465,12 +471,12 @@ bool Sema::resolve_import_modules(std::vector<ptr<ResolvedModuleDecl>> &out_reso
     return true;
 }
 
-std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(bool needMain) {
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::path sourcePath, bool needMain) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
     std::vector<ptr<ResolvedModuleDecl>> imported_mods;
     bool error = false;
-    error = !resolve_import_modules(imported_mods);
+    error = !resolve_import_modules(sourcePath, imported_mods);
     if (needMain) {
         bool haveMain = false;
         for (auto &&decl : m_ast->declarations) {
@@ -625,6 +631,18 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         return ret;
     }
 
+    if (dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedDeps)) {
+        debug_msg("is ResolvedGenericFunctionDecl not needed");
+        ret = false;
+        return ret;
+    }
+
+    if (dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedDeps)) {
+        debug_msg("is ResolvedGenericFunctionDecl not needed");
+        ret = false;
+        return ret;
+    }
+
     if (resolvedDeps.identifier == "main") {
         debug_msg(resolvedDeps.name() << " is needed main");
         ret = true;
@@ -635,6 +653,15 @@ bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
         debug_msg(resolvedDeps.name() << " is needed buildTest or __builtin_main_test");
         ret = true;
         return ret;
+    }
+
+    if (resolvedDeps.isUsedBy.size() == 1) {
+        debug_msg(resolvedDeps.name() << " " << (*resolvedDeps.isUsedBy.begin())->name());
+        if (*resolvedDeps.isUsedBy.begin() == &resolvedDeps) {
+            debug_msg(resolvedDeps.name() << " is not needed isUsedBy only by itself" << resolvedDeps.name());
+            ret = false;
+            return ret;
+        }
     }
 
     size_t reasonRecurse = 0;
@@ -669,9 +696,14 @@ void Sema::remove_unused(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool
 void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) {
     debug_func("");
 
-    auto add_to_remove = [&](ptr<DMZ::ResolvedDecl> &d) {
-        if (dynamic_cast<ResolvedDependencies *>(d.get())) {
-            d.reset();
+    auto add_to_remove = [](ptr<DMZ::ResolvedDecl> &d) {
+        if (auto *deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
+            // d.reset();
+            if (!dynamic_cast<const ResolvedGenericFunctionDecl *>(deps) &&
+                !dynamic_cast<const ResolvedGenericStructDecl *>(deps)) {
+                deps->isNeeded = false;
+            }
+            deps->clean_dependencies();
         } else {
             d->dump();
             dmz_unreachable("unexpected declaration");
@@ -703,7 +735,6 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
                 if (!recurse_needed(*gen, buildTest, recurse_check)) {
                     add_to_remove(decl);
                 }
-                continue;
             }
             debug_msg("StructDecl " << sd->identifier);
 
@@ -727,7 +758,6 @@ void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) 
                 if (!recurse_needed(*gen, buildTest, recurse_check)) {
                     add_to_remove(decl);
                 }
-                continue;
             }
 
             debug_msg("FuncDecl " << fd->identifier);
@@ -940,12 +970,12 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
 
         e.decl->symbolName = e.symbol + e.decl->identifier;
 
-        if (const auto *func = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(e.decl)) {
-            e.decl->symbolName += func->specializedTypes->to_str();
-        }
-        if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
-            e.decl->symbolName += struc->specializedTypes->to_str();
-        }
+        // if (const auto *func = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(e.decl)) {
+        //     e.decl->symbolName += func->specializedTypes->to_str();
+        // }
+        // if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
+        //     e.decl->symbolName += struc->specializedTypes->to_str();
+        // }
         if (const auto *func = dynamic_cast<const ResolvedGenericFunctionDecl *>(e.decl)) {
             e.decl->symbolName += ResolvedGenericTypeDecl::generic_types_to_str(func->genericTypeDecls);
         }
@@ -959,7 +989,7 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
         // e.decl->dump();
         // std::cout << indent(e.level) << e.decl->symbolName << std::endl;
 
-        std::string new_symbol_name = e.decl->symbolName + ".";
+        std::string new_symbol_name = e.decl->name() + ".";
         // if (e.decl->symbolName.find(".dmz") == std::string::npos) {
         // new_symbol_name = e.decl->symbolName + ".";
         // }
@@ -997,8 +1027,12 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
 void Sema::add_dependency(ResolvedDecl *decl) {
     debug_func("Adding " << decl->identifier << " " << decl);
     ResolvedDependencies *declDep = nullptr;
-    if (!decl->isDependency) return;
-    auto dep = static_cast<ResolvedDependencies *>(decl);
+    auto dep = dynamic_cast<ResolvedDependencies *>(decl);
+    if (!dep) return;
+
+    if (auto *varDecl = dynamic_cast<ResolvedVarDecl *>(decl)) {
+        if (!varDecl->isGlobal) return;
+    }
 
     if (!decl->isMutable &&
         (decl->type->kind == ResolvedTypeKind::Module || decl->type->kind == ResolvedTypeKind::StructDecl ||
@@ -1027,17 +1061,17 @@ void Sema::add_dependency(ResolvedDecl *decl) {
             declDep->isUsedBy.emplace(m_currentFunction);
         }
     }
-    if (m_currentModule) {
-        debug_msg("Adding " << dep->name() << " to module " << m_currentModule->name());
-        m_currentModule->dependsOn.emplace(dep);
-        dep->isUsedBy.emplace(m_currentModule);
+    // if (m_currentModule) {
+    //     debug_msg("Adding " << dep->name() << " to module " << m_currentModule->name());
+    //     m_currentModule->dependsOn.emplace(dep);
+    //     dep->isUsedBy.emplace(m_currentModule);
 
-        if (declDep) {
-            debug_msg("Adding " << declDep->name() << " to module " << m_currentModule->name());
-            m_currentModule->dependsOn.emplace(declDep);
-            declDep->isUsedBy.emplace(m_currentModule);
-        }
-    }
+    //     if (declDep) {
+    //         debug_msg("Adding " << declDep->name() << " to module " << m_currentModule->name());
+    //         m_currentModule->dependsOn.emplace(declDep);
+    //         declDep->isUsedBy.emplace(m_currentModule);
+    //     }
+    // }
     if (m_currentStruct) {
         debug_msg("Adding " << decl->name() << " to struct " << m_currentStruct->name());
         m_currentStruct->dependsOn.emplace(dep);

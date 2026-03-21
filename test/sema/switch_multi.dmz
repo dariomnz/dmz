@@ -1,0 +1,50 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let x = 10;
+
+    switch (x) {
+        case 1 => printf("1\n");
+        case 4, 5 => printf("2\n");
+        case 7, 8, 9 => printf("3\n");
+        else => printf("else %d\n", x);
+    }
+}
+
+// CHECK: ResolvedSwitchStmt
+// CHECK-NEXT:   ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:   ResolvedCaseStmt
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:     | value: 1
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 '1\n'
+// CHECK-NEXT:   ResolvedCaseStmt
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '4'
+// CHECK-NEXT:     | value: 4
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:     | value: 5
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 '2\n'
+// CHECK-NEXT:   ResolvedCaseStmt
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '7'
+// CHECK-NEXT:     | value: 7
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '8'
+// CHECK-NEXT:     | value: 8
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '9'
+// CHECK-NEXT:     | value: 9
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 '3\n'
+// CHECK-NEXT:   ElseBlock
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:         ResolvedStringLiteral:*u8 'else %d\n'
+// CHECK-NEXT:         ResolvedDeclRefExpr:i32 x

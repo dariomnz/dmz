@@ -207,11 +207,11 @@ struct ForStmt : public Stmt {
 };
 
 struct CaseStmt : public Stmt {
-    ptr<Expr> condition;
+    std::vector<ptr<Expr>> conditions;
     ptr<Block> block;
 
-    CaseStmt(SourceLocation location, ptr<Expr> condition, ptr<Block> block)
-        : Stmt(location), condition(std::move(condition)), block(std::move(block)) {}
+    CaseStmt(SourceLocation location, std::vector<ptr<Expr>> conditions, ptr<Block> block)
+        : Stmt(location), conditions(std::move(conditions)), block(std::move(block)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -530,13 +530,15 @@ struct VarDecl : public Decl {
     ptr<Expr> type;
     ptr<Expr> initializer;
     bool isMutable;
+    bool isGlobal;
 
     VarDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type, bool isMutable,
-            ptr<Expr> initializer = nullptr)
+            bool isGlobal, ptr<Expr> initializer = nullptr)
         : Decl(location, isPublic, std::move(identifier)),
           type(std::move(type)),
           initializer(std::move(initializer)),
-          isMutable(isMutable) {}
+          isMutable(isMutable),
+          isGlobal(isGlobal) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -802,10 +804,13 @@ struct LambdaExpr : public Expr {
     ptr<Expr> returnType;
     ptr<Block> body;
 
-    LambdaExpr(SourceLocation location, std::vector<ptr<Expr>> captures,
-               std::vector<ptr<ParamDecl>> params, ptr<Expr> returnType, ptr<Block> body)
-        : Expr(location), captures(std::move(captures)), params(std::move(params)),
-          returnType(std::move(returnType)), body(std::move(body)) {}
+    LambdaExpr(SourceLocation location, std::vector<ptr<Expr>> captures, std::vector<ptr<ParamDecl>> params,
+               ptr<Expr> returnType, ptr<Block> body)
+        : Expr(location),
+          captures(std::move(captures)),
+          params(std::move(params)),
+          returnType(std::move(returnType)),
+          body(std::move(body)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

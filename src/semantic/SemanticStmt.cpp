@@ -414,28 +414,34 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
     bool caseMatched = false;
     std::vector<ptr<ResolvedCaseStmt>> cases;
     for (auto &&cas : switchStmt.cases) {
-        varOrReturn(tempCond, resolve_expr(*cas->condition));
-        tempCond->set_constant_value(cee.evaluate(*tempCond, false));
-        if (!tempCond->get_constant_value()) {
-            return report(tempCond->location, "condition in case must be a constant value");
+        std::vector<ptr<ResolvedExpr>> resolvedConditions;
+        bool caseMatchedInInline = false;
+        for (auto &&cond : cas->conditions) {
+            varOrReturn(tempCond, resolve_expr(*cond));
+            tempCond->set_constant_value(cee.evaluate(*tempCond, false));
+            if (!tempCond->get_constant_value()) {
+                return report(tempCond->location, "condition in case must be a constant value");
+            }
+            if (switchStmt.isInline && tempCond->get_constant_value() == condition->get_constant_value()) {
+                caseMatchedInInline = true;
+                caseMatched = true;
+            }
+            resolvedConditions.emplace_back(std::move(tempCond));
         }
 
-        bool currentCaseMatched = false;
         if (switchStmt.isInline) {
-            if (tempCond->get_constant_value() == condition->get_constant_value()) {
-                currentCaseMatched = true;
-                caseMatched = true;
+            if (caseMatchedInInline) {
+                varOrReturn(block, resolve_block(*cas->block));
+                cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
             } else {
                 auto emptyBlock = makePtr<ResolvedBlock>(cas->location, std::vector<ptr<ResolvedStmt>>{},
                                                          std::vector<ptr<ResolvedDeferRefStmt>>{});
                 cases.emplace_back(
-                    makePtr<ResolvedCaseStmt>(cas->location, std::move(tempCond), std::move(emptyBlock)));
+                    makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(emptyBlock)));
             }
-        }
-
-        if (!switchStmt.isInline || currentCaseMatched) {
+        } else {
             varOrReturn(block, resolve_block(*cas->block));
-            cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(tempCond), std::move(block)));
+            cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
         }
     }
 
@@ -456,16 +462,23 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
 ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value,
                                               bool isInline) {
     debug_func(caseStmt.location);
-    varOrReturn(condition, resolve_expr(*caseStmt.condition));
-
-    condition->set_constant_value(cee.evaluate(*condition, false));
-    if (!condition->get_constant_value()) {
-        return report(condition->location, "condition in case must be a constant value");
+    std::vector<ptr<ResolvedExpr>> resolvedConditions;
+    bool caseMatchedInInline = false;
+    for (auto &&cond : caseStmt.conditions) {
+        varOrReturn(resolvedCond, resolve_expr(*cond));
+        resolvedCond->set_constant_value(cee.evaluate(*resolvedCond, false));
+        if (!resolvedCond->get_constant_value()) {
+            return report(resolvedCond->location, "condition in case must be a constant value");
+        }
+        if (isInline && resolvedCond->get_constant_value().value() == constant_value.value()) {
+            caseMatchedInInline = true;
+        }
+        resolvedConditions.emplace_back(std::move(resolvedCond));
     }
 
     auto block = resolve_block(*caseStmt.block);
     if (!block) {
-        if (isInline && condition->get_constant_value().value() != constant_value.value()) {
+        if (isInline && !caseMatchedInInline) {
             block = makePtr<ResolvedBlock>(caseStmt.location, std::vector<ptr<ResolvedStmt>>{},
                                            std::vector<ptr<ResolvedDeferRefStmt>>{});
         } else {
@@ -473,6 +486,6 @@ ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::opt
         }
     }
 
-    return makePtr<ResolvedCaseStmt>(caseStmt.location, std::move(condition), std::move(block));
+    return makePtr<ResolvedCaseStmt>(caseStmt.location, std::move(resolvedConditions), std::move(block));
 }
 }  // namespace DMZ

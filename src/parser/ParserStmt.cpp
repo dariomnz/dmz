@@ -37,14 +37,15 @@ ptr<ReturnStmt> Parser::parse_return_stmt() {
 ptr<Stmt> Parser::parse_statement() {
     debug_func("");
     m_expectIncompleteStatement = false;
-    if (m_nextToken.type == TokenType::kw_if || (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_if))
+    if (m_nextToken.type == TokenType::kw_if ||
+        (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_if))
         return parse_if_stmt();
     if (m_nextToken.type == TokenType::kw_while) return parse_while_stmt();
     if (m_nextToken.type == TokenType::kw_for ||
         (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for))
         return parse_for_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
-    if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt();
+    if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt(false);
     if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
         return parse_defer_stmt();
     if (m_nextToken.type == TokenType::block_l) return parse_block();
@@ -177,7 +178,7 @@ ptr<ForStmt> Parser::parse_for_stmt() {
     return makePtr<ForStmt>(location, std::move(*conditions), std::move(*captures), std::move(body), isInline);
 }
 
-ptr<DeclStmt> Parser::parse_decl_stmt() {
+ptr<DeclStmt> Parser::parse_decl_stmt(bool isGlobal) {
     debug_func("");
     Token tok = m_nextToken;
     bool isPublic = false;
@@ -189,7 +190,7 @@ ptr<DeclStmt> Parser::parse_decl_stmt() {
     eat_next_token();  // eat 'let' or 'const'
 
     matchOrReturn(TokenType::id, "expected identifier");
-    varOrReturn(varDecl, parse_var_decl(isPublic, isConst));
+    varOrReturn(varDecl, parse_var_decl(isPublic, isConst, isGlobal));
 
     matchOrReturn(TokenType::semicolon, "expected ';' after declaration");
     eat_next_token();  // eat ';'
@@ -333,17 +334,18 @@ ptr<SwitchStmt> Parser::parse_switch_stmt() {
             continue;
         }
         bool isElse = m_nextToken.type == TokenType::kw_else;
-        varOrReturn(cas, parse_case_stmt());
 
         if (!isElse) {
+            varOrReturn(cas, parse_case_stmt());
             cases.emplace_back(std::move(cas));
         } else {
             if (elseBlock) {
+                auto location = m_nextToken.loc;
                 synchronize_on({TokenType::block_r});
                 eat_next_token();  // eat '}'
-                return report(cas->location, "only one else is permited");
+                return report(location, "only one else is permited");
             }
-            elseBlock = std::move(cas->block);
+            elseBlock = parse_else_stmt();
         }
     }
 
@@ -365,21 +367,28 @@ ptr<CaseStmt> Parser::parse_case_stmt() {
     if (m_nextToken.type != TokenType::kw_case && m_nextToken.type != TokenType::kw_else) {
         return report(location, "expected case or else");
     }
-    bool isElse = m_nextToken.type == TokenType::kw_else;
-    eat_next_token();  // eat case or else
 
-    ptr<Expr> condition;
-    if (!isElse) {
-        auto conditionLocation = m_nextToken.loc;
-        condition = parse_expr();
-        if (!condition) return report(conditionLocation, "expected expresion");
-    }
-
-    matchOrReturn(TokenType::switch_arrow, "expected '=>'");
-    eat_next_token();  // eat =>
+    std::vector<ptr<Expr>> conditions;
+    bool haveTrailingComma = false;
+    varOrReturn(conditionsPtr, parse_list_with_trailing_comma<Expr>(
+                                   {TokenType::kw_case, "expected case"}, [this]() { return parse_expr(); },
+                                   {TokenType::switch_arrow, "expected '=>'"}, haveTrailingComma));
+    conditions = std::move(*conditionsPtr);
 
     varOrReturn(block, parse_block(m_nextToken.type != TokenType::block_l));
 
-    return makePtr<CaseStmt>(location, std::move(condition), std::move(block));
+    return makePtr<CaseStmt>(location, std::move(conditions), std::move(block));
+}
+
+ptr<Block> Parser::parse_else_stmt() {
+    debug_func("");
+    auto location = m_nextToken.loc;
+    matchOrReturn(TokenType::kw_else, "expected else");
+    eat_next_token();  // eat else
+    matchOrReturn(TokenType::switch_arrow, "expected =>");
+    eat_next_token();  // eat =>
+
+    varOrReturn(block, parse_block(m_nextToken.type != TokenType::block_l));
+    return block;
 }
 }  // namespace DMZ

@@ -294,7 +294,9 @@ std::string ForStmt::to_str() const { dmz_unreachable("TODO"); }
 void CaseStmt::dump(size_t level) const {
     std::cerr << indent(level) << "CaseStmt\n";
 
-    condition->dump(level + 1);
+    for (auto &&cond : conditions) {
+        cond->dump(level + 1);
+    }
     block->dump(level + 1);
 }
 
@@ -319,7 +321,7 @@ void VarDecl::dump(size_t level) const {
     if (type) {
         std::cerr << type->to_str();
     }
-    std::cerr << " " << identifier << '\n';
+    std::cerr << " " << identifier << (isGlobal ? " global" : "") << '\n';
 
     if (initializer) initializer->dump(level + 1);
 }

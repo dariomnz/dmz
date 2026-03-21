@@ -170,17 +170,28 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
 
     int rechableIndex = -1;
     for (size_t i = 0; i < stmt.cases.size(); i++) {
-        if (!stmt.cases[i]->condition) continue;
-        std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
-        if (val && case_val && val == case_val) {
-            rechableIndex = i;
+        for (auto &&cond : stmt.cases[i]->conditions) {
+            std::optional<int> case_val = cee.evaluate(*cond, true);
+            if (val && case_val && val == case_val) {
+                rechableIndex = i;
+            }
         }
     }
 
     for (size_t i = 0; i < stmt.cases.size(); i++) {
-        if (!stmt.cases[i]->condition) continue;
-        std::optional<int> case_val = cee.evaluate(*stmt.cases[i]->condition, true);
-        cfg.insert_edge(entry, casesBlocks[i], !val || !case_val || rechableIndex == static_cast<int>(i));
+        bool canMatch = false;
+        if (!val) {
+            canMatch = true; // condition not constant, anything can match
+        } else {
+            for (auto &&cond : stmt.cases[i]->conditions) {
+                std::optional<int> case_val = cee.evaluate(*cond, true);
+                if (!case_val || val == case_val) {
+                    canMatch = true;
+                    break;
+                }
+            }
+        }
+        cfg.insert_edge(entry, casesBlocks[i], canMatch || (rechableIndex == static_cast<int>(i)));
     }
 
     cfg.insert_edge(entry, casesBlocks[stmt.cases.size()], !val || rechableIndex == -1);
