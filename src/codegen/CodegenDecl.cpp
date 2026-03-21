@@ -348,13 +348,13 @@ void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &E
     debug_func("");
     for (auto &error : ErrorGroupExprDecl.errors) {
         std::string errName = "error.str." + error->identifier;
-        auto global = m_module->getGlobalVariable(errName);
+        auto global = m_module->getNamedGlobal(errName);
         if (!global) {
             llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, error->identifier, true);
-            m_declarations[error.get()] =
-                new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
-                                         llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, errName);
+            global = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                              llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, errName);
         }
+        m_declarations[error.get()] = global;
     }
 }
 

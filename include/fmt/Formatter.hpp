@@ -74,6 +74,8 @@ class Formatter {
     ptr<Node> fmt_return_stmt(const ReturnStmt& stmt);
     ptr<Node> fmt_switch_stmt(const SwitchStmt& stmt);
     ptr<Node> fmt_case_stmt(const CaseStmt& stmt);
+    ptr<Node> fmt_break_stmt(const BreakStmt& stmt);
+    ptr<Node> fmt_continue_stmt(const ContinueStmt& stmt);
     ptr<Node> fmt_while_stmt(const WhileStmt& stmt);
     ptr<Node> fmt_for_stmt(const ForStmt& stmt);
     ptr<Node> fmt_if_stmt(const IfStmt& stmt);

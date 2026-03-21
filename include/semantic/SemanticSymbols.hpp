@@ -147,6 +147,22 @@ struct ResolvedWhileStmt : public ResolvedStmt {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedBreakStmt : public ResolvedStmt {
+    std::vector<ptr<ResolvedDeferRefStmt>> defers;
+    ResolvedBreakStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedStmt(location), defers(std::move(defers)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedContinueStmt : public ResolvedStmt {
+    std::vector<ptr<ResolvedDeferRefStmt>> defers;
+    ResolvedContinueStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers)
+        : ResolvedStmt(location), defers(std::move(defers)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedCaptureDecl : public ResolvedDecl {
     ResolvedCaptureDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type)
         : ResolvedDecl(location, identifier, std::move(type), false, true) {}

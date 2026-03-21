@@ -452,11 +452,14 @@ bool Sema::resolve_import_modules(std::filesystem::path sourcePath,
     std::vector<std::filesystem::path> moduleDeclsPaths;
     std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
     for (auto &&[k, v] : imported_modules) {
-        debug_msg("Resolving imported module: " << k);
-        if (std::filesystem::canonical(k) == sourceAbsPath) {
+        std::filesystem::path k_path = std::filesystem::canonical(k);
+        debug_msg("Resolving imported module: " << k_path);
+        if (k_path == sourceAbsPath) {
             continue;
         }
-        moduleDeclsPaths.emplace_back(k);  // k is const ref, so copy
+
+        moduleDeclsPaths.emplace_back(k_path);
+        v->module_path = k_path;
         moduleDecls.emplace_back(std::move(v));
     }
     imported_modules.clear();

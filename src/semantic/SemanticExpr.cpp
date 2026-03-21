@@ -492,14 +492,14 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
     if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Pointer && resolvedLHS->type->kind != ResolvedTypeKind::Simd &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
+        resolvedLHS->type->kind != ResolvedTypeKind::Error && resolvedLHS->type->kind != ResolvedTypeKind::Pointer &&
+        resolvedLHS->type->kind != ResolvedTypeKind::Simd && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
     if (resolvedRHS->type->kind != ResolvedTypeKind::Number && resolvedRHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Pointer && resolvedRHS->type->kind != ResolvedTypeKind::Simd &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
+        resolvedRHS->type->kind != ResolvedTypeKind::Error && resolvedRHS->type->kind != ResolvedTypeKind::Pointer &&
+        resolvedRHS->type->kind != ResolvedTypeKind::Simd && resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }

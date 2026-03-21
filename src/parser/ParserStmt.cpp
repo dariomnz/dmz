@@ -44,6 +44,8 @@ ptr<Stmt> Parser::parse_statement() {
     if (m_nextToken.type == TokenType::kw_for ||
         (m_nextToken.type == TokenType::kw_inline && peek_token().type == TokenType::kw_for))
         return parse_for_stmt();
+    if (m_nextToken.type == TokenType::kw_break) return parse_break_stmt();
+    if (m_nextToken.type == TokenType::kw_continue) return parse_continue_stmt();
     if (m_nextToken.type == TokenType::kw_return) return parse_return_stmt();
     if (m_nextToken.type == TokenType::kw_let || m_nextToken.type == TokenType::kw_const) return parse_decl_stmt(false);
     if (m_nextToken.type == TokenType::kw_defer || m_nextToken.type == TokenType::kw_errdefer)
@@ -107,9 +109,7 @@ ptr<IfStmt> Parser::parse_if_stmt() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat ')'
 
-    matchOrReturn(TokenType::block_l, "expected 'if' body");
-
-    varOrReturn(trueBlock, parse_block());
+    varOrReturn(trueBlock, parse_block(m_nextToken.type != TokenType::block_l));
 
     if (m_nextToken.type != TokenType::kw_else)
         return makePtr<IfStmt>(location, std::move(condition), std::move(trueBlock), nullptr, isInline);
@@ -125,8 +125,7 @@ ptr<IfStmt> Parser::parse_if_stmt() {
 
         falseBlock = makePtr<Block>(loc, std::move(stmts));
     } else {
-        matchOrReturn(TokenType::block_l, "expected 'else' body");
-        falseBlock = parse_block();
+        falseBlock = parse_block(m_nextToken.type != TokenType::block_l);
     }
 
     if (!falseBlock) return nullptr;
@@ -147,10 +146,27 @@ ptr<WhileStmt> Parser::parse_while_stmt() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat ')'
 
-    matchOrReturn(TokenType::block_l, "expected 'while' body");
-    varOrReturn(body, parse_block());
+    varOrReturn(body, parse_block(m_nextToken.type != TokenType::block_l));
 
     return makePtr<WhileStmt>(location, std::move(cond), std::move(body));
+}
+
+ptr<BreakStmt> Parser::parse_break_stmt() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'break'
+    matchOrReturn(TokenType::semicolon, "expected ';' after break");
+    eat_next_token();  // eat ';'
+    return makePtr<BreakStmt>(location);
+}
+
+ptr<ContinueStmt> Parser::parse_continue_stmt() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    eat_next_token();  // eat 'continue'
+    matchOrReturn(TokenType::semicolon, "expected ';' after continue");
+    eat_next_token();  // eat ';'
+    return makePtr<ContinueStmt>(location);
 }
 
 ptr<ForStmt> Parser::parse_for_stmt() {
@@ -172,8 +188,7 @@ ptr<ForStmt> Parser::parse_for_stmt() {
                               {TokenType ::pipe, "expected '|'"}, [this]() { return parse_capture_decl(); },
                               {TokenType ::pipe, "expected '|'"}, haveTrailingCommaCapt));
 
-    matchOrReturn(TokenType::block_l, "expected 'for' body");
-    varOrReturn(body, parse_block());
+    varOrReturn(body, parse_block(m_nextToken.type != TokenType::block_l));
 
     return makePtr<ForStmt>(location, std::move(*conditions), std::move(*captures), std::move(body), isInline);
 }

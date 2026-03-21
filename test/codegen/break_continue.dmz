@@ -1,0 +1,64 @@
+// RUN: dmz %s -run | filecheck %s
+
+fn test_while_break() -> i32 {
+    let i = 0;
+    while (i < 10) {
+        if (i == 5) break;
+        i = i + 1;
+    }
+    return i;
+}
+
+fn test_while_continue() -> i32 {
+    let i = 0;
+    let sum = 0;
+    while (i < 10) {
+        i = i + 1;
+        if (i % 2 == 0) continue;
+        sum = sum + i;
+    }
+    return sum;
+}
+
+fn test_for_break() -> i32 {
+    let res = 0;
+    for (0..10) |i| {
+        if (i == 5) break;
+        res = i;
+    }
+    return res;
+}
+
+fn test_for_continue() -> i32 {
+    let sum = 0;
+    for (0..10) |i| {
+        if (i % 2 == 0) continue;
+        sum = sum + i;
+    }
+    return sum;
+}
+
+fn test_nested_break() -> i32 {
+    let count = 0;
+    for (0..3) |i| {
+        for (0..10) |j| {
+            if (j == 2) break;
+            count = count + 1;
+        }
+    }
+    return count;
+}
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let a = test_while_break();
+    let b = test_while_continue();
+    let c = test_for_break();
+    let d = test_for_continue();
+    let e = test_nested_break();
+    
+    printf("%d %d %d %d %d\n", a, b, c, d, e);
+}
+
+// CHECK: 5 25 4 25 6

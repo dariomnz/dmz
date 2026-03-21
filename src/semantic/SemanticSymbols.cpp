@@ -380,6 +380,14 @@ void ResolvedWhileStmt::dump(size_t level, bool onlySelf) const {
     body->dump(level + 1, onlySelf);
 }
 
+void ResolvedBreakStmt::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedBreakStmt\n";
+}
+
+void ResolvedContinueStmt::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedContinueStmt\n";
+}
+
 void ResolvedCaptureDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCaptureDecl:" + type->to_str() + " " << identifier << "\n";
     if (onlySelf) return;

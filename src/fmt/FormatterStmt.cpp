@@ -26,6 +26,10 @@ ptr<Node> Formatter::fmt_stmt(const Stmt& stmt) {
     } else if (auto cast_stmt = dynamic_cast<const CaseStmt*>(&stmt)) {
         node = fmt_case_stmt(*cast_stmt);
         needSemicolon = false;
+    } else if (auto cast_stmt = dynamic_cast<const BreakStmt*>(&stmt)) {
+        node = fmt_break_stmt(*cast_stmt);
+    } else if (auto cast_stmt = dynamic_cast<const ContinueStmt*>(&stmt)) {
+        node = fmt_continue_stmt(*cast_stmt);
     } else if (auto cast_stmt = dynamic_cast<const WhileStmt*>(&stmt)) {
         node = fmt_while_stmt(*cast_stmt);
         needSemicolon = false;
@@ -248,6 +252,17 @@ ptr<Node> Formatter::fmt_defer_stmt(const DeferStmt& stmt) {
     }
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(fmt_block(*stmt.block, true, false));
+    return ret;
+}
+ptr<Node> Formatter::fmt_break_stmt([[maybe_unused]] const BreakStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("break"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_continue_stmt([[maybe_unused]] const ContinueStmt& stmt) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("continue"));
     return ret;
 }
 }  // namespace fmt

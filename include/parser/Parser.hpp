@@ -130,6 +130,8 @@ class Parser {
     ptr<std::vector<ptr<ParamDecl>>> parse_parameter_list();
     ptr<IfStmt> parse_if_stmt();
     ptr<WhileStmt> parse_while_stmt();
+    ptr<BreakStmt> parse_break_stmt();
+    ptr<ContinueStmt> parse_continue_stmt();
     ptr<CaptureDecl> parse_capture_decl();
     ptr<ForStmt> parse_for_stmt();
     ptr<DeclStmt> parse_decl_stmt(bool isGlobal);

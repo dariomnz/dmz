@@ -38,6 +38,12 @@ ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     if (auto *forStmt = dynamic_cast<const ForStmt *>(&stmt)) {
         return resolve_for_stmt(*forStmt);
     }
+    if (auto *breakStmt = dynamic_cast<const BreakStmt *>(&stmt)) {
+        return resolve_break_stmt(*breakStmt);
+    }
+    if (auto *continueStmt = dynamic_cast<const ContinueStmt *>(&stmt)) {
+        return resolve_continue_stmt(*continueStmt);
+    }
     if (auto *returnStmt = dynamic_cast<const ReturnStmt *>(&stmt)) {
         return resolve_return_stmt(*returnStmt);
     }
@@ -180,11 +186,31 @@ ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
         return report(condition->location, "unexpected type in condition '" + condition->type->to_str() + "'");
     }
 
+    m_loopDepth++;
     varOrReturn(body, resolve_block(*whileStmt.body));
+    m_loopDepth--;
 
     condition->set_constant_value(cee.evaluate(*condition, false));
 
     return makePtr<ResolvedWhileStmt>(whileStmt.location, std::move(condition), std::move(body));
+}
+
+ptr<ResolvedBreakStmt> Sema::resolve_break_stmt(const BreakStmt &breakStmt) {
+    debug_func(breakStmt.location);
+    if (m_loopDepth <= 0) {
+        return report(breakStmt.location, "unexpected break statement outside a loop");
+    }
+    auto defers = resolve_defer_ref_stmt(true, false);
+    return makePtr<ResolvedBreakStmt>(breakStmt.location, std::move(defers));
+}
+
+ptr<ResolvedContinueStmt> Sema::resolve_continue_stmt(const ContinueStmt &continueStmt) {
+    debug_func(continueStmt.location);
+    if (m_loopDepth <= 0) {
+        return report(continueStmt.location, "unexpected continue statement outside a loop");
+    }
+    auto defers = resolve_defer_ref_stmt(true, false);
+    return makePtr<ResolvedContinueStmt>(continueStmt.location, std::move(defers));
 }
 
 ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
@@ -310,7 +336,9 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
 
     if (error) return nullptr;
 
+    m_loopDepth++;
     varOrReturn(resolvedBody, resolve_block(*forStmt.body));
+    m_loopDepth--;
 
     return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
                                     std::move(resolvedBody));

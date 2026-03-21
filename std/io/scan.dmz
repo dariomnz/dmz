@@ -1,0 +1,98 @@
+const std = import("std");
+
+pub fn scanInteger<T>(r: std.io.Reader) -> !T {
+    let result: T = 0;
+    let started = false;
+    let negative = false;
+    const is_signed: bool = @typeid(result) == std.types.int_t;
+
+    while (true) {
+        // Leemos byte por byte
+        const byte_opt = r.readByte();
+        const byte_error = catch byte_opt;
+        if (byte_error) {
+            const e = error.EndOfStream;
+            if (byte_error == e) {
+                if (started) {
+                    if (negative) {
+                        return -result;
+                    } else {
+                        return result;
+                    }
+                } else {
+                    return byte_error;
+                }
+            } else {
+                return byte_error;
+            }
+        }
+        const byte = try byte_opt;
+        switch (byte) {
+            case ' ', '\n', '\r', '\t' => {
+                // Ignorar espacios en blanco iniciales
+                if (started) {
+                    break;
+                }
+                // Si ya empezamos a leer el número, el espacio termina la lectura
+                continue;
+            }
+            case '-' => {
+                // Manejar signo negativo si el tipo es Signed
+                if (started) {
+                    return error.InvalidCharacter;
+                }
+                if (!is_signed) {
+                    return error.InvalidCharacter;
+                }
+                negative = true;
+                started = true;
+            }
+            case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => {
+                started = true;
+                const digit = byte - '0';
+
+                const mul = result * 10;
+                if (mul % 10 != 0) {
+                    return error.Overflow;
+                }
+
+                const add = mul + digit;
+                if (add % 10 != digit) {
+                    return error.Overflow;
+                }
+
+                result = add;
+            }
+            else => {
+                if (started) {
+                    break;
+                }
+                return error.InvalidCharacter;
+            }
+        }
+    }
+
+    if (negative) {
+        return -result;
+    } else {
+        return result;
+    }
+}
+
+test "scanInteger cases" {
+    const cases = {
+        "123",
+        "-123",
+        "0",
+        "-0",
+        "7345",
+        "-13246",
+        "987654321",
+        "-987654321",
+    };
+    for (cases[0..8]) |case_str| {
+        const r = std.io.Reader.fixed(case_str.*[0..std.mem.strlen(case_str.*)]);
+        const result = try scanInteger<i32>(r);
+        std.io.print("{} == {}\n", .{case_str, result});
+    }
+}

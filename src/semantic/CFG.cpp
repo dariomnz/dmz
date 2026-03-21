@@ -22,7 +22,8 @@ CFG CFGBuilder::build(const ResolvedBlock &block) {
 static inline bool is_terminator(const ResolvedStmt &stmt) {
     return dynamic_cast<const ResolvedIfStmt *>(&stmt) || dynamic_cast<const ResolvedWhileStmt *>(&stmt) ||
            dynamic_cast<const ResolvedReturnStmt *>(&stmt) || dynamic_cast<const ResolvedSwitchStmt *>(&stmt) ||
-           dynamic_cast<const ResolvedForStmt *>(&stmt);
+           dynamic_cast<const ResolvedForStmt *>(&stmt) || dynamic_cast<const ResolvedBreakStmt *>(&stmt) ||
+           dynamic_cast<const ResolvedContinueStmt *>(&stmt);
 }
 
 int CFGBuilder::insert_block(const ResolvedBlock &block, int succ) {
@@ -77,6 +78,12 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
     }
     if (auto *switchStmt = dynamic_cast<const ResolvedSwitchStmt *>(&stmt)) {
         return insert_switch_stmt(*switchStmt, block);
+    }
+    if (auto *breakStmt = dynamic_cast<const ResolvedBreakStmt *>(&stmt)) {
+        return insert_break_stmt(*breakStmt, block);
+    }
+    if (auto *continueStmt = dynamic_cast<const ResolvedContinueStmt *>(&stmt)) {
+        return insert_continue_stmt(*continueStmt, block);
     }
     stmt.dump();
     dmz_unreachable("unexpected expression");
@@ -137,6 +144,30 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
         return insert_expr(*tryErrorExpr->errorToTry, block);
     }
 
+    return block;
+}
+
+int CFGBuilder::insert_break_stmt(const ResolvedBreakStmt &stmt, int block) {
+    for (auto &&d : stmt.defers) {
+        block = insert_block(*d->resolvedDefer.block, block);
+    }
+
+    int target = m_loopExitStack.top();
+    block = cfg.insert_new_block_before(target, true);
+
+    cfg.insert_stmt(&stmt, block);
+    return block;
+}
+
+int CFGBuilder::insert_continue_stmt(const ResolvedContinueStmt &stmt, int block) {
+    for (auto &&d : stmt.defers) {
+        block = insert_block(*d->resolvedDefer.block, block);
+    }
+
+    int target = m_loopContinueStack.top();
+    block = cfg.insert_new_block_before(target, true);
+
+    cfg.insert_stmt(&stmt, block);
     return block;
 }
 
@@ -202,7 +233,11 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
 
 int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
     int latch = cfg.insert_new_block();
+    m_loopExitStack.push(exit);
+    m_loopContinueStack.push(latch);
     int body = insert_block(*stmt.body, latch);
+    m_loopContinueStack.pop();
+    m_loopExitStack.pop();
 
     int header = cfg.insert_new_block();
     cfg.insert_edge(latch, header, true);
@@ -219,7 +254,11 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
 
 int CFGBuilder::insert_for_stmt(const ResolvedForStmt &stmt, int exit) {
     int latch = cfg.insert_new_block();
+    m_loopExitStack.push(exit);
+    m_loopContinueStack.push(latch);
     int body = insert_block(*stmt.body, latch);
+    m_loopContinueStack.pop();
+    m_loopExitStack.pop();
 
     int header = cfg.insert_new_block();
     cfg.insert_edge(latch, header, true);

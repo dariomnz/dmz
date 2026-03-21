@@ -293,10 +293,14 @@ llvm::Value *Codegen::generate_binary_operator(const ResolvedBinaryOperator &bin
 llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, llvm::Value *lhs, llvm::Value *rhs) {
     debug_func("");
     rhs = cast_to(rhs, *binop.rhs->type, *binop.lhs->type);
+    ptr<ResolvedTypeNumber> usizeType = castPtr<ResolvedTypeNumber>(ResolvedTypeNumber::usize(binop.lhs->location));
     auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(binop.lhs->type.get());
     if (!typeNum) {
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(binop.lhs->type.get())) {
             typeNum = dynamic_cast<const ResolvedTypeNumber *>(simdType->simdType.get());
+        }
+        if (dynamic_cast<const ResolvedTypeError *>(binop.lhs->type.get())) {
+            typeNum = usizeType.get();
         }
         if (!typeNum) {
             binop.lhs->type->dump();
@@ -607,7 +611,7 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
 
 llvm::Value *Codegen::generate_error_in_place_expr(const ResolvedErrorInPlaceExpr &errorInPlaceExpr) {
     std::string errName = "error.str." + errorInPlaceExpr.identifier;
-    auto global = m_module->getGlobalVariable(errName);
+    auto global = m_module->getNamedGlobal(errName);
     if (global) {
         return global;
     } else {
@@ -796,7 +800,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
     llvm::Type *sizeTy = llvm::Type::getIntNTy(*m_context, m_module->getDataLayout().getPointerSizeInBits());
 
     std::string globalName = "TypeInfo." + targetType->to_str();
-    if (auto existingGlobal = m_module->getGlobalVariable(globalName)) {
+    if (auto existingGlobal = m_module->getNamedGlobal(globalName)) {
         return existingGlobal;
     }
 

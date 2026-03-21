@@ -94,6 +94,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_case);
         CASE_TYPE(kw_test);
         CASE_TYPE(kw_inline);
+        CASE_TYPE(kw_break);
+        CASE_TYPE(kw_continue);
         // CASE_TYPE(kw_static);
         CASE_TYPE(kw_sizeof);
         CASE_TYPE(kw_typeid);

@@ -23,6 +23,9 @@ class Codegen {
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
 
+    std::stack<llvm::BasicBlock *> m_loopExitStack;
+    std::stack<llvm::BasicBlock *> m_loopContinueStack;
+
     // Debug
     llvm::DIBuilder m_debugBuilder;
     bool m_debugSymbols = false;
@@ -68,6 +71,8 @@ class Codegen {
     void generate_block(const ResolvedBlock &block);
     llvm::Value *generate_stmt(const ResolvedStmt &stmt);
     llvm::Value *generate_return_stmt(const ResolvedReturnStmt &stmt);
+    llvm::Value *generate_break_stmt(const ResolvedBreakStmt &stmt);
+    llvm::Value *generate_continue_stmt(const ResolvedContinueStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
     llvm::Value *generate_lambda_expr(const ResolvedLambdaExpr &expr);

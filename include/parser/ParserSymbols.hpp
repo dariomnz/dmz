@@ -244,6 +244,20 @@ struct ReturnStmt : public Stmt {
     std::string to_str() const override;
 };
 
+struct BreakStmt : public Stmt {
+    BreakStmt(SourceLocation location) : Stmt(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ContinueStmt : public Stmt {
+    ContinueStmt(SourceLocation location) : Stmt(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct FieldInitStmt : public Stmt {
     std::string identifier;
     ptr<Expr> initializer;

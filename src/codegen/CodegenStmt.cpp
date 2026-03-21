@@ -46,6 +46,12 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
     if (auto *forStmt = dynamic_cast<const ResolvedForStmt *>(&stmt)) {
         return generate_for_stmt(*forStmt);
     }
+    if (auto *breakStmt = dynamic_cast<const ResolvedBreakStmt *>(&stmt)) {
+        return generate_break_stmt(*breakStmt);
+    }
+    if (auto *continueStmt = dynamic_cast<const ResolvedContinueStmt *>(&stmt)) {
+        return generate_continue_stmt(*continueStmt);
+    }
     if (auto *declStmt = dynamic_cast<const ResolvedDeclStmt *>(&stmt)) {
         return generate_decl_stmt(*declStmt);
     }
@@ -137,7 +143,11 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
     m_builder.CreateCondBr(to_bool(cond, *stmt.condition->type), body, exit);
 
     m_builder.SetInsertPoint(body);
+    m_loopExitStack.push(exit);
+    m_loopContinueStack.push(header);
     generate_block(*stmt.body);
+    m_loopContinueStack.pop();
+    m_loopExitStack.pop();
     break_into_bb(header);
 
     m_builder.SetInsertPoint(exit);
@@ -235,7 +245,11 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
     // Body
     m_builder.SetInsertPoint(body);
+    m_loopExitStack.push(exit);
+    m_loopContinueStack.push(increment);
     generate_block(*stmt.body);
+    m_loopContinueStack.pop();
+    m_loopExitStack.pop();
     break_into_bb(increment);
 
     // Increment counter
@@ -333,6 +347,25 @@ llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
 
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
+    return nullptr;
+}
+llvm::Value *Codegen::generate_break_stmt(const ResolvedBreakStmt &stmt) {
+    debug_func(stmt.location);
+    for (auto &&d : stmt.defers) {
+        generate_block(*d->resolvedDefer.block);
+    }
+    assert(!m_loopExitStack.empty() && "break statement outside a loop");
+    break_into_bb(m_loopExitStack.top());
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_continue_stmt(const ResolvedContinueStmt &stmt) {
+    debug_func(stmt.location);
+    for (auto &&d : stmt.defers) {
+        generate_block(*d->resolvedDefer.block);
+    }
+    assert(!m_loopContinueStack.empty() && "continue statement outside a loop");
+    break_into_bb(m_loopContinueStack.top());
     return nullptr;
 }
 }  // namespace DMZ

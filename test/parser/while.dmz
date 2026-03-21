@@ -3,14 +3,18 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:13: error: expected expression
     while (-) {}
     
-    // CHECK: [[# @LINE + 1 ]]:15: error: expected 'while' body
-    while (0) ;
+    // CHECK: [[# @LINE + 1 ]]:15: error: expected expression
+    while (1) ;
 
-    while (0) {
+    const zero = 0;
+    while (zero) {
         1;
     }
-    // CHECK: WhileStmt
-    // CHECK-NEXT:   IntLiteral '0'
-    // CHECK-NEXT:   Block
-    // CHECK-NEXT:     IntLiteral '1'
+    // CHECK: DeclStmt
+    // CHECK-NEXT:        VarDecl:const  zero
+    // CHECK-NEXT:          IntLiteral '0'
+    // CHECK-NEXT:      WhileStmt
+    // CHECK-NEXT:        DeclRefExpr zero
+    // CHECK-NEXT:        Block
+    // CHECK-NEXT:          IntLiteral '1'
 }

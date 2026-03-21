@@ -22,6 +22,7 @@ class Sema {
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;
+    int m_loopDepth = 0;
 
     class ScopeRAII {
         Sema &m_sema;
@@ -109,6 +110,8 @@ class Sema {
     ptr<ResolvedGroupingExpr> resolve_grouping_expr(const GroupingExpr &grouping);
     ptr<ResolvedIfStmt> resolve_if_stmt(const IfStmt &ifStmt);
     ptr<ResolvedWhileStmt> resolve_while_stmt(const WhileStmt &whileStmt);
+    ptr<ResolvedBreakStmt> resolve_break_stmt(const BreakStmt &breakStmt);
+    ptr<ResolvedContinueStmt> resolve_continue_stmt(const ContinueStmt &continueStmt);
     ptr<ResolvedStmt> resolve_for_stmt(const ForStmt &forStmt);
     bool run_flow_sensitive_checks(const ResolvedFuncDecl &fn);
     bool check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg);

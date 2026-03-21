@@ -41,6 +41,8 @@ struct CFG {
 class CFGBuilder {
     CFG cfg;
     ConstantExpressionEvaluator cee;
+    std::stack<int> m_loopExitStack;
+    std::stack<int> m_loopContinueStack;
 
    public:
     CFG build(const ResolvedBlock &block);
@@ -49,6 +51,8 @@ class CFGBuilder {
     int insert_block(const ResolvedBlock &block, int succ);
     int insert_stmt(const ResolvedStmt &stmt, int block);
     int insert_return_stmt(const ResolvedReturnStmt &stmt, int block);
+    int insert_break_stmt(const ResolvedBreakStmt &stmt, int block);
+    int insert_continue_stmt(const ResolvedContinueStmt &stmt, int block);
     int insert_expr(const ResolvedExpr &expr, int block);
     int insert_if_stmt(const ResolvedIfStmt &stmt, int exit);
     int insert_while_stmt(const ResolvedWhileStmt &stmt, int exit);

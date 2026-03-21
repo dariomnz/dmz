@@ -123,6 +123,14 @@ void ReturnStmt::dump(size_t level) const {
 
 std::string ReturnStmt::to_str() const { dmz_unreachable("TODO"); }
 
+void BreakStmt::dump(size_t level) const { std::cerr << indent(level) << "BreakStmt\n"; }
+
+std::string BreakStmt::to_str() const { return "break"; }
+
+void ContinueStmt::dump(size_t level) const { std::cerr << indent(level) << "ContinueStmt\n"; }
+
+std::string ContinueStmt::to_str() const { return "continue"; }
+
 void IntLiteral::dump(size_t level) const { std::cerr << indent(level) << "IntLiteral '" << value << "'\n"; }
 
 std::string IntLiteral::to_str() const { return value; }
