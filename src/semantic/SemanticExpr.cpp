@@ -102,6 +102,10 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
             st->is_this = true;
         } else if (auto *std = dynamic_cast<ResolvedTypeStructDecl *>(type.get())) {
             std->is_this = true;
+        } else if (auto *ut = dynamic_cast<ResolvedTypeUnion *>(type.get())) {
+            ut->is_this = true;
+        } else if (auto *ud = dynamic_cast<ResolvedTypeUnionDecl *>(type.get())) {
+            ud->is_this = true;
         }
     }
     auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, std::move(type));
@@ -233,10 +237,11 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     if (isMemberCall && resolvedBase) {
         ptr<ResolvedExpr> argsToAdd = nullptr;
         if (resolvedBase->type->kind == ResolvedTypeKind::Struct ||
-            resolvedBase->type->kind == ResolvedTypeKind::Simd) {
+            resolvedBase->type->kind == ResolvedTypeKind::Union || resolvedBase->type->kind == ResolvedTypeKind::Simd) {
             argsToAdd = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
         } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
             if (ptrType->pointerType->kind == ResolvedTypeKind::Struct ||
+                ptrType->pointerType->kind == ResolvedTypeKind::Union ||
                 ptrType->pointerType->kind == ResolvedTypeKind::Simd) {
                 argsToAdd = std::move(resolvedBase);
             }
@@ -586,6 +591,12 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
+    } else if (auto unionType = dynamic_cast<const ResolvedTypeUnionDecl *>(baseType)) {
+        decl = lookup_in_union(memberExpr.location, *unionType->decl, memberExpr.field);
+        if (!decl) {
+            return report(memberExpr.location, "union \'" + resolvedBase->type->to_str() + "' has no member called '" +
+                                                   memberExpr.field + '\'');
+        }
         // auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl);
         // auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
         // if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
@@ -695,6 +706,18 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
                                                        resolvedBase->type->to_str() + "'");
             }
         }
+    } else if (auto unionType = dynamic_cast<const ResolvedTypeUnion *>(baseType)) {
+        decl = lookup_in_union(memberExpr.location, *unionType->decl, memberExpr.field);
+        if (!decl) {
+            return report(memberExpr.location, "union \'" + resolvedBase->type->to_str() + "' has no member called '" +
+                                                   memberExpr.field + '\'');
+        }
+        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
+            if (memberFunc->isStatic) {
+                return report(memberExpr.location, "cannot call a static member with a instance of struct \'" +
+                                                       resolvedBase->type->to_str() + "'");
+            }
+        }
     } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(baseType)) {
         auto moduleDecl = modType->moduleDecl;
         if (!moduleDecl)
@@ -736,6 +759,11 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         resolvedBase = makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
     }
     auto res = makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
+    if (res->base->type->kind == ResolvedTypeKind::UnionDecl) {
+        if (dynamic_cast<const ResolvedFieldDecl *>(&res->member)) {
+            res->type = makePtr<ResolvedTypeNumber>(res->location, ResolvedNumberKind::UInt, 32);
+        }
+    }
     res->set_constant_value(cee.evaluate(*res, false));
     return res;
 }
@@ -865,11 +893,48 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
                                        std::move(captureInitializers));
 }
 
-ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
-    const StructInstantiationExpr &structInstantiation) {
+ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
 
     varOrReturn(resolvedBase, resolve_expr(*structInstantiation.base));
+
+    if (resolvedBase->type->kind == ResolvedTypeKind::UnionDecl) {
+        auto auxUnionType = static_cast<const ResolvedTypeUnionDecl *>(resolvedBase->type.get());
+        auto un = auxUnionType->decl;
+
+        if (structInstantiation.fieldInitializers.size() != 1) {
+            return report(structInstantiation.location, "union instantiation must initialize exactly one field");
+        }
+
+        auto &&initStmt = structInstantiation.fieldInitializers[0];
+        std::string &id = initStmt->identifier;
+        const SourceLocation &loc = initStmt->location;
+
+        const ResolvedFieldDecl *fieldDecl = nullptr;
+        for (auto &&f : un->fields) {
+            if (f->identifier == id) {
+                fieldDecl = f.get();
+                break;
+            }
+        }
+
+        if (!fieldDecl) {
+            return report(loc, "'" + un->identifier + "' has no field named '" + id + "'");
+        }
+
+        varOrReturn(resolvedInitExpr, resolve_expr(*initStmt->initializer));
+
+        if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
+            return report(resolvedInitExpr->location, "'" + resolvedInitExpr->type->to_str() +
+                                                          "' cannot be used to initialize a field of type '" +
+                                                          fieldDecl->type->to_str() + "'");
+        }
+
+        auto init = makePtr<ResolvedFieldInitStmt>(loc, *fieldDecl, std::move(resolvedInitExpr));
+        init->initializer->set_constant_value(cee.evaluate(*init->initializer, false));
+
+        return makePtr<ResolvedUnionInstantiationExpr>(structInstantiation.location, *un, std::move(init));
+    }
 
     if (resolvedBase->type->kind != ResolvedTypeKind::StructDecl) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
@@ -978,8 +1043,7 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_struct_instantiation(
     return res;
 }
 
-ptr<ResolvedStructInstantiationExpr> Sema::resolve_tuple_instantiation(
-    const TupleInstantiationExpr &tupleInstantiation) {
+ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation) {
     debug_func(tupleInstantiation.location);
 
     std::vector<ptr<ResolvedFieldDecl>> tupleFields;
@@ -1014,8 +1078,7 @@ ptr<ResolvedStructInstantiationExpr> Sema::resolve_tuple_instantiation(
                                                     std::move(resolvedFieldInits), true);
 }
 
-ptr<ResolvedArrayInstantiationExpr> Sema::resolve_array_instantiation(
-    const ArrayInstantiationExpr &arrayInstantiation) {
+ptr<ResolvedExpr> Sema::resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation) {
     debug_func(arrayInstantiation.location);
     std::vector<ptr<ResolvedExpr>> resolvedinitializers;
     resolvedinitializers.reserve(arrayInstantiation.initializers.size());

@@ -353,34 +353,34 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
 // Forward declaration
 struct ResolvedStructDecl;
 struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
-    const ResolvedStructDecl *structDecl;
+    const ResolvedDecl *parentDecl;
     bool isStatic;
 
     ResolvedMemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
-                               const ResolvedStructDecl *structDecl, bool isStatic)
+                               const ResolvedDecl *parentDecl, bool isStatic)
         : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
                                std::move(body)),
-          structDecl(structDecl),
+          parentDecl(parentDecl),
           isStatic(isStatic) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
 struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
-    const ResolvedStructDecl *structDecl;
+    const ResolvedDecl *parentDecl;
     ResolvedMemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                       ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                       const FunctionDecl *functionDecl, ptr<ResolvedBlock> body,
                                       std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                                       std::vector<ResolvedDecl *> scopeToSpecialize,
                                       ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct,
-                                      const ResolvedStructDecl *structDecl)
+                                      const ResolvedDecl *parentDecl)
         : ResolvedGenericFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), functionDecl,
                                       std::move(body), std::move(genericTypeDecls), std::move(scopeToSpecialize),
                                       saveCurrentModule, saveCurrentStruct),
-          structDecl(structDecl) {}
+          parentDecl(parentDecl) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
@@ -439,6 +439,29 @@ struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     std::string name() const override;
+};
+
+struct ResolvedUnionDecl : public ResolvedDependencies {
+    const UnionDecl *unionDecl;
+    bool isPacked;
+    std::vector<ptr<ResolvedFieldDecl>> fields;
+    std::vector<ptr<ResolvedMemberFunctionDecl>> functions;
+    std::vector<std::string> fields_strs;
+    std::vector<std::string> functions_strs;
+    ptr<ResolvedFieldDecl> tag;
+
+    ResolvedUnionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                       const UnionDecl *unionDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+                       std::vector<ptr<ResolvedMemberFunctionDecl>> functions)
+        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeUnionDecl>(location, this), false,
+                                isPublic),
+          unionDecl(unionDecl),
+          isPacked(isPacked),
+          fields(std::move(fields)),
+          functions(std::move(functions)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
 struct ResolvedGenericStructDecl : public ResolvedStructDecl {
@@ -803,6 +826,19 @@ struct ResolvedStructInstantiationExpr : public ResolvedExpr {
           structDecl(structDecl),
           fieldInitializers(std::move(fieldInitializers)),
           isTuple(isTuple) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedUnionInstantiationExpr : public ResolvedExpr {
+    ResolvedUnionDecl &unionDecl;
+    ptr<ResolvedFieldInitStmt> fieldInitializer;
+
+    ResolvedUnionInstantiationExpr(SourceLocation location, ResolvedUnionDecl &unionDecl,
+                                   ptr<ResolvedFieldInitStmt> fieldInitializer)
+        : ResolvedExpr(location, makePtr<ResolvedTypeUnion>(unionDecl.location, &unionDecl)),
+          unionDecl(unionDecl),
+          fieldInitializer(std::move(fieldInitializer)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

@@ -470,6 +470,19 @@ void ResolvedStructDecl::dump_dependencies(size_t level, bool dot_format) const 
     for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
 }
 
+void ResolvedUnionDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedUnionDecl " << (isPacked ? "packed " : "") << type->to_str() << '\n';
+
+    if (onlySelf) return;
+    for (auto &&field : fields) field->dump(level + 1, onlySelf);
+    for (auto &&function : functions) function->dump(level + 1, onlySelf);
+}
+
+void ResolvedUnionDecl::dump_dependencies(size_t level, bool dot_format) const {
+    ResolvedDependencies::dump_dependencies(level, dot_format);
+    for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
+}
+
 void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericStructDecl " << (isPacked ? "packed " : "") << type->to_str() << '\n';
     for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
@@ -535,6 +548,13 @@ void ResolvedStructInstantiationExpr::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
     for (auto &&field : fieldInitializers) field->dump(level + 1, onlySelf);
+}
+
+void ResolvedUnionInstantiationExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedUnionInstantiationExpr:" << type->to_str() << "\n";
+
+    if (onlySelf) return;
+    fieldInitializer->dump(level + 1, onlySelf);
 }
 
 void ResolvedArrayInstantiationExpr::dump(size_t level, bool onlySelf) const {

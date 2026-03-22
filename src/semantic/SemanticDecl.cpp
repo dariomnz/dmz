@@ -49,7 +49,7 @@ std::vector<ptr<ResolvedGenericTypeDecl>> Sema::resolve_generic_types_decl(
     return resolvedTypes;
 }
 
-ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const ResolvedStructDecl &structDecl,
+ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const ResolvedDecl &parentDecl,
                                                                    const MemberFunctionDecl &function) {
     debug_func(function.location);
 
@@ -62,17 +62,25 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
     bool isStatic = true;
 
     if (resolvedFunctionDecl->params.size() > 0) {
-        auto structType = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(&structDecl));
-        auto paramType = makePtr<ResolvedTypePointer>(function.location, std::move(structType));
-        if (resolvedFunctionDecl->params[0]->type->equal(*paramType)) {
-            isStatic = false;
+        ptr<ResolvedType> parentType = nullptr;
+        if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&parentDecl)) {
+            parentType = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(sd));
+        } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&parentDecl)) {
+            parentType = makePtr<ResolvedTypeUnion>(function.location, const_cast<ResolvedUnionDecl *>(ud));
+        }
+
+        if (parentType) {
+            auto paramType = makePtr<ResolvedTypePointer>(function.location, std::move(parentType));
+            if (resolvedFunctionDecl->params[0]->type->equal(*paramType)) {
+                isStatic = false;
+            }
         }
     }
 
     auto ret = makePtr<ResolvedMemberFunctionDecl>(
         resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
         std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
-        resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &structDecl, isStatic);
+        resolvedFunctionDecl->functionDecl, std::move(resolvedFunctionDecl->body), &parentDecl, isStatic);
     auto fnType = ret->getFnType();
     fnType->fnDecl = ret.get();
     return ret;
@@ -441,6 +449,108 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
     return true;
 }
 
+ptr<ResolvedUnionDecl> Sema::resolve_union_decl(const UnionDecl &unionDecl) {
+    debug_func(unionDecl.location);
+    std::set<std::string> identifiers;
+
+    auto resUnionDecl = makePtr<ResolvedUnionDecl>(
+        unionDecl.location, unionDecl.isPublic, unionDecl.identifier, &unionDecl, unionDecl.isPacked,
+        std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+
+    for (auto &&decl : unionDecl.decls) {
+        if (dynamic_cast<Decoration *>(decl.get())) continue;
+        if (!identifiers.emplace(decl->identifier).second)
+            return report(decl->location, "member '" + decl->identifier + "' is already declared");
+    }
+
+    return resUnionDecl;
+}
+
+bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
+    debug_func(resolvedUnionDecl.location);
+
+    auto prevUnion = m_currentUnion;
+    m_currentUnion = &resolvedUnionDecl;
+    defer([&]() { m_currentUnion = prevUnion; });
+
+    // Unions in DMZ are tagged, so we add an implicit tag field
+    // For now, let's just resolve the user-defined fields.
+    // The memory layout will be handled in codegen.
+
+    return true;
+}
+
+bool Sema::resolve_union_decl_funcs(ResolvedUnionDecl &resolvedUnionDecl) {
+    debug_func(resolvedUnionDecl.location << " " << resolvedUnionDecl.name());
+
+    auto prevUnion = m_currentUnion;
+    m_currentUnion = &resolvedUnionDecl;
+    defer([&]() { m_currentUnion = prevUnion; });
+
+    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
+    std::vector<std::string> resolvedFunctions_strs;
+    for (auto &&decl : resolvedUnionDecl.unionDecl->decls) {
+        auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
+        if (!function) continue;
+        auto memberFunc = (resolve_member_function_decl(resolvedUnionDecl, *function));
+        if (!memberFunc) return false;
+        resolvedFunctions.emplace_back(std::move(memberFunc));
+        resolvedFunctions_strs.emplace_back(function->identifier);
+    }
+
+    resolvedUnionDecl.functions = std::move(resolvedFunctions);
+    resolvedUnionDecl.functions_strs = std::move(resolvedFunctions_strs);
+
+    std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
+    std::vector<std::string> resolvedFields_strs;
+    int idx = 0;
+
+    // Implicit tag field (always at index 0)
+    auto tagType = makePtr<ResolvedTypeNumber>(resolvedUnionDecl.location, ResolvedNumberKind::UInt, 32, false);
+    resolvedUnionDecl.tag = makePtr<ResolvedFieldDecl>(resolvedUnionDecl.location, "_tag", std::move(tagType), idx++, nullptr);
+    // We don't add it to fields yet, or maybe we should?
+    // Let's keep it separate as in the class definition.
+
+    for (auto &&decl : resolvedUnionDecl.unionDecl->decls) {
+        auto field = dynamic_cast<const FieldDecl *>(decl.get());
+        if (!field) continue;
+        auto type = resolve_type(*field->type);
+        if (!type) {
+            report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
+            return false;
+        }
+        ptr<ResolvedExpr> default_initializer = nullptr;
+        if (field->default_initializer) {
+            default_initializer = resolve_expr(*field->default_initializer);
+            if (!default_initializer) return false;
+        }
+
+        auto retField = std::make_unique<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++,
+                                                            std::move(default_initializer));
+        retField->resolvedTypeExpr = resolve_expr(*field->type);
+        resolvedFields.emplace_back(std::move(retField));
+        resolvedFields_strs.emplace_back(field->identifier);
+    }
+
+    resolvedUnionDecl.fields = std::move(resolvedFields);
+    resolvedUnionDecl.fields_strs = std::move(resolvedFields_strs);
+
+    return true;
+}
+
+bool Sema::resolve_union_body_funcs(ResolvedUnionDecl &resolvedUnionDecl) {
+    auto prevUnion = m_currentUnion;
+    m_currentUnion = &resolvedUnionDecl;
+    defer([&]() { m_currentUnion = prevUnion; });
+
+    for (size_t i = 0; i < resolvedUnionDecl.functions.size(); i++) {
+        auto &resfunc = resolvedUnionDecl.functions[i];
+        if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
+    }
+
+    return true;
+}
+
 ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) {
     debug_func(structDecl.location);
     std::set<std::string> identifiers;
@@ -692,6 +802,13 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {
+        if (!resolve_module_union_decls(*module)) {
+            error = true;
+            continue;
+        }
+    }
+    if (error) return {};
+    for (auto &&module : resolvedModules) {
         if (!resolve_module_function_decls(*module, sourceModule)) {
             error = true;
             continue;
@@ -700,6 +817,13 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     if (error) return {};
     for (auto &&module : resolvedModules) {
         if (!resolve_module_struct_decl_funcs(*module)) {
+            error = true;
+            continue;
+        }
+    }
+    if (error) return {};
+    for (auto &&module : resolvedModules) {
+        if (!resolve_module_union_decl_funcs(*module)) {
             error = true;
             continue;
         }
@@ -728,6 +852,26 @@ bool Sema::resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl) {
         if (const auto *st = dynamic_cast<const StructDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             ptr<ResolvedDecl> resolvedDecl = resolve_struct_decl(*st);
+
+            if (!resolvedDecl || !insert_decl_to_module(resolvedModuleDecl, std::move(resolvedDecl))) {
+                error = true;
+                continue;
+            }
+        }
+    }
+    return !error;
+}
+
+bool Sema::resolve_module_union_decls(ResolvedModuleDecl &resolvedModuleDecl) {
+    debug_func(resolvedModuleDecl.location);
+    auto prevModule = m_currentModule;
+    m_currentModule = &resolvedModuleDecl;
+    defer([&]() { m_currentModule = prevModule; });
+    bool error = false;
+    for (auto &&decl : resolvedModuleDecl.moduleDecl.declarations) {
+        if (const auto *un = dynamic_cast<const UnionDecl *>(decl.get())) {
+            debug_msg(decl->identifier << " " << decl->location);
+            ptr<ResolvedDecl> resolvedDecl = resolve_union_decl(*un);
 
             if (!resolvedDecl || !insert_decl_to_module(resolvedModuleDecl, std::move(resolvedDecl))) {
                 error = true;
@@ -769,6 +913,24 @@ bool Sema::resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDe
         if (auto *st = dynamic_cast<ResolvedStructDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             if (!resolve_struct_decl_funcs(*st)) {
+                error = true;
+                continue;
+            }
+        }
+    }
+    return !error;
+}
+
+bool Sema::resolve_module_union_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl) {
+    debug_func(resolvedModuleDecl.location);
+    auto prevModule = m_currentModule;
+    m_currentModule = &resolvedModuleDecl;
+    defer([&]() { m_currentModule = prevModule; });
+    bool error = false;
+    for (auto &&decl : resolvedModuleDecl.declarations) {
+        if (auto *un = dynamic_cast<ResolvedUnionDecl *>(decl.get())) {
+            debug_msg(decl->identifier << " " << decl->location);
+            if (!resolve_union_decl_funcs(*un)) {
                 error = true;
                 continue;
             }
@@ -836,6 +998,19 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
             }
             if (!resolve_struct_body_funcs(*st)) {
                 debug_msg("error resolve_struct_body_funcs");
+                error = true;
+                continue;
+            }
+            continue;
+        }
+        if (auto *un = dynamic_cast<ResolvedUnionDecl *>(currentDecl)) {
+            if (!resolve_union_members(*un)) {
+                debug_msg("error resolve_union_members");
+                error = true;
+                continue;
+            }
+            if (!resolve_union_body_funcs(*un)) {
+                debug_msg("error resolve_union_body_funcs");
                 error = true;
                 continue;
             }

@@ -138,7 +138,8 @@ ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst, bool isGlobal) 
 
     varOrReturn(initializer, parse_expr());
 
-    return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, isGlobal, std::move(initializer));
+    return makePtr<VarDecl>(location, isPublic, identifier, std::move(type), !isConst, isGlobal,
+                            std::move(initializer));
 }
 
 // <structDecl>
@@ -196,7 +197,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             varOrReturn(init, parse_field_decl());
             declList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
-            eat_next_token();  // eat ','
+                eat_next_token();  // eat ','
         } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
             bool isPublic = m_nextToken.type == TokenType::kw_pub;
             if (isPublic) {
@@ -219,6 +220,79 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     structDecl->decls = std::move(declList);
 
     return structDecl;
+}
+
+ptr<UnionDecl> Parser::parse_union_decl() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    bool isPacked = false;
+    bool isPublic = false;
+    if (m_nextToken.type == TokenType::kw_pub) {
+        eat_next_token();  // eat pub
+        isPublic = true;
+    }
+
+    if (m_nextToken.type == TokenType::kw_packed) {
+        eat_next_token();  // eat packet
+        isPacked = true;
+    }
+
+    matchOrReturn(TokenType::kw_union, "expected 'union'");
+    eat_next_token();  // eat union
+
+    matchOrReturn(TokenType::id, "expected identifier");
+
+    auto unionIdentifier = m_nextToken.str;
+    eat_next_token();  // eat identifier
+
+    auto genericTypes = parse_generic_types_decl();
+    if (!genericTypes.empty()) {
+        return report(m_nextToken.loc, "unions cannot be generic");
+    }
+
+    matchOrReturn(TokenType::block_l, "expected '{'");
+    eat_next_token();  // eat openingToken
+
+    std::vector<ptr<Decl>> declList;
+    ptr<UnionDecl> unionDecl;
+    unionDecl = makePtr<UnionDecl>(location, isPublic, unionIdentifier, isPacked, std::move(declList));
+
+    while (true) {
+        if (m_nextToken.type == TokenType::block_r) break;
+
+        if (m_nextToken.type == TokenType::comment) {
+            varOrReturn(comment, parse_comment());
+            declList.emplace_back(std::move(comment));
+        } else if (m_nextToken.type == TokenType::empty_line) {
+            varOrReturn(empty_line, parse_empty_line());
+            declList.emplace_back(std::move(empty_line));
+        } else if (m_nextToken.type == TokenType::id) {
+            varOrReturn(init, parse_field_decl());
+            declList.emplace_back(std::move(init));
+            if (m_nextToken.type != TokenType::comma) break;
+                eat_next_token();  // eat ','
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
+            bool isPublic = m_nextToken.type == TokenType::kw_pub;
+            if (isPublic) {
+                eat_next_token();  // eat pub
+            }
+            varOrReturn(init, parse_function_decl());
+            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
+            auto memberFunc =
+                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
+                                            std::move(func->params), std::move(func->body), unionDecl.get());
+            declList.emplace_back(std::move(memberFunc));
+        } else {
+            return report(m_nextToken.loc, "expected identifier or fn in union");
+        }
+    }
+
+    matchOrReturn(TokenType::block_r, "expected '}'");
+    eat_next_token();  // eat closingToken
+
+    unionDecl->decls = std::move(declList);
+
+    return unionDecl;
 }
 
 // <fieldDecl>
@@ -331,10 +405,17 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
                 declarations.emplace_back(std::move(st));
                 continue;
             }
-        } else if (ttype == TokenType::kw_struct || ttype == TokenType::kw_packed) {
-            if (auto st = parse_struct_decl()) {
-                declarations.emplace_back(std::move(st));
-                continue;
+        } else if (ttype == TokenType::kw_struct || ttype == TokenType::kw_packed || ttype == TokenType::kw_union) {
+            if (ttype == TokenType::kw_union) {
+                if (auto st = parse_union_decl()) {
+                    declarations.emplace_back(std::move(st));
+                    continue;
+                }
+            } else {
+                if (auto st = parse_struct_decl()) {
+                    declarations.emplace_back(std::move(st));
+                    continue;
+                }
             }
         } else if (ttype == TokenType::kw_module) {
             if (auto st = parse_module_decl()) {

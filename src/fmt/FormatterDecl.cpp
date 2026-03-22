@@ -14,6 +14,8 @@ ptr<Node> Formatter::fmt_decl(const Decl& decl) {
         return fmt_func_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const StructDecl*>(&decl)) {
         return fmt_struct_decl(*cast_decl);
+    } else if (auto cast_decl = dynamic_cast<const UnionDecl*>(&decl)) {
+        return fmt_union_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const FieldDecl*>(&decl)) {
         return fmt_field_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const ParamDecl*>(&decl)) {
@@ -127,6 +129,36 @@ ptr<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
         }
         ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
     }
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>("{"));
+    ret->nodes.emplace_back(makePtr<Line>());
+    ret->nodes.emplace_back(makePtr<Indent>(std::move(nodes)));
+    ret->nodes.emplace_back(makePtr<Text>("}"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_union_decl(const UnionDecl& decl) {
+    debug_func("");
+
+    vec<ptr<Node>> nodes;
+    for (size_t i = 0; i < decl.decls.size(); i++) {
+        nodes.emplace_back(fmt_decl(*decl.decls[i]));
+        nodes.emplace_back(makePtr<Line>());
+    }
+
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (decl.isPublic) {
+        ret->nodes.emplace_back(makePtr<Text>("pub"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
+    if (decl.isPacked) {
+        ret->nodes.emplace_back(makePtr<Text>("packed"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
+    ret->nodes.emplace_back(makePtr<Text>("union"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
+
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("{"));
     ret->nodes.emplace_back(makePtr<Line>());

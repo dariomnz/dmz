@@ -101,6 +101,27 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             ret = llvm::StructType::getTypeByName(*m_context, name);
             if (!ret) dmz_unreachable("unexpected error generating struct decl");
         }
+    } else if (type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::UnionDecl) {
+        ResolvedUnionDecl *decl = nullptr;
+        if (auto typeUnion = dynamic_cast<const ResolvedTypeUnionDecl *>(&type)) {
+            decl = typeUnion->decl;
+        }
+        if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
+            decl = typeUnion->decl;
+        }
+        if (!decl) dmz_unreachable("unexpected error");
+        std::string name = generate_decl_name(*decl);
+        debug_msg("union '" << name << "'");
+        auto unionType = get_union_decl(*decl);
+        ret = unionType;
+        if (!ret) {
+            dmz_unreachable("cannot get type '" + name + "'");
+        }
+        if (noOpaque && unionType->isOpaque()) {
+            generate_union_fields(*decl);
+            ret = llvm::StructType::getTypeByName(*m_context, name);
+            if (!ret) dmz_unreachable("unexpected error generating union decl");
+        }
     } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
         ret = generate_type(*typeArray->arrayType, true);
         ret = llvm::ArrayType::get(ret, typeArray->arraySize);
@@ -325,6 +346,74 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         auto llvmElemType = generate_debug_type(*typeArray->arrayType);
         auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmArrayType).value() * 8;
         return m_debugBuilder.createArrayType(typeArray->arraySize, alingSize, llvmElemType, nullptr);
+    } else if (type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::UnionDecl) {
+        ResolvedUnionDecl *decl = nullptr;
+        if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
+            decl = typeUnion->decl;
+        } else if (auto typeUnion = dynamic_cast<const ResolvedTypeUnionDecl *>(&type)) {
+            decl = typeUnion->decl;
+        }
+        if (!decl) dmz_unreachable("unexpected error");
+
+        if (auto it = m_debugTypes.find(decl->name()); it != m_debugTypes.end()) {
+            return it->second;
+        }
+
+        auto unionFile = generate_debug_file(decl->location);
+        auto llvmUnionType = llvm::cast<llvm::StructType>(generate_type(type, true));
+        const auto &dl = m_module->getDataLayout();
+        const auto *structLayout = dl.getStructLayout(llvmUnionType);
+        auto bitSize = dl.getTypeSizeInBits(llvmUnionType);
+        auto alingSize = dl.getPrefTypeAlign(llvmUnionType).value() * 8;
+
+        auto forwardDecl = m_debugBuilder.createReplaceableCompositeType(
+            llvm::dwarf::DW_TAG_structure_type, decl->name(), unionFile, unionFile, decl->location.line, 0, bitSize,
+            alingSize, llvm::DINode::DIFlags::FlagFwdDecl);
+
+        m_debugTypes[decl->name()] = forwardDecl;
+
+        std::vector<llvm::Metadata *> Elements;
+
+        // Tag field
+        auto tagType = generate_debug_type(*decl->tag->type);
+        auto tagBitSize = dl.getTypeSizeInBits(m_builder.getInt32Ty());
+        auto tagAlingSize = dl.getPrefTypeAlign(m_builder.getInt32Ty()).value() * 8;
+        auto tagOffset = structLayout->getElementOffsetInBits(0);
+        auto tagField = m_debugBuilder.createMemberType(
+            unionFile, "tag", unionFile, decl->location.line, tagBitSize, tagAlingSize, tagOffset,
+            llvm::DINode::DIFlags::FlagPublic, tagType);
+        Elements.emplace_back(tagField);
+
+        // For the payload, we can create a union of all possible variants
+        std::vector<llvm::Metadata *> VariantElements;
+        for (auto &&field : decl->fields) {
+            auto llvmVariantType = generate_type(*field->type, true);
+            auto variantBitSize = dl.getTypeSizeInBits(llvmVariantType);
+            auto variantAlingSize = dl.getPrefTypeAlign(llvmVariantType).value() * 8;
+            auto variantMember = m_debugBuilder.createMemberType(
+                unionFile, field->name(), unionFile, field->location.line, variantBitSize, variantAlingSize, 0,
+                llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
+            VariantElements.emplace_back(variantMember);
+        }
+
+        auto payloadOffset = structLayout->getElementOffsetInBits(1);
+        auto payloadBitSize = bitSize - payloadOffset;
+        auto payloadUnion = m_debugBuilder.createUnionType(
+            unionFile, decl->name() + "_payload", unionFile, decl->location.line, payloadBitSize, alingSize,
+            llvm::DINode::DIFlags::FlagPublic, m_debugBuilder.getOrCreateArray(VariantElements));
+
+        auto payloadField = m_debugBuilder.createMemberType(
+            unionFile, "payload", unionFile, decl->location.line, payloadBitSize, alingSize, payloadOffset,
+            llvm::DINode::DIFlags::FlagPublic, payloadUnion);
+        Elements.emplace_back(payloadField);
+
+        auto finalType = m_debugBuilder.createStructType(
+            unionFile, decl->name(), unionFile, decl->location.line, bitSize, alingSize,
+            llvm::DINode::DIFlags::FlagPrototyped, nullptr, m_debugBuilder.getOrCreateArray(Elements));
+
+        m_debugBuilder.replaceTemporary(llvm::TempDICompositeType(forwardDecl), finalType);
+        m_debugTypes[decl->name()] = finalType;
+        return finalType;
     }
     type.dump();
     dmz_unreachable("TODO");

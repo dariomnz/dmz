@@ -83,11 +83,11 @@ class Parser {
     void synchronize();
 
     const std::unordered_set<TokenType> top_level_tokens = {
-        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct, TokenType::kw_packed,
+        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct, TokenType::kw_union, TokenType::kw_packed,
         TokenType::kw_extern, TokenType::kw_module, TokenType::kw_const,  TokenType::kw_let,
     };
     const std::unordered_set<TokenType> top_top_level_tokens = {
-        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct,
+        TokenType::eof,       TokenType::kw_fn,     TokenType::kw_struct, TokenType::kw_union,
         TokenType::kw_packed, TokenType::kw_extern, TokenType::kw_module,
     };
     const std::unordered_set<TokenType> top_stmt_level_tokens = {
@@ -139,6 +139,7 @@ class Parser {
     ptr<Stmt> parse_assignment_or_expr(bool expectSemicolon = true);
     ptr<Assignment> parse_assignment_rhs(ptr<AssignableExpr> lhs);
     ptr<StructDecl> parse_struct_decl();
+    ptr<UnionDecl> parse_union_decl();
     ptr<FieldDecl> parse_field_decl();
     ptr<FieldInitStmt> parse_field_init_stmt();
     ptr<DeferStmt> parse_defer_stmt();

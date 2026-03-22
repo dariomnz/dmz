@@ -104,11 +104,16 @@ class Codegen {
     llvm::Value *generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer);
     llvm::Value *generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer);
     llvm::Value *generate_temporary_struct(const ResolvedStructInstantiationExpr &sie);
+    llvm::Value *generate_temporary_union(const ResolvedUnionInstantiationExpr &uie);
     llvm::Value *generate_temporary_array(const ResolvedArrayInstantiationExpr &aie);
     llvm::StructType *get_struct_decl(const ResolvedStructDecl &structDecl);
     llvm::StructType *generate_struct_decl(const ResolvedStructDecl &structDecl);
     void generate_struct_fields(const ResolvedStructDecl &structDecl);
     void generate_struct_functions(const ResolvedStructDecl &structDecl);
+    llvm::StructType *get_union_decl(const ResolvedUnionDecl &unionDecl);
+    llvm::StructType *generate_union_decl(const ResolvedUnionDecl &unionDecl);
+    void generate_union_fields(const ResolvedUnionDecl &unionDecl);
+    void generate_union_functions(const ResolvedUnionDecl &unionDecl);
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);

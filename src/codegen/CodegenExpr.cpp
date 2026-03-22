@@ -82,6 +82,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sie = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         return generate_temporary_struct(*sie);
     }
+    if (auto *uie = dynamic_cast<const ResolvedUnionInstantiationExpr *>(&expr)) {
+        return generate_temporary_union(*uie);
+    }
     if (auto *aie = dynamic_cast<const ResolvedArrayInstantiationExpr *>(&expr)) {
         return generate_temporary_array(*aie);
     }
@@ -486,6 +489,20 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
             typeToGenerate = ptrType->pointerType.get();
         }
         llvm::Type *type = generate_type(*typeToGenerate);
+        if (typeToGenerate->kind == ResolvedTypeKind::Union || typeToGenerate->kind == ResolvedTypeKind::UnionDecl) {
+            if (member->index == 0) {
+                llvm::Value *field = m_builder.CreateStructGEP(type, base, 0);
+                return keepPointer ? field : load_value(field, *member->type);
+            }
+            llvm::Value *payloadArrayPtr = m_builder.CreateStructGEP(type, base, 1);
+            llvm::Type *fieldType = generate_type(*member->type);
+            llvm::Value *fieldPtr = m_builder.CreateBitCast(payloadArrayPtr, llvm::PointerType::get(fieldType, 0));
+
+            keepPointer |= member->type->generate_struct();
+            keepPointer |= member->type->kind == ResolvedTypeKind::Array;
+
+            return keepPointer ? fieldPtr : load_value(fieldPtr, *member->type);
+        }
         llvm::Value *field = m_builder.CreateStructGEP(type, base, member->index);
 
         keepPointer |= member->type->generate_struct();
@@ -586,6 +603,32 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
 
     return tmp;
 }
+
+llvm::Value *Codegen::generate_temporary_union(const ResolvedUnionInstantiationExpr &uie) {
+    debug_func("");
+    std::string tmpName = "tmp.union." + uie.type->to_str();
+    llvm::Value *tmp = allocate_stack_variable(uie.location, tmpName, *uie.type);
+
+    auto unionLLVMType = generate_type(*uie.type);
+
+    // 1. Store the tag
+    llvm::Value *tagPtr = m_builder.CreateStructGEP(unionLLVMType, tmp, 0);
+    m_builder.CreateStore(m_builder.getInt32(uie.fieldInitializer->field.index), tagPtr);
+
+    // 2. Store the payload
+    llvm::Value *payloadArrayPtr = m_builder.CreateStructGEP(unionLLVMType, tmp, 1);
+
+    auto &initExpr = *uie.fieldInitializer->initializer;
+    llvm::Value *initVal = generate_expr(initExpr, initExpr.type->generate_struct());
+
+    llvm::Type *fieldType = generate_type(*uie.fieldInitializer->field.type);
+    llvm::Value *fieldPtr = m_builder.CreateBitCast(payloadArrayPtr, llvm::PointerType::get(fieldType, 0));
+
+    store_value(initVal, fieldPtr, *initExpr.type, *uie.fieldInitializer->field.type);
+
+    return tmp;
+}
+
 
 llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationExpr &aie) {
     debug_func("");

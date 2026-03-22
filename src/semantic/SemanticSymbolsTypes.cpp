@@ -11,7 +11,9 @@ namespace DMZ {
 bool ResolvedType::is_generic() const { return false; }
 
 bool ResolvedType::generate_struct() const {
-    return kind == ResolvedTypeKind::Struct || kind == ResolvedTypeKind::Optional || kind == ResolvedTypeKind::Slice;
+    return kind == ResolvedTypeKind::Struct || kind == ResolvedTypeKind::StructDecl ||
+           kind == ResolvedTypeKind::Union || kind == ResolvedTypeKind::UnionDecl ||
+           kind == ResolvedTypeKind::Optional || kind == ResolvedTypeKind::Slice;
 }
 
 bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
@@ -231,6 +233,59 @@ bool ResolvedTypeStruct::is_generic() const {
     }
     return debug_ret(false);
 }
+
+bool ResolvedTypeUnionDecl::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeUnionDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (auto strType = dynamic_cast<const ResolvedTypeUnionDecl *>(&other)) {
+        return debug_ret(decl == strType->decl);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeUnionDecl::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeUnionDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeUnionDecl::clone() const {
+    debug_func("ResolvedTypeUnionDecl " << location);
+    return makePtr<ResolvedTypeUnionDecl>(location, decl);
+}
+
+void ResolvedTypeUnionDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeUnionDecl " << to_str() << "\n";
+}
+
+std::string ResolvedTypeUnionDecl::to_str() const { return decl->name(); }
+
+bool ResolvedTypeUnion::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeUnion " << to_str() << " " << other.to_str() << " " << location);
+    if (auto strType = dynamic_cast<const ResolvedTypeUnion *>(&other)) {
+        return debug_ret(decl == strType->decl);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeUnion::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeUnion " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeUnion::clone() const {
+    debug_func("ResolvedTypeUnion " << location);
+    return makePtr<ResolvedTypeUnion>(location, decl);
+}
+
+void ResolvedTypeUnion::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeUnion " << to_str() << "\n";
+}
+
+std::string ResolvedTypeUnion::to_str() const { return decl->name() + "{}"; }
 
 bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);

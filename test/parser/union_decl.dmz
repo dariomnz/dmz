@@ -1,0 +1,19 @@
+// RUN: dmz %s -ast-dump 2>&1 | filecheck %s
+union Token {
+    int_val: i32,
+    str_val: *u8,
+}
+
+fn main() -> void {
+    let t = Token { int_val: 5 };
+}
+
+// CHECK: UnionDecl Token
+// CHECK-NEXT:   FieldDecl:i32 int_val
+// CHECK-NEXT:   FieldDecl:*u8 str_val
+// CHECK: DeclStmt
+// CHECK-NEXT:   VarDecl: t
+// CHECK-NEXT:     StructInstantiationExpr
+// CHECK-NEXT:       DeclRefExpr Token
+// CHECK-NEXT:       FieldInitStmt int_val
+// CHECK-NEXT:         IntLiteral '5'

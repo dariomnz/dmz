@@ -1,0 +1,71 @@
+// RUN: dmz %s -test -run 2>&1 | filecheck %s
+
+// CHECK: Run test [1/5] 'union instantiation and access'.
+// CHECK-NEXT: Run test [2/5] 'union memory sharing'.
+// CHECK-NEXT: Run test [3/5] 'union tag comparison'.
+// CHECK-NEXT: Run test [4/5] 'union switch'.
+// CHECK-NEXT: Run test [5/5] 'switch on tagged union'.
+// CHECK-NEXT: All 5 tests passed.
+
+const std = import("std");
+
+union Token {
+    int_val: i32,
+    str_val: *u8,
+}
+
+test "union instantiation and access" {
+    let t = Token { int_val: 5 };
+    try std.testing.expect(t.int_val == 5);
+    
+    let t2 = Token { str_val: "hello" };
+    try std.testing.expect(t2.str_val[0] == 'h');
+    try std.testing.expect(t2.str_val[1] == 'e');
+    try std.testing.expect(t2.str_val[2] == 'l');
+    try std.testing.expect(t2.str_val[3] == 'l');
+    try std.testing.expect(t2.str_val[4] == 'o');
+}
+
+union Mix {
+    a: i32,
+    b: i32,
+}
+
+test "union memory sharing" {
+    let m = Mix { a: 10 };
+    try std.testing.expect(m.a == 10);
+    try std.testing.expect(m.b == 10);
+    try std.testing.expect(m.tag == Mix.a);
+    m.b = 20;
+    // The tag shouldn't change just by assigning to a member if it was already initialized
+    try std.testing.expect(m.tag == Mix.a);
+}
+
+test "union tag comparison" {
+    let t = Token { int_val: 5 };
+    try std.testing.expect(t.tag == Token.int_val);
+    
+    let t2 = Token { str_val: "hello" };
+    try std.testing.expect(t2.tag == Token.str_val);
+}
+
+test "union switch" {
+    let t = Token { int_val: 5 };
+    let mutRes = 0;
+    switch (t.tag) {
+        case Token.int_val => mutRes = 1;
+        case Token.str_val => mutRes = 2;
+        else => mutRes = 3;
+    }
+    try std.testing.expect(mutRes == 1);
+}
+
+test "switch on tagged union" {
+    let value = Token{ int_val: 1 };
+    switch (value.tag) {
+        case Token.int_val => value.int_val += 1;
+        case Token.str_val => {}
+        else => {}
+    }
+    try std.testing.expect(value.int_val == 2);
+}

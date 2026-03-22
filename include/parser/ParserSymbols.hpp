@@ -605,26 +605,26 @@ struct GenericFunctionDecl : public FunctionDecl {
 // Forware declaration
 struct StructDecl;
 struct MemberFunctionDecl : public FunctionDecl {
-    StructDecl* structBase;
+    Decl* parentDecl;
 
     MemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, StructDecl* structBase)
+                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, Decl* parentDecl)
         : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
-          structBase(structBase) {}
+          parentDecl(parentDecl) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
 };
 
 struct MemberGenericFunctionDecl : public GenericFunctionDecl {
-    StructDecl* structBase;
+    Decl* parentDecl;
 
     MemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                               std::vector<ptr<ParamDecl>> params, ptr<Block> body,
-                              std::vector<ptr<GenericTypeDecl>> genericTypes, StructDecl* structBase)
+                              std::vector<ptr<GenericTypeDecl>> genericTypes, Decl* parentDecl)
         : GenericFunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params),
                               std::move(body), std::move(genericTypes)),
-          structBase(structBase) {}
+          parentDecl(parentDecl) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -662,6 +662,18 @@ struct GenericStructDecl : public StructDecl {
                       std::vector<ptr<Decl>> decls, std::vector<ptr<GenericTypeDecl>> genericTypes)
         : StructDecl(location, isPublic, std::move(identifier), isPacked, std::move(decls)),
           genericTypes(std::move(genericTypes)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct UnionDecl : public Decl {
+    bool isPacked;
+    std::vector<ptr<Decl>> decls;
+
+    UnionDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
+               std::vector<ptr<Decl>> decls)
+        : Decl(location, isPublic, std::move(identifier)), isPacked(isPacked), decls(std::move(decls)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

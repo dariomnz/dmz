@@ -113,8 +113,10 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
     if (id == "@This") {
         if (m_currentStruct) {
             return m_currentStruct;
+        } else if (m_currentUnion) {
+            return m_currentUnion;
         } else {
-            return report(loc, "unexpected use of @This outside a struct");
+            return report(loc, "unexpected use of @This outside a struct or union");
         }
     }
 
@@ -140,6 +142,11 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
 
     if (m_currentStruct) {
         auto ret = lookup_in_struct(loc, *m_currentStruct, id, needAddDeps);
+        if (ret) return ret;
+    }
+
+    if (m_currentUnion) {
+        auto ret = lookup_in_union(loc, *m_currentUnion, id, needAddDeps);
         if (ret) return ret;
     }
 
@@ -186,6 +193,29 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
     for (auto &&decl : structDecl.fields) {
         if (id != decl->identifier) continue;
         return decl.get();
+    }
+    return nullptr;
+}
+
+ResolvedDecl *Sema::lookup_in_union(const SourceLocation &loc, const ResolvedUnionDecl &unionDecl,
+                                    const std::string_view id, bool needAddDeps) {
+    debug_func("Union " << unionDecl.identifier << " " << id);
+    if (needAddDeps) add_dependency(const_cast<ResolvedUnionDecl *>(&unionDecl));
+    for (auto &&decl : unionDecl.functions) {
+        if (id != decl->identifier) continue;
+        if (&unionDecl != m_currentUnion && !decl->isPublic) {
+            report(loc, "cannot access private member '" + std::string(id) + "'");
+            return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
+        }
+        if (needAddDeps) add_dependency(decl.get());
+        return decl.get();
+    }
+    for (auto &&decl : unionDecl.fields) {
+        if (id != decl->identifier) continue;
+        return decl.get();
+    }
+    if (id == "tag") {
+        return unionDecl.tag.get();
     }
     return nullptr;
 }
@@ -304,10 +334,12 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
         }
         if (dynamic_cast<ResolvedDeclStmt *>(decl) || dynamic_cast<ResolvedParamDecl *>(decl) ||
-            dynamic_cast<ResolvedStructDecl *>(decl) || dynamic_cast<ResolvedCaptureDecl *>(decl) ||
-            dynamic_cast<ResolvedVarDecl *>(decl)) {
+            dynamic_cast<ResolvedStructDecl *>(decl) || dynamic_cast<ResolvedUnionDecl *>(decl) ||
+            dynamic_cast<ResolvedCaptureDecl *>(decl) || dynamic_cast<ResolvedVarDecl *>(decl)) {
             if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
+            } else if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->decl, declRefType->identifier == "@This");
             } else {
                 ret = decl->type->clone();
             }
@@ -1009,6 +1041,10 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
                 for (auto &&decl : genStrDecl->specializations) {
                     stack.push(elem{decl.get(), e.level + 1, e.symbol});
                 }
+            }
+        } else if (const auto *unionDecl = dynamic_cast<const ResolvedUnionDecl *>(e.decl)) {
+            for (auto &&decl : unionDecl->functions) {
+                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
             }
         } else if (const auto *ErrorGroupExprDecl = dynamic_cast<const ResolvedErrorGroupExprDecl *>(e.decl)) {
             for (auto &&decl : ErrorGroupExprDecl->errors) {

@@ -34,6 +34,7 @@ class Formatter {
     ptr<Node> fmt_module_decl(const ModuleDecl& decl);
     ptr<Node> fmt_func_decl(const FuncDecl& decl);
     ptr<Node> fmt_struct_decl(const StructDecl& decl);
+    ptr<Node> fmt_union_decl(const UnionDecl& decl);
     ptr<Node> fmt_field_decl(const FieldDecl& decl);
     ptr<Node> fmt_param_decl(const ParamDecl& decl);
     ptr<Node> fmt_error_decl(const ErrorDecl& decl);

@@ -46,6 +46,18 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(st->decl)) {
             if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
         }
+    } else if (const auto* ut = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
+        if (ut->decl &&
+            is_at_location(ut->location, (ut->is_this ? std::string("@This") : ut->decl->identifier).length())) {
+            found_decl = ut->decl;
+            return;
+        }
+    } else if (const auto* ud = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
+        if (ud->decl &&
+            is_at_location(ud->location, (ud->is_this ? std::string("@This") : ud->decl->identifier).length())) {
+            found_decl = ud->decl;
+            return;
+        }
     } else if (const auto* mdt = dynamic_cast<const ResolvedTypeModule*>(&type)) {
         if (mdt->moduleDecl && is_at_location(mdt->location, mdt->moduleDecl->identifier.length())) {
             found_decl = mdt->moduleDecl;
@@ -126,6 +138,15 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
             if (found_decl) return;
         }
         for (const auto& method : sd->functions) {
+            find_in_decl(*method);
+            if (found_decl) return;
+        }
+    } else if (const auto* ud = dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
+        for (const auto& field : ud->fields) {
+            find_in_decl(*field);
+            if (found_decl) return;
+        }
+        for (const auto& method : ud->functions) {
             find_in_decl(*method);
             if (found_decl) return;
         }
@@ -220,6 +241,16 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             find_in_expr(*init->initializer);
             if (found_decl) return;
         }
+    } else if (const auto* uie = dynamic_cast<const ResolvedUnionInstantiationExpr*>(&expr)) {
+        if (is_at_location(uie->location, uie->unionDecl.identifier.length())) {
+            found_decl = &uie->unionDecl;
+            return;
+        }
+        if (is_at_location(uie->fieldInitializer->location, uie->fieldInitializer->field.identifier.length())) {
+            found_decl = &uie->fieldInitializer->field;
+            return;
+        }
+        find_in_expr(*uie->fieldInitializer->initializer);
     } else if (const auto* re = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
         for (const auto& init : re->initializers) {
             find_in_expr(*init);

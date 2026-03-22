@@ -134,6 +134,12 @@ int CFGBuilder::insert_expr(const ResolvedExpr &expr, int block) {
             insert_stmt(**it, block);
         return block;
     }
+    if (const auto *unionInst = dynamic_cast<const ResolvedUnionInstantiationExpr *>(&expr)) {
+        if (unionInst->fieldInitializer) {
+            insert_stmt(*unionInst->fieldInitializer, block);
+        }
+        return block;
+    }
     if (const auto *catchErrorExpr = dynamic_cast<const ResolvedCatchErrorExpr *>(&expr)) {
         return insert_expr(*catchErrorExpr->errorToCatch, block);
     }

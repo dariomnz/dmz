@@ -37,6 +37,11 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
         return evaluate_decl_ref_expr(*declRefExpr, allowSideEffects);
     }
     if (const auto *memberExpr = dynamic_cast<const ResolvedMemberExpr *>(&expr)) {
+        if (memberExpr->base->type->kind == ResolvedTypeKind::UnionDecl) {
+            if (auto field = dynamic_cast<const ResolvedFieldDecl *>(&memberExpr->member)) {
+                return field->index;
+            }
+        }
         return evaluate_decl(memberExpr->member, allowSideEffects);
     }
     if (const auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {

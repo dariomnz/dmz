@@ -334,6 +334,59 @@ void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
     }
 }
 
+llvm::StructType *Codegen::get_union_decl(const ResolvedUnionDecl &unionDecl) {
+    auto name = generate_decl_name(unionDecl);
+    auto unionType = llvm::StructType::getTypeByName(*m_context, name);
+    if (unionType) return unionType;
+
+    auto ret = generate_union_decl(unionDecl);
+    generate_union_fields(unionDecl);
+    return ret;
+}
+
+llvm::StructType *Codegen::generate_union_decl(const ResolvedUnionDecl &unionDecl) {
+    debug_func(unionDecl.name());
+    auto unionType = llvm::StructType::create(*m_context, generate_decl_name(unionDecl));
+    debug_msg(Dumper([&]() { unionType->print(llvm::errs()); }));
+
+    for (auto &&func : unionDecl.functions) {
+        generate_function_decl(*func);
+    }
+
+    return unionType;
+}
+
+void Codegen::generate_union_fields(const ResolvedUnionDecl &unionDecl) {
+    debug_func(unionDecl.name());
+    auto *type = static_cast<llvm::StructType *>(generate_type(*unionDecl.type));
+
+    if (!type->isOpaque()) {
+        debug_msg("already generated " << unionDecl.name());
+        return;
+    }
+
+    uint64_t maxSize = 0;
+    const llvm::DataLayout &dl = m_module->getDataLayout();
+    for (auto &&field : unionDecl.fields) {
+        llvm::Type *t = generate_type(*field->type, true);
+        debug_msg(field->type->to_str() << " size: " << dl.getTypeAllocSize(t).getFixedValue());
+        maxSize = std::max(maxSize, dl.getTypeAllocSize(t).getFixedValue());
+    }
+
+    std::vector<llvm::Type *> fieldTypes;
+    fieldTypes.emplace_back(m_builder.getInt32Ty());                                // Tag
+    fieldTypes.emplace_back(llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize));  // Payload
+
+    type->setBody(fieldTypes, false);
+}
+
+void Codegen::generate_union_functions(const ResolvedUnionDecl &unionDecl) {
+    debug_func(unionDecl.name());
+    for (auto &&func : unionDecl.functions) {
+        generate_function_body(*func);
+    }
+}
+
 void Codegen::generate_error_no_err() {
     debug_func("");
     if (m_success) return;
@@ -393,6 +446,8 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
         if (!decl->is_needed()) continue;
         if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
+        } else if (const auto *ud = dynamic_cast<const ResolvedUnionDecl *>(decl.get())) {
+            generate_union_decl(*ud);
         } else if (const auto *ds = dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             generate_global_var_decl(*ds);
         } else if (dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
@@ -416,6 +471,7 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
             generate_function_decl(*fn);
         } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
                    dynamic_cast<const ResolvedStructDecl *>(decl.get()) ||
+                   dynamic_cast<const ResolvedUnionDecl *>(decl.get()) ||
                    dynamic_cast<const ResolvedDeclStmt *>(decl.get())) {
             continue;
         } else {
@@ -434,6 +490,8 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
             continue;
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_fields(*sd);
+        } else if (const auto *ud = dynamic_cast<const ResolvedUnionDecl *>(decl.get())) {
+            generate_union_fields(*ud);
         } else {
             decl->dump();
             dmz_unreachable("unexpected top level in module declaration");
@@ -454,6 +512,8 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
             continue;
         } else if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_functions(*sd);
+        } else if (const auto *ud = dynamic_cast<const ResolvedUnionDecl *>(decl.get())) {
+            generate_union_functions(*ud);
         } else if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_body(*fn);
         } else {
@@ -466,7 +526,7 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
     if (stmt.type->kind == ResolvedTypeKind::Module || stmt.type->kind == ResolvedTypeKind::Function ||
-        stmt.type->kind == ResolvedTypeKind::StructDecl)
+        stmt.type->kind == ResolvedTypeKind::StructDecl || stmt.type->kind == ResolvedTypeKind::UnionDecl)
         return;
 
     if (stmt.type->kind == ResolvedTypeKind::ErrorGroup) {

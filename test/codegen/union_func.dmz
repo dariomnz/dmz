@@ -1,0 +1,39 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+
+// CHECK: t.int_val == 5: 1
+// CHECK-NEXT: int_val
+// CHECK-NEXT: str_val
+// CHECK-NEXT: t2.str_val[0] == 'h': 1
+// CHECK-NEXT: t2.str_val[1] == 'e': 1
+// CHECK-NEXT: t2.str_val[2] == 'l': 1
+// CHECK-NEXT: t2.str_val[3] == 'l': 1
+// CHECK-NEXT: t2.str_val[4] == 'o': 1
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+union Token {
+    int_val: i32,
+    str_val: *u8,
+
+    pub fn print(self: *@This) -> void {
+        switch (self.tag) {
+            case Token.int_val => printf("int_val\n");
+            case Token.str_val => printf("str_val\n");
+            else => printf("unknown\n");
+        }
+    }
+}
+
+fn main() -> void {
+    let t = Token{int_val: 5};
+    printf("t.int_val == 5: %d\n", t.int_val == 5);
+    t.print();
+
+    let t2 = Token{str_val: "hello"};
+    t2.print();
+    printf("t2.str_val[0] == 'h': %d\n", t2.str_val[0] == 'h');
+    printf("t2.str_val[1] == 'e': %d\n", t2.str_val[1] == 'e');
+    printf("t2.str_val[2] == 'l': %d\n", t2.str_val[2] == 'l');
+    printf("t2.str_val[3] == 'l': %d\n", t2.str_val[3] == 'l');
+    printf("t2.str_val[4] == 'o': %d\n", t2.str_val[4] == 'o');
+}

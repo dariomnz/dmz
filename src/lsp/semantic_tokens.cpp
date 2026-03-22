@@ -50,6 +50,15 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             for (const auto& func : structDecl->functions) {
                 traverse_decl(*func);
             }
+        } else if (auto* unionDecl = dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
+            add_token(unionDecl->location, unionDecl->identifier, SemanticTokenType::Type,
+                      (uint32_t)SemanticTokenModifier::Declaration);
+            for (const auto& field : unionDecl->fields) {
+                traverse_decl(*field);
+            }
+            for (const auto& func : unionDecl->functions) {
+                traverse_decl(*func);
+            }
         } else if (auto* funcDecl = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
             if (!dynamic_cast<const ResolvedTestDecl*>(funcDecl)) {
                 if (!dynamic_cast<const ResolvedLambdaFunctionDecl*>(funcDecl)) {
@@ -177,6 +186,14 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
                 if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(declRef->type.get())) {
                     is_this = structType->is_this;
                 }
+            } else if (dynamic_cast<const ResolvedUnionDecl*>(&declRef->decl)) {
+                type = SemanticTokenType::Type;
+                if (auto* unionDeclType = dynamic_cast<const ResolvedTypeUnionDecl*>(declRef->type.get())) {
+                    is_this = unionDeclType->is_this;
+                }
+                if (auto* unionType = dynamic_cast<const ResolvedTypeUnion*>(declRef->type.get())) {
+                    is_this = unionType->is_this;
+                }
             } else if (dynamic_cast<const ResolvedParamDecl*>(&declRef->decl))
                 type = SemanticTokenType::Parameter;
             else if (dynamic_cast<const ResolvedModuleDecl*>(&declRef->decl))
@@ -231,6 +248,25 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
                     add_token(init->location, init->field.identifier, SemanticTokenType::Property);
                 }
                 traverse_expr(*init->initializer);
+            }
+        } else if (auto* instantiation = dynamic_cast<const ResolvedUnionInstantiationExpr*>(&expr)) {
+            debug_msg("ResolvedUnionInstantiationExpr");
+            std::cerr << "ResolvedUnionInstantiationExpr: " << instantiation->unionDecl.identifier << std::endl;
+            bool is_this = false;
+            if (auto* unionDeclType = dynamic_cast<const ResolvedTypeUnionDecl*>(instantiation->type.get())) {
+                is_this = unionDeclType->is_this;
+            }
+            if (auto* unionType = dynamic_cast<const ResolvedTypeUnion*>(instantiation->type.get())) {
+                is_this = unionType->is_this;
+            }
+
+            std::cerr << "color: " << (is_this ? "@This" : instantiation->unionDecl.identifier) << std::endl;
+            add_token(instantiation->location, is_this ? "@This" : instantiation->unionDecl.identifier,
+                      SemanticTokenType::Type);
+            if (instantiation->fieldInitializer) {
+                add_token(instantiation->fieldInitializer->location, instantiation->fieldInitializer->field.identifier,
+                          SemanticTokenType::Property);
+                traverse_expr(*instantiation->fieldInitializer->initializer);
             }
         } else if (auto* arrInstantiation = dynamic_cast<const ResolvedArrayInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedArrayInstantiationExpr");
@@ -344,6 +380,16 @@ void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
         }
         if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(structDecl->decl)) {
             if (specStru->specializedTypes) traverse_type(*specStru->specializedTypes);
+        }
+    } else if (auto* unionTy = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
+        if (unionTy->location.file_name == m_target_file) {
+            add_token(unionTy->location, unionTy->is_this ? "@This" : unionTy->decl->identifier,
+                      SemanticTokenType::Type);
+        }
+    } else if (auto* unionDecl = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
+        if (unionDecl->location.file_name == m_target_file) {
+            add_token(unionDecl->location, unionDecl->is_this ? "@This" : unionDecl->decl->identifier,
+                      SemanticTokenType::Type);
         }
     } else if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
                dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type) ||

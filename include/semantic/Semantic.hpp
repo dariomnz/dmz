@@ -22,6 +22,7 @@ class Sema {
     std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;
+    ResolvedUnionDecl *m_currentUnion = nullptr;
     int m_loopDepth = 0;
     std::vector<ResolvedCatchErrorExpr *> m_catchStack;
 
@@ -66,6 +67,8 @@ class Sema {
                                    const std::string_view id, bool needAddDeps = true);
     ResolvedDecl *lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
                                    const std::string_view id, bool needAddDeps = true);
+    ResolvedDecl *lookup_in_union(const SourceLocation &loc, const ResolvedUnionDecl &unionDecl,
+                                  const std::string_view id, bool needAddDeps = true);
     // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
     bool insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound = false);
     void remove_decl_to_current_scope(ResolvedDecl &decl);
@@ -93,7 +96,7 @@ class Sema {
                                                              ResolvedGenericStructDecl &struDecl,
                                                              const ResolvedTypeSpecialized &specializedTypes);
     ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
-    ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedStructDecl &structDecl,
+    ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedDecl &parentDecl,
                                                                  const MemberFunctionDecl &function);
     ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     ptr<ResolvedBlock> resolve_block(const Block &block);
@@ -125,14 +128,18 @@ class Sema {
     ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
     ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
-    ptr<ResolvedStructInstantiationExpr> resolve_struct_instantiation(
+    ptr<ResolvedExpr> resolve_struct_instantiation(
         const StructInstantiationExpr &structInstantiation);
-    ptr<ResolvedStructInstantiationExpr> resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation);
-    ptr<ResolvedArrayInstantiationExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);
+    ptr<ResolvedExpr> resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation);
+    ptr<ResolvedExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);
     ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
     bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl);
+    ptr<ResolvedUnionDecl> resolve_union_decl(const UnionDecl &unionDecl);
+    bool resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl);
+    bool resolve_union_decl_funcs(ResolvedUnionDecl &resolvedUnionDecl);
+    bool resolve_union_body_funcs(ResolvedUnionDecl &resolvedUnionDecl);
     ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
     ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
@@ -144,8 +151,10 @@ class Sema {
                                                                bool sourceModule);
     ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
     bool resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_union_decls(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_decl_stmts(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
+    bool resolve_module_union_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, bool sourceModule);
 
     // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);

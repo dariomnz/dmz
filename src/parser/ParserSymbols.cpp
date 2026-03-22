@@ -94,7 +94,7 @@ void MemberFunctionDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 std::string MemberFunctionDecl::to_str() const { dmz_unreachable("TODO"); }
 
 void MemberGenericFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << structBase->identifier << "\n";
+    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << parentDecl->identifier << "\n";
     GenericFunctionDecl::dump(level + 1);
 }
 
@@ -382,6 +382,14 @@ void GenericStructDecl::dump(size_t level) const {
 }
 
 std::string GenericStructDecl::to_str() const { dmz_unreachable("TODO"); }
+
+void UnionDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "UnionDecl " << (isPacked ? "packed " : "") << identifier << '\n';
+
+    for (auto &&decl : decls) decl->dump(level + 1);
+}
+
+std::string UnionDecl::to_str() const { dmz_unreachable("TODO"); }
 
 void MemberExpr::dump(size_t level) const {
     std::cerr << indent(level) << "MemberExpr ." << field << '\n';

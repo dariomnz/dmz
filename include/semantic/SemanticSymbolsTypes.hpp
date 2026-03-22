@@ -13,6 +13,8 @@ enum class ResolvedTypeKind {
     Bool,
     StructDecl,
     Struct,
+    UnionDecl,
+    Union,
     Generic,
     Specialized,
     Error,
@@ -91,6 +93,8 @@ struct ResolvedTypeBool : public ResolvedTypeNumber {
 };
 
 struct ResolvedStructDecl;  // Forward declaration
+struct ResolvedUnionDecl;   // Forward declaration
+
 struct ResolvedTypeStructDecl : public ResolvedType {
     ResolvedStructDecl *decl;
     bool is_this = false;
@@ -117,6 +121,32 @@ struct ResolvedTypeStruct : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     bool is_generic() const override;
+};
+
+struct ResolvedTypeUnionDecl : public ResolvedType {
+    ResolvedUnionDecl *decl;
+    bool is_this = false;
+    ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false)
+        : ResolvedType(ResolvedTypeKind::UnionDecl, std::move(location)), decl(decl), is_this(is_this) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct ResolvedTypeUnion : public ResolvedType {
+    ResolvedUnionDecl *decl;
+    bool is_this = false;
+    ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false)
+        : ResolvedType(ResolvedTypeKind::Union, std::move(location)), decl(decl), is_this(is_this) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
 };
 
 struct ResolvedGenericTypeDecl;  // Forward declaration
