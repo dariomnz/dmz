@@ -106,7 +106,7 @@ pub fn fmtStruct<T>(w: std.io.Writer, s: T) -> !usize {
     inline if (@hasMethod(s, "fmt")) {
         return s.fmt(w);
     }
-    const typeinfo = @typeinfo(s);
+    const typeinfo = @typeinfo(s).infoStruct;
     let ret: usize = 0;
     ret += try w.writeAll(typeinfo.name);
     ret += try w.writeChar('{');
@@ -185,7 +185,7 @@ pub fn fmtSimd<T>(w: std.io.Writer, v: T) -> !usize {
     let ret: usize = 0;
     let current_element = 0;
     inline if (@typeid(v) == std.types.simd_t) {
-        const typeinfo = @typeinfo(v);
+        const typeinfo = @typeinfo(v).infoSimd;
         ret += try w.writeAll(typeinfo.type);
         ret += try w.writeChar('(');
         while (current_element < typeinfo.len) {
@@ -256,14 +256,15 @@ struct Test_struct2 {
 test "print integers" {
     let a = 6;
     let b = 10;
-    let buf: u8[1024] = {};
-    let w = std.io.Writer.fixed(buf[0..1024]);
+    const buf_len = 128;
+    let buf: u8[buf_len] = {};
+    let w = std.io.Writer.fixed(buf[0..buf_len]);
     let ret = try fmt(w, "Value a {} value b {}\n", .{a + 1, b});
     let expected = "Value a 7 value b 10\n";
     try std.testing.expect(std.mem.memcmp(&buf[0], expected, std.mem.strlen(expected)) == 0);
 
-    let buf2: u8[1024] = {};
-    let w2 = std.io.stdout.writer(buf2[0..1024]);
+    let buf2: u8[buf_len] = {};
+    let w2 = std.io.stdout.writer(buf2[0..buf_len]);
     let big: i128 = 123456789;
     big *= 1000000000;
     big *= 1000000000;

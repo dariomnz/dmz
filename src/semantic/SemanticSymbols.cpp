@@ -158,14 +158,14 @@ void ResolvedTypeidExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeidExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
     dump_constant_value(level);
-    typeidExpr->dump(level + 1, onlySelf);
+    if (typeidExpr) typeidExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedTypeinfoExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeinfoExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
     dump_constant_value(level);
-    typeinfoExpr->dump(level + 1, onlySelf);
+    if (typeinfoExpr) typeinfoExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedHasMethodExpr::dump(size_t level, bool onlySelf) const {

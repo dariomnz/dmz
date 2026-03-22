@@ -462,7 +462,7 @@ ptr<ImportExpr> Parser::parse_import_expr() {
     matchOrReturn(TokenType::par_r, "expected ')'");
     eat_next_token();  // eat )
 
-    auto ids = Driver::register_import(m_lexer.get_file_path(), identifier);
+    auto ids = Driver::register_import(location, m_lexer.get_file_path(), identifier);
     return makePtr<ImportExpr>(location, identifier, ids.first, ids.second);
 }
 

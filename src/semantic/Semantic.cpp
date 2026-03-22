@@ -465,8 +465,10 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     }
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::Bool || type.kind == ResolvedTypeKind::StructDecl ||
-        type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::ErrorGroup ||
-        type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function) {
+        type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::UnionDecl ||
+        type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::ErrorGroup ||
+        type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function ||
+        type.kind == ResolvedTypeKind::Module) {
         ret = type.clone();
         retPtr = ret.get();
         return ret;

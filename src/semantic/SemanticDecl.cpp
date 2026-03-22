@@ -436,12 +436,6 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
         return false;
     }
 
-    if (dynamic_cast<ResolvedMemberExpr *>(resolvedInitializer.get()) && !varDecl.isMutable) {
-        if (auto structType = dynamic_cast<ResolvedTypeStruct *>(resolvedInitializer->type.get())) {
-            resolvedInitializer->type =
-                makePtr<ResolvedTypeStructDecl>(structType->location, structType->decl, structType->is_this);
-        }
-    }
 
     varDecl.type = type->clone();
     varDecl.initializer = std::move(resolvedInitializer);
@@ -504,12 +498,6 @@ bool Sema::resolve_union_decl_funcs(ResolvedUnionDecl &resolvedUnionDecl) {
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     std::vector<std::string> resolvedFields_strs;
     int idx = 0;
-
-    // Implicit tag field (always at index 0)
-    auto tagType = makePtr<ResolvedTypeNumber>(resolvedUnionDecl.location, ResolvedNumberKind::UInt, 32, false);
-    resolvedUnionDecl.tag = makePtr<ResolvedFieldDecl>(resolvedUnionDecl.location, "_tag", std::move(tagType), idx++, nullptr);
-    // We don't add it to fields yet, or maybe we should?
-    // Let's keep it separate as in the class definition.
 
     for (auto &&decl : resolvedUnionDecl.unionDecl->decls) {
         auto field = dynamic_cast<const FieldDecl *>(decl.get());

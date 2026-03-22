@@ -244,7 +244,8 @@ void Driver::fmt_pass(ptr<ModuleDecl> ast) {
     m_haveNormalExit = true;
 }
 
-std::pair<std::string, std::filesystem::path> Driver::register_import(const std::filesystem::path &source,
+std::pair<std::string, std::filesystem::path> Driver::register_import(SourceLocation location,
+                                                                      const std::filesystem::path &source,
                                                                       std::string_view imported) {
     debug_func("source: '" << source << "' imported '" << imported << "'");
     auto &d = instance();
@@ -263,6 +264,7 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
 
         debug_msg("module_path " << module_path);
         if (!std::filesystem::exists(module_path)) {
+            report(location, std::string("'") + module_path.string() + "' doesn't exits");
             debug_msg("error: doesnt exists module_path " << module_path);
             debug_msg("[Driver] Module not found: " << module_path << " (from imported=" << imported
                                                     << " source=" << source << ")");
@@ -291,27 +293,29 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(const std:
                 parent_path = proyect_path;
             }
         }
-        if (parent_path.empty()) {
-            debug_msg("error: parent_path empty");
-            return {"", ""};
-        }
-        // Extract the diferente, in other words the relative path
-        std::string parent_path_str = parent_path.string();
-        auto diff = module_path_str.substr(parent_path_str.size());
         std::string termination = ".dmz";
-        if (diff.find_last_of(termination) != diff.size() - 1) {
-            dmz_unreachable("unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
-        }
+        if (parent_path.empty()) {
+            debug_msg("parent_path empty");
+            std::string name = module_path.filename();
+            identifier = name.substr(0, name.size() - termination.size());
+        } else {
+            // Extract the diferente, in other words the relative path
+            std::string parent_path_str = parent_path.string();
+            auto diff = module_path_str.substr(parent_path_str.size());
+            if (diff.find_last_of(termination) != diff.size() - 1) {
+                dmz_unreachable("unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
+            }
 
-        // convert the relative path to symbol name
-        int start_pos = (diff.size() > 0 && diff[0] == '/') ? 1 : 0;
-        diff = diff.substr(start_pos, diff.size() - (termination.size() + start_pos));
-        std::replace(diff.begin(), diff.end(), '/', '.');
-        // identifier empty if is not from imports
-        if (!identifier.empty() && !diff.empty()) {
-            identifier += ".";
+            // convert the relative path to symbol name
+            int start_pos = (diff.size() > 0 && diff[0] == '/') ? 1 : 0;
+            diff = diff.substr(start_pos, diff.size() - (termination.size() + start_pos));
+            std::replace(diff.begin(), diff.end(), '/', '.');
+            // identifier empty if is not from imports
+            if (!identifier.empty() && !diff.empty()) {
+                identifier += ".";
+            }
+            identifier += diff;
         }
-        identifier += diff;
     } else {
         auto it = d.m_options.imports.find(std::string(imported));
         if (it == d.m_options.imports.end()) {

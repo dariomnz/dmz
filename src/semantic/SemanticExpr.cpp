@@ -96,7 +96,11 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "symbol '" + declRefExpr.identifier + "' not found");
     }
 
-    auto type = decl->type->clone();
+    auto type = re_resolve_type(*decl->type);
+    if (!type) {
+        decl->dump();
+        dmz_unreachable("unreachable");
+    }
     if (declRefExpr.identifier == "@This") {
         if (auto *st = dynamic_cast<ResolvedTypeStruct *>(type.get())) {
             st->is_this = true;
@@ -759,9 +763,9 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         resolvedBase = makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
     }
     auto res = makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
-    if (res->base->type->kind == ResolvedTypeKind::UnionDecl) {
+    if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl*>(res->base->type.get())) {
         if (dynamic_cast<const ResolvedFieldDecl *>(&res->member)) {
-            res->type = makePtr<ResolvedTypeNumber>(res->location, ResolvedNumberKind::UInt, 32);
+            res->type = unionDecl->decl->tag->type->clone();
         }
     }
     res->set_constant_value(cee.evaluate(*res, false));
@@ -1225,29 +1229,17 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     debug_func(typeinfoExpr.location);
     varOrReturn(expr, resolve_expr(*typeinfoExpr.typeinfoExpr));
 
-    std::string targetStructName;
-    if (expr->type->kind == ResolvedTypeKind::Number) {
-        targetStructName = "TypeInfoNumber";
-    } else if (expr->type->kind == ResolvedTypeKind::Simd) {
-        targetStructName = "TypeInfoSimd";
-    } else if (expr->type->kind == ResolvedTypeKind::Bool || expr->type->kind == ResolvedTypeKind::Void) {
-        targetStructName = "TypeInfo";
-    } else if (expr->type->kind == ResolvedTypeKind::StructDecl || expr->type->kind == ResolvedTypeKind::Struct ||
-               expr->type->kind == ResolvedTypeKind::Generic) {
-        targetStructName = "TypeInfoStruct";
-    } else {
-        return report(typeinfoExpr.location, "unsupported type for @typeinfo: " + expr->type->to_str());
-    }
+    std::string targetUnionName = "TypeInfo";
 
-    ResolvedTypeStructDecl *typeInfoDecl = nullptr;
+    ResolvedTypeUnionDecl *typeInfoDecl = nullptr;
     for (auto &[path, mod] : m_modules_for_import) {
         debug_msg("Module " << mod->name() << " path " << path);
-        if (path.ends_with("std/builtin.dmz")) {
+        if (path.ends_with("std/types.dmz")) {
             for (auto &decl : mod->declarations) {
-                debug_msg("Target " << targetStructName << " search " << decl->identifier);
-                if (decl->identifier == targetStructName) {
-                    if (auto structDeclRef = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
-                        typeInfoDecl = structDeclRef;
+                debug_msg("Target " << targetUnionName << " search " << decl->identifier);
+                if (decl->identifier == targetUnionName) {
+                    if (auto unionDeclRef = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
+                        typeInfoDecl = unionDeclRef;
                         break;
                     }
                 }
@@ -1256,10 +1248,10 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     }
 
     if (!typeInfoDecl) {
-        return report(typeinfoExpr.location, "could not find " + targetStructName + " in builtin.dmz");
+        return report(typeinfoExpr.location, "could not find " + targetUnionName + " in types.dmz");
     }
     add_dependency(typeInfoDecl->decl);
-    auto returnType = makePtr<ResolvedTypePointer>(typeinfoExpr.location, typeInfoDecl->clone());
+    auto returnType = makePtr<ResolvedTypePointer>(typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->decl));
     return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
 }
 

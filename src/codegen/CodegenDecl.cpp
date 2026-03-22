@@ -368,13 +368,14 @@ void Codegen::generate_union_fields(const ResolvedUnionDecl &unionDecl) {
     uint64_t maxSize = 0;
     const llvm::DataLayout &dl = m_module->getDataLayout();
     for (auto &&field : unionDecl.fields) {
-        llvm::Type *t = generate_type(*field->type, true);
         debug_msg(field->type->to_str() << " size: " << dl.getTypeAllocSize(t).getFixedValue());
+        if (field->type->kind == ResolvedTypeKind::Void) continue;
+        llvm::Type *t = generate_type(*field->type, true);
         maxSize = std::max(maxSize, dl.getTypeAllocSize(t).getFixedValue());
     }
 
     std::vector<llvm::Type *> fieldTypes;
-    fieldTypes.emplace_back(m_builder.getInt32Ty());                                // Tag
+    fieldTypes.emplace_back(generate_type(*unionDecl.tag->type, true)); // Tag
     fieldTypes.emplace_back(llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize));  // Payload
 
     type->setBody(fieldTypes, false);

@@ -255,9 +255,9 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
             offset += fieldBitSize;
         }
 
-        auto finalType = m_debugBuilder.createStructType(
-            structFile, decl->name(), structFile, decl->location.line, bitSize, alingSize,
-            llvm::DINode::DIFlags::FlagPrototyped, nullptr, m_debugBuilder.getOrCreateArray(Elements));
+        auto finalType = m_debugBuilder.createStructType(structFile, decl->name(), structFile, decl->location.line,
+                                                         bitSize, alingSize, llvm::DINode::DIFlags::FlagPrototyped,
+                                                         nullptr, m_debugBuilder.getOrCreateArray(Elements));
 
         m_debugBuilder.replaceTemporary(llvm::TempDICompositeType(forwardDecl), finalType);
         m_debugTypes[decl->name()] = finalType;
@@ -375,21 +375,26 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         std::vector<llvm::Metadata *> Elements;
 
         // Tag field
-        auto tagType = generate_debug_type(*decl->tag->type);
-        auto tagBitSize = dl.getTypeSizeInBits(m_builder.getInt32Ty());
-        auto tagAlingSize = dl.getPrefTypeAlign(m_builder.getInt32Ty()).value() * 8;
+        auto tagDebugType = generate_debug_type(*decl->tag->type);
+        auto tagType = generate_type(*decl->tag->type);
+        auto tagBitSize = dl.getTypeSizeInBits(tagType);
+        auto tagAlingSize = dl.getPrefTypeAlign(tagType).value() * 8;
         auto tagOffset = structLayout->getElementOffsetInBits(0);
-        auto tagField = m_debugBuilder.createMemberType(
-            unionFile, "tag", unionFile, decl->location.line, tagBitSize, tagAlingSize, tagOffset,
-            llvm::DINode::DIFlags::FlagPublic, tagType);
+        auto tagField =
+            m_debugBuilder.createMemberType(unionFile, "tag", unionFile, decl->location.line, tagBitSize, tagAlingSize,
+                                            tagOffset, llvm::DINode::DIFlags::FlagPublic, tagDebugType);
         Elements.emplace_back(tagField);
 
         // For the payload, we can create a union of all possible variants
         std::vector<llvm::Metadata *> VariantElements;
         for (auto &&field : decl->fields) {
-            auto llvmVariantType = generate_type(*field->type, true);
-            auto variantBitSize = dl.getTypeSizeInBits(llvmVariantType);
-            auto variantAlingSize = dl.getPrefTypeAlign(llvmVariantType).value() * 8;
+            int variantBitSize = 0;
+            int variantAlingSize = 0;
+            if (field->type->kind != ResolvedTypeKind::Void) {
+                auto llvmVariantType = generate_type(*field->type, true);
+                variantBitSize = dl.getTypeSizeInBits(llvmVariantType);
+                variantAlingSize = dl.getPrefTypeAlign(llvmVariantType).value() * 8;
+            }
             auto variantMember = m_debugBuilder.createMemberType(
                 unionFile, field->name(), unionFile, field->location.line, variantBitSize, variantAlingSize, 0,
                 llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
@@ -402,14 +407,14 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
             unionFile, decl->name() + "_payload", unionFile, decl->location.line, payloadBitSize, alingSize,
             llvm::DINode::DIFlags::FlagPublic, m_debugBuilder.getOrCreateArray(VariantElements));
 
-        auto payloadField = m_debugBuilder.createMemberType(
-            unionFile, "payload", unionFile, decl->location.line, payloadBitSize, alingSize, payloadOffset,
-            llvm::DINode::DIFlags::FlagPublic, payloadUnion);
+        auto payloadField =
+            m_debugBuilder.createMemberType(unionFile, "payload", unionFile, decl->location.line, payloadBitSize,
+                                            alingSize, payloadOffset, llvm::DINode::DIFlags::FlagPublic, payloadUnion);
         Elements.emplace_back(payloadField);
 
-        auto finalType = m_debugBuilder.createStructType(
-            unionFile, decl->name(), unionFile, decl->location.line, bitSize, alingSize,
-            llvm::DINode::DIFlags::FlagPrototyped, nullptr, m_debugBuilder.getOrCreateArray(Elements));
+        auto finalType = m_debugBuilder.createStructType(unionFile, decl->name(), unionFile, decl->location.line,
+                                                         bitSize, alingSize, llvm::DINode::DIFlags::FlagPrototyped,
+                                                         nullptr, m_debugBuilder.getOrCreateArray(Elements));
 
         m_debugBuilder.replaceTemporary(llvm::TempDICompositeType(forwardDecl), finalType);
         m_debugTypes[decl->name()] = finalType;

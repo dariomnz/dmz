@@ -1,27 +1,45 @@
-const std = import("std");
+// RUN: dmz %s -run | filecheck %s
 
+const types = import("../../std/types.dmz");
+
+extern fn printf(fmt: *u8, ...) -> i32;
 struct MyStruct {
     a: i32,
     b: bool,
 
-    pub fn foo(self: *MyStruct) -> void {}
-    pub fn bar() -> void {}
+    pub fn foo(self: *MyStruct) -> void {
+    }
+    pub fn bar() -> void {
+    }
+}
+
+fn print<T>() -> void {
+    const info = @typeinfo(T);
+    switch (info.tag) {
+        case types.TypeInfo.infoInt => printf("int: bits %d\n", info.infoInt.bits);
+        case types.TypeInfo.infoUint => printf("uint: bits %d\n", info.infoUint.bits);
+        case types.TypeInfo.infoStruct => {
+            printf("TypeInfo: %s fields %d methods %d\n", info.infoStruct.name.ptr, info.infoStruct.fields.len, info.infoStruct.methods.len);
+            for (info.infoStruct.fields) |field| {
+                printf("field %s\n", field.ptr);
+            }
+            for (info.infoStruct.methods) |method| {
+                printf("method %s\n", method.ptr);
+            }
+        }
+        else => printf("Unsuported type\n");
+    }
 }
 
 pub fn main() -> void {
-    const intInfo = @typeinfo(i32);
-    std.io.printf("TypeInfo: i32 bits %d signed %d\n", intInfo.bits, intInfo.is_signed);
-
-    const uintInfo = @typeinfo(u8);
-    std.io.printf("TypeInfo: i8 bits %d signed %d\n", uintInfo.bits, uintInfo.is_signed);
-
-    const structInfo = @typeinfo(MyStruct);
-    std.io.printf("TypeInfo: MyStruct fields %d methods %d\n", structInfo.fields.len, structInfo.methods.len);
-
-    for (structInfo.fields) |field| {
-        std.io.printf("TypeInfo: MyStruct field %s\n", field.name.ptr);
-    }
-    for (structInfo.methods) |method| {
-        std.io.printf("TypeInfo: MyStruct method %s\n", method.name.ptr);
-    }
+    print<i32>();
+    print<u8>();
+    print<MyStruct>();
 }
+// CHECK: int: bits 32
+// CHECK-NEXT: uint: bits 8
+// CHECK-NEXT: TypeInfo: typeinfo.MyStruct fields 2 methods 2
+// CHECK-NEXT: field a
+// CHECK-NEXT: field b
+// CHECK-NEXT: method foo
+// CHECK-NEXT: method bar

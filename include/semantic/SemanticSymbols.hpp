@@ -152,10 +152,10 @@ struct ResolvedWhileStmt : public ResolvedStmt {
 struct ResolvedBreakStmt : public ResolvedStmt {
     std::vector<ptr<ResolvedDeferRefStmt>> defers;
     ptr<ResolvedExpr> expr;
-    ResolvedCatchErrorExpr* targetCatch;
+    ResolvedCatchErrorExpr *targetCatch;
 
-    ResolvedBreakStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers, 
-                      ptr<ResolvedExpr> expr = nullptr, ResolvedCatchErrorExpr* targetCatch = nullptr)
+    ResolvedBreakStmt(SourceLocation location, std::vector<ptr<ResolvedDeferRefStmt>> defers,
+                      ptr<ResolvedExpr> expr = nullptr, ResolvedCatchErrorExpr *targetCatch = nullptr)
         : ResolvedStmt(location), defers(std::move(defers)), expr(std::move(expr)), targetCatch(targetCatch) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -232,11 +232,11 @@ struct ResolvedParamDecl : public ResolvedDecl {
 };
 
 struct ResolvedFieldDecl : public ResolvedDecl {
-    unsigned index;
+    int index;
     ptr<ResolvedExpr> default_initializer;
 
     ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
-    ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, unsigned index,
+    ResolvedFieldDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, int index,
                       ptr<ResolvedExpr> default_initializer)
         : ResolvedDecl(location, std::move(identifier), std::move(type), false, true),
           index(index),
@@ -450,15 +450,16 @@ struct ResolvedUnionDecl : public ResolvedDependencies {
     std::vector<std::string> functions_strs;
     ptr<ResolvedFieldDecl> tag;
 
-    ResolvedUnionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
-                       const UnionDecl *unionDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
-                       std::vector<ptr<ResolvedMemberFunctionDecl>> functions)
+    ResolvedUnionDecl(SourceLocation location, bool isPublic, std::string_view identifier, const UnionDecl *unionDecl,
+                      bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+                      std::vector<ptr<ResolvedMemberFunctionDecl>> functions)
         : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeUnionDecl>(location, this), false,
-                                isPublic),
+                               isPublic),
           unionDecl(unionDecl),
           isPacked(isPacked),
           fields(std::move(fields)),
-          functions(std::move(functions)) {}
+          functions(std::move(functions)),
+          tag(makePtr<ResolvedFieldDecl>(location, "tag", ResolvedTypeNumber::usize(location), -1, nullptr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;

@@ -66,7 +66,8 @@ class Driver {
 
     void fmt_pass(ptr<ModuleDecl> asts);
     void import_pass(ptr<ModuleDecl>& asts);
-    static std::pair<std::string, std::filesystem::path> register_import(const std::filesystem::path& source,
+    static std::pair<std::string, std::filesystem::path> register_import(SourceLocation location,
+                                                                         const std::filesystem::path& source,
                                                                          std::string_view imported);
 
     std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);

@@ -13,3 +13,44 @@ pub const function_t = 11;
 pub const error_t = 12;
 pub const optional_t = 13;
 pub const simd_t = 14;
+
+pub union TypeInfo {
+    infoVoid: void,
+    infoInt: TypeInfoNumber,
+    infoUint: TypeInfoNumber,
+    infoFloat: TypeInfoNumber,
+    infoBool: void,
+    infoStruct: TypeInfoStruct,
+    infoTuple: TypeInfoStruct,
+    // TODO: infoPointer
+    infoPointer: void,
+    // TODO: infoSlice
+    infoSlice: void,
+    // TODO: infoRange
+    infoRange: void,
+    // TODO: infoArray
+    infoArray: void,
+    // TODO: infoFunction
+    infoFunction: void,
+    // TODO: infoError
+    infoError: void,
+    // TODO: infoOptional
+    infoOptional: void,
+    infoSimd: TypeInfoSimd,
+
+}
+
+pub struct TypeInfoStruct {
+    name: []u8,
+    fields: [][]u8,
+    methods: [][]u8,
+}
+
+pub struct TypeInfoNumber {
+    bits: u32,
+}
+
+pub struct TypeInfoSimd {
+    type: []u8,
+    len: u32,
+}
