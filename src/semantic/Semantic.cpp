@@ -478,47 +478,55 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable("TODO");
 }
 
-bool Sema::resolve_import_modules(std::filesystem::path sourcePath,
-                                  std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules) {
-    debug_func("");
-    auto &imported_modules = Driver::instance().imported_modules;
-    std::vector<ptr<ModuleDecl>> moduleDecls;
-    std::vector<std::filesystem::path> moduleDeclsPaths;
-    std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
-    for (auto &&[k, v] : imported_modules) {
-        std::filesystem::path k_path = std::filesystem::canonical(k);
-        debug_msg("Resolving imported module: " << k_path);
-        if (k_path == sourceAbsPath) {
-            continue;
-        }
-
-        moduleDeclsPaths.emplace_back(k_path);
-        v->module_path = k_path;
-        moduleDecls.emplace_back(std::move(v));
-    }
-    imported_modules.clear();
-
-    auto resolvedModuleDecl = resolve_modules_decls(moduleDecls, false);
-    for (size_t i = 0; i < moduleDecls.size(); i++) {
-        imported_modules.emplace(std::move(moduleDeclsPaths[i]), std::move(moduleDecls[i]));
-    }
-
-    if (resolvedModuleDecl.size() != moduleDecls.size()) return false;
-    out_resolvedModules = std::move(resolvedModuleDecl);
-    return true;
-}
 
 std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::path sourcePath, bool needMain) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
-    std::vector<ptr<ResolvedModuleDecl>> imported_mods;
-    bool error = false;
-    error = !resolve_import_modules(sourcePath, imported_mods);
+
+    std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
+    m_ast->module_path = sourceAbsPath;
+
+    auto &imported_modules = Driver::instance().imported_modules;
+    std::vector<ptr<ModuleDecl>> modules;
+    std::vector<std::filesystem::path> modulesPaths;
+
+    // Add main module
+    modules.emplace_back(std::move(m_ast));
+    modulesPaths.emplace_back(sourceAbsPath);
+
+    // Add imported modules
+    for (auto &&[k, v] : imported_modules) {
+        std::filesystem::path k_path = std::filesystem::canonical(k);
+        if (k_path == sourceAbsPath) continue;
+        v->module_path = k_path;
+        modulesPaths.emplace_back(std::move(k_path));
+        modules.emplace_back(std::move(v));
+    }
+    imported_modules.clear();
+
+    auto resolvedModules = resolve_modules_decls(modules, sourceAbsPath);
+
+    // Put things back
+    for (size_t i = 0; i < modules.size(); i++) {
+        if (modulesPaths[i] == sourceAbsPath) {
+            m_ast = std::move(modules[i]);
+        } else {
+            imported_modules.emplace(std::move(modulesPaths[i]), std::move(modules[i]));
+        }
+    }
+
+    if (resolvedModules.size() != modules.size()) return {};
+
     if (needMain) {
         bool haveMain = false;
-        for (auto &&decl : m_ast->declarations) {
-            if (decl->identifier == "main") {
-                haveMain = true;
+        for (auto &&mod : resolvedModules) {
+            if (mod->module_path == sourceAbsPath) {
+                for (auto &&decl : mod->declarations) {
+                    if (decl->identifier == "main") {
+                        haveMain = true;
+                        break;
+                    }
+                }
                 break;
             }
         }
@@ -528,25 +536,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
         }
     }
 
-    std::vector<ptr<ModuleDecl>> ast_v;
-    ast_v.emplace_back(std::move(m_ast));
-    auto declarations = resolve_modules_decls(ast_v, true);
-    m_ast = std::move(ast_v[0]);
-    ast_v.clear();
-
-    if (error) return {};
-
-    std::vector<ptr<ResolvedModuleDecl>> resolvedDecls;
-    resolvedDecls.reserve(imported_mods.size() + declarations.size());
-
-    for (auto &i : imported_mods) {
-        resolvedDecls.emplace_back(std::move(i));
-    }
-    for (auto &i : declarations) {
-        resolvedDecls.emplace_back(std::move(i));
-    }
-
-    return resolvedDecls;
+    return resolvedModules;
 }
 
 bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {

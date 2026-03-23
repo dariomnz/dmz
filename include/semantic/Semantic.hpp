@@ -52,7 +52,6 @@ class Sema {
     explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
     std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
-    bool resolve_import_modules(std::filesystem::path sourcePath, std::vector<ptr<ResolvedModuleDecl>> &out_resolvedModules);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
@@ -128,8 +127,7 @@ class Sema {
     ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
     ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
     ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
-    ptr<ResolvedExpr> resolve_struct_instantiation(
-        const StructInstantiationExpr &structInstantiation);
+    ptr<ResolvedExpr> resolve_struct_instantiation(const StructInstantiationExpr &structInstantiation);
     ptr<ResolvedExpr> resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation);
     ptr<ResolvedExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);
     ptr<ResolvedStructDecl> resolve_struct_decl(const StructDecl &structDecl);
@@ -148,14 +146,14 @@ class Sema {
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
 
     std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
-                                                               bool sourceModule);
+                                                               const std::filesystem::path &sourcePath);
     ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
     bool resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_union_decls(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_decl_stmts(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_union_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, bool sourceModule);
+    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath);
 
     // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);

@@ -758,7 +758,7 @@ ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(const ErrorG
 }
 
 std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
-                                                                 bool sourceModule) {
+                                                                 const std::filesystem::path &sourcePath) {
     bool error = false;
     debug_func("error " << (error ? "true" : "false"));
     debug_msg("[Sema] resolve_modules_decls: resolving " << modules.size() << " modules");
@@ -797,7 +797,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     }
     if (error) return {};
     for (auto &&module : resolvedModules) {
-        if (!resolve_module_function_decls(*module, sourceModule)) {
+        if (!resolve_module_function_decls(*module, sourcePath)) {
             error = true;
             continue;
         }
@@ -927,7 +927,8 @@ bool Sema::resolve_module_union_decl_funcs(ResolvedModuleDecl &resolvedModuleDec
     return !error;
 }
 
-bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, bool sourceModule) {
+bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl,
+                                         const std::filesystem::path &sourcePath) {
     debug_func(resolvedModuleDecl.location);
     auto prevModule = m_currentModule;
     m_currentModule = &resolvedModuleDecl;
@@ -937,7 +938,7 @@ bool Sema::resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl,
         if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             auto resolvedDecl = resolve_function_decl(*fn);
-            if (sourceModule) {
+            if (resolvedModuleDecl.module_path == sourcePath) {
                 if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
                     auto it = std::find_if(m_tests.begin(), m_tests.end(),
                                            [test](ResolvedTestDecl *t) { return t->identifier == test->identifier; });
