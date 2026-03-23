@@ -36,11 +36,13 @@ ptr<Node> Formatter::fmt_empty_line([[maybe_unused]] const EmptyLine& decl) {
 ptr<Node> Formatter::fmt_block(const Block& block, bool wantWrap, bool needBracket) {
     debug_func("");
     auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
-    if (needBracket || block.statements.size() == 0 || block.statements.size() > 1) {
+    bool haveBrackets =
+        block.haveBrackets || needBracket || block.statements.size() == 0 || block.statements.size() > 1;
+    if (haveBrackets) {
         ret->nodes.emplace_back(makePtr<Text>("{"));
     }
     if (block.statements.size() < 2 && wantWrap) {
-        if (needBracket) {
+        if (haveBrackets) {
             ret->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(ret->group_id));
         } else {
             ret->nodes.emplace_back(makePtr<LineIfWrap>(ret->group_id));
@@ -53,7 +55,7 @@ ptr<Node> Formatter::fmt_block(const Block& block, bool wantWrap, bool needBrack
         auto stmtList = makePtr<IndentIfWrap>(ret->group_id, vec<ptr<Node>>{});
         for (size_t i = 0; i < block.statements.size(); i++) {
             stmtList->nodes.emplace_back(fmt_stmt(*block.statements[i]));
-            if (needBracket) {
+            if (haveBrackets) {
                 stmtList->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(ret->group_id));
             } else {
                 stmtList->nodes.emplace_back(makePtr<LineIfWrap>(ret->group_id));
@@ -68,7 +70,7 @@ ptr<Node> Formatter::fmt_block(const Block& block, bool wantWrap, bool needBrack
         }
         ret->nodes.emplace_back(std::move(stmtList));
     }
-    if (needBracket || block.statements.size() == 0 || block.statements.size() > 1) {
+    if (haveBrackets) {
         ret->nodes.emplace_back(makePtr<Text>("}"));
     }
     return ret;

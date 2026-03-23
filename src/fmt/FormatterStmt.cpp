@@ -224,12 +224,18 @@ ptr<Node> Formatter::fmt_if_stmt(const IfStmt& stmt) {
     ret->nodes.emplace_back(std::move(cond_group));
     ret->nodes.emplace_back(makePtr<Text>(")"));
     ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(fmt_block(*stmt.trueBlock, false));
+    ret->nodes.emplace_back(fmt_block(*stmt.trueBlock, !stmt.trueBlock->haveBrackets));
     if (stmt.falseBlock) {
         ret->nodes.emplace_back(makePtr<Space>());
         ret->nodes.emplace_back(makePtr<Text>("else"));
         ret->nodes.emplace_back(makePtr<Space>());
-        ret->nodes.emplace_back(fmt_block(*stmt.falseBlock, false));
+        if (!stmt.falseBlock->haveBrackets && stmt.falseBlock->statements.size() == 1) {
+            if (auto cast_stmt = dynamic_cast<const IfStmt*>(stmt.falseBlock->statements[0].get())) {
+                ret->nodes.emplace_back(fmt_if_stmt(*cast_stmt));
+                return ret;
+            }
+        }
+        ret->nodes.emplace_back(fmt_block(*stmt.falseBlock, !stmt.falseBlock->haveBrackets));
     }
     return ret;
 }

@@ -144,9 +144,10 @@ struct TypePointer : public Type {
 
 struct Block : public Stmt {
     std::vector<ptr<Stmt>> statements;
+    bool haveBrackets;
 
-    Block(SourceLocation location, std::vector<ptr<Stmt>> statements)
-        : Stmt(location), statements(std::move(statements)) {}
+    Block(SourceLocation location, std::vector<ptr<Stmt>> statements, bool haveBrackets = true)
+        : Stmt(location), statements(std::move(statements)), haveBrackets(haveBrackets) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -672,7 +673,7 @@ struct UnionDecl : public Decl {
     std::vector<ptr<Decl>> decls;
 
     UnionDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
-               std::vector<ptr<Decl>> decls)
+              std::vector<ptr<Decl>> decls)
         : Decl(location, isPublic, std::move(identifier)), isPacked(isPacked), decls(std::move(decls)) {}
 
     void dump(size_t level = 0) const override;

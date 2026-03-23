@@ -26,7 +26,7 @@ class Formatter {
     ptr<Node> fmt_decoration(const Decoration& decl);
     ptr<Node> fmt_comment(const Comment& decl);
     ptr<Node> fmt_empty_line(const EmptyLine& decl);
-    ptr<Node> fmt_block(const Block& block, bool wantWrap = true, bool needBracket = true);
+    ptr<Node> fmt_block(const Block& block, bool wantWrap = true, bool needBracket = false);
     // ptr<Node> fmt_case_block(const Block& block);
 
     // Decl

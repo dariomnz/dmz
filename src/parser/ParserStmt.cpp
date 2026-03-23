@@ -88,7 +88,7 @@ ptr<Block> Parser::parse_block(bool oneStmt) {
         eat_next_token();  // eat '}'
     }
 
-    return makePtr<Block>(loc, std::move(statements));
+    return makePtr<Block>(loc, std::move(statements), !oneStmt);
 }
 
 ptr<IfStmt> Parser::parse_if_stmt() {
@@ -123,7 +123,7 @@ ptr<IfStmt> Parser::parse_if_stmt() {
         std::vector<ptr<Stmt>> stmts;
         stmts.emplace_back(std::move(elseIf));
 
-        falseBlock = makePtr<Block>(loc, std::move(stmts));
+        falseBlock = makePtr<Block>(loc, std::move(stmts), false);
     } else {
         falseBlock = parse_block(m_nextToken.type != TokenType::block_l);
     }
