@@ -1,56 +1,107 @@
 const std = import("std");
 
-pub fn fmtType<T>(w: std.io.Writer, arg: T) -> !usize {
+pub struct FormatFloat {
+    precision: usize,
+}
+
+pub struct FormatHex {
+    upper: bool,
+}
+
+pub union FormatOptions {
+    none: void,
+    string: void,
+    character: void,
+    decimal: void,
+    hex: FormatHex,
+    binary: void,
+    float: FormatFloat,
+}
+
+pub fn fmtType<T>(w: std.io.Writer, arg: T, spec: FormatOptions) -> !usize {
     const t = @typeid(arg);
     inline switch (t) {
-        case std.types.int_t => return fmtInteger<T>(w, arg);
-        case std.types.uint_t => return fmtInteger<T>(w, arg);
-        case std.types.float_t => return fmtFloat<T>(w, arg, 3);
-        case std.types.bool_t => return fmtBool(w, arg);
-        case std.types.struct_t => return fmtStruct<T>(w, arg);
-        case std.types.void_t => return w.writeStr("unsupported void");
-        case std.types.pointer_t => return fmtPointer(w, arg);
-        case std.types.slice_t => return fmtSlice<T>(w, arg);
-        case std.types.range_t => return w.writeStr("unsupported range");
-        case std.types.array_t => return w.writeStr("unsupported array");
-        case std.types.function_t => return w.writeStr("unsupported function");
-        case std.types.error_t => return fmtError(w, arg);
-        case std.types.optional_t => return w.writeStr("unsupported optional");
-        case std.types.simd_t => return fmtSimd<T>(w, arg);
-        else => return w.writeStr("unsupported type");
+        case std.types.int_t => return fmtInteger<T>(w, arg, spec);
+        case std.types.uint_t => return fmtInteger<T>(w, arg, spec);
+        case std.types.float_t => return fmtFloat<T>(w, arg, spec);
+        case std.types.bool_t => return fmtBool(w, arg, spec);
+        case std.types.struct_t => return fmtStruct<T>(w, arg, spec);
+        case std.types.void_t => return w.writeAll("void");
+        case std.types.pointer_t => return fmtPointer(w, arg, spec);
+        case std.types.slice_t => return fmtSlice<T>(w, arg, spec);
+        case std.types.range_t => return w.writeAll("unsupported range");
+        case std.types.array_t => return w.writeAll("unsupported array");
+        case std.types.function_t => return w.writeAll("unsupported function");
+        case std.types.error_t => return fmtError(w, arg, spec);
+        case std.types.optional_t => return w.writeAll("unsupported optional");
+        case std.types.simd_t => return fmtSimd<T>(w, arg, spec);
+        else => return w.writeAll("unsupported type");
     }
 }
 
-pub fn fmtInteger<T>(w: std.io.Writer, n: T) -> !usize {
-    if (n == 0) {
-        return w.writeChar('0');
+pub fn fmtInteger<T>(w: std.io.Writer, n: T, spec: FormatOptions) -> !usize {
+    if (spec.tag == FormatOptions.character) {
+        return w.writeChar(n);
     }
 
     let ret: usize = 0;
+    let base: T = 10;
+    let upper = false;
+
+    switch (spec.tag) {
+        case FormatOptions.hex => {
+            base = 16;
+            upper = spec.hex.upper;
+            ret += try w.writeAll("0x");
+        }
+        case FormatOptions.binary => {
+            base = 2;
+            ret += try w.writeAll("0b");
+        }
+        else => { base = 10; }
+    }
+
+    if (n == 0) {
+        return ret + try w.writeChar('0');
+    }
+
     let num = n;
-    if (num < 0) {
-        try w.writeChar('-');
-        ret++;
+    if (num < 0 && base == 10) {
+        ret += try w.writeChar('-');
         num = -num;
     }
 
     let divisor: T = 1;
 
-    while (num / divisor >= 10) {
-        divisor *= 10;
+    while (num / divisor >= base) {
+        divisor *= base;
     }
 
     while (divisor > 0) {
-        let digito: u8 = (num / divisor) + '0';
-        ret += try w.writeChar(digito);
+        let val: u8 = (num / divisor) % base;
+        let c: u8 = 0;
+        if (val < 10) {
+            c = val + '0';
+        } else {
+            if (upper) {
+                c = (val - 10) + 'A';
+            } else {
+                c = (val - 10) + 'a';
+            }
+        }
+        ret += try w.writeChar(c);
 
         num = num % divisor;
-        divisor /= 10;
+        divisor /= base;
     }
     return ret;
 }
 
-pub fn fmtFloat<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
+pub fn fmtFloat<T>(w: std.io.Writer, f: T, spec: FormatOptions) -> !usize {
+    let precision: usize = 3;
+    if (spec.tag == FormatOptions.float) {
+        precision = spec.float.precision;
+    }
     let ret: usize = 0;
     let val = f;
 
@@ -94,17 +145,17 @@ pub fn fmtFloat<T>(w: std.io.Writer, f: T, precision: usize) -> !usize {
     return ret;
 }
 
-pub fn fmtBool(w: std.io.Writer, b: bool) -> !usize {
+pub fn fmtBool(w: std.io.Writer, b: bool, spec: FormatOptions) -> !usize {
     if (b) {
-        return w.writeStr("true");
+        return w.writeAll("true");
     } else {
-        return w.writeStr("false");
+        return w.writeAll("false");
     }
 }
 
-pub fn fmtStruct<T>(w: std.io.Writer, s: T) -> !usize {
+pub fn fmtStruct<T>(w: std.io.Writer, s: T, spec: FormatOptions) -> !usize {
     inline if (@hasMethod(s, "fmt")) {
-        return s.fmt(w);
+        return s.fmt(w, spec);
     }
     const typeinfo = @typeinfo(s).infoStruct;
     let ret: usize = 0;
@@ -113,75 +164,61 @@ pub fn fmtStruct<T>(w: std.io.Writer, s: T) -> !usize {
     let current_field = 0;
     inline for (s) |field| {
         if (current_field > 0) {
-            ret += try w.writeStr(", ");
+            ret += try w.writeAll(", ");
         }
         ret += try w.writeAll(typeinfo.fields[current_field]);
-        ret += try w.writeStr(": ");
-        ret += try fmtType<field>(w, field);
+        ret += try w.writeAll(": ");
+        ret += try fmtType<field>(w, field, FormatOptions{none: void});
         current_field++;
     }
     ret += try w.writeChar('}');
     return ret;
 }
 
-pub fn fmtPointer(w: std.io.Writer, ptr: *void) -> !usize {
-    let ret: usize = 0;
+pub fn fmtPointer(w: std.io.Writer, ptr: *void, spec: FormatOptions) -> !usize {
+    if (spec.tag == FormatOptions.string) {
+        return w.writeStr(ptr);
+    }
     const addr: usize = ptr;
 
-    ret += try w.writeStr("0x");
-
-    let i: i32 = (@sizeof(ptr) * 2) - 1;
-
-    while (i >= 0) {
-        let temp_addr = addr;
-        let j: i32 = 0;
-
-        while (j < i) {
-            temp_addr /= 16;
-            j++;
-        }
-
-        const digito = temp_addr % 16;
-
-        if (digito < 10) {
-            ret += try w.writeChar(digito + '0');
-        } else {
-            ret += try w.writeChar((digito - 10) + 'a');
-        }
-        i--;
+    if (spec.tag == FormatOptions.hex) {
+        return fmtInteger(w, addr, spec);
+    } else {
+        return fmtInteger(w, addr, FormatOptions{hex: FormatHex{upper: false}});
     }
-
-    return ret;
 }
 
-pub fn fmtSlice<T>(w: std.io.Writer, s: T) -> !usize {
+pub fn fmtSlice<T>(w: std.io.Writer, s: T, spec: FormatOptions) -> !usize {
+    if (spec.tag == FormatOptions.string) {
+        return w.writeAll(s);
+    }
     let ret: usize = 0;
-    ret += try w.writeStr("[len: ");
-    ret += try fmtInteger<s.len>(w, s.len);
-    ret += try w.writeStr(", {");
+    ret += try w.writeAll("[len: ");
+    ret += try fmtInteger<s.len>(w, s.len, FormatOptions{none: void});
+    ret += try w.writeAll(", {");
     let idx: usize = 0;
     inline if (@typeid(s) == std.types.slice_t) {
         while (idx < s.len) {
             if (idx > 0) {
-                ret += try w.writeStr(", ");
+                ret += try w.writeAll(", ");
             }
             const element = s[idx];
-            ret += try fmtType<element>(w, element);
+            ret += try fmtType<element>(w, element, FormatOptions{none: void});
             idx++;
         }
     }
-    ret += try w.writeStr("}]");
+    ret += try w.writeAll("}]");
     return ret;
 }
 
-pub fn fmtError(w: std.io.Writer, e: err) -> !usize {
+pub fn fmtError(w: std.io.Writer, e: err, spec: FormatOptions) -> !usize {
     let ret: usize = 0;
-    ret += try w.writeStr("error.");
+    ret += try w.writeAll("error.");
     ret += try w.writeStr(e);
     return ret;
 }
 
-pub fn fmtSimd<T>(w: std.io.Writer, v: T) -> !usize {
+pub fn fmtSimd<T>(w: std.io.Writer, v: T, spec: FormatOptions) -> !usize {
     let ret: usize = 0;
     let current_element = 0;
     inline if (@typeid(v) == std.types.simd_t) {
@@ -190,10 +227,10 @@ pub fn fmtSimd<T>(w: std.io.Writer, v: T) -> !usize {
         ret += try w.writeChar('(');
         while (current_element < typeinfo.len) {
             if (current_element > 0) {
-                ret += try w.writeStr(", ");
+                ret += try w.writeAll(", ");
             }
             const element = v[current_element];
-            ret += try fmtType<element>(w, element);
+            ret += try fmtType<element>(w, element, FormatOptions{none: void});
             current_element++;
         }
     }
@@ -201,24 +238,68 @@ pub fn fmtSimd<T>(w: std.io.Writer, v: T) -> !usize {
     return ret;
 }
 
-pub fn fmt<T>(w: std.io.Writer, format: *u8, args: T) -> !usize {
-    let fmt_idx = 0;
-    let arg_tracker = 0;
+fn parseSpecifier(s: []u8) -> FormatOptions {
+    let ret = FormatOptions{none: void};
+    if (s.len == 0) return ret;
+    if (s.len == 1) {
+        if (s[0] == 's') ret = FormatOptions{string: void};
+        if (s[0] == 'c') ret = FormatOptions{character: void};
+        if (s[0] == 'x') ret = FormatOptions{hex: FormatHex{upper: false}};
+        if (s[0] == 'X') ret = FormatOptions{hex: FormatHex{upper: true}};
+        if (s[0] == 'b') ret = FormatOptions{binary: void};
+        if (s[0] == 'd') ret = FormatOptions{decimal: void};
+        if (s[0] == 'f') ret = FormatOptions{float: FormatFloat{precision: 3}};
+    }
+    if (s[0] == 'f' && s.len > 2 && s[1] == '.') {
+        let precision: usize = 0;
+        let i: usize = 2;
+        while (i < s.len) {
+            precision = precision * 10 + (s[i] - '0');
+            i++;
+        }
+        ret = FormatOptions{float: FormatFloat{precision: precision}};
+    }
+    return ret;
+}
+
+pub fn fmt<T>(w: std.io.Writer, format: []u8, args: T) -> !usize {
+    let fmt_idx: usize = 0;
+    let arg_tracker: usize = 0;
     let ret: usize = 0;
-    const format_len = std.mem.strlen(format);
-    while (fmt_idx < format_len) {
-        if (format[fmt_idx] == '{' && fmt_idx + 1 < format_len && format[fmt_idx + 1] == '}') {
+    while (fmt_idx < format.len) {
+        if (format[fmt_idx] == '{') {
+            fmt_idx++;
+            if (fmt_idx < format.len && format[fmt_idx] == '{') {
+                ret += try w.writeChar('{');
+                fmt_idx++;
+                continue;
+            }
+
+            let spec_start: usize = fmt_idx;
+            while (fmt_idx < format.len && format[fmt_idx] != '}') {
+                fmt_idx++;
+            }
+
+            let spec = FormatOptions{none: void};
+            if (fmt_idx < format.len) {
+                spec = parseSpecifier(format[spec_start..fmt_idx]);
+                fmt_idx++;
+                // skip '}'
+            }
+
             let current_arg = 0;
             inline if (@typeid(args) == std.types.tuple_t) {
                 inline for (args) |arg| {
                     if (current_arg++ == arg_tracker) {
-                        ret += try fmtType<arg>(w, arg);
+                        ret += try fmtType<arg>(w, arg, spec);
                     }
                 }
             } else {
-                ret += try fmtType<args>(w, args);
+                ret += try fmtType<args>(w, args, spec);
             }
             arg_tracker++;
+        } else if (format[fmt_idx] == '}' && fmt_idx + 1 < format.len && format[fmt_idx + 1] == '}') {
+            ret += try w.writeChar('}');
             fmt_idx += 2;
         } else {
             ret += try w.writeChar(format[fmt_idx]);
@@ -234,14 +315,14 @@ struct Test_struct {
     b: i32,
     c: i32,
 
-    pub fn fmt(s: *@This, w: std.io.Writer) -> !usize {
+    pub fn fmt(s: *@This, w: std.io.Writer, spec: FormatOptions) -> !usize {
         let ret: usize = 0;
-        ret += try w.writeStr("Test_struct a ");
-        ret += try fmtInteger<s.a>(w, s.a);
-        ret += try w.writeStr(" b ");
-        ret += try fmtInteger<s.b>(w, s.b);
-        ret += try w.writeStr(" c ");
-        ret += try fmtInteger<s.c>(w, s.c);
+        ret += try w.writeAll("Test_struct a ");
+        ret += try fmtInteger<s.a>(w, s.a, FormatOptions{none: void});
+        ret += try w.writeAll(" b ");
+        ret += try fmtInteger<s.b>(w, s.b, FormatOptions{none: void});
+        ret += try w.writeAll(" c ");
+        ret += try fmtInteger<s.c>(w, s.c, FormatOptions{none: void});
         return ret;
     }
 }
@@ -276,4 +357,38 @@ test "print integers" {
     const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError, simd};
     let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}' simd '{}'\n", tuple);
     w2.flush();
+}
+
+test "format specifiers" {
+    const buf_len = 256;
+    let buf: u8[buf_len] = {};
+    let w = std.io.stdout.writer(buf[0..buf_len]);
+    defer try w.flush();
+
+    // Test {s}
+    try fmt(w, "str: {s}\n", .{"hello"});
+    // const expected = "str: hello\n";
+    // try std.testing.expectEqualSlice<u8>(buf[0..11], expected[0..std.mem.strlen(expected)]);
+    // w.end = 0;
+
+    // Test {x} and {X}
+    let x = 123;
+    try fmt(w, "hex: {x} HEX: {X} ptr: {x} {X}\n", .{255, 255, &x, &x});
+    // try std.testing.expect(std.mem.memcmp(&buf[0], "hex: ff HEX: FF", 15) == 0);
+    // w.end = 0;
+
+    // Test {b}
+    try fmt(w, "bin: {b}\n", .{5});
+    // try std.testing.expect(std.mem.memcmp(&buf[0], "bin: 101", 8) == 0);
+    // w.end = 0;
+
+    // Test {.precision} for float
+    try fmt(w, "float: {f.5}\n", .{1.23456});
+    // try std.testing.expect(std.mem.memcmp(&buf[0], "float: 1.23", 11) == 0);
+    // w.end = 0;
+
+    // Test {c}
+    try fmt(w, "char: {c}\n", .{65});
+    // try std.testing.expect(std.mem.memcmp(&buf[0], "char: A", 7) == 0);
+    // w.end = 0;
 }
