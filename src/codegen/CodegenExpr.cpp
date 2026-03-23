@@ -38,7 +38,18 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return m_builder.getInt1(number->value);
     }
     if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
-        return m_builder.CreateGlobalString(str->value, "global.str");
+        auto ptr = m_builder.CreateGlobalString(str->value, "global.str");
+        if (str->type->kind == ResolvedTypeKind::Slice) {
+            auto slice = allocate_stack_variable(str->location, "string.literal.slice", *str->type);
+            auto sliceType = generate_type(*str->type);
+            llvm::Value *slice_value = llvm::UndefValue::get(sliceType);
+            slice_value = m_builder.CreateInsertValue(slice_value, ptr, 0);
+            auto length = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), str->value.size());
+            slice_value = m_builder.CreateInsertValue(slice_value, length, 1);
+            m_builder.CreateStore(slice_value, slice);
+            return slice;
+        }
+        return ptr;
     }
     if (dynamic_cast<const ResolvedNullLiteral *>(&expr)) {
         return llvm::Constant::getNullValue(m_builder.getPtrTy());

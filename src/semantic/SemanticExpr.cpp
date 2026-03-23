@@ -315,9 +315,13 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         }
     }
 
+    debug_msg(Dumper([&]() { resolvedCallee->dump(); }));
+    debug_msg(call.location << " funcDeclArgs " << funcDeclArgs << " call_args_num "
+                          << call_args_num);
     for (size_t i = 0; i < call_args_num; ++i) {
-        size_t paramIdx = isMemberCall ? i + 1 : i;
-        if (paramIdx < funcDeclArgs) {
+        if (i < funcDeclArgs) {
+            size_t paramIdx = isMemberCall ? i + 1 : i;
+            perform_implicit_cast(resolvedArguments[paramIdx], *fnType->paramsTypes[paramIdx]);
             if (!fnType->paramsTypes[paramIdx]->compare(*resolvedArguments[paramIdx]->type)) {
                 return report(resolvedArguments[paramIdx]->location,
                               "unexpected type of argument '" + resolvedArguments[paramIdx]->type->to_str() +
@@ -763,7 +767,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         resolvedBase = makePtr<ResolvedDerefPtrExpr>(memberExpr.location, baseType->clone(), std::move(resolvedBase));
     }
     auto res = makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
-    if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl*>(res->base->type.get())) {
+    if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(res->base->type.get())) {
         if (dynamic_cast<const ResolvedFieldDecl *>(&res->member)) {
             res->type = unionDecl->decl->tag->type->clone();
         }
@@ -928,6 +932,7 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
         varOrReturn(resolvedInitExpr, resolve_expr(*initStmt->initializer));
 
+        perform_implicit_cast(resolvedInitExpr, *fieldDecl->type);
         if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
             return report(resolvedInitExpr->location, "'" + resolvedInitExpr->type->to_str() +
                                                           "' cannot be used to initialize a field of type '" +
@@ -991,6 +996,7 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
             continue;
         }
 
+        perform_implicit_cast(resolvedInitExpr, *fieldDecl->type);
         if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
             report(resolvedInitExpr->location, "'" + resolvedInitExpr->type->to_str() +
                                                    "' cannot be used to initialize a field of type '" +
@@ -1091,6 +1097,11 @@ ptr<ResolvedExpr> Sema::resolve_array_instantiation(const ArrayInstantiationExpr
     bool only_first = true;
     for (auto &&initializer : arrayInstantiation.initializers) {
         varOrReturn(resolvedExpr, resolve_expr(*initializer));
+
+        if (!only_first) {
+            perform_implicit_cast(resolvedExpr, *type);
+        }
+
         auto *resolved = resolvedinitializers.emplace_back(std::move(resolvedExpr)).get();
 
         resolved->set_constant_value(cee.evaluate(*resolved, false));
@@ -1102,7 +1113,7 @@ ptr<ResolvedExpr> Sema::resolve_array_instantiation(const ArrayInstantiationExpr
 
         if (!resolved->type->compare(*type)) {
             return report(initializer->location, "unexpected different types in array instantiation expected '" +
-                                                     resolved->type->to_str() + "' actual '" + type->to_str() + "'");
+                                                     type->to_str() + "' actual '" + resolved->type->to_str() + "'");
         }
     }
     if (type->kind != ResolvedTypeKind::DefaultInit) {
@@ -1251,7 +1262,8 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
         return report(typeinfoExpr.location, "could not find " + targetUnionName + " in types.dmz");
     }
     add_dependency(typeInfoDecl->decl);
-    auto returnType = makePtr<ResolvedTypePointer>(typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->decl));
+    auto returnType = makePtr<ResolvedTypePointer>(
+        typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->decl));
     return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
 }
 

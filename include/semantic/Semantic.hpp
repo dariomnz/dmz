@@ -177,5 +177,6 @@ class Sema {
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
     ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
+    void perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };
 }  // namespace DMZ

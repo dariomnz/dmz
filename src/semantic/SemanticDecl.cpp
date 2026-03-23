@@ -416,6 +416,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
                 }
             }
             if (shouldCheckType) {
+                perform_implicit_cast(resolvedInitializer, *varDecl.type);
                 if (!varDecl.type->compare(*resolvedInitializer->type)) {
                     varDecl.type->dump();
                     resolvedInitializer->type->dump();
@@ -435,7 +436,6 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
         report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
         return false;
     }
-
 
     varDecl.type = type->clone();
     varDecl.initializer = std::move(resolvedInitializer);

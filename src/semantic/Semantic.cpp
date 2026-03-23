@@ -478,7 +478,6 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable("TODO");
 }
 
-
 std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::path sourcePath, bool needMain) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
@@ -1112,6 +1111,19 @@ void Sema::add_dependency(ResolvedDecl *decl) {
             debug_msg("Adding " << declDep->name() << " to struct " << m_currentStruct->name());
             m_currentStruct->dependsOn.emplace(declDep);
             declDep->isUsedBy.emplace(m_currentStruct);
+        }
+    }
+}
+
+void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType) {
+    debug_func(expr->location << " type " << expr->type->to_str() << " expectedType " << expectedType.to_str());
+    if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(expr.get())) {
+        if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&expectedType)) {
+            if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(sliceType->sliceType.get())) {
+                if (numType->numberKind == ResolvedNumberKind::UInt && numType->bitSize == 8) {
+                    strLit->type = sliceType->clone();
+                }
+            }
         }
     }
 }

@@ -81,6 +81,7 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
         resolvedExpr = resolve_expr(*returnStmt.expr);
         if (!resolvedExpr) return nullptr;
 
+        perform_implicit_cast(resolvedExpr, *fnType->returnType);
         if (!fnType->returnType->compare(*resolvedExpr->type))
             return report(resolvedExpr->location, "unexpected return type, expected '" + fnType->returnType->to_str() +
                                                       "' actual '" + resolvedExpr->type->to_str() + "'");
@@ -209,6 +210,7 @@ ptr<ResolvedBreakStmt> Sema::resolve_break_stmt(const BreakStmt &breakStmt) {
         if (!resolvedExpr) return nullptr;
 
         targetCatch = m_catchStack.back();
+        perform_implicit_cast(resolvedExpr, *targetCatch->type);
         if (!targetCatch->type->compare(*resolvedExpr->type)) {
             return report(breakStmt.location, "unexpected break value type, expected '" + targetCatch->type->to_str() +
                                                   "' actual '" + resolvedExpr->type->to_str() + "'");
@@ -406,6 +408,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     if (resolvedLHS->type->kind == ResolvedTypeKind::Void) {
         return report(resolvedLHS->location, "reference to void declaration in assignment LHS");
     }
+    perform_implicit_cast(resolvedRHS, *resolvedLHS->type);
     if (!resolvedLHS->type->compare(*resolvedRHS->type)) {
         return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type->to_str() +
                                                  "' doesn't match variable type '" + resolvedLHS->type->to_str() + "'");
