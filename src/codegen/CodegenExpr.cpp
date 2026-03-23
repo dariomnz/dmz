@@ -489,7 +489,7 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
         if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(typeToGenerate)) {
             typeToGenerate = ptrType->pointerType.get();
         }
-        llvm::Type *type = generate_type(*typeToGenerate);
+        llvm::Type *type = generate_type(*typeToGenerate, true);
         if (typeToGenerate->kind == ResolvedTypeKind::Union || typeToGenerate->kind == ResolvedTypeKind::UnionDecl) {
             if (member->index == -1) {
                 llvm::Value *field = m_builder.CreateStructGEP(type, base, 0);
