@@ -28,7 +28,7 @@ bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
 bool ResolvedTypeVoid::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -764,6 +764,7 @@ bool ResolvedTypeDefaultInit::equal(const ResolvedType &other) const {
 bool ResolvedTypeDefaultInit::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeDefaultInit " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::Void) return debug_ret(true);
     return debug_ret(false);
 }
 

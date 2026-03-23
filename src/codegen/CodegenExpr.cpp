@@ -614,21 +614,22 @@ llvm::Value *Codegen::generate_temporary_union(const ResolvedUnionInstantiationE
 
     // 1. Store the tag
     llvm::Value *tagPtr = m_builder.CreateStructGEP(unionLLVMType, tmp, 0);
-    llvm::Type *tagTy = static_cast<llvm::StructType*>(unionLLVMType)->getElementType(0);
+    llvm::Type *tagTy = static_cast<llvm::StructType *>(unionLLVMType)->getElementType(0);
     const llvm::DataLayout &dl = m_module->getDataLayout();
     m_builder.CreateStore(m_builder.getIntN(dl.getTypeSizeInBits(tagTy), uie.fieldInitializer->field.index), tagPtr);
 
     // 2. Store the payload
-    llvm::Value *payloadArrayPtr = m_builder.CreateStructGEP(unionLLVMType, tmp, 1);
+    if (uie.fieldInitializer->field.type->kind != ResolvedTypeKind::Void) {
+        llvm::Value *payloadArrayPtr = m_builder.CreateStructGEP(unionLLVMType, tmp, 1);
 
-    auto &initExpr = *uie.fieldInitializer->initializer;
-    llvm::Value *initVal = generate_expr(initExpr, initExpr.type->generate_struct());
+        auto &initExpr = *uie.fieldInitializer->initializer;
+        llvm::Value *initVal = generate_expr(initExpr, initExpr.type->generate_struct());
 
-    llvm::Type *fieldType = generate_type(*uie.fieldInitializer->field.type);
-    llvm::Value *fieldPtr = m_builder.CreateBitCast(payloadArrayPtr, llvm::PointerType::get(fieldType, 0));
+        llvm::Type *fieldType = generate_type(*uie.fieldInitializer->field.type);
+        llvm::Value *fieldPtr = m_builder.CreateBitCast(payloadArrayPtr, llvm::PointerType::get(fieldType, 0));
 
-    store_value(initVal, fieldPtr, *initExpr.type, *uie.fieldInitializer->field.type);
-
+        store_value(initVal, fieldPtr, *initExpr.type, *uie.fieldInitializer->field.type);
+    }
     return tmp;
 }
 
@@ -1020,8 +1021,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         std::vector<llvm::Constant *> unionVals = {m_builder.getIntN(tagBitSize, tag), payload};
         unionInit = llvm::ConstantStruct::get(unionTmpType, unionVals);
     } else {
-        std::vector<llvm::Type *> unionFields = {tagTy,
-                                                 llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize)};
+        std::vector<llvm::Type *> unionFields = {tagTy, llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize)};
         auto *unionTmpType = llvm::StructType::get(*m_context, unionFields);
         std::vector<llvm::Constant *> unionVals = {
             m_builder.getIntN(tagBitSize, tag),
