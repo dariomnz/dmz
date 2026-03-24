@@ -1,7 +1,10 @@
+// RUN: dmz %s -run | filecheck %s
+// CHECK: A: 123 B: 456
+
 const std = import("std");
 
 fn main() -> void {
     let a = 123;
     let b = 456;
-    std.io.print.print("A: {} B: {}\n", .{a, b});
+    std.io.print("A: {} B: {}\n", .{a, b});
 }

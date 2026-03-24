@@ -23,5 +23,3 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:19: error: symbol 'y' not found
     let x6: i32 = y;
 }
-
-// CHECK-NOT: {{.*}}

@@ -43,4 +43,3 @@ fn loop(x: i32) -> void {
 }
 
 fn main() -> void {}
-// CHECK-NOT: {{.*}}

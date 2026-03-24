@@ -24,5 +24,3 @@ fn bar(x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:6: error: calling non-function symbol
     x();
 }
-
-// CHECK-NOT: {{.*}}

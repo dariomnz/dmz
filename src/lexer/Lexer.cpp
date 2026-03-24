@@ -459,6 +459,7 @@ Token Lexer::next_token() {
         advance();
     }
     debug_msg(t);
+    t.loc.len = t.str.size() > 0 ? t.str.size() : 1;
     return t;
 }
 

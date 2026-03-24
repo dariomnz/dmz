@@ -1,10 +1,9 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
+// CHECK: [[# @LINE + 2 ]]:13: error: symbol 'userDefinedType' not found
 // CHECK: [[# @LINE + 1 ]]:1: error: function 'foo' has invalid 'userDefinedType' return type
 fn foo() -> userDefinedType {
 }
 
 fn main() -> void {
 }
-
-// CHECK-NOT: {{.*}}

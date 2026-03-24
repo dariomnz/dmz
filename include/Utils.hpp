@@ -22,7 +22,7 @@ namespace DMZ {
 
 struct SourceLocation {
     std::string file_name = {};
-    size_t line = 0, col = 0;
+    size_t line = 0, col = 0, len = 1;
 
     std::string to_string() const {
         std::stringstream os;
@@ -36,11 +36,73 @@ struct SourceLocation {
     }
 };
 
+[[maybe_unused]] static inline std::string get_file_line(const std::string& file_name, size_t line_num) {
+    static std::mutex cacheMutex;
+    static std::unordered_map<std::string, std::vector<std::string>> fileCache;
+
+    std::unique_lock lock(cacheMutex);
+    auto it = fileCache.find(file_name);
+    if (it == fileCache.end()) {
+        std::ifstream file(file_name);
+        if (!file.is_open()) return "";
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(file, line)) {
+            lines.push_back(line);
+        }
+        it = fileCache.emplace(file_name, std::move(lines)).first;
+    }
+
+    if (line_num > 0 && line_num <= it->second.size()) {
+        return it->second[line_num - 1];
+    }
+    return "";
+}
+
 [[maybe_unused]] static inline std::nullptr_t report(SourceLocation loc, std::string_view message,
                                                      bool isWarning = false) {
     static std::mutex reportMutex;
     std::unique_lock lock(reportMutex);
-    std::cerr << loc << ':' << (isWarning ? " warning: " : " error: ") << message << '\n';
+
+    bool is_terminal = isatty(STDERR_FILENO);
+    const char* red = is_terminal ? "\033[1;31m" : "";
+    const char* yellow = is_terminal ? "\033[1;33m" : "";
+    const char* reset = is_terminal ? "\033[0m" : "";
+    const char* bold = is_terminal ? "\033[1m" : "";
+
+    std::cerr << bold << loc << ":" << reset;
+    if (isWarning) {
+        std::cerr << yellow << " warning: " << reset;
+    } else {
+        std::cerr << red << " error: " << reset;
+    }
+    std::cerr << bold << message << reset << '\n';
+
+    std::string line = get_file_line(loc.file_name, loc.line);
+    if (!line.empty()) {
+        std::cerr << " " << loc.line << " | ";
+        if (is_terminal) {
+            std::string before = line.substr(0, std::min(loc.col, line.size()));
+            std::string error_part = (loc.col < line.size()) ? line.substr(loc.col, std::min(loc.len, line.size() - loc.col)) : "";
+            std::string after = (loc.col + error_part.size() < line.size()) ? line.substr(loc.col + error_part.size()) : "";
+            std::cerr << before << (isWarning ? yellow : red) << bold << error_part << reset << after << '\n';
+        } else {
+            std::cerr << line << '\n';
+        }
+
+        std::cerr << " " << std::string(std::to_string(loc.line).size(), ' ') << " | ";
+        for (size_t i = 0; i < loc.col; ++i) {
+            if (line[i] == '\t')
+                std::cerr << '\t';
+            else
+                std::cerr << ' ';
+        }
+        std::cerr << (isWarning ? yellow : red) << bold;
+        for (size_t i = 0; i < loc.len; ++i) {
+            std::cerr << '^';
+        }
+        std::cerr << reset << '\n';
+    }
 
     return nullptr;
 }

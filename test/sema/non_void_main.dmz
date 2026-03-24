@@ -2,5 +2,3 @@
 // CHECK: [[# @LINE + 1 ]]:1: error: 'main' function is expected to have 'void' return type
 fn main() -> i32 {
 }
-
-// CHECK-NOT: {{.*}}

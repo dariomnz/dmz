@@ -418,8 +418,6 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
             if (shouldCheckType) {
                 perform_implicit_cast(resolvedInitializer, *varDecl.type);
                 if (!varDecl.type->compare(*resolvedInitializer->type)) {
-                    varDecl.type->dump();
-                    resolvedInitializer->type->dump();
                     report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                               varDecl.type->to_str() + "' actual '" +
                                                               resolvedInitializer->type->to_str() + "'");

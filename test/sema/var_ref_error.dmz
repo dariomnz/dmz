@@ -9,5 +9,3 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:9: error: unexpected type of argument 'i32' expected '*i32'
     foo(i);
 }
-
-// CHECK-NOT: {{.*}}

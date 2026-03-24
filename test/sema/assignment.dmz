@@ -30,5 +30,3 @@ fn assignParam(x: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:5: error: 'x' cannot be mutated
     x = 1;
 }
-
-// CHECK-NOT: {{.*}}

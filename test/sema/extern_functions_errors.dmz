@@ -14,5 +14,3 @@ extern fn argvar2(a: i32, ..., b: i32) -> void;
 
 fn main() -> void {
 }
-
-// CHECK-NOT: {{.*}}

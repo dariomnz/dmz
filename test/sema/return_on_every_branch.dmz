@@ -194,5 +194,3 @@ fn returnAllPathsElse2(x: i32) -> i32 {
 
 fn main() -> void {
 }
-
-// CHECK-NOT: {{.*}}

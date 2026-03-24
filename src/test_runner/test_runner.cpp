@@ -277,7 +277,9 @@ static std::string process_line_vars(std::string pat, int line_num) {
 TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
     auto start = std::chrono::high_resolution_clock::now();
     try {
-        if (tc.run_lines.empty()) return {false, tc.path.string(), 0, {}, "NO RUN LINE FOUND", ""};
+        if (tc.run_lines.empty()) {
+            return {false, tc.path.string(), 0, {"No RUN lines found"}, "NO RUN LINE", ""};
+        }
 
         std::string abs_path = fs::absolute(tc.path).string();
         std::string abs_dir = fs::absolute(tc.path.parent_path()).string();
@@ -404,9 +406,7 @@ int run_tests(std::string_view test_path, const TestOptions& options) {
                     if (!val.empty()) tc.run_lines.push_back(val);
                 }
             }
-            if (!tc.run_lines.empty()) {
-                tests.push_back(tc);
-            }
+            tests.push_back(tc);
         }
     };
 

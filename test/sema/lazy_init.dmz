@@ -141,5 +141,3 @@ fn nestedInLoop(param: i32) -> void {
     // CHECK: [[# @LINE + 1 ]]:9: error: 'x' is not initialized
     x + x;
 }
-
-// CHECK-NOT: {{.*}}

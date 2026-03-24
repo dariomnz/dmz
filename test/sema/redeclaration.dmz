@@ -4,5 +4,3 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:9: error: redeclaration of 'x'
     let x: i32 = 2;
 }
-
-// CHECK-NOT: {{.*}}
