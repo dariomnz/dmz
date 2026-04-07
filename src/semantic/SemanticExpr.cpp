@@ -316,8 +316,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     }
 
     debug_msg(Dumper([&]() { resolvedCallee->dump(); }));
-    debug_msg(call.location << " funcDeclArgs " << funcDeclArgs << " call_args_num "
-                          << call_args_num);
+    debug_msg(call.location << " funcDeclArgs " << funcDeclArgs << " call_args_num " << call_args_num);
     for (size_t i = 0; i < call_args_num; ++i) {
         if (i < funcDeclArgs) {
             size_t paramIdx = isMemberCall ? i + 1 : i;
@@ -1056,32 +1055,44 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation) {
     debug_func(tupleInstantiation.location);
 
-    std::vector<ptr<ResolvedFieldDecl>> tupleFields;
-    std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
+    std::vector<ptr<ResolvedExpr>> resolvedElements;
+    std::string tupleName = "tuple";
 
-    unsigned index = 0;
     for (auto &&element : tupleInstantiation.elements) {
         varOrReturn(resolvedElement, resolve_expr(*element));
         resolvedElement->set_constant_value(cee.evaluate(*resolvedElement, false));
-
-        std::string fieldName = "elem" + std::to_string(index);
-
-        auto fieldDecl = makePtr<ResolvedFieldDecl>(resolvedElement->location, fieldName,
-                                                    resolvedElement->type->clone(), index, nullptr);
-        auto initStmt =
-            makePtr<ResolvedFieldInitStmt>(resolvedElement->location, *fieldDecl, std::move(resolvedElement));
-        tupleFields.emplace_back(std::move(fieldDecl));
-        resolvedFieldInits.emplace_back(std::move(initStmt));
-        index++;
+        tupleName += "." + resolvedElement->type->to_str();
+        resolvedElements.emplace_back(std::move(resolvedElement));
     }
 
-    std::string tupleName = "tuple." + std::to_string(m_currentModule->tuple_counter++);
-    auto structDecl =
-        makePtr<ResolvedStructDecl>(tupleInstantiation.location, false, tupleName, nullptr, false,
-                                    std::move(tupleFields), std::vector<ptr<ResolvedMemberFunctionDecl>>{});
-    structDecl->isTuple = true;
-    auto *structDeclPtr = structDecl.get();
-    m_currentModule->declarations.emplace_back(std::move(structDecl));
+    ResolvedStructDecl *structDeclPtr = nullptr;
+    if (m_instantiatedTuples.count(tupleName)) {
+        structDeclPtr = m_instantiatedTuples[tupleName];
+    } else {
+        std::vector<ptr<ResolvedFieldDecl>> tupleFields;
+        unsigned index = 0;
+        for (auto &&el : resolvedElements) {
+            std::string fieldName = "elem" + std::to_string(index);
+            tupleFields.emplace_back(
+                makePtr<ResolvedFieldDecl>(el->location, fieldName, el->type->clone(), index, nullptr));
+            index++;
+        }
+
+        auto structDecl =
+            makePtr<ResolvedStructDecl>(tupleInstantiation.location, false, tupleName, nullptr, false,
+                                        std::move(tupleFields), std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+        structDecl->isTuple = true;
+        structDeclPtr = structDecl.get();
+        m_instantiatedTuples[tupleName] = structDeclPtr;
+        m_currentModule->declarations.emplace_back(std::move(structDecl));
+    }
+
+    std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
+    for (unsigned i = 0; i < resolvedElements.size(); ++i) {
+        resolvedFieldInits.emplace_back(makePtr<ResolvedFieldInitStmt>(
+            resolvedElements[i]->location, *structDeclPtr->fields[i], std::move(resolvedElements[i])));
+    }
+
     add_dependency(structDeclPtr);
 
     return makePtr<ResolvedStructInstantiationExpr>(tupleInstantiation.location, *structDeclPtr,
@@ -1174,6 +1185,28 @@ ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryEr
         return report(resolvedErr->location, "expect error union when using try");
     auto optType = static_cast<const ResolvedTypeOptional *>(resolvedErr->type.get());
     auto defers = resolve_defer_ref_stmt(false, true);
+
+    ResolvedFunctionDecl *printErrorDecl = nullptr;
+    for (auto &[path, mod] : m_modules_for_import) {
+        debug_msg("Module " << mod->name() << " path " << path);
+        if (path.ends_with("std/builtin.dmz")) {
+            for (auto &decl : mod->declarations) {
+                debug_msg("Target " << "printErrorTrace" << " search " << decl->identifier);
+                if (decl->identifier == "printErrorTrace") {
+                    if (auto funcDecl = dynamic_cast<ResolvedFunctionDecl *>(decl.get())) {
+                        printErrorDecl = funcDecl;
+                        break;
+                    }
+                }
+            }
+        }
+        if (printErrorDecl != nullptr) break;
+    }
+
+    if (printErrorDecl) {
+        add_dependency(printErrorDecl);
+    }
+
     return makePtr<ResolvedTryErrorExpr>(tryErrorExpr.location, optType->optionalType->clone(), std::move(resolvedErr),
                                          std::move(defers));
 }
