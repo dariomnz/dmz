@@ -68,6 +68,15 @@ pub struct libc_allocator {
     }
 }
 
+pub fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
+    for (0..slice.len) |i| {
+        if (slice[i] == scalar) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // test "leak" {
 //     let libc_alloc = libc_allocator.init();
 //     let allocator = libc_alloc.Allocator();

@@ -1,0 +1,13 @@
+const std = import("std");
+
+extern fn isatty(fd: i32) -> i32;
+
+pub fn isTerminal() -> bool {
+    return isatty(std.io.file.stdout) == 1;
+}
+
+pub const COLORRESET: []u8 = "\x1B[0m";
+pub const COLORRED: []u8 = "\x1B[31m";
+pub const COLORGREEN: []u8 = "\x1B[32m";
+pub const COLORYELLOW: []u8 = "\x1B[33m";
+pub const COLORBLUE: []u8 = "\x1B[34m";

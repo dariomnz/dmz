@@ -1,13 +1,16 @@
+const std = import("std");
+
 pub const stdin: i32 = 0;
 pub const stdout: i32 = 1;
 pub const stderr: i32 = 2;
 
+pub const O_RDONLY = 0;
+
 pub extern fn open(buffer: *u8, flags: i32, ...) -> i32;
 pub extern fn write(fd: i32, buffer: *u8, count: usize) -> isize;
-extern fn read(fd: i32, buffer: *u8, count: usize) -> isize;
-pub extern fn cloase(fd: i32) -> i32;
+pub extern fn read(fd: i32, buffer: *u8, count: usize) -> isize;
+pub extern fn close(fd: i32) -> i32;
 
-const std = import("std");
 pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
     let writed = 0;
     let buf_slice = buffer[0..count];
@@ -27,10 +30,39 @@ pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
 }
 
 pub fn readOne(fd: i32, buffer: []u8) -> !usize {
-    std.io.printf("to readAll %ld\n", buffer.len);
+    // std.io.printf("fd %d to readAll %ld\n", fd, buffer.len);
     const readed = read(fd, buffer.ptr, buffer.len);
+    // std.io.printf("readed %d\n", readed);
     if (readed < 0) {
         try std.errno.error_errno();
     }
     return readed;
+}
+
+pub struct reader {
+    fd: i32,
+
+    pub fn init(file_fd: i32) -> @This {
+        return @This{
+            fd: file_fd,
+        };
+    }
+
+    pub fn reader(self: *@This, buf: []u8) -> std.io.Reader {
+        let ret = std.io.Reader{
+            buffer: buf,
+            vtable_ptr: null,
+            vtable_refill: &reader.refill,
+        };
+        ret.vtable_ptr = self;
+        return ret;
+    }
+
+    fn refill(ptr: *@This, r: *std.io.Reader, wanted: usize) -> !usize {
+        // std.io.printf("reader refill %ld\n", wanted);
+        let readed = try std.io.file.readOne(ptr.fd, r.buffer[r.end..(r.end + wanted)]);
+        // std.io.printf("readAll %ld\n", readed);
+        r.end += readed;
+        return readed;
+    }
 }

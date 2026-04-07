@@ -15,7 +15,6 @@ pub struct Writer {
             vtable_ptr: null,
             vtable_flush: &@This.fixedFlush,
         };
-        ret.vtable_ptr = &ret;
         return ret;
     }
 

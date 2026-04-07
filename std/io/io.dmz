@@ -19,7 +19,6 @@ pub struct stdout {
             vtable_ptr: null,
             vtable_flush: &stdout.flush,
         };
-        ret.vtable_ptr = &ret;
         return ret;
     }
 

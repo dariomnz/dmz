@@ -8,13 +8,13 @@ pub struct Reader {
 
     vtable_ptr: *void,
     // fn rebase(ptr: *@This, capacity: usize) -> !void
-    vtable_rebase: *fn(*void, *@This, usize)->!void = &Reader.defaultRebase,
+    vtable_rebase: *fn(*void, *@This, usize)->!void = &std.io.Reader.defaultRebase,
     // fn refill(ptr: *@This, wanted: usize) -> !usize
     vtable_refill: *fn(*void, *@This, usize)->!usize,
 
-    pub fn print(r: *@This) -> void {
-        std.io.printf("Reader{buf %p, size %ld, seek %ld, end %ld}\n", r.buffer.ptr, r.buffer.len, r.seek, r.end);
-    }
+    // pub fn print(r: *@This) -> void {
+    //     std.io.printf("Reader{buf %p, size %ld, seek %ld, end %ld}\n", r.buffer.ptr, r.buffer.len, r.seek, r.end);
+    // }
 
     pub fn rebase(r: *@This, capacity: usize) -> !void {
         // std.io.printf("rebase capacity %ld\n", capacity);
@@ -65,6 +65,66 @@ pub struct Reader {
 
         defer r.seek++;
         return r.buffer[r.seek];
+    }
+
+    pub fn readLine(r: *@This) -> ![]u8 {
+        const start_pos = r.seek;
+
+        while (true) {
+            // Buscamos el delimitador en la parte del buffer que ya tenemos cargada
+            const current_data = r.buffer[r.seek..r.end];
+
+            const pos: isize = std.mem.indexOfScalar<u8>(current_data, '\n');
+            // std.io.print("pos {}\n", .{pos});
+            if (pos >= 0) {
+                // Calculamos el final de la línea (sin incluir el \n)
+                const line_end = r.seek + pos;
+
+                // Actualizamos el puntero de lectura para saltar el \n en la próxima llamada
+                r.seek = line_end + 1;
+
+                // Retornamos el slice de la línea (puedes ajustar si quieres quitar el \r)
+                let line = r.buffer[start_pos..line_end];
+                if (line.len > 0 && line[line.len - 1] == '\r') {
+                    line = line[0..line.len - 1];
+                }
+                // std.io.print("readed line {s}\n", .{line});
+                return line;
+            }
+
+            // Si no encontramos '\n', hemos llegado al final de lo cargado actualmente.
+            // Movemos el seek al final para que refill sepa desde dónde trabajar.
+            r.seek = r.end;
+
+            // Intentamos cargar más datos. 
+            // Si ya no hay más (EndOfStream), devolvemos lo que tengamos hasta ahora.
+            r.refill(1) catch |er| {
+                if (er == error.EndOfStream) {
+                    if (r.end > start_pos) {
+                        // Devolvemos el resto del buffer como última línea
+                        const line = r.buffer[start_pos..r.end];
+                        r.seek = r.end;
+                        // Marcamos como agotado
+                        return line;
+                    }
+                    return er;
+                }
+                return er;
+            };
+            // Tras el refill exitoso, el bucle continúa buscando en los nuevos datos.
+            // Nota: Si refill hizo un rebase, start_pos ya no es válido.
+            // Por eso, es mejor reajustar start_pos si r.seek volvió a 0.
+            // if (r.seek == 0) {
+                // Este caso ocurre si defaultRebase se ejecutó durante el refill
+                // No podemos devolver un slice que apunte a memoria antigua.
+                // Para un Reader con buffer circular o rebase, readLine debería
+                // idealmente usar un ArrayList externo o garantizar que la línea
+                // no se mueva. 
+                // std.io.printf("StreamTooLong\n");
+                // return error.StreamTooLong;
+                // O manejar la relocalización
+            // }
+        }
     }
 
     pub fn refill(r: *@This, wanted: usize) -> !usize {

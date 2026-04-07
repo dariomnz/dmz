@@ -14,24 +14,120 @@ fn @builtin_test_name(n: i32) -> *u8 {
     return "";
 }
 
+struct ErrorTraceEntry {
+    file: []u8,
+    line: i32,
+    col: i32,
+    func: []u8,
+}
+
+struct ErrorTrace {
+    size: i32,
+    entries: ErrorTraceEntry[20],
+}
+
+fn @getErrorTrace() -> ErrorTrace {
+    // Internaly implemented
+    return ErrorTrace{size: 0, entries: {}};
+}
+
+fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
+    const file = std.io.file.open(file_path.ptr, std.io.file.O_RDONLY);
+    if (file < 0) return;
+    defer std.io.file.close(file);
+
+    const reader = std.io.file.reader.init(file);
+    let buffer: u8[1024] = {};
+    const r = reader.reader(buffer[0..1024]);
+
+    let current_line = 1;
+    while (true) {
+        const readline = r.readLine() catch |er| {
+            return;
+        };
+        if (current_line == line) {
+            let start = 0;
+            const isTerminal = std.terminal.isTerminal();
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORBLUE});
+            start += try std.io.print(" {d}", .{line});
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+            start += try std.io.print(" | ", .{});
+
+            std.io.print("{s}\n", .{readline});
+            for (0..(start + col - 2)) |i| {
+                std.io.print(" ", .{});
+            }
+            std.io.print(" ^\n", .{});
+            return;
+        }
+        current_line += 1;
+    }
+}
+
+fn printErrorTrace(er: err) -> void {
+    const trace = @getErrorTrace();
+
+    const isTerminal = std.terminal.isTerminal();
+    if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRED});
+    std.io.print("error: {s}\n", .{er});
+    if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+
+    for (0..trace.size) |i| {
+        const entry = trace.entries[i];
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORYELLOW});
+        std.io.print("{s}", .{entry.file});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+        std.io.print(":", .{});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORBLUE});
+        std.io.print("{d}", .{entry.line});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+        std.io.print(":", .{});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORBLUE});
+        std.io.print("{d}", .{entry.col});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+        std.io.print(": in function '", .{});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORGREEN});
+        std.io.print("{s}", .{entry.func});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+        std.io.print("'\n", .{});
+
+        printSourceLine(entry.file, entry.line, entry.col);
+    }
+}
+
 fn __builtin_main_test() -> void {
     const num_test = @builtin_test_num();
     let result = 0;
+    const isTerminal = std.terminal.isTerminal();
 
     for (0..num_test) |i| {
         result = result + 1;
         const test_name = @builtin_test_name(i);
-        std.io.printf("Run test [%d/%d] '%s'.\n", i + 1, num_test, test_name);
-        @builtin_test_run(i) catch |er| {
-            std.io.printf("Fail test [%d/%d] '%s' with error '%s'.\n", i + 1, num_test, test_name, er);
+
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORGREEN});
+        std.io.print("Run test ", .{});
+        if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+        std.io.print("[{d}/{d}] '{s}'.\n", .{i + 1, num_test, test_name});
+
+        const test_result = @builtin_test_run(i);
+        test_result catch |er| {
+            printErrorTrace(er);
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRED});
+            std.io.print("Fail test ", .{});
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+            std.io.print("[{d}/{d}] '{s}' with ", .{i + 1, num_test, test_name});
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRED});
+            std.io.print("error ", .{});
+            if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
+            std.io.print("'{s}'.\n", .{er});
             result = result - 1;
         };
     }
 
     if (result == num_test) {
-        std.io.printf("All %d tests passed.\n", num_test);
+        std.io.print("All {d} tests passed.\n", .{num_test});
     } else {
-        std.io.printf("%d passed, %d failed.\n", result, num_test - result);
+        std.io.print("{d} passed, {d} failed.\n", .{result, num_test - result});
     }
 }
 
