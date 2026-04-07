@@ -192,19 +192,50 @@ overload(Ts...) -> overload<Ts...>;
     std::string res = "";
     static const std::unordered_map<char, char> specialChars = {
         {'n', '\n'}, {'t', '\t'}, {'r', '\r'},  {'v', '\v'},  {'b', '\b'},  {'f', '\f'},
-        {'a', '\a'}, {'0', '\0'}, {'\\', '\\'}, {'\"', '\"'}, {'\'', '\''},
+        {'a', '\a'}, {'\\', '\\'}, {'\"', '\"'}, {'\'', '\''},
     };
     for (size_t i = 0; i < literal.length(); ++i) {
         if (literal[i] == '\\') {
             i++;
-            if (i < literal.length()) {
+            if (i >= literal.length()) return std::nullopt;
+
+            if (literal[i] == 'x') {
+                i++;
+                if (i + 1 < literal.length()) {
+                    auto hexValue = [](char h) -> int {
+                        if (h >= '0' && h <= '9') return h - '0';
+                        if (h >= 'a' && h <= 'f') return h - 'a' + 10;
+                        if (h >= 'A' && h <= 'F') return h - 'A' + 10;
+                        return -1;
+                    };
+                    int h = hexValue(literal[i]);
+                    int l = hexValue(literal[i + 1]);
+                    if (h != -1 && l != -1) {
+                        res += static_cast<char>((h << 4) | l);
+                        i++;
+                    } else {
+                        return std::nullopt;
+                    }
+                } else {
+                    return std::nullopt;
+                }
+            } else if (literal[i] >= '0' && literal[i] <= '7') {
+                int val = 0;
+                int count = 0;
+                while (count < 3 && i < literal.length() && literal[i] >= '0' && literal[i] <= '7') {
+                    val = val * 8 + (literal[i] - '0');
+                    i++;
+                    count++;
+                }
+                i--;
+                res += static_cast<char>(val);
+            } else {
                 auto it = specialChars.find(literal[i]);
                 if (it != specialChars.end()) {
                     res += it->second;
+                } else {
+                    res += literal[i];
                 }
-            } else {
-                // Error end '\'
-                return std::nullopt;
             }
         } else {
             res += literal[i];
@@ -220,9 +251,14 @@ overload(Ts...) -> overload<Ts...>;
         {'\a', "\\a"}, {'\0', "\\0"}, {'\\', "\\\\"}, {'\"', "\\\""}, {'\'', "\\\'"},
     };
     for (size_t i = 0; i < str.length(); ++i) {
-        auto it = specialChars.find(str[i]);
+        unsigned char uc = static_cast<unsigned char>(str[i]);
+        auto it = specialChars.find(static_cast<char>(uc));
         if (it != specialChars.end()) {
             res += it->second;
+        } else if (uc < 32 || uc > 126) {
+            char hex[5];
+            snprintf(hex, sizeof(hex), "\\x%02X", uc);
+            res += hex;
         } else {
             res += str[i];
         }
