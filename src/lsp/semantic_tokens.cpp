@@ -359,6 +359,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_decl(*errorGroupExprDecl);
         } else if (dynamic_cast<const ResolvedImportExpr*>(&expr)) {
             debug_msg("ResolvedImportExpr");
+        } else if (auto errorInplace = dynamic_cast<const ResolvedErrorInPlaceExpr*>(&expr)) {
+            debug_msg("ResolvedErrorInPlaceExpr");
+            add_token(errorInplace->location, errorInplace->identifier, SemanticTokenType::Variable);
         }
     }
 }
