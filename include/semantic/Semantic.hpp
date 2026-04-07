@@ -46,6 +46,7 @@ class Sema {
 
     std::vector<ResolvedDecl *> m_pending_decls;
 
+    std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
     static std::unordered_map<std::string, ptr<ResolvedDecl>> m_vectorBuiltins;
 
    public:
@@ -55,10 +56,7 @@ class Sema {
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
     void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
-    void remove_unused(std::vector<ptr<ResolvedModuleDecl>> &decls, bool buildTest);
-    void remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest);
-    bool recurse_needed(ResolvedDependencies &deps, bool buildTest,
-                        std::unordered_set<ResolvedDependencies *> &recurse_check);
+    void mark_needed(std::vector<ptr<ResolvedModuleDecl>> &decls, bool buildTest);
 
    private:
     ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true);

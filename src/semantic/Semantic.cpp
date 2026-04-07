@@ -541,15 +541,18 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
 bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
     bool error = false;
     debug_func((error ? "error" : "no error"));
-    ScopedTimer(StatType::Semantic_Body);
-    for (auto &&module : moduleDecls) {
-        if (!resolve_module_body(*module)) {
+    {
+        ScopedTimer(StatType::Semantic_Body);
+        for (auto &&module : moduleDecls) {
+            ScopedTimerName(StatType::Semantic_Body, module->name());
+            if (!resolve_module_body(*module)) {
+                error = true;
+            }
+        }
+
+        if (!resolve_pending_body()) {
             error = true;
         }
-    }
-
-    if (!resolve_pending_body()) {
-        error = true;
     }
 
     if (!error) {
@@ -561,6 +564,7 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
 
 void Sema::fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls) {
     debug_func("");
+    ScopedTimer(StatType::Semantic_Fill_deps);
     for (auto &&decl : decls) {
         debug_msg("ResolvedModuleDecl " << decl->name());
         fill_depends(decl.get(), decl->declarations);
@@ -626,182 +630,41 @@ void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDe
     }
 }
 
-bool Sema::recurse_needed(ResolvedDependencies &resolvedDeps, bool buildTest,
-                          std::unordered_set<ResolvedDependencies *> &recurse_check) {
-    bool ret = false;
-    bool isReasonRecurse = false;
-    debug_func(resolvedDeps.name() << " " << (ret ? "true" : "false"));
-    defer([&]() {
-        if (ret == false && isReasonRecurse == false) {
-            debug_msg(resolvedDeps.name() << " cached not needed");
-            resolvedDeps.cachedIsNotNeeded = true;
-        }
-        recurse_check.erase(&resolvedDeps);
-    });
-
-    if (resolvedDeps.cachedIsNotNeeded) {
-        debug_msg("ResolvedDecl cached is not needed");
-        ret = false;
-        return ret;
-    }
-
-    if (!buildTest && dynamic_cast<const ResolvedTestDecl *>(&resolvedDeps)) {
-        debug_msg("ResolvedDecl is a test and not necesary");
-        ret = false;
-        return ret;
-    }
-
-    if (dynamic_cast<const ResolvedModuleDecl *>(&resolvedDeps)) {
-        debug_msg("ResolvedModuleDecl is empty");
-        ret = false;
-        return ret;
-    }
-
-    if (dynamic_cast<const ResolvedGenericFunctionDecl *>(&resolvedDeps)) {
-        debug_msg("is ResolvedGenericFunctionDecl not needed");
-        ret = false;
-        return ret;
-    }
-
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedDeps)) {
-        debug_msg("is ResolvedGenericFunctionDecl not needed");
-        ret = false;
-        return ret;
-    }
-
-    if (resolvedDeps.identifier == "main") {
-        debug_msg(resolvedDeps.name() << " is needed main");
-        ret = true;
-        return ret;
-    }
-
-    if (buildTest && resolvedDeps.identifier == "__builtin_main_test") {
-        debug_msg(resolvedDeps.name() << " is needed buildTest or __builtin_main_test");
-        ret = true;
-        return ret;
-    }
-
-    if (resolvedDeps.isUsedBy.size() == 1) {
-        debug_msg(resolvedDeps.name() << " " << (*resolvedDeps.isUsedBy.begin())->name());
-        if (*resolvedDeps.isUsedBy.begin() == &resolvedDeps) {
-            debug_msg(resolvedDeps.name() << " is not needed isUsedBy only by itself" << resolvedDeps.name());
-            ret = false;
-            return ret;
-        }
-    }
-
-    size_t reasonRecurse = 0;
-    for (auto &&decl : resolvedDeps.isUsedBy) {
-        debug_msg(decl->name() << " in isUsedBy " << resolvedDeps.name());
-        if (!recurse_check.emplace(decl).second) {
-            debug_msg(resolvedDeps.name() << " is not needed recurse check");
-            reasonRecurse += 1;
-            continue;
-        }
-        if (recurse_needed(*decl, buildTest, recurse_check)) {
-            debug_msg(decl->name() << " is needed recurse");
-            ret = true;
-            return ret;
-        }
-    }
-    if (reasonRecurse > 0) {
-        isReasonRecurse = true;
-    }
-
-    debug_msg(resolvedDeps.name() << " is not needed");
-    ret = false;
-    return ret;
-}
-
-void Sema::remove_unused(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool buildTest) {
-    auto aux_vector = move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(moduleDecls);
-    remove_unused(aux_vector, buildTest);
-    moduleDecls = move_vector_ptr<ResolvedDecl, ResolvedModuleDecl>(aux_vector);
-}
-
-void Sema::remove_unused(std::vector<ptr<ResolvedDecl>> &decls, bool buildTest) {
+void Sema::mark_needed(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool buildTest) {
     debug_func("");
-
-    auto add_to_remove = [](ptr<DMZ::ResolvedDecl> &d) {
-        if (auto *deps = dynamic_cast<ResolvedDependencies *>(d.get())) {
-            // d.reset();
-            if (!dynamic_cast<const ResolvedGenericFunctionDecl *>(deps) &&
-                !dynamic_cast<const ResolvedGenericStructDecl *>(deps)) {
-                deps->isNeeded = false;
-            }
-            deps->clean_dependencies();
-        } else {
-            d->dump();
-            dmz_unreachable("unexpected declaration");
-        }
-    };
-    std::unordered_set<ResolvedDependencies *> recurse_check;
-    for (auto &&decl : decls) {
-        recurse_check.clear();
-        if (!decl) {
-            debug_msg("Continue in to_remove");
-            continue;
-        }
-        if (auto md = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
-            debug_msg("ModuleDecl " << md->identifier);
-            remove_unused(md->declarations, buildTest);
-            if (md->declarations.empty()) {
-                add_to_remove(decl);
-            }
-            continue;
-        }
-        if (auto sd = dynamic_cast<ResolvedStructDecl *>(decl.get())) {
-            if (auto gen = dynamic_cast<ResolvedGenericStructDecl *>(decl.get())) {
-                debug_msg("ResolvedGenericStructDecl " << gen->identifier);
-
-                auto aux_decls = move_vector_ptr<ResolvedSpecializedStructDecl, ResolvedDecl>(gen->specializations);
-                remove_unused(aux_decls, buildTest);
-                gen->specializations = move_vector_ptr<ResolvedDecl, ResolvedSpecializedStructDecl>(aux_decls);
-
-                if (!recurse_needed(*gen, buildTest, recurse_check)) {
-                    add_to_remove(decl);
-                }
-            }
-            debug_msg("StructDecl " << sd->identifier);
-
-            auto aux_decls = move_vector_ptr<ResolvedMemberFunctionDecl, ResolvedDecl>(sd->functions);
-            remove_unused(aux_decls, buildTest);
-            sd->functions = move_vector_ptr<ResolvedDecl, ResolvedMemberFunctionDecl>(aux_decls);
-
-            if (!recurse_needed(*sd, buildTest, recurse_check)) {
-                add_to_remove(decl);
-            }
-            continue;
-        }
-        if (auto fd = dynamic_cast<ResolvedFuncDecl *>(decl.get())) {
-            if (auto gen = dynamic_cast<ResolvedGenericFunctionDecl *>(decl.get())) {
-                debug_msg("ResolvedGenericFunctionDecl " << gen->identifier);
-
-                auto aux_decls = move_vector_ptr<ResolvedSpecializedFunctionDecl, ResolvedDecl>(gen->specializations);
-                remove_unused(aux_decls, buildTest);
-                gen->specializations = move_vector_ptr<ResolvedDecl, ResolvedSpecializedFunctionDecl>(aux_decls);
-
-                if (!recurse_needed(*gen, buildTest, recurse_check)) {
-                    add_to_remove(decl);
-                }
+    ScopedTimer(StatType::Semantic_Mark_deps);
+    std::queue<ResolvedDependencies *> worklist;
+    for (auto &&modDeps : moduleDecls) {
+        for (auto &&decl : modDeps->declarations) {
+            bool isRoot = false;
+            auto deps = dynamic_cast<ResolvedDependencies *>(decl.get());
+            if (!deps) continue;
+            if (deps->identifier == "main" || deps->identifier == "__builtin_main") {
+                isRoot = true;
+            } else if (buildTest && deps->identifier == "__builtin_main_test") {
+                isRoot = true;
             }
 
-            debug_msg("FuncDecl " << fd->identifier);
-            if (!recurse_needed(*fd, buildTest, recurse_check)) {
-                add_to_remove(decl);
+            if (isRoot) {
+                deps->isNeeded = true;
+                worklist.push(deps);
             }
-            continue;
-        }
-        if (auto deps = dynamic_cast<ResolvedDependencies *>(decl.get())) {
-            debug_msg("ResolvedDependencies " << deps->identifier);
-            if (!recurse_needed(*deps, buildTest, recurse_check)) {
-                add_to_remove(decl);
-            }
-            continue;
         }
     }
 
-    std::erase_if(decls, [&](ptr<ResolvedDecl> &d) -> bool { return d == nullptr; });
+    if (worklist.empty())
+        dmz_unreachable("This should not happend. There are no main, __builtin_main or __builtin_main_test");
+
+    while (worklist.size() > 0) {
+        auto curr = worklist.front();
+        worklist.pop();
+        for (auto dep : curr->dependsOn) {
+            if (!dep->isNeeded) {
+                dep->isNeeded = true;
+                worklist.push(dep);
+            }
+        }
+    }
 }
 
 bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {

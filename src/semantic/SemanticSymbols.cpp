@@ -10,7 +10,8 @@ void ResolvedExpr::dump_constant_value(size_t level) const {
     }
 }
 
-bool ResolvedDecl::is_needed() {
+bool ResolvedDecl::is_needed(bool noRemoveUnused) {
+    if (noRemoveUnused) return true;
     if (auto *deps = dynamic_cast<const ResolvedDependencies *>(this)) {
         return deps->isNeeded;
     }
@@ -45,7 +46,7 @@ void ResolvedDependencies::dump_dependencies(size_t level, bool dot_format) cons
     // dump(level, true);
     if (!dot_format) {
         std::cerr << indent_line(level, 0, true) << name() << (isNeeded ? "" : " (not needed)") << '\n';
-        if (!isNeeded) return;
+        if (!isNeeded || (dependsOn.empty() && isUsedBy.empty())) return;
         std::cerr << indent_line(level + 1, 1, false) << "Depends on " << dependsOn.size() << ": [ ";
         for (auto &&dep : dependsOn) {
             if (dep->symbolName.empty()) {
