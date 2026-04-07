@@ -159,9 +159,9 @@ static bool match_pattern(const std::string& text, const std::string& pattern, s
     }
 }
 
-static std::pair<bool, std::string> verify_checks(const std::string& output,
+static std::pair<bool, std::string> verify_checks(const std::string& filename, const std::string& output,
                                                   const std::vector<CheckDirective>& checks) {
-    if (checks.empty()) return {false, "No checks found"};
+    if (checks.empty()) return {false, filename + ": No checks found"};
 
     auto lines = split_lines(output);
     size_t current_line_idx = 0;
@@ -188,21 +188,19 @@ static std::pair<bool, std::string> verify_checks(const std::string& output,
                 }
             }
             if (!found)
-                return {false, "CHECK: '" + check.pattern + "' not found (source line " +
-                                   std::to_string(check.line_num) + ")"};
+                return {false,
+                        filename + ":" + std::to_string(check.line_num) + ": \nCHECK: '" + check.pattern + "' not found"};
         } else if (check.kind == CheckKind::CheckNext) {
             if (!has_matched_once)
-                return {false,
-                        "CHECK-NEXT: used before any CHECK (source line " + std::to_string(check.line_num) + ")"};
+                return {false, filename + ":" + std::to_string(check.line_num) + ": CHECK-NEXT: used before any CHECK"};
             size_t next_line = current_line_idx + 1;
             if (next_line >= lines.size())
-                return {false,
-                        "CHECK-NEXT: reached end of output (source line " + std::to_string(check.line_num) + ")"};
+                return {false, filename + ":" + std::to_string(check.line_num) + ": CHECK-NEXT: reached end of output"};
 
             size_t m_pos, m_len;
             if (!match_pattern(lines[next_line], check.pattern, m_pos, m_len)) {
-                return {false, "CHECK-NEXT: '" + check.pattern + "' not found on next line (got: '" + lines[next_line] +
-                                   "') (source line " + std::to_string(check.line_num) + ")"};
+                return {false, filename + ":" + std::to_string(check.line_num) + ": \nCHECK-NEXT: '" + check.pattern +
+                                   "' not found on next line\n      (got: '" + lines[next_line] + "')"};
             }
             current_line_idx = next_line;
             current_col_idx = m_pos + m_len;
@@ -233,8 +231,8 @@ static std::pair<bool, std::string> verify_checks(const std::string& output,
                 std::string search_range = lines[l].substr(start, end - start);
                 size_t m_pos, m_len;
                 if (match_pattern(search_range, check.pattern, m_pos, m_len)) {
-                    return {false, "CHECK-NOT: '" + check.pattern + "' found but excluded (source line " +
-                                       std::to_string(check.line_num) + ")"};
+                    return {false, filename + ":" + std::to_string(check.line_num) + ": CHECK-NOT: '" + check.pattern +
+                                       "' found but excluded"};
                 }
             }
         }
@@ -337,14 +335,14 @@ TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
             int exit_code = WEXITSTATUS(res.status);
 
             if (should_check) {
-                auto [passed, err_msg] = verify_checks(res.output, tc.checks);
+                auto [passed, err_msg] = verify_checks(std::filesystem::canonical(tc.path), res.output, tc.checks);
                 if (!passed) {
                     auto end = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> elapsed = end - start;
                     std::vector<std::string> errors;
-                    errors.push_back("Verification failed: " + err_msg);
+                    errors.push_back(err_msg);
                     errors.push_back("Command: " + cmd);
-                    return {false, tc.path.string(), elapsed.count(), errors, "", res.output};
+                    return {false, tc.path, elapsed.count(), errors, "", res.output};
                 }
             } else if (exit_code != 0) {
                 auto end = std::chrono::high_resolution_clock::now();
@@ -367,6 +365,12 @@ TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
 }
 
 int run_tests(std::string_view test_path, const TestOptions& options) {
+    bool isTerminal = isatty(STDOUT_FILENO);
+    const auto COLORRESET = isTerminal ? "\x1B[0m" : "";
+    const auto COLORRED = isTerminal ? "\x1B[31m" : "";
+    const auto COLORGREEN = isTerminal ? "\x1B[32m" : "";
+    // const auto COLORYELLOW = isTerminal ? "\x1B[33m" : "";
+
     auto start = std::chrono::high_resolution_clock::now();
     fs::path target = test_path;
     std::string dmz_bin = options.binary_path;
@@ -447,13 +451,16 @@ int run_tests(std::string_view test_path, const TestOptions& options) {
                 if (result.success) {
                     passed++;
                     if (!options.quiet)
-                        std::cout << "Running test: " << result.test_name << "... " << "\033[32mPASSED\033[0m in "
-                                  << std::fixed << std::setprecision(3) << result.elapsed << " seconds" << std::endl;
+                        std::cout << "Running test: " << result.test_name << "... " << COLORGREEN << "PASSED"
+                                  << COLORRESET << " in " << std::fixed << std::setprecision(3) << result.elapsed
+                                  << " seconds" << std::endl;
                 } else {
-                    std::cout << "Running test: " << result.test_name << "... " << "\033[31mFAILED\033[0m in "
-                              << std::fixed << std::setprecision(3) << result.elapsed << " seconds" << std::endl;
+                    std::cout << "Running test: " << result.test_name << "... " << COLORRED << "FAILED" << COLORRESET
+                              << " in " << std::fixed << std::setprecision(3) << result.elapsed << " seconds"
+                              << std::endl;
                     if (!result.system_error.empty())
-                        std::cout << "  - \033[31mERROR:\033[0m " << result.system_error << std::endl;
+                        std::cout << "  - " << COLORRED << "ERROR:" << COLORRESET << " " << result.system_error
+                                  << std::endl;
                     for (const auto& err : result.errors) std::cout << "  - " << err << std::endl;
                     if (!result.output.empty()) {
                         std::cout << "  --- PROGRAM OUTPUT ---" << std::endl;
