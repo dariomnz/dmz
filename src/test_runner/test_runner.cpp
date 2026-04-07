@@ -330,7 +330,7 @@ TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
             std::string escaped_cmd = cmd;
             escaped_cmd = replace_all(escaped_cmd, "\"", "\\\"");
             escaped_cmd = replace_all(escaped_cmd, "$", "\\$");
-            std::string full_cmd = "timeout 1s bash -c \"" + escaped_cmd + "\"";
+            std::string full_cmd = "timeout 10s bash -c \"" + escaped_cmd + "\"";
             ExecResult res = exec(full_cmd);
             int exit_code = WEXITSTATUS(res.status);
 

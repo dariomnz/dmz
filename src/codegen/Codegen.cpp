@@ -10,8 +10,10 @@
 #include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
-Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols)
+Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
+                 bool noRemoveUnused)
     : m_resolvedTree(move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(resolvedTree)),
+      m_noRemoveUnused(noRemoveUnused),
       m_context(makePtr<llvm::LLVMContext>()),
       m_builder(*m_context),
       m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)),
@@ -431,6 +433,89 @@ llvm::DIFile *Codegen::generate_debug_file(const SourceLocation &location) {
     return m_debugBuilder.createFile(path.filename().string(), path.parent_path().string());
 }
 
+void Codegen::generate_error_trace_push(const SourceLocation &location) {
+    ResolvedTypeSlice sliceType(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 8));
+    auto sliceLLVMType = generate_type(sliceType, true);
+    if (!m_errorTraceGlobal) {
+        m_errorTraceEntryType = llvm::StructType::create(*m_context, "ErrorTraceEntry");
+        m_errorTraceEntryType->setBody({sliceLLVMType, m_builder.getInt32Ty(), m_builder.getInt32Ty(), sliceLLVMType});
+
+        auto bufferType = llvm::ArrayType::get(m_errorTraceEntryType, 20);
+        m_errorTraceType = llvm::StructType::create(*m_context, "ErrorTrace");
+        m_errorTraceType->setBody({m_builder.getInt32Ty(), bufferType});
+
+        m_errorTraceGlobal =
+            new llvm::GlobalVariable(*m_module, m_errorTraceType, false, llvm::GlobalValue::InternalLinkage,
+                                     llvm::ConstantAggregateZero::get(m_errorTraceType), "dmz_error_trace");
+        static_cast<llvm::GlobalVariable *>(m_errorTraceGlobal)->setThreadLocal(true);
+    }
+    auto sizePtr = m_builder.CreateStructGEP(m_errorTraceType, m_errorTraceGlobal, 0);
+    auto size = m_builder.CreateLoad(m_builder.getInt32Ty(), sizePtr);
+    auto canPush = m_builder.CreateICmpSLT(size, m_builder.getInt32(20));
+
+    auto function = get_current_function();
+    auto pushBB = llvm::BasicBlock::Create(*m_context, "error_trace.push", function);
+    auto mergeBB = llvm::BasicBlock::Create(*m_context, "error_trace.merge", function);
+
+    m_builder.CreateCondBr(canPush, pushBB, mergeBB);
+    m_builder.SetInsertPoint(pushBB);
+
+    auto bufferPtr = m_builder.CreateStructGEP(m_errorTraceType, m_errorTraceGlobal, 1);
+    auto entryPtr =
+        m_builder.CreateGEP(llvm::ArrayType::get(m_errorTraceEntryType, 20), bufferPtr, {m_builder.getInt32(0), size});
+
+    llvm::Value *entry_value = llvm::UndefValue::get(m_errorTraceEntryType);
+
+    auto storeSlice = [&](const std::string &str, int idx) {
+        auto strVal = create_global_string(str, "global.str.trace.data");
+
+        llvm::Value *slice_value = llvm::UndefValue::get(sliceLLVMType);
+        slice_value = m_builder.CreateInsertValue(slice_value, strVal, 0);
+        slice_value = m_builder.CreateInsertValue(slice_value, m_builder.getInt64(str.length()), 1);
+
+        entry_value = m_builder.CreateInsertValue(entry_value, slice_value, idx);
+    };
+    std::string file_name = location.file_name;
+    if (std::filesystem::exists(file_name)) {
+        file_name = std::filesystem::canonical(file_name);
+    }
+    storeSlice(file_name, 0);
+    entry_value = m_builder.CreateInsertValue(entry_value, m_builder.getInt32(location.line), 1);
+    entry_value = m_builder.CreateInsertValue(entry_value, m_builder.getInt32(location.col + 1), 2);
+    storeSlice(m_currentFunction ? m_currentFunction->name() : "unknown", 3);
+
+    m_builder.CreateStore(entry_value, entryPtr);
+
+    auto newSize = m_builder.CreateAdd(size, m_builder.getInt32(1));
+    m_builder.CreateStore(newSize, sizePtr);
+    m_builder.CreateBr(mergeBB);
+
+    m_builder.SetInsertPoint(mergeBB);
+}
+
+llvm::Value *Codegen::generate_error_trace_get_idx() {
+    if (!m_errorTraceGlobal) return m_builder.getInt32(0);
+    if (!m_builder.GetInsertBlock()) return m_builder.getInt32(0);
+    auto sizePtr = m_builder.CreateStructGEP(m_errorTraceType, m_errorTraceGlobal, 0, "errorTraceGlobal.idx.ptr");
+    auto size = m_builder.CreateLoad(m_builder.getInt32Ty(), sizePtr, "errorTraceGlobal.idx");
+    return size;
+}
+
+void Codegen::generate_error_trace_clear(llvm::Value *idx) {
+    if (!m_errorTraceGlobal) return;
+    if (!m_builder.GetInsertBlock()) return;
+    auto sizePtr = m_builder.CreateStructGEP(m_errorTraceType, m_errorTraceGlobal, 0, "errorTraceGlobal.idx.ptr");
+    m_builder.CreateStore(idx ? idx : m_builder.getInt32(0), sizePtr);
+}
+
+llvm::Value *Codegen::generate_get_error_trace() {
+    if (!m_errorTraceGlobal) {
+        generate_error_trace_push({});
+        generate_error_trace_clear();
+    }
+    return m_errorTraceGlobal;
+}
+
 void Codegen::set_debug_location(const SourceLocation &location) {
     if (m_debugSymbols) {
         debug_func(Dumper([this]() { m_currentDebugScope->print(llvm::errs()); }));
@@ -640,6 +725,19 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
 llvm::Value *Codegen::load_value(llvm::Value *v, const ResolvedType &type) {
     debug_func("");
     if (type.kind == ResolvedTypeKind::Void) return nullptr;
-    return m_builder.CreateLoad(generate_type(type), v);
+    bool kp = false;
+    kp |= type.generate_struct();
+    kp |= type.kind == ResolvedTypeKind::Array;
+    return kp ? v : m_builder.CreateLoad(generate_type(type), v);
+}
+
+llvm::GlobalVariable *Codegen::create_global_string(const std::string &str, const std::string &name) {
+    debug_func(str);
+    if (m_globalStrings.contains(str)) {
+        return m_globalStrings[str];
+    }
+    auto strVal = m_builder.CreateGlobalString(str, name, 0, m_module.get());
+    m_globalStrings[str] = strVal;
+    return strVal;
 }
 }  // namespace DMZ

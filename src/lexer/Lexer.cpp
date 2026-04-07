@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "Debug.hpp"
+#include "Stats.hpp"
 
 namespace DMZ {
 std::ostream& operator<<(std::ostream& os, const TokenType& t) {
@@ -177,6 +178,7 @@ bool Lexer::next_line() {
     debug_msg("read line " << m_line << " '" + m_line_buffer + "'");
     m_line++;
     m_col = 0;
+    Stats::instance().add_parsed_line();
     return true;
 }
 

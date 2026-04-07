@@ -58,14 +58,13 @@ struct ResolvedDecl : public ConstantValueContainer<int> {
         return symbolName;
     }
 
-    bool is_needed();
+    bool is_needed(bool noRemoveUnused);
 };
 
 struct ResolvedDependencies : public ResolvedDecl {
-    bool isNeeded = true;
+    bool isNeeded = false;
     std::unordered_set<ResolvedDependencies *> dependsOn;
     std::unordered_set<ResolvedDependencies *> isUsedBy;
-    bool cachedIsNotNeeded = false;
 
     ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
                          bool isPublic)
@@ -74,7 +73,7 @@ struct ResolvedDependencies : public ResolvedDecl {
 
     void clean_dependencies();
 
-    virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
+    virtual void dump(size_t level = 0, bool onlySelf = false) const override = 0;
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 

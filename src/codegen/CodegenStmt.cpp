@@ -77,11 +77,17 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
     if (stmt.expr) {
         auto retType = m_currentFunction->getFnType()->returnType.get();
         if (stmt.expr->type->kind == ResolvedTypeKind::Error) {
+            generate_error_trace_push(stmt.location);
+
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
             store_value(generate_expr(*stmt.expr), dst, *stmt.expr->type, *stmt.expr->type);
         } else {
             if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(retType)) {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *fnTypeOptional->optionalType);
+                // this reset the error if the function is not returning an error
+                llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
+                ResolvedTypeError typeError(stmt.expr->location);
+                store_value(llvm::Constant::getNullValue(m_builder.getPtrTy()), dst, typeError, typeError);
             } else {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type,
                             *m_currentFunction->getFnType()->returnType);
@@ -225,8 +231,8 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
 
         // In case not equal at run time
         m_builder.SetInsertPoint(not_equal_length);
-        auto fmt = m_builder.CreateGlobalString(stmt.location.to_string() +
-                                                ": Aborted: for loop over objects with non-equal lengths\n");
+        auto fmt = create_global_string(stmt.location.to_string() +
+                                        ": Aborted: for loop over objects with non-equal lengths\n");
         auto printf_func = m_module->getOrInsertFunction(
             "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getPtrTy(), true));
         m_builder.CreateCall(printf_func, {fmt});
@@ -349,6 +355,7 @@ llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
     m_builder.SetInsertPoint(exitBB);
     return nullptr;
 }
+
 llvm::Value *Codegen::generate_break_stmt(const ResolvedBreakStmt &stmt) {
     debug_func(stmt.location);
 
@@ -356,7 +363,7 @@ llvm::Value *Codegen::generate_break_stmt(const ResolvedBreakStmt &stmt) {
         auto it = m_catchBreakTargets.find(stmt.targetCatch);
         assert(it != m_catchBreakTargets.end());
 
-        llvm::Value *val = generate_expr(*stmt.expr);
+        llvm::Value *val = generate_expr(*stmt.expr, stmt.targetCatch->type->generate_struct());
         if (it->second.valueAddr) {
             store_value(val, it->second.valueAddr, *stmt.expr->type, *stmt.targetCatch->type);
         }

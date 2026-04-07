@@ -38,7 +38,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return m_builder.getInt1(number->value);
     }
     if (auto *str = dynamic_cast<const ResolvedStringLiteral *>(&expr)) {
-        auto ptr = m_builder.CreateGlobalString(str->value, "global.str");
+        auto ptr = create_global_string(str->value, "string.literal");
         if (str->type->kind == ResolvedTypeKind::Slice) {
             auto slice = allocate_stack_variable(str->location, "string.literal.slice", *str->type);
             auto sliceType = generate_type(*str->type);
@@ -133,6 +133,11 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     debug_func("");
+    if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(call.callee.get())) {
+        if (declRef->decl.identifier == "@getErrorTrace") {
+            return generate_get_error_trace();
+        }
+    }
     if (auto memberExpr = dynamic_cast<const ResolvedMemberExpr *>(call.callee.get())) {
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(memberExpr->base->type.get())) {
             auto &name = memberExpr->member.identifier;
@@ -160,6 +165,13 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     if (!fnType) {
         dmz_unreachable("unexpected type in callee '" + call.callee->type->to_str() + "'");
     }
+
+    // // Implicitly clear error trace if this is a "root" call (non-failable calling failable)
+    // if (fnType->returnType->kind == ResolvedTypeKind::Optional) {
+    //     if (m_currentFunction && m_currentFunction->getFnType()->returnType->kind != ResolvedTypeKind::Optional) {
+    //         generate_error_trace_clear();
+    //     }
+    // }
 
     bool isReturningStruct = fnType->returnType->generate_struct();
     llvm::Value *callRetVal = nullptr;
@@ -315,6 +327,9 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
             typeNum = dynamic_cast<const ResolvedTypeNumber *>(simdType->simdType.get());
         }
         if (dynamic_cast<const ResolvedTypeError *>(binop.lhs->type.get())) {
+            typeNum = usizeType.get();
+        }
+        if (dynamic_cast<const ResolvedTypePointer *>(binop.lhs->type.get())) {
             typeNum = usizeType.get();
         }
         if (!typeNum) {
@@ -684,6 +699,9 @@ llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &ca
         if (ret) ret->print(llvm::errs(), true);
     }));
 
+    keepPointer |= catchErrorExpr.type->generate_struct();
+    keepPointer |= catchErrorExpr.type->kind == ResolvedTypeKind::Array;
+
     llvm::Function *function = get_current_function();
     auto *noErrorBB = llvm::BasicBlock::Create(*m_context, "catch.no_error", function);
     auto *hasErrorBB = llvm::BasicBlock::Create(*m_context, "catch.has_error", function);
@@ -708,7 +726,7 @@ llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &ca
     m_builder.SetInsertPoint(noErrorBB);
     if (resultAddr) {
         llvm::Value *value_ptr = m_builder.CreateStructGEP(generate_type(*error_type), error_struct, 0);
-        llvm::Value *value = load_value(value_ptr, *catchErrorExpr.type);
+        llvm::Value *value = keepPointer ? value_ptr : load_value(value_ptr, *catchErrorExpr.type);
         store_value(value, resultAddr, *catchErrorExpr.type, *catchErrorExpr.type);
     }
     m_builder.CreateBr(exitBB);
@@ -724,7 +742,8 @@ llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &ca
         llvm::Value *var_ptr = allocate_stack_variable(
             catchErrorExpr.errorVar->location, catchErrorExpr.errorVar->identifier, *catchErrorExpr.errorVar->type);
         m_declarations[catchErrorExpr.errorVar.get()] = var_ptr;
-        llvm::Value *error_val = load_value(error_value_ptr, *catchErrorExpr.errorVar->type);
+        llvm::Value *error_val =
+            keepPointer ? error_value_ptr : load_value(error_value_ptr, *catchErrorExpr.errorVar->type);
         store_value(error_val, var_ptr, *catchErrorExpr.errorVar->type, *catchErrorExpr.errorVar->type);
     }
 
@@ -738,14 +757,16 @@ llvm::Value *Codegen::generate_catch_error_expr(const ResolvedCatchErrorExpr &ca
     }
 
     // Only jump to exit if the block didn't already terminate (e.g. via break or return)
-    if (!m_builder.GetInsertBlock()->getTerminator()) {
-        m_builder.CreateBr(exitBB);
+    if (auto currentBB = m_builder.GetInsertBlock()) {
+        if (!currentBB->getTerminator()) {
+            m_builder.CreateBr(exitBB);
+        }
     }
 
     // --- Exit ---
     m_builder.SetInsertPoint(exitBB);
     if (resultAddr) {
-        ret = load_value(resultAddr, *catchErrorExpr.type);
+        ret = keepPointer ? resultAddr : load_value(resultAddr, *catchErrorExpr.type);
     }
 
     return ret;
@@ -758,6 +779,11 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
     }));
     llvm::Function *function = get_current_function();
 
+    // Implicitly clear error trace if this is a "root" call (non-failable calling failable)
+    if (m_currentFunction && m_currentFunction->getFnType()->returnType->kind != ResolvedTypeKind::Optional) {
+        generate_error_trace_clear();
+    }
+
     auto *trueBB = llvm::BasicBlock::Create(*m_context, "if.true.try");
     auto *exitBB = llvm::BasicBlock::Create(*m_context, "if.exit.try");
 
@@ -769,10 +795,12 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         m_builder.CreateStructGEP(generate_type(*tryErrorExpr.errorToTry->type), error_struct, 1);
     llvm::Value *error_value = load_value(error_value_ptr, ResolvedTypeError{SourceLocation{}});
 
+    llvm::Value *error_trace_idx = generate_error_trace_get_idx();
     m_builder.CreateCondBr(to_bool(error_value, ResolvedTypeError{SourceLocation{}}), trueBB, elseBB);
 
     trueBB->insertInto(function);
     m_builder.SetInsertPoint(trueBB);
+    generate_error_trace_push(tryErrorExpr.location);
     for (auto &&d : tryErrorExpr.defers) {
         generate_block(*d->resolvedDefer.block);
     }
@@ -785,19 +813,38 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
-        auto fmt = m_builder.CreateGlobalString(tryErrorExpr.location.to_string() +
-                                                ": Aborted: Try catch an error value of '%s' in the function '" +
-                                                m_currentFunction->identifier + "' that not return an optional\n");
+        llvm::Function *printErrorTraceFn = m_module->getFunction("std.builtin.printErrorTrace");
+        if (!printErrorTraceFn) printErrorTraceFn = m_module->getFunction("printErrorTrace");
+
         auto printf_func = m_module->getOrInsertFunction(
             "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getPtrTy(), true));
+        if (printErrorTraceFn) {
+            m_builder.CreateCall(printErrorTraceFn, {error_value});
+        } else {
+            auto fmt = create_global_string("help: import 'std' to enable error trace printing");
+            m_builder.CreateCall(printf_func, {fmt});
+        }
+
+        std::string location = tryErrorExpr.location.file_name;
+        if (std::filesystem::exists(location)) {
+            location = std::filesystem::canonical(location);
+        }
+        location += ":";
+        location += std::to_string(tryErrorExpr.location.line);
+        location += ":";
+        location += std::to_string(tryErrorExpr.location.col + 1);
+        auto fmt = create_global_string(location + ": Aborted: Try catch an error value of '%s' in the function '" +
+                                        m_currentFunction->identifier + "' that not return an optional\n");
         m_builder.CreateCall(printf_func, {fmt, error_value});
-        llvm::Function *trapIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trap);
-        m_builder.CreateCall(trapIntrinsic, {});
+        auto exit_func = m_module->getOrInsertFunction(
+            "exit", llvm::FunctionType::get(m_builder.getVoidTy(), m_builder.getInt32Ty()));
+        m_builder.CreateCall(exit_func, {m_builder.getInt32(1)});
     }
     break_into_bb(exitBB);
 
     exitBB->insertInto(function);
     m_builder.SetInsertPoint(exitBB);
+    generate_error_trace_clear(error_trace_idx);
 
     if (tryErrorExpr.type->kind == ResolvedTypeKind::Void) return nullptr;
 
@@ -956,7 +1003,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType))
             structDecl = sd->decl;
 
-        auto structNameGlobal = m_builder.CreateGlobalString(structDecl->name(), "typeinfo.name.str");
+        auto structNameGlobal = create_global_string(structDecl->name(), "typeinfo.name.str");
         auto structNameLen = llvm::ConstantInt::get(sizeTy, structDecl->name().size());
         auto structNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {structNameGlobal, structNameLen});
 
@@ -967,7 +1014,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         // Fields setup
         std::vector<llvm::Constant *> fieldsArrayVals;
         for (auto &field : structDecl->fields_strs) {
-            auto nameGlobal = m_builder.CreateGlobalString(field, "typeinfo.str");
+            auto nameGlobal = create_global_string(field, "typeinfo.str");
             auto nameLen = llvm::ConstantInt::get(sizeTy, field.size());
             auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
             fieldsArrayVals.push_back(nameSlice);
@@ -987,7 +1034,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         // Methods setup
         std::vector<llvm::Constant *> methodsArrayVals;
         for (auto &method : structDecl->functions_strs) {
-            auto nameGlobal = m_builder.CreateGlobalString(method, "typeinfo.str");
+            auto nameGlobal = create_global_string(method, "typeinfo.str");
             auto nameLen = llvm::ConstantInt::get(sizeTy, method.size());
             auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
             methodsArrayVals.push_back(nameSlice);
@@ -1012,7 +1059,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         auto simdType = static_cast<const ResolvedTypeSimd *>(targetType);
 
         auto elementType = simdType->to_str();
-        auto elementNameGlobal = m_builder.CreateGlobalString(elementType, "typeinfo.simd.element.str");
+        auto elementNameGlobal = create_global_string(elementType, "typeinfo.simd.element.str");
         auto elementNameLen = llvm::ConstantInt::get(sizeTy, elementType.size());
         auto elementNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {elementNameGlobal, elementNameLen});
 

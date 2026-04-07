@@ -425,7 +425,7 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     if (resolvedTree.empty()) m_haveError = true;
 
     if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
-    if (!m_haveError && !m_options.noRemoveUnused) sema.remove_unused(resolvedTree, m_options.test);
+    if (!m_haveError && !m_options.noRemoveUnused) sema.mark_needed(resolvedTree, m_options.test);
 
     if (m_options.depsDump || m_options.depsDotDump) {
         if (!m_haveError) {
@@ -471,7 +471,7 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
 std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
-    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols);
+    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols, m_options.noRemoveUnused);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module = codegen.generate_ir(m_options.test);
 
     if (m_options.llvmDump) {
@@ -675,7 +675,7 @@ int Driver::ptrBitSize() {
 int Driver::typeBitSize(const ResolvedType &type) {
     llvm::LLVMContext context;
     llvm::Module module("tmp", context);
-    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false).generate_type(type);
+    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true).generate_type(type);
     return module.getDataLayout().getTypeSizeInBits(llvmType);
 }
 
@@ -713,7 +713,7 @@ int Driver::target_simd_size() {
     simdSize = TTI.getRegisterBitWidth(llvm::TargetTransformInfo::RGK_FixedWidthVector);
 
     debug_msg("El ancho de banda SIMD para '" << TripleStr << "' cpu: '" << CPU << "' features: '" << Features
-                                              << "' es: " << vectorSize << " bits");
+                                              << "' es: " << simdSize << " bits");
     return simdSize;
 }
 

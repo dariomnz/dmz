@@ -8,6 +8,7 @@ namespace DMZ {
 
 class Codegen {
     std::vector<ptr<ResolvedDecl>> m_resolvedTree;
+    bool m_noRemoveUnused;
 
     ptr<llvm::LLVMContext> m_context;
     llvm::IRBuilder<> m_builder;
@@ -15,10 +16,14 @@ class Codegen {
 
     const ResolvedModuleDecl *m_currentModule = nullptr;
     std::unordered_map<const ResolvedDecl *, llvm::Value *> m_declarations;
+    std::unordered_map<std::string, llvm::GlobalVariable *> m_globalStrings;
     llvm::Instruction *m_allocaInsertPoint = nullptr;
     llvm::Instruction *m_memsetInsertPoint = nullptr;
     const ResolvedFuncDecl *m_currentFunction = nullptr;
     llvm::Value *m_success = nullptr;
+    llvm::Value *m_errorTraceGlobal = nullptr;
+    llvm::StructType *m_errorTraceType = nullptr;
+    llvm::StructType *m_errorTraceEntryType = nullptr;
 
     struct CatchBreakTarget {
         llvm::Value *valueAddr;
@@ -60,7 +65,7 @@ class Codegen {
     };
 
    public:
-    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols);
+    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols, bool noRemoveUnused);
 
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
@@ -134,5 +139,11 @@ class Codegen {
                                      const ResolvedRangeExpr &range);
     llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
                                        const ResolvedTypeSimd &vecType);
+    void generate_error_trace_push(const SourceLocation &location);
+    llvm::Value *generate_error_trace_get_idx();
+    void generate_error_trace_clear(llvm::Value *idx = nullptr);
+    llvm::Value *generate_get_error_trace();
+
+    llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };
 }  // namespace DMZ
