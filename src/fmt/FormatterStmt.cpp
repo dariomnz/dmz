@@ -260,9 +260,13 @@ ptr<Node> Formatter::fmt_defer_stmt(const DeferStmt& stmt) {
     ret->nodes.emplace_back(fmt_block(*stmt.block, true, false));
     return ret;
 }
-ptr<Node> Formatter::fmt_break_stmt([[maybe_unused]] const BreakStmt& stmt) {
+ptr<Node> Formatter::fmt_break_stmt(const BreakStmt& stmt) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
     ret->nodes.emplace_back(makePtr<Text>("break"));
+    if (stmt.expr) {
+        ret->nodes.emplace_back(makePtr<Space>());
+        ret->nodes.emplace_back(fmt_expr(*stmt.expr));
+    }
     return ret;
 }
 

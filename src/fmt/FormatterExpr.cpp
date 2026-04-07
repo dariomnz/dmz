@@ -150,14 +150,14 @@ ptr<Node> Formatter::fmt_unary_operator(const UnaryOperator& expr) {
 
 ptr<Node> Formatter::fmt_binary_operator(const BinaryOperator& expr) {
     debug_func("");
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});
     ret->nodes.emplace_back(fmt_expr(*expr.lhs));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>(get_op_str(expr.op)));
-    ret->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(-1));
+    ret->nodes.emplace_back(makePtr<SpaceOrLineIfWrap>(ret->group_id));
     vec<ptr<Node>> rhs;
     rhs.emplace_back(fmt_expr(*expr.rhs));
-    ret->nodes.emplace_back(makePtr<IndentIfWrap>(-1, std::move(rhs)));
+    ret->nodes.emplace_back(makePtr<IndentIfWrap>(ret->group_id, std::move(rhs)));
     return ret;
 }
 
