@@ -9,9 +9,9 @@ fn main() -> void {
 // CHECK: ResolvedModuleDecl inline_for
 // CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedDeclStmt inline_for.tuple.0{}
-// CHECK-NEXT:         ResolvedVarDecl:inline_for.tuple.0{} t
-// CHECK-NEXT:           ResolvedTupleInstantiationExpr:inline_for.tuple.0{}
+// CHECK-NEXT:       ResolvedDeclStmt inline_for.tuple.i32.i32{}
+// CHECK-NEXT:         ResolvedVarDecl:inline_for.tuple.i32.i32{} t
+// CHECK-NEXT:           ResolvedTupleInstantiationExpr:inline_for.tuple.i32.i32{}
 // CHECK-NEXT:             ResolvedFieldInitStmt:i32 elem0
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
@@ -19,14 +19,14 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:               | value: 2
 // CHECK-NEXT:       ResolvedInlineForStmt
-// CHECK-NEXT:         ResolvedDeclRefExpr:inline_for.tuple.0{} t
+// CHECK-NEXT:         ResolvedDeclRefExpr:inline_for.tuple.i32.i32{} t
 // CHECK-NEXT:         ResolvedCaptureDecl:generic x
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedDeclStmt i32
 // CHECK-NEXT:               ResolvedVarDecl:const i32 x
 // CHECK-NEXT:                 ResolvedMemberExpr:i32 elem0
-// CHECK-NEXT:                   ResolvedDeclRefExpr:inline_for.tuple.0{} t
+// CHECK-NEXT:                   ResolvedDeclRefExpr:inline_for.tuple.i32.i32{} t
 // CHECK-NEXT:             ResolvedDeclStmt i32
 // CHECK-NEXT:               ResolvedVarDecl:i32 y
 // CHECK-NEXT:                 ResolvedDeclRefExpr:i32 x
@@ -34,7 +34,7 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedDeclStmt i32
 // CHECK-NEXT:               ResolvedVarDecl:const i32 x
 // CHECK-NEXT:                 ResolvedMemberExpr:i32 elem1
-// CHECK-NEXT:                   ResolvedDeclRefExpr:inline_for.tuple.0{} t
+// CHECK-NEXT:                   ResolvedDeclRefExpr:inline_for.tuple.i32.i32{} t
 // CHECK-NEXT:             ResolvedDeclStmt i32
 // CHECK-NEXT:               ResolvedVarDecl:i32 y
 // CHECK-NEXT:                 ResolvedDeclRefExpr:i32 x

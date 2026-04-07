@@ -36,6 +36,6 @@ fn main() -> void {
 // CHECK-NEXT:   %6 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %5)
 // CHECK-NEXT:   store i32 %6, ptr %sum, align 4
 // CHECK-NEXT:   %7 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %7)
+// CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %7)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

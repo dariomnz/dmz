@@ -33,7 +33,7 @@ struct Color {
 // CHECK-NEXT:   %7 = load ptr, ptr %self, align 8
 // CHECK-NEXT:   %8 = getelementptr inbounds nuw %methods.Color, ptr %7, i32 0, i32 2
 // CHECK-NEXT:   %9 = load i32, ptr %8, align 4
-// CHECK-NEXT:   %10 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %3, i32 %6, i32 %9)
+// CHECK-NEXT:   %10 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %3, i32 %6, i32 %9)
 // CHECK-NEXT:   store i32 %10, ptr %retval, align 4
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 

@@ -51,6 +51,6 @@ fn main() -> void {
 // CHECK-NEXT:   %14 = load i32, ptr %13, align 4
 // CHECK-NEXT:   %15 = getelementptr <4 x i32>, ptr %v3, i32 0, i32 3
 // CHECK-NEXT:   %16 = load i32, ptr %15, align 4
-// CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %10, i32 %12, i32 %14, i32 %16)
+// CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %10, i32 %12, i32 %14, i32 %16)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

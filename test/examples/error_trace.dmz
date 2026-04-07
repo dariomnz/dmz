@@ -1,0 +1,101 @@
+// RUN: dmz %s -test -run | filecheck %s
+
+const std = import("std");
+
+fn a() -> !void {
+    return error.FailA;
+}
+
+fn b() -> !void {
+    try a();
+}
+
+fn c() -> !void {
+    try b();
+}
+
+test "error trace" {
+    try c();
+}
+
+test "error trace 2" {
+    try foo(12);
+    try std.testing.expect(1 == 1);
+}
+
+fn foo(x: i32) -> !void {
+    if (x >= 5) {
+        try bar();
+    } else {
+        try bang2();
+    }
+}
+
+fn bar() -> !void {
+    baz() catch |er| {
+        if (er == error.FileNotFound) try hello();
+    };
+}
+
+fn baz() -> !void {
+    try bang1();
+}
+
+fn quux() -> !void {
+    try bang2();
+}
+
+fn hello() -> !void {
+    try bang2();
+}
+
+fn bang1() -> !void {
+    return error.FileNotFound;
+}
+
+fn bang2() -> !void {
+    return error.PermissionDenied;
+}
+
+// CHECK: Run test [1/2] 'error trace'.
+// CHECK-NEXT: error: error.FailA
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:6:5: in function 'error_trace.a'
+// CHECK-NEXT:  6 |     return error.FailA;
+// CHECK-NEXT:          ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:10:5: in function 'error_trace.b'
+// CHECK-NEXT:  10 |     try a();
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:14:5: in function 'error_trace.c'
+// CHECK-NEXT:  14 |     try b();
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:18:5: in function 'error_trace.error trace'
+// CHECK-NEXT:  18 |     try c();
+// CHECK-NEXT:           ^
+// CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'
+// CHECK-NEXT: Fail test [1/2] 'error trace' with error 'error.FailA'.
+// CHECK-NEXT: Run test [2/2] 'error trace 2'.
+// CHECK-NEXT: error: error.PermissionDenied
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:53:5: in function 'error_trace.bang1'
+// CHECK-NEXT:  53 |     return error.FileNotFound;
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:41:5: in function 'error_trace.baz'
+// CHECK-NEXT:  41 |     try bang1();
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:57:5: in function 'error_trace.bang2'
+// CHECK-NEXT:  57 |     return error.PermissionDenied;
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:49:5: in function 'error_trace.hello'
+// CHECK-NEXT:  49 |     try bang2();
+// CHECK-NEXT:           ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:36:39: in function 'error_trace.bar'
+// CHECK-NEXT:  36 |         if (er == error.FileNotFound) try hello();
+// CHECK-NEXT:                                             ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:28:9: in function 'error_trace.foo'
+// CHECK-NEXT:  28 |         try bar();
+// CHECK-NEXT:               ^
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:22:5: in function 'error_trace.error trace 2'
+// CHECK-NEXT:  22 |     try foo(12);
+// CHECK-NEXT:           ^
+// CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'
+// CHECK-NEXT: Fail test [2/2] 'error trace 2' with error 'error.PermissionDenied'.
+// CHECK-NEXT: 0 passed, 2 failed.

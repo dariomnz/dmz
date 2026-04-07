@@ -86,7 +86,7 @@ fn main() -> void {
 // CHECK-NEXT:   %25 = load i64, ptr %for.capture.i, align 4
 // CHECK-NEXT:   %26 = getelementptr i32, ptr %24, i64 %25
 // CHECK-NEXT:   %27 = load i32, ptr %26, align 4
-// CHECK-NEXT:   %28 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i64 %22, i32 %27)
+// CHECK-NEXT:   %28 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i64 %22, i32 %27)
 // CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
 // CHECK-NEXT: for.exit:                                         ; preds = %for.cond
@@ -115,10 +115,10 @@ fn main() -> void {
 // CHECK-NEXT: for.body4:                                        ; preds = %for.cond1
 // CHECK-NEXT:   %39 = load ptr, ptr %for.capture.val, align 8
 // CHECK-NEXT:   %40 = load i32, ptr %39, align 4
-// CHECK-NEXT:   %41 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.1, i32 %40)
+// CHECK-NEXT:   %41 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1, i32 %40)
 // CHECK-NEXT:   br label %for.increment2
 // CHECK-NEXT: 
 // CHECK-NEXT: for.exit5:                                        ; preds = %for.cond1
-// CHECK-NEXT:   %42 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str.2)
+// CHECK-NEXT:   %42 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

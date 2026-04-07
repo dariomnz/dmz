@@ -20,7 +20,7 @@ fn main() -> void {
     foo(1, 2, 3);
 }
 // CHECK: @error.str.SUCCESS = private constant [8 x i8] c"SUCCESS\00"
-// CHECK-NEXT: @global.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+// CHECK-NEXT: @string.literal = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 // CHECK-NEXT: 
 // CHECK-NEXT: declare i32 @printf(ptr byref(i8) %0, ...)
 // CHECK-NEXT: 
@@ -32,7 +32,7 @@ fn main() -> void {
 // CHECK-NEXT:   store i32 %0, ptr %n, align 4
 // CHECK-NEXT:     #dbg_declare(ptr %n, !9, !DIExpression(), !11)
 // CHECK-NEXT:   %1 = load i32, ptr %n, align 4, !dbg !12
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @global.str, i32 %1), !dbg !13
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %1), !dbg !13
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 // CHECK-NEXT: 

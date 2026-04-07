@@ -22,28 +22,54 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT:   br i1 %2, label %if.true, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %entry
-// CHECK-NEXT:   %3 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr @error.str.ERROR_ONE, ptr %3, align 8
+// CHECK-NEXT:   %3 = load i32, ptr @dmz_error_trace, align 4
+// CHECK-NEXT:   %4 = icmp slt i32 %3, 20
+// CHECK-NEXT:   br i1 %4, label %error_trace.push, label %error_trace.merge
+// CHECK-NEXT: 
+// CHECK-NEXT: error_trace.push:                                 ; preds = %if.true
+// CHECK-NEXT:   %5 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %3
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 6, i32 9, %slice.struct { ptr @global.str.trace.data.1, i64 24 } }, ptr %5, align 8
+// CHECK-NEXT:   %6 = add i32 %3, 1
+// CHECK-NEXT:   store i32 %6, ptr @dmz_error_trace, align 4
+// CHECK-NEXT:   br label %error_trace.merge
+// CHECK-NEXT: 
+// CHECK-NEXT: error_trace.merge:                                ; preds = %error_trace.push, %if.true
+// CHECK-NEXT:   %7 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_ONE, ptr %7, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %entry
-// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %5 = icmp eq i32 %4, 2
-// CHECK-NEXT:   br i1 %5, label %if.true1, label %if.exit
+// CHECK-NEXT:   %8 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %9 = icmp eq i32 %8, 2
+// CHECK-NEXT:   br i1 %9, label %if.true1, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true1:                                         ; preds = %if.false
-// CHECK-NEXT:   %6 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr @error.str.ERROR_TWO, ptr %6, align 8
+// CHECK-NEXT:   %10 = load i32, ptr @dmz_error_trace, align 4
+// CHECK-NEXT:   %11 = icmp slt i32 %10, 20
+// CHECK-NEXT:   br i1 %11, label %error_trace.push2, label %error_trace.merge3
+// CHECK-NEXT: 
+// CHECK-NEXT: error_trace.push2:                                ; preds = %if.true1
+// CHECK-NEXT:   %12 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %10
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 9, i32 13, %slice.struct { ptr @global.str.trace.data.1, i64 24 } }, ptr %12, align 8
+// CHECK-NEXT:   %13 = add i32 %10, 1
+// CHECK-NEXT:   store i32 %13, ptr @dmz_error_trace, align 4
+// CHECK-NEXT:   br label %error_trace.merge3
+// CHECK-NEXT: 
+// CHECK-NEXT: error_trace.merge3:                               ; preds = %error_trace.push2, %if.true1
+// CHECK-NEXT:   %14 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr @error.str.ERROR_TWO, ptr %14, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false
-// CHECK-NEXT:   br label %if.exit2
+// CHECK-NEXT:   br label %if.exit4
 // CHECK-NEXT: 
-// CHECK-NEXT: if.exit2:                                         ; preds = %if.exit
+// CHECK-NEXT: if.exit4:                                         ; preds = %if.exit
 // CHECK-NEXT:   store i32 10, ptr %ret, align 4
+// CHECK-NEXT:   %15 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
+// CHECK-NEXT:   store ptr null, ptr %15, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
-// CHECK-NEXT: return:                                           ; preds = %if.exit2, %if.true1, %if.true
+// CHECK-NEXT: return:                                           ; preds = %if.exit4, %error_trace.merge3, %error_trace.merge
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
