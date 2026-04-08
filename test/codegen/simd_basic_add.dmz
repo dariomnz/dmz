@@ -43,14 +43,14 @@ fn main() -> void {
 // CHECK-NEXT:   %7 = load <4 x i32>, ptr %v2, align 16
 // CHECK-NEXT:   %8 = add <4 x i32> %6, %7
 // CHECK-NEXT:   store <4 x i32> %8, ptr %v3, align 16
-// CHECK-NEXT:   %9 = getelementptr <4 x i32>, ptr %v3, i32 0, i32 0
-// CHECK-NEXT:   %10 = load i32, ptr %9, align 4
-// CHECK-NEXT:   %11 = getelementptr <4 x i32>, ptr %v3, i32 0, i32 1
-// CHECK-NEXT:   %12 = load i32, ptr %11, align 4
-// CHECK-NEXT:   %13 = getelementptr <4 x i32>, ptr %v3, i32 0, i32 2
-// CHECK-NEXT:   %14 = load i32, ptr %13, align 4
-// CHECK-NEXT:   %15 = getelementptr <4 x i32>, ptr %v3, i32 0, i32 3
-// CHECK-NEXT:   %16 = load i32, ptr %15, align 4
+// CHECK-NEXT:   %9 = load <4 x i32>, ptr %v3, align 16
+// CHECK-NEXT:   %10 = extractelement <4 x i32> %9, i32 0
+// CHECK-NEXT:   %11 = load <4 x i32>, ptr %v3, align 16
+// CHECK-NEXT:   %12 = extractelement <4 x i32> %11, i32 1
+// CHECK-NEXT:   %13 = load <4 x i32>, ptr %v3, align 16
+// CHECK-NEXT:   %14 = extractelement <4 x i32> %13, i32 2
+// CHECK-NEXT:   %15 = load <4 x i32>, ptr %v3, align 16
+// CHECK-NEXT:   %16 = extractelement <4 x i32> %15, i32 3
 // CHECK-NEXT:   call void (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %10, i32 %12, i32 %14, i32 %16)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

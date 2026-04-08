@@ -590,6 +590,22 @@ struct ResolvedSimdSizeExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedSimdSplatExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> value;
+
+    ResolvedSimdSplatExpr(SourceLocation location, ptr<ResolvedExpr> value, ptr<ResolvedType> type)
+        : ResolvedExpr(location, std::move(type)), value(std::move(value)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedSimdIotaExpr : public ResolvedExpr {
+    ResolvedSimdIotaExpr(SourceLocation location, ptr<ResolvedType> type)
+        : ResolvedExpr(location, std::move(type)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 struct ResolvedTypeExpr : public ResolvedExpr {
     ptr<ResolvedType> resolvedType;
 

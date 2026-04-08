@@ -163,5 +163,7 @@ class Parser {
     ptr<HasMethodExpr> parse_hasmethod_expr();
     ptr<TypeSimd> parse_simd_type();
     ptr<SimdSizeExpr> parse_simdsize_expr();
+    ptr<SimdSplatExpr> parse_simdsplat_expr();
+    ptr<SimdIotaExpr> parse_simdiota_expr();
 };
 }  // namespace DMZ

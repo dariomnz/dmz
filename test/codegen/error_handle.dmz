@@ -21,6 +21,7 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   store i32 %0, ptr %x, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %x, align 4
 // CHECK-NEXT:   %2 = icmp eq i32 %1, 1
@@ -46,8 +47,6 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: if.exit:                                          ; preds = %entry
 // CHECK-NEXT:   %8 = load i32, ptr %x, align 4
 // CHECK-NEXT:   store i32 %8, ptr %ret, align 4
-// CHECK-NEXT:   %9 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr null, ptr %9, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %if.exit, %error_trace.merge
@@ -66,6 +65,7 @@ fn bar(x: i32) -> !i32 {
 // CHECK-NEXT:   %struct.ret.tmp = alloca %error.struct.i32, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   store i32 %0, ptr %x, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %x, align 4
 // CHECK-NEXT:   %2 = icmp eq i32 %1, 2
@@ -78,7 +78,7 @@ fn bar(x: i32) -> !i32 {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push:                                 ; preds = %if.true
 // CHECK-NEXT:   %5 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %3
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 59, i32 9, %slice.struct { ptr @global.str.trace.data.2, i64 16 } }, ptr %5, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 58, i32 9, %slice.struct { ptr @global.str.trace.data.2, i64 16 } }, ptr %5, align 8
 // CHECK-NEXT:   %6 = add i32 %3, 1
 // CHECK-NEXT:   store i32 %6, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge
@@ -105,7 +105,7 @@ fn bar(x: i32) -> !i32 {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push1:                                ; preds = %if.true.try
 // CHECK-NEXT:   %14 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %12
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 61, i32 12, %slice.struct { ptr @global.str.trace.data.2, i64 16 } }, ptr %14, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 60, i32 12, %slice.struct { ptr @global.str.trace.data.2, i64 16 } }, ptr %14, align 8
 // CHECK-NEXT:   %15 = add i32 %12, 1
 // CHECK-NEXT:   store i32 %15, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge2
@@ -120,8 +120,6 @@ fn bar(x: i32) -> !i32 {
 // CHECK-NEXT:   %17 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp, i32 0, i32 0
 // CHECK-NEXT:   %18 = load i32, ptr %17, align 4
 // CHECK-NEXT:   store i32 %18, ptr %ret, align 4
-// CHECK-NEXT:   %19 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr null, ptr %19, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %if.exit.try, %error_trace.merge2, %error_trace.merge
@@ -213,7 +211,7 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push:                                 ; preds = %if.true.try
 // CHECK-NEXT:   %5 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %3
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 142, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %5, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 140, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %5, align 8
 // CHECK-NEXT:   %6 = add i32 %3, 1
 // CHECK-NEXT:   store i32 %6, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge
@@ -295,7 +293,7 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push9:                                ; preds = %if.true.try8
 // CHECK-NEXT:   %38 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %36
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 157, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %38, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 155, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %38, align 8
 // CHECK-NEXT:   %39 = add i32 %36, 1
 // CHECK-NEXT:   store i32 %39, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge10
@@ -361,7 +359,7 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push24:                               ; preds = %if.true.try23
 // CHECK-NEXT:   %64 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %62
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 166, i32 33, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %64, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 164, i32 33, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %64, align 8
 // CHECK-NEXT:   %65 = add i32 %62, 1
 // CHECK-NEXT:   store i32 %65, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge25
@@ -393,7 +391,7 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push31:                               ; preds = %if.true.try30
 // CHECK-NEXT:   %76 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %74
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 167, i32 38, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %76, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 165, i32 38, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %76, align 8
 // CHECK-NEXT:   %77 = add i32 %74, 1
 // CHECK-NEXT:   store i32 %77, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge32

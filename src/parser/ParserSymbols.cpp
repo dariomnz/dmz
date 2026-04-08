@@ -186,14 +186,25 @@ void HasMethodExpr::dump(size_t level) const {
     structType->dump(level + 1);
 }
 
-std::string HasMethodExpr::to_str() const { return "@hasMethod(" + structType->to_str() + ", \"" + methodName + "\")"; }
+std::string HasMethodExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void SimdSizeExpr::dump(size_t level) const {
     std::cerr << indent(level) << "SimdSizeExpr\n";
     simdType->dump(level + 1);
 }
 
-std::string SimdSizeExpr::to_str() const { return "@simdSize(" + simdType->to_str() + ")"; }
+std::string SimdSizeExpr::to_str() const { dmz_unreachable("TODO"); }
+
+void SimdSplatExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "SimdSplatExpr\n";
+    value->dump(level + 1);
+}
+
+std::string SimdSplatExpr::to_str() const { dmz_unreachable("TODO"); }
+
+void SimdIotaExpr::dump(size_t level) const { std::cerr << indent(level) << "SimdIotaExpr\n"; }
+
+std::string SimdIotaExpr::to_str() const { dmz_unreachable("TODO"); }
 
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 

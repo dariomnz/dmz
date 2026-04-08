@@ -320,6 +320,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(arraySizeExpr.get())) {
             arraySize = intLit->value;
         } else {
+            debug_msg("arraySizeExpr: " << arraySizeExpr->location);
             return report(arraySizeExpr->location, "cannot deduce array size");
         }
 
@@ -986,6 +987,77 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                 if (numType->numberKind == ResolvedNumberKind::UInt && numType->bitSize == 8) {
                     strLit->type = sliceType->clone();
                 }
+            }
+        }
+    }
+
+    if (auto intLit = dynamic_cast<ResolvedIntLiteral *>(expr.get())) {
+        if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&expectedType)) {
+            if (numType->numberKind == ResolvedNumberKind::Int || numType->numberKind == ResolvedNumberKind::UInt) {
+                intLit->type = numType->clone();
+            }
+        }
+    }
+
+    if (auto floatLit = dynamic_cast<ResolvedFloatLiteral *>(expr.get())) {
+        if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&expectedType)) {
+            if (numType->numberKind == ResolvedNumberKind::Float) {
+                floatLit->type = numType->clone();
+            }
+        }
+    }
+
+    if (auto splatExpr = dynamic_cast<ResolvedSimdSplatExpr *>(expr.get())) {
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+            perform_implicit_cast(splatExpr->value, *simdType->simdType);
+            if (simdType->simdType->compare(*splatExpr->value->type)) {
+                splatExpr->type = simdType->clone();
+            } else {
+                report(splatExpr->location,
+                       "cannot splat '" + splatExpr->value->type->to_str() + "' into '" + expectedType.to_str() + "'");
+            }
+        }
+    }
+
+    if (auto iotaExpr = dynamic_cast<ResolvedSimdIotaExpr *>(expr.get())) {
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+            iotaExpr->type = simdType->clone();
+        }
+    }
+
+    if (auto binOp = dynamic_cast<ResolvedBinaryOperator *>(expr.get())) {
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+            if (binOp->type->kind == ResolvedTypeKind::Simd &&
+                dynamic_cast<const ResolvedTypeSimd *>(binOp->type.get())->simdSize == 0) {
+                perform_implicit_cast(binOp->lhs, *simdType);
+                perform_implicit_cast(binOp->rhs, *simdType);
+                if (binOp->lhs->type->compare(*simdType) && binOp->rhs->type->compare(*simdType)) {
+                    binOp->type = simdType->clone();
+                }
+            }
+        }
+    }
+
+    if (auto grouping = dynamic_cast<ResolvedGroupingExpr *>(expr.get())) {
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+            if (grouping->type->kind == ResolvedTypeKind::Simd &&
+                dynamic_cast<const ResolvedTypeSimd *>(grouping->type.get())->simdSize == 0) {
+                perform_implicit_cast(grouping->expr, *simdType);
+                if (grouping->expr->type->compare(*simdType)) {
+                    grouping->type = simdType->clone();
+                }
+            }
+        }
+    }
+
+    if (auto arrayInstantiation = dynamic_cast<ResolvedArrayInstantiationExpr *>(expr.get())) {
+        if (auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&expectedType)) {
+            for (auto &elem : arrayInstantiation->initializers) {
+                perform_implicit_cast(elem, *arrayType->arrayType);
+            }
+            if (!arrayInstantiation->initializers.empty() &&
+                arrayInstantiation->initializers[0]->type->compare(*arrayType->arrayType)) {
+                arrayInstantiation->type = arrayType->clone();
             }
         }
     }

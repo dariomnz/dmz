@@ -16,6 +16,7 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %x = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   store i32 %0, ptr %x, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %x, align 4
 // CHECK-NEXT:   %2 = icmp eq i32 %1, 1
@@ -65,8 +66,6 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit4:                                         ; preds = %if.exit
 // CHECK-NEXT:   store i32 10, ptr %ret, align 4
-// CHECK-NEXT:   %15 = getelementptr inbounds nuw %error.struct.i32, ptr %ret, i32 0, i32 1
-// CHECK-NEXT:   store ptr null, ptr %15, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %if.exit4, %error_trace.merge3, %error_trace.merge

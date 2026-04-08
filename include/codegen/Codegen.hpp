@@ -139,6 +139,8 @@ class Codegen {
                                      const ResolvedRangeExpr &range);
     llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
                                        const ResolvedTypeSimd &vecType);
+    llvm::Value *generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr);
+    llvm::Value *generate_simdiota_expr(const ResolvedSimdIotaExpr &expr);
     void generate_error_trace_push(const SourceLocation &location);
     llvm::Value *generate_error_trace_get_idx();
     void generate_error_trace_clear(llvm::Value *idx = nullptr);

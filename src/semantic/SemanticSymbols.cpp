@@ -183,6 +183,19 @@ void ResolvedSimdSizeExpr::dump(size_t level, bool onlySelf) const {
     typeExpr->dump(level + 1, onlySelf);
 }
 
+void ResolvedSimdSplatExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSimdSplatExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+    value->dump(level + 1, onlySelf);
+}
+
+void ResolvedSimdIotaExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedSimdIotaExpr:" << type->to_str() << "\n";
+    if (onlySelf) return;
+    dump_constant_value(level);
+}
+
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;

@@ -27,6 +27,7 @@ fn bar(s: S) -> S {
 }
 // CHECK: define void @struct_parameter.bar(ptr sret(%struct_parameter.S) %ret, ptr readonly %0) {
 // CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ret, ptr align 4 %0, i64 8, i1 false)
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 

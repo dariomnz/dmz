@@ -59,6 +59,8 @@ class Formatter {
     ptr<Node> fmt_typeinfo_expr(const TypeinfoExpr& expr);
     ptr<Node> fmt_hasmethod_expr(const HasMethodExpr& expr);
     ptr<Node> fmt_simdsize_expr(const SimdSizeExpr& expr);
+    ptr<Node> fmt_simdsplat_expr(const SimdSplatExpr& expr);
+    ptr<Node> fmt_simdiota_expr(const SimdIotaExpr& expr);
     ptr<Node> fmt_array_at_expr(const ArrayAtExpr& expr);
     ptr<Node> fmt_ref_ptr_expr(const RefPtrExpr& expr);
     ptr<Node> fmt_range_expr(const RangeExpr& expr);

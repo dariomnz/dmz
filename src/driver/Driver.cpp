@@ -471,7 +471,8 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
 std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
-    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols, m_options.noRemoveUnused);
+    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols,
+                    m_options.noRemoveUnused);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module = codegen.generate_ir(m_options.test);
 
     if (m_options.llvmDump) {
@@ -673,6 +674,9 @@ int Driver::ptrBitSize() {
 }
 
 int Driver::typeBitSize(const ResolvedType &type) {
+    if (type.is_generic()) {
+        return ptrBitSize();
+    }
     llvm::LLVMContext context;
     llvm::Module module("tmp", context);
     llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true).generate_type(type);

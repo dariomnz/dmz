@@ -451,6 +451,12 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *simdSizeExpr = dynamic_cast<const SimdSizeExpr *>(&expr)) {
         return resolve_simd_size_expr(*simdSizeExpr);
     }
+    if (const auto *simdsplatExpr = dynamic_cast<const SimdSplatExpr *>(&expr)) {
+        return resolve_simdsplat_expr(*simdsplatExpr);
+    }
+    if (const auto *simdiotaExpr = dynamic_cast<const SimdIotaExpr *>(&expr)) {
+        return resolve_simdiota_expr(*simdiotaExpr);
+    }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
     }
@@ -503,15 +509,17 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (resolvedLHS->type->kind != ResolvedTypeKind::Number && resolvedLHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Error && resolvedLHS->type->kind != ResolvedTypeKind::Pointer &&
-        resolvedLHS->type->kind != ResolvedTypeKind::Simd && resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
+    auto lhsKind = resolvedLHS->type->kind;
+    auto rhsKind = resolvedRHS->type->kind;
+    if (lhsKind != ResolvedTypeKind::Number && lhsKind != ResolvedTypeKind::Bool &&
+        lhsKind != ResolvedTypeKind::Error && lhsKind != ResolvedTypeKind::Pointer &&
+        lhsKind != ResolvedTypeKind::Simd && lhsKind != ResolvedTypeKind::Generic) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
-    if (resolvedRHS->type->kind != ResolvedTypeKind::Number && resolvedRHS->type->kind != ResolvedTypeKind::Bool &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Error && resolvedRHS->type->kind != ResolvedTypeKind::Pointer &&
-        resolvedRHS->type->kind != ResolvedTypeKind::Simd && resolvedRHS->type->kind != ResolvedTypeKind::Generic) {
+    if (rhsKind != ResolvedTypeKind::Number && rhsKind != ResolvedTypeKind::Bool &&
+        rhsKind != ResolvedTypeKind::Error && rhsKind != ResolvedTypeKind::Pointer &&
+        rhsKind != ResolvedTypeKind::Simd && rhsKind != ResolvedTypeKind::Generic) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
@@ -523,7 +531,11 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     auto ret =
         makePtr<ResolvedBinaryOperator>(binop.location, binop.op, std::move(resolvedLHS), std::move(resolvedRHS));
     if (op_generate_bool(binop.op)) {
-        ret->type = makePtr<ResolvedTypeBool>(binop.location);
+        if (auto simdType = dynamic_cast<ResolvedTypeSimd *>(ret->type.get())) {
+            simdType->simdType = makePtr<ResolvedTypeBool>(simdType->location);
+        } else {
+            ret->type = makePtr<ResolvedTypeBool>(binop.location);
+        }
     }
     return ret;
 }
@@ -660,6 +672,32 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
                                                         std::move(params), nullptr, nullptr, nullptr, false);
             }
             decl = m_vectorBuiltins[key].get();
+        } else if (memberExpr.field == "select") {
+            // The format is a.select(b, mask);
+            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
+                return report(memberExpr.location, "cannot call instance member 'select' on vector type");
+            }
+            std::string key = "select:" + vecType->to_str();
+            // println(key);
+            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+                std::vector<ptr<ResolvedParamDecl>> params;
+                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
+                auto maskType = makePtr<ResolvedTypeSimd>(SourceLocation{}, makePtr<ResolvedTypeBool>(SourceLocation{}),
+                                                          vecType->simdSize);
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "b", vecType->clone(), false));
+                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "mask", maskType->clone(), false));
+                std::vector<ptr<ResolvedType>> paramsTypes;
+                paramsTypes.emplace_back(selfType->clone());
+                paramsTypes.emplace_back(vecType->clone());
+                paramsTypes.emplace_back(maskType->clone());
+                auto fnType =
+                    makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType->clone());
+                m_vectorBuiltins[key] =
+                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "select", std::move(fnType),
+                                                        std::move(params), nullptr, nullptr, nullptr, false);
+            }
+            decl = m_vectorBuiltins[key].get();
         } else if (memberExpr.field == "reduceAdd" || memberExpr.field == "reduceMul" ||
                    memberExpr.field == "reduceMin" || memberExpr.field == "reduceMax" ||
                    memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" ||
@@ -671,12 +709,14 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
 
             auto elementType = vecType->simdType.get();
             auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
-            if (!numType) {
-                return report(memberExpr.location, "reduction operations only supported for numeric vector elements");
+            if (!numType && elementType->kind != ResolvedTypeKind::Generic) {
+                return report(memberExpr.location,
+                              "reduction operations only supported for numeric vector elements, actual '" +
+                                  vecType->to_str() + "'");
             }
 
             if (memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" || memberExpr.field == "reduceXor") {
-                if (numType->numberKind == ResolvedNumberKind::Float) {
+                if (numType && numType->numberKind == ResolvedNumberKind::Float) {
                     return report(memberExpr.location,
                                   "bitwise reduction '" + memberExpr.field + "' only supported for integer vectors");
                 }
@@ -779,6 +819,11 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
     debug_func(arrayAtExpr.location);
     auto resolvedBase = resolve_expr(*arrayAtExpr.array);
     if (!resolvedBase) return nullptr;
+
+    if (resolvedBase->type->kind == ResolvedTypeKind::Generic) {
+        return makePtr<ResolvedArrayAtExpr>(arrayAtExpr.location, resolvedBase->type->clone(), std::move(resolvedBase),
+                                            nullptr);
+    }
 
     if (resolvedBase->type->kind != ResolvedTypeKind::Array && resolvedBase->type->kind != ResolvedTypeKind::Pointer &&
         resolvedBase->type->kind != ResolvedTypeKind::Slice && resolvedBase->type->kind != ResolvedTypeKind::Simd) {
@@ -1374,5 +1419,21 @@ ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
     endExpr->set_constant_value(cee.evaluate(*endExpr, false));
 
     return makePtr<ResolvedRangeExpr>(rangeExpr.location, std::move(startExpr), std::move(endExpr));
+}
+
+ptr<ResolvedSimdSplatExpr> Sema::resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr) {
+    debug_func(simdSplatExpr.location);
+    varOrReturn(value, resolve_expr(*simdSplatExpr.value));
+    // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
+    auto dummyType = makePtr<ResolvedTypeSimd>(simdSplatExpr.location, value->type->clone(), 0);
+    return makePtr<ResolvedSimdSplatExpr>(simdSplatExpr.location, std::move(value), std::move(dummyType));
+}
+
+ptr<ResolvedSimdIotaExpr> Sema::resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr) {
+    debug_func(simdiotaExpr.location);
+    // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
+    auto dummyType =
+        makePtr<ResolvedTypeSimd>(simdiotaExpr.location, ResolvedTypeNumber::usize(simdiotaExpr.location), 0);
+    return makePtr<ResolvedSimdIotaExpr>(simdiotaExpr.location, std::move(dummyType));
 }
 }  // namespace DMZ

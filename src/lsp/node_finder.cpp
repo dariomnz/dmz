@@ -320,6 +320,8 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*hasMethodExpr->structTypeExpr);
     } else if (auto* simdSizeExpr = dynamic_cast<const ResolvedSimdSizeExpr*>(&expr)) {
         find_in_expr(*simdSizeExpr->typeExpr);
+    } else if (auto* simdSplatExpr = dynamic_cast<const ResolvedSimdSplatExpr*>(&expr)) {
+        find_in_expr(*simdSplatExpr->value);
     } else if (auto* genericExpr = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
         find_in_expr(*genericExpr->base);
         if (found_decl) return;

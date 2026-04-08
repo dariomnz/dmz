@@ -174,6 +174,8 @@ class Sema {
     ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
     ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
+    ptr<ResolvedSimdSplatExpr> resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr);
+    ptr<ResolvedSimdIotaExpr> resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
     void perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };

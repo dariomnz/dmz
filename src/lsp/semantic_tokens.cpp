@@ -350,6 +350,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* simdSizeExpr = dynamic_cast<const ResolvedSimdSizeExpr*>(&expr)) {
             debug_msg("ResolvedSimdSizeExpr");
             traverse_expr(*simdSizeExpr->typeExpr);
+        } else if (auto* simdSplatExpr = dynamic_cast<const ResolvedSimdSplatExpr*>(&expr)) {
+            debug_msg("ResolvedSimdSplatExpr");
+            traverse_expr(*simdSplatExpr->value);
         } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
             debug_msg("ResolvedRangeExpr");
             traverse_expr(*rangeExpr->startExpr);

@@ -5,6 +5,7 @@ pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn memcpy(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn strlen(str: *u8) -> usize;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
+pub extern fn memset(ptr: *void, value: i32, size: usize) -> *void;
 
 pub struct Allocator {
     allocator: *void,
@@ -70,11 +71,95 @@ pub struct libc_allocator {
 
 pub fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
     for (0..slice.len) |i| {
-        if (slice[i] == scalar) {
-            return i;
-        }
+        if (slice[i] == scalar) return i;
     }
     return -1;
+}
+
+pub fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
+    const simd_len = @simdSize(T);
+
+    if (slice.len < simd_len) {
+        return indexOfScalar<T>(slice, scalar);
+    }
+    // First consume the firsts elements to avoid alignment issues
+    // call indexOfScalar<T>() to consume until aligment
+    const alignment = @sizeof(@simd<T, simd_len>);
+    const ptr_int: usize = slice.ptr;
+    const remainder = ptr_int % alignment;
+    let offset = 0;
+    if (remainder != 0) {
+        offset = (alignment - remainder) / @sizeof(T);
+        const index = indexOfScalar<T>(slice[0..offset], scalar);
+        if (index != -1) return index;
+    }
+
+    const scalar_vec: @simd<T, simd_len> = @simdSplat(scalar);
+
+    const index_vec: @simd<u16, simd_len> = @simdIota();
+    let i: usize = offset;
+    while (i <= slice.len - simd_len) {
+        const slice_ptr = &slice[i];
+        const data = @simd<T, simd_len>.load(slice_ptr);
+        const match_mask = data == scalar_vec;
+
+        if (match_mask.reduceOr()) {
+            const matches = index_vec.select(@simdSplat(simd_len), match_mask);
+            return i + matches.reduceMin();
+        }
+        i += simd_len;
+    }
+
+    const index = indexOfScalar<T>(slice[i..slice.len], scalar);
+    if (index != -1) return i + index;
+
+    return -1;
+}
+
+const std = import("std");
+test "indexOfScalarSIMD string" {
+    const slice: []u8 = "hello world! hello world! hello world! hello world! 88";
+    const scalar = '8';
+    const index = indexOfScalarSIMD<u8>(slice, scalar);
+
+    try std.testing.expect(index == 52);
+}
+
+test "indexOfScalarSIMD f64" {
+    const slice: f64[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    const scalar = 3.0;
+    const index = indexOfScalarSIMD<f64>(slice[0..5], scalar);
+
+    try std.testing.expect(index == 2);
+}
+
+test "indexOfScalarSIMD i32" {
+    const slice: i32[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    const scalar = 14;
+    const index = indexOfScalarSIMD<i32>(slice[0..16], scalar);
+
+    try std.testing.expect(index == 13);
+}
+
+test "indexOfScalar benchmark" {
+    const size = 1024 * 1024 * 10;
+    let ptr: *u8 = malloc(size);
+    memset(ptr, 123, size);
+    const scalar = 124;
+    ptr[size - 1] = scalar;
+    const start = std.time.get();
+    const index = indexOfScalarSIMD<u8>(ptr[0..size], scalar);
+    const end = std.time.get();
+    const time_diff = (end - start) * 1000;
+    try std.testing.expect(index == size - 1);
+    const start2 = std.time.get();
+    const index2 = indexOfScalar<u8>(ptr[0..size], scalar);
+    const end2 = std.time.get();
+    const time_diff2 = (end2 - start2) * 1000;
+    
+    try std.testing.expect(index2 == size - 1);
+    try std.testing.expect(time_diff< time_diff2);
+    free(ptr);
 }
 
 // test "leak" {

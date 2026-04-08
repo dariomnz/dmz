@@ -195,6 +195,12 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     for (auto &&arg : function->args()) {
         if (arg.hasStructRetAttr()) {
             arg.setName("ret");
+            // Prevent return optional with previous values
+            const llvm::DataLayout &dl = m_module->getDataLayout();
+            auto retType = generate_type(*fnType->returnType);
+            m_builder.CreateMemSetInline(
+                &arg, dl.getPrefTypeAlign(retType), m_builder.getInt8(0),
+                llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), dl.getTypeAllocSize(retType)));
             debug_msg("retVal is in a arg");
             retVal = &arg;
             continue;
@@ -565,17 +571,19 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
         if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
             initializer = m_builder.getInt32(*constVal);
         }
-        globalVar = new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
-                                             llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.name());
+        globalVar =
+            new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
+                                     llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.name());
         m_module->insertGlobalVariable(globalVar);
         m_declarations[&stmt] = globalVar;
     }
 
     if (m_debugSymbols && globalVar) {
-        bool isLocal = globalVar->hasLocalLinkage() || globalVar->hasInternalLinkage() || globalVar->hasPrivateLinkage();
-        auto *gvDebug = m_debugBuilder.createGlobalVariableExpression(
-            m_currentDebugScope, stmt.identifier, stmt.name(), m_currentDebugFile, stmt.location.line,
-            generate_debug_type(*stmt.type), isLocal);
+        bool isLocal =
+            globalVar->hasLocalLinkage() || globalVar->hasInternalLinkage() || globalVar->hasPrivateLinkage();
+        auto *gvDebug = m_debugBuilder.createGlobalVariableExpression(m_currentDebugScope, stmt.identifier, stmt.name(),
+                                                                      m_currentDebugFile, stmt.location.line,
+                                                                      generate_debug_type(*stmt.type), isLocal);
         globalVar->addDebugInfo(gvDebug);
     }
 }

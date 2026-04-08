@@ -414,6 +414,21 @@ struct SimdSizeExpr : public Expr {
     std::string to_str() const override;
 };
 
+struct SimdSplatExpr : public Expr {
+    ptr<Expr> value;
+    SimdSplatExpr(SourceLocation location, ptr<Expr> value) : Expr(location), value(std::move(value)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct SimdIotaExpr : public Expr {
+    SimdIotaExpr(SourceLocation location) : Expr(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct CallExpr : public Expr {
     ptr<Expr> callee;
     std::vector<ptr<Expr>> arguments;

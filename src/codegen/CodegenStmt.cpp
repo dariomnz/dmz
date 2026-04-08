@@ -84,10 +84,6 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
         } else {
             if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(retType)) {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *fnTypeOptional->optionalType);
-                // this reset the error if the function is not returning an error
-                llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
-                ResolvedTypeError typeError(stmt.expr->location);
-                store_value(llvm::Constant::getNullValue(m_builder.getPtrTy()), dst, typeError, typeError);
             } else {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type,
                             *m_currentFunction->getFnType()->returnType);

@@ -1,0 +1,36 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    test_i32x4();
+    test_f32x8();
+}
+
+fn test_i32x4() -> void {
+    let v: @simd<i32, 4> = @simdIota();
+    for (0..4) |i| {
+        const value = v[i];
+        if (value != i) {
+            return;
+        }
+    }
+    printf("i32x4 all values OK\n");
+    // CHECK: i32x4 all values OK
+}
+
+fn test_f32x8() -> void {
+    let v: @simd<f32, 8> = @simdIota();
+    for (0..8) |i| {
+        const value = v[i];
+        let i_lower: f32 = i;
+        i_lower -= 0.01;
+        let i_upper: f32 = i;
+        i_upper += 0.01;
+        if (value < i_lower || value > i_upper) {
+            return;
+        }
+    }
+    printf("f32x8 all values OK\n");
+    // CHECK: f32x8 all values OK
+}

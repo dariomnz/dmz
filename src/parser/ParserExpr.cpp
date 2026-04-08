@@ -188,6 +188,12 @@ ptr<Expr> Parser::parse_primary() {
         if (m_nextToken.type == TokenType::kw_simdsize) {
             return parse_simdsize_expr();
         }
+        if (m_nextToken.type == TokenType::kw_simdsplat) {
+            return parse_simdsplat_expr();
+        }
+        if (m_nextToken.type == TokenType::kw_simdiota) {
+            return parse_simdiota_expr();
+        }
     }
     if (restrictions & OnlyTypeExpr) {
         return report(location, "expected type expression");
@@ -578,5 +584,37 @@ ptr<SimdSizeExpr> Parser::parse_simdsize_expr() {
     eat_next_token();  // eat )
 
     return makePtr<SimdSizeExpr>(location, std::move(type));
+}
+
+ptr<SimdSplatExpr> Parser::parse_simdsplat_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_simdsplat, "expected @simdSplat");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @simdSplat
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    varOrReturn(value, parse_expr());
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return makePtr<SimdSplatExpr>(location, std::move(value));
+}
+
+ptr<SimdIotaExpr> Parser::parse_simdiota_expr() {
+    debug_func("");
+    matchOrReturn(TokenType::kw_simdiota, "expected @simdIota");
+    auto location = m_nextToken.loc;
+    eat_next_token();  // eat @simdIota
+
+    matchOrReturn(TokenType::par_l, "expected '('");
+    eat_next_token();  // eat (
+
+    matchOrReturn(TokenType::par_r, "expected ')'");
+    eat_next_token();  // eat )
+
+    return makePtr<SimdIotaExpr>(location);
 }
 }  // namespace DMZ

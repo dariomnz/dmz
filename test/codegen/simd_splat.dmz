@@ -1,0 +1,45 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    test_i32x4();
+    test_f32x8();
+    test_add_splats();
+}
+
+fn test_i32x4() -> void {
+    let v: @simd<i32, 4> = @simdSplat(10);
+    for (0..4) |i| {
+        const value = v[i];
+        if (value != 10) {
+            return;
+        }
+    }
+    printf("i32x4 all values OK\n");
+    // CHECK: i32x4 all values OK
+}
+
+fn test_f32x8() -> void {
+    let v: @simd<f32, 8> = @simdSplat(1.5);
+    for (0..8) |i| {
+        const value = v[i];
+        if (value != 1.5) {
+            return;
+        }
+    }
+    printf("f32x8 all values OK\n");
+    // CHECK: f32x8 all values OK
+}
+
+fn test_add_splats() -> void {
+    let v: @simd<i32, 4> = @simdSplat(1) + @simdSplat(2);
+    for (0..4) |i| {
+        const value = v[i];
+        if (value != 3) {
+            return;
+        }
+    }
+    printf("add_splats all values OK\n");
+    // CHECK: add_splats all values OK
+}

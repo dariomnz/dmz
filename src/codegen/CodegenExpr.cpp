@@ -20,16 +20,13 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     defer([&]() { unset_debug_location(); });
 
     if (auto val = expr.get_constant_value()) {
-        if (auto nt = dynamic_cast<ResolvedTypeNumber *>(expr.type.get())) {
-            return m_builder.getIntN(nt->bitSize, *val);
-        }
-        return m_builder.getInt32(*val);
+        return llvm::ConstantInt::get(generate_type(*expr.type), *val);
     }
     if (auto *number = dynamic_cast<const ResolvedFloatLiteral *>(&expr)) {
-        return llvm::ConstantFP::get(m_builder.getDoubleTy(), number->value);
+        return llvm::ConstantFP::get(generate_type(*number->type), number->value);
     }
     if (auto *number = dynamic_cast<const ResolvedIntLiteral *>(&expr)) {
-        return m_builder.getInt32(number->value);
+        return llvm::ConstantInt::get(generate_type(*number->type), number->value);
     }
     if (auto *number = dynamic_cast<const ResolvedCharLiteral *>(&expr)) {
         return m_builder.getInt8(number->value);
@@ -112,6 +109,12 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
         return generate_orelse_error_expr(*orelseErr, keepPointer);
     }
+    if (auto *simdsplat = dynamic_cast<const ResolvedSimdSplatExpr *>(&expr)) {
+        return generate_simdsplat_expr(*simdsplat);
+    }
+    if (auto *simdiota = dynamic_cast<const ResolvedSimdIotaExpr *>(&expr)) {
+        return generate_simdiota_expr(*simdiota);
+    }
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
@@ -141,7 +144,7 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     if (auto memberExpr = dynamic_cast<const ResolvedMemberExpr *>(call.callee.get())) {
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(memberExpr->base->type.get())) {
             auto &name = memberExpr->member.identifier;
-            if (name == "load" || name == "store" || name == "reduceAdd" || name == "reduceMul" ||
+            if (name == "load" || name == "store" || name == "select" || name == "reduceAdd" || name == "reduceMul" ||
                 name == "reduceAnd" || name == "reduceOr" || name == "reduceXor" || name == "reduceMin" ||
                 name == "reduceMax") {
                 return generate_simd_builtin(call, *memberExpr, *simdType);
@@ -585,8 +588,10 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
         type = generate_type(*arrayAtExpr.array->type);
         idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Simd) {
-        type = generate_type(*arrayAtExpr.array->type);
-        idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
+        if (keepPointer) dmz_unreachable("This should not happend, simd types are not meant to be used as base of array at expressions");
+        return m_builder.CreateExtractElement(generate_expr(*arrayAtExpr.array), generate_expr(*arrayAtExpr.index));
+        // type = generate_type(*arrayAtExpr.array->type);
+        // idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Slice) {
         auto slicetype = generate_type(*arrayAtExpr.array->type);
         base = m_builder.CreateStructGEP(slicetype, base, 0);
@@ -1108,6 +1113,13 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
         llvm::Value *destPtr = generate_expr(*call.arguments[1]);
         llvm::Value *simdVal = load_value(selfPtr, simdType);
         return m_builder.CreateStore(simdVal, destPtr);
+    } else if (name == "select") {
+        // select(self_ptr, vec_b, mask)
+        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
+        llvm::Value *vecB = generate_expr(*call.arguments[1]);
+        llvm::Value *mask = generate_expr(*call.arguments[2]);
+        llvm::Value *simdVal = load_value(selfPtr, simdType);
+        return m_builder.CreateSelect(mask, simdVal, vecB);
     } else if (name == "reduceAdd" || name == "reduceMul" || name == "reduceMin" || name == "reduceMax" ||
                name == "reduceAnd" || name == "reduceOr" || name == "reduceXor") {
         // reduce(self_ptr)
@@ -1209,4 +1221,39 @@ llvm::Value *Codegen::generate_lambda_expr(const ResolvedLambdaExpr &expr) {
     return llvmFn;
 }
 
+llvm::Value *Codegen::generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr) {
+    debug_func("");
+    llvm::Value *val = generate_expr(*expr.value);
+    auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+    if (!vecType) {
+        dmz_unreachable("unexpected type in simdsplat");
+    }
+    val = cast_to(val, *expr.value->type, *vecType->simdType);
+    return m_builder.CreateVectorSplat(vecType->simdSize, val);
+}
+
+llvm::Value *Codegen::generate_simdiota_expr(const ResolvedSimdIotaExpr &expr) {
+    debug_func("");
+    auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+    if (!vecType) {
+        dmz_unreachable("unexpected type in simdiota");
+    }
+    auto numType = dynamic_cast<const ResolvedTypeNumber *>(vecType->simdType.get());
+    if (!numType) {
+        dmz_unreachable("unexpected type in simdiota");
+    }
+    auto llvmVecType = generate_type(*expr.type);
+    auto llvmNumType = generate_type(*numType);
+    llvm::Value *vec = llvm::UndefValue::get(llvmVecType);
+    for (int i = 0; i < vecType->simdSize; i++) {
+        llvm::Value *val;
+        if (numType->numberKind == ResolvedNumberKind::Float) {
+            val = llvm::ConstantFP::get(llvmNumType, i);
+        } else {
+            val = llvm::ConstantInt::get(llvmNumType, i);
+        }
+        vec = m_builder.CreateInsertElement(vec, val, i);
+    }
+    return vec;
+}
 }  // namespace DMZ
