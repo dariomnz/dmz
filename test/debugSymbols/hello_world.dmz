@@ -31,33 +31,33 @@ fn main() -> void {
 // CHECK-NEXT:     #dbg_declare(ptr %a, !18, !DIExpression(), !19)
 // CHECK-NEXT:   store i32 %1, ptr %a, align 4
 // CHECK-NEXT:     #dbg_declare(ptr %a, !14, !DIExpression(), !19)
-// CHECK-NEXT:     #dbg_declare(ptr %b, !20, !DIExpression(), !21)
+// CHECK-NEXT:     #dbg_declare(ptr %b, !21, !DIExpression(), !22)
 // CHECK-NEXT:   store i32 %2, ptr %b, align 4
-// CHECK-NEXT:     #dbg_declare(ptr %b, !15, !DIExpression(), !21)
-// CHECK-NEXT:     #dbg_declare(ptr %c, !22, !DIExpression(), !23)
+// CHECK-NEXT:     #dbg_declare(ptr %b, !15, !DIExpression(), !22)
+// CHECK-NEXT:     #dbg_declare(ptr %c, !23, !DIExpression(), !24)
 // CHECK-NEXT:   store i32 %3, ptr %c, align 4
-// CHECK-NEXT:     #dbg_declare(ptr %c, !16, !DIExpression(), !23)
-// CHECK-NEXT:   %4 = load i32, ptr %a, align 4, !dbg !24
-// CHECK-NEXT:   %5 = load i32, ptr %b, align 4, !dbg !25
-// CHECK-NEXT:   %6 = add i32 %4, %5, !dbg !26
-// CHECK-NEXT:     #dbg_declare(ptr %a_ptr, !27, !DIExpression(), !29)
-// CHECK-NEXT:   store ptr null, ptr %a_ptr, align 8, !dbg !29
-// CHECK-NEXT:   %7 = load ptr, ptr %a_ptr, align 8, !dbg !30
-// CHECK-NEXT:   store i32 1, ptr %7, align 4, !dbg !31
+// CHECK-NEXT:     #dbg_declare(ptr %c, !16, !DIExpression(), !24)
+// CHECK-NEXT:   %4 = load i32, ptr %a, align 4, !dbg !25
+// CHECK-NEXT:   %5 = load i32, ptr %b, align 4, !dbg !26
+// CHECK-NEXT:   %6 = add i32 %4, %5, !dbg !27
+// CHECK-NEXT:     #dbg_declare(ptr %a_ptr, !28, !DIExpression(), !30)
+// CHECK-NEXT:   store ptr null, ptr %a_ptr, align 8, !dbg !30
+// CHECK-NEXT:   %7 = load ptr, ptr %a_ptr, align 8, !dbg !31
+// CHECK-NEXT:   store i32 1, ptr %7, align 4, !dbg !32
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 // CHECK-NEXT: 
-// CHECK-NEXT: define void @__builtin_main() !dbg !32 {
+// CHECK-NEXT: define void @__builtin_main() !dbg !33 {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %tmp.struct.hello_world.Point = alloca %hello_world.Point, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.hello_world.Point, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal), !dbg !36
-// CHECK-NEXT:     #dbg_declare(ptr %tmp.struct.hello_world.Point, !37, !DIExpression(), !38)
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 0, !dbg !38
-// CHECK-NEXT:   store i32 1, ptr %1, align 4, !dbg !38
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 1, !dbg !38
-// CHECK-NEXT:   store i32 2, ptr %2, align 4, !dbg !38
-// CHECK-NEXT:   call void @hello_world.foo(ptr readonly %tmp.struct.hello_world.Point, i32 1, i32 2, i32 3), !dbg !39
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal), !dbg !37
+// CHECK-NEXT:     #dbg_declare(ptr %tmp.struct.hello_world.Point, !38, !DIExpression(), !39)
+// CHECK-NEXT:   %1 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 0, !dbg !39
+// CHECK-NEXT:   store i32 1, ptr %1, align 4, !dbg !39
+// CHECK-NEXT:   %2 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 1, !dbg !39
+// CHECK-NEXT:   store i32 2, ptr %2, align 4, !dbg !39
+// CHECK-NEXT:   call void @hello_world.foo(ptr readonly %tmp.struct.hello_world.Point, i32 1, i32 2, i32 3), !dbg !40
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 // CHECK-NEXT: 
@@ -95,23 +95,25 @@ fn main() -> void {
 // CHECK-NEXT: !17 = !DILocation(line: 10, column: 7, scope: !4)
 // CHECK-NEXT: !18 = !DILocalVariable(name: "a", scope: !4, file: !1, line: 10, type: !10)
 // CHECK-NEXT: !19 = !DILocation(line: 10, column: 17, scope: !4)
-// CHECK-NEXT: !20 = !DILocalVariable(name: "b", scope: !4, file: !1, line: 10, type: !10)
-// CHECK-NEXT: !21 = !DILocation(line: 10, column: 25, scope: !4)
-// CHECK-NEXT: !22 = !DILocalVariable(name: "c", scope: !4, file: !1, line: 10, type: !10)
-// CHECK-NEXT: !23 = !DILocation(line: 10, column: 33, scope: !4)
-// CHECK-NEXT: !24 = !DILocation(line: 11, column: 4, scope: !4)
-// CHECK-NEXT: !25 = !DILocation(line: 11, column: 8, scope: !4)
-// CHECK-NEXT: !26 = !DILocation(line: 11, column: 6, scope: !4)
-// CHECK-NEXT: !27 = !DILocalVariable(name: "a_ptr", scope: !4, file: !1, line: 12, type: !28)
-// CHECK-NEXT: !28 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
-// CHECK-NEXT: !29 = !DILocation(line: 12, column: 4, scope: !4)
-// CHECK-NEXT: !30 = !DILocation(line: 13, column: 4, scope: !4)
-// CHECK-NEXT: !31 = !DILocation(line: 13, column: 12, scope: !4)
-// CHECK-NEXT: !32 = distinct !DISubprogram(name: "hello_world.main", scope: !1, file: !1, line: 16, type: !33, scopeLine: 16, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !35)
-// CHECK-NEXT: !33 = !DISubroutineType(types: !34)
-// CHECK-NEXT: !34 = !{null}
-// CHECK-NEXT: !35 = !{}
-// CHECK-NEXT: !36 = !DILocation(line: 17, column: 10, scope: !32)
-// CHECK-NEXT: !37 = !DILocalVariable(name: "tmp.struct.hello_world.Point", scope: !32, file: !1, line: 18, type: !7)
-// CHECK-NEXT: !38 = !DILocation(line: 18, column: 8, scope: !32)
-// CHECK-NEXT: !39 = !DILocation(line: 18, column: 7, scope: !32)
+// CHECK-NEXT: !20 = !DILocation(line: 10, scope: !4)
+// CHECK-NEXT: !21 = !DILocalVariable(name: "b", scope: !4, file: !1, line: 10, type: !10)
+// CHECK-NEXT: !22 = !DILocation(line: 10, column: 25, scope: !4)
+// CHECK-NEXT: !23 = !DILocalVariable(name: "c", scope: !4, file: !1, line: 10, type: !10)
+// CHECK-NEXT: !24 = !DILocation(line: 10, column: 33, scope: !4)
+// CHECK-NEXT: !25 = !DILocation(line: 11, column: 4, scope: !4)
+// CHECK-NEXT: !26 = !DILocation(line: 11, column: 8, scope: !4)
+// CHECK-NEXT: !27 = !DILocation(line: 11, column: 6, scope: !4)
+// CHECK-NEXT: !28 = !DILocalVariable(name: "a_ptr", scope: !4, file: !1, line: 12, type: !29)
+// CHECK-NEXT: !29 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
+// CHECK-NEXT: !30 = !DILocation(line: 12, column: 4, scope: !4)
+// CHECK-NEXT: !31 = !DILocation(line: 13, column: 4, scope: !4)
+// CHECK-NEXT: !32 = !DILocation(line: 13, column: 12, scope: !4)
+// CHECK-NEXT: !33 = distinct !DISubprogram(name: "hello_world.main", scope: !1, file: !1, line: 16, type: !34, scopeLine: 16, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !36)
+// CHECK-NEXT: !34 = !DISubroutineType(types: !35)
+// CHECK-NEXT: !35 = !{null}
+// CHECK-NEXT: !36 = !{}
+// CHECK-NEXT: !37 = !DILocation(line: 17, column: 10, scope: !33)
+// CHECK-NEXT: !38 = !DILocalVariable(name: "tmp.struct.hello_world.Point", scope: !33, file: !1, line: 18, type: !7)
+// CHECK-NEXT: !39 = !DILocation(line: 18, column: 8, scope: !33)
+// CHECK-NEXT: !40 = !DILocation(line: 18, column: 7, scope: !33)
+// CHECK-NEXT: !41 = !DILocation(line: 16, scope: !33)

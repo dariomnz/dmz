@@ -153,6 +153,8 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         function->setSubprogram(subProgram);
         debugScope = makePtr<DebugScopeRAII>(*this, subProgram);
     }
+    set_debug_location(functionDecl.location);
+    defer([&]() { unset_debug_location(); });
 
     auto *entryBB = llvm::BasicBlock::Create(*m_context, "entry", function);
     m_builder.SetInsertPoint(entryBB);
