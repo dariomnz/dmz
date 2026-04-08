@@ -473,7 +473,8 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     debug_func("");
     Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols,
                     m_options.noRemoveUnused);
-    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module = codegen.generate_ir(m_options.test);
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module =
+        codegen.generate_ir(m_options.test, m_options.optimizationLevel);
 
     if (m_options.llvmDump) {
         module.second->dump();

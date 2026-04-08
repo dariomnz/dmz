@@ -23,7 +23,8 @@ Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_
     m_module->setTargetTriple(llvm::sys::getDefaultTargetTriple());
 }
 
-std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool runTest) {
+std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool runTest,
+                                                                          const std::string &optimizationLevel) {
     debug_func("");
     ScopedTimer(StatType::Codegen);
 
@@ -42,6 +43,40 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
     if (m_debugSymbols) {
         m_debugBuilder.finalize();
     }
+
+    if (optimizationLevel != "-O0") {
+        llvm::PassInstrumentationCallbacks PIC;
+        llvm::StandardInstrumentations SI(*m_context, false);
+        SI.registerCallbacks(PIC);
+
+        llvm::LoopAnalysisManager LAM;
+        llvm::FunctionAnalysisManager FAM;
+        llvm::CGSCCAnalysisManager CGAM;
+        llvm::ModuleAnalysisManager MAM;
+
+        llvm::PassBuilder PB(nullptr, llvm::PipelineTuningOptions(), std::nullopt, &PIC);
+
+        PB.registerModuleAnalyses(MAM);
+        PB.registerCGSCCAnalyses(CGAM);
+        PB.registerFunctionAnalyses(FAM);
+        PB.registerLoopAnalyses(LAM);
+        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+        llvm::FunctionPassManager FPM;
+
+        FPM.addPass(llvm::InstCombinePass());
+        FPM.addPass(llvm::ReassociatePass());
+        FPM.addPass(llvm::GVNPass());
+        FPM.addPass(llvm::SimplifyCFGPass());
+
+        for (auto &&function : m_module->functions()) {
+            debug_msg("Running FunctionPassManager on " << function.getName().str() << " ("
+                                                        << function.getInstructionCount() << " instructions)");
+            if (function.getInstructionCount() == 0) continue;
+            FPM.run(function, FAM);
+        }
+    }
+
     return {std::move(m_context), std::move(m_module)};
 }
 

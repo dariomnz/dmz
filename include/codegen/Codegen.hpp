@@ -65,9 +65,11 @@ class Codegen {
     };
 
    public:
-    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols, bool noRemoveUnused);
+    Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
+            bool noRemoveUnused);
 
-    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest);
+    std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest,
+                                                                     const std::string &optimizationLevel);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     llvm::DIType *generate_debug_type(const ResolvedType &type);
     llvm::DIFile *generate_debug_file(const SourceLocation &location);
