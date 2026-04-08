@@ -1,8 +1,12 @@
-const testingError = error {EXPECT};
-
 pub fn expect(v: i1) -> !void {
     if (v == false) {
-        return testingError.EXPECT;
+        return error.EXPECT;
+    }
+}
+
+pub fn expectEqual<T>(a: T, b: T) -> !void {
+    if (a != b) {
+        return error.NOT_EQUAL;
     }
 }
 

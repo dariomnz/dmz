@@ -142,8 +142,8 @@ fn @builtin_get_errno() -> i32 {
     return errno_num;
 }
 
-pub fn error_errno() -> !void {
-    switch (@builtin_get_errno()) {
+pub fn libc_error(errno: i32) -> !void {
+    switch (errno) {
         case 0 => return POSIX_errs.SUCCESS;
         case 1 => return POSIX_errs.OPERATION_NOT_PERMITTED;
         case 2 => return POSIX_errs.NO_SUCH_FILE_OR_DIRECTORY;
@@ -278,4 +278,9 @@ pub fn error_errno() -> !void {
         case 133 => return POSIX_errs.MEMORY_PAGE_POISONED;
         else => return POSIX_errs.UNKNOWN;
     }
+}
+
+pub fn libc_errno() -> !void {
+    const errno = @builtin_get_errno();
+    return libc_error(errno);
 }

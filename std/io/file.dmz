@@ -17,7 +17,7 @@ pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
     while (buf_slice.len > 0) {
         const ret = write(fd, buf_slice.ptr, buf_slice.len);
         if (ret < 0) {
-            try std.errno.error_errno();
+            try std.errno.libc_errno();
         } else {
             if (ret == 0) {
                 return writed;
@@ -34,7 +34,7 @@ pub fn readOne(fd: i32, buffer: []u8) -> !usize {
     const readed = read(fd, buffer.ptr, buffer.len);
     // std.io.printf("readed %d\n", readed);
     if (readed < 0) {
-        try std.errno.error_errno();
+        try std.errno.libc_errno();
     }
     return readed;
 }

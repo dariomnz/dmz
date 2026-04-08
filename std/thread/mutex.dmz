@@ -1,0 +1,45 @@
+
+const std = import("std");
+
+extern fn pthread_mutex_init(mutexPtr: *void, attr: *void) -> i32;
+extern fn pthread_mutex_lock(mutexPtr: *void) -> i32;
+extern fn pthread_mutex_unlock(mutexPtr: *void) -> i32;
+extern fn pthread_mutex_destroy(mutexPtr: *void) -> i32;
+
+pub struct mutex {
+    opaque_data: u8[40] = {},
+
+    pub fn init() -> mutex {
+        const this = @This{};
+        pthread_mutex_init(&this, null);
+        return this;
+    }
+
+    pub fn deinit(self: *@This) -> !void {
+        const ret = pthread_mutex_destroy(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+
+    pub fn lock(self: *@This) -> !void {
+        const ret = pthread_mutex_lock(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+
+    pub fn unlock(self: *@This) -> !void {
+        const ret = pthread_mutex_unlock(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+}
+
+test "mutex test" {
+    let m = mutex.init();
+    defer m.deinit();
+    m.lock();
+    m.unlock();
+}

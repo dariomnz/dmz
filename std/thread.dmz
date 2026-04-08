@@ -1,0 +1,31 @@
+pub const mutex = import("./thread/mutex.dmz").mutex;
+pub const thread = import("./thread/thread.dmz").thread;
+
+const std = import("std");
+
+test "thread mutex" {
+    let contador = 0;
+    let contador_ptr = &contador;
+    const INCREMENTOS = 100000;
+    let cont_mutex = mutex.init();
+    defer try cont_mutex.deinit();
+    let cont_mutex_ptr = &cont_mutex;
+    const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
+        try cont_mutex_ptr.lock();
+        contador_ptr.*++;
+        try cont_mutex_ptr.unlock();
+    } };
+
+    const NUM_HILOS = 5;
+    let threads: thread[NUM_HILOS] = {};
+
+    for (0..NUM_HILOS) |i| {
+        threads[i] = try thread.init(incrementar_contador, null);
+    }
+
+    for (0..NUM_HILOS) |i| {
+        try threads[i].join();
+    }
+
+    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+}

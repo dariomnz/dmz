@@ -1,0 +1,39 @@
+const std = import("std");
+
+extern fn pthread_create(thread_id: *usize, attr: *void, start_routine: *fn(*void)->void, arg: *void) -> i32;
+extern fn pthread_join(thread_id: usize, retval: *void) -> i32;
+extern fn pthread_exit(retval: *void) -> void;
+
+pub struct thread {
+    thread_id: usize = {},
+
+    pub fn init(start_routine: *fn(*void)->void, arg: *void) -> !thread {
+        const this = @This{};
+        const ret = pthread_create(&this.thread_id, null, start_routine, arg);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+        return this;
+    }
+
+    pub fn join(self: *@This) -> !void {
+        const ret = pthread_join(self.thread_id, null);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+}
+
+test "thread test" {
+    const func = [](arg: *void) -> void {
+        const real_arg: *i32 = arg;
+        std.io.printf("Thread %d\n", real_arg.*);
+        pthread_exit(null);
+    };
+    let arg1: i32 = 1;
+    let arg2: i32 = 2;
+    const t1 = try thread.init(func, &arg1);
+    const t2 = try thread.init(func, &arg2);
+    t1.join();
+    t2.join();
+}
