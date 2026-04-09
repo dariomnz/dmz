@@ -109,6 +109,12 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_simdiota);
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
+        CASE_TYPE(kw_atomicLoad);
+        CASE_TYPE(kw_atomicStore);
+        CASE_TYPE(kw_atomicCmpExW);
+        CASE_TYPE(kw_atomicCmpExS);
+        CASE_TYPE(kw_atomicRmw);
+        CASE_TYPE(caret);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -439,6 +445,10 @@ Token Lexer::next_token() {
         advance(2);
     } else if (line_content.substr(0, 1) == ".") {
         t.type = TokenType::dot;
+        t.str = line_content.substr(0, 1);
+        advance();
+    } else if (line_content.substr(0, 1) == "^") {
+        t.type = TokenType::caret;
         t.str = line_content.substr(0, 1);
         advance();
     } else if (line_content.substr(0, 1) == "|") {

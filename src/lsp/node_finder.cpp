@@ -340,6 +340,22 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             if (found_decl) return;
         }
         find_in_decl(*lambdaExpr->lambdaFunc);
+    } else if (auto* atomicLoad = dynamic_cast<const ResolvedAtomicLoadExpr*>(&expr)) {
+        find_in_expr(*atomicLoad->ptrExpr);
+    } else if (auto* atomicStore = dynamic_cast<const ResolvedAtomicStoreExpr*>(&expr)) {
+        find_in_expr(*atomicStore->ptrExpr);
+        if (found_decl) return;
+        find_in_expr(*atomicStore->valExpr);
+    } else if (auto* atomicCmpEx = dynamic_cast<const ResolvedAtomicCmpExExpr*>(&expr)) {
+        find_in_expr(*atomicCmpEx->ptrExpr);
+        if (found_decl) return;
+        find_in_expr(*atomicCmpEx->expected);
+        if (found_decl) return;
+        find_in_expr(*atomicCmpEx->replacement);
+    } else if (auto* atomicRmw = dynamic_cast<const ResolvedAtomicRmwExpr*>(&expr)) {
+        find_in_expr(*atomicRmw->ptrExpr);
+        if (found_decl) return;
+        find_in_expr(*atomicRmw->valExpr);
     }
 }
 

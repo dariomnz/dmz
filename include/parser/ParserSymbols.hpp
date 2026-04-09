@@ -863,4 +863,55 @@ struct LambdaExpr : public Expr {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
 };
+struct AtomicLoadExpr : public Expr {
+    ptr<Expr> ptr_expr;
+    AtomicLoadExpr(SourceLocation location, ptr<Expr> ptr_expr)
+        : Expr(location), ptr_expr(std::move(ptr_expr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct AtomicStoreExpr : public Expr {
+    ptr<Expr> ptr_expr;
+    ptr<Expr> val_expr;
+    AtomicStoreExpr(SourceLocation location, ptr<Expr> ptr_expr, ptr<Expr> val_expr)
+        : Expr(location), ptr_expr(std::move(ptr_expr)), val_expr(std::move(val_expr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct AtomicCmpExExpr : public Expr {
+    ptr<Expr> ptr_expr;
+    ptr<Expr> expected;
+    ptr<Expr> replacement;
+    bool isWeak;
+
+    AtomicCmpExExpr(SourceLocation location, ptr<Expr> ptr_expr, ptr<Expr> expected, ptr<Expr> replacement, bool isWeak)
+        : Expr(location),
+          ptr_expr(std::move(ptr_expr)),
+          expected(std::move(expected)),
+          replacement(std::move(replacement)),
+          isWeak(isWeak) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
+struct AtomicRmwExpr : public Expr {
+    ptr<Expr> ptr_expr;
+    TokenType op;
+    ptr<Expr> val_expr;
+    
+    AtomicRmwExpr(SourceLocation location, ptr<Expr> ptr_expr, TokenType op, ptr<Expr> val_expr)
+        : Expr(location),
+          ptr_expr(std::move(ptr_expr)),
+          op(op),
+          val_expr(std::move(val_expr)) {}
+          
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 }  // namespace DMZ

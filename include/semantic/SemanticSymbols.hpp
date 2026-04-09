@@ -985,4 +985,51 @@ struct ResolvedTestDecl : public ResolvedFunctionDecl {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
+struct ResolvedAtomicLoadExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> ptrExpr;
+    ResolvedAtomicLoadExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> ptrExpr)
+        : ResolvedExpr(location, std::move(type)), ptrExpr(std::move(ptrExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedAtomicStoreExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> ptrExpr;
+    ptr<ResolvedExpr> valExpr;
+    ResolvedAtomicStoreExpr(SourceLocation location, ptr<ResolvedExpr> ptrExpr, ptr<ResolvedExpr> valExpr)
+        : ResolvedExpr(location, makePtr<ResolvedTypeVoid>(location)),
+          ptrExpr(std::move(ptrExpr)),
+          valExpr(std::move(valExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedAtomicCmpExExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> ptrExpr;
+    ptr<ResolvedExpr> expected;
+    ptr<ResolvedExpr> replacement;
+    bool isWeak;
+
+    ResolvedAtomicCmpExExpr(SourceLocation location, ptr<ResolvedType> resultType, ptr<ResolvedExpr> ptrExpr,
+                            ptr<ResolvedExpr> expected, ptr<ResolvedExpr> replacement, bool isWeak)
+        : ResolvedExpr(location, std::move(resultType)),
+          ptrExpr(std::move(ptrExpr)),
+          expected(std::move(expected)),
+          replacement(std::move(replacement)),
+          isWeak(isWeak) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
+struct ResolvedAtomicRmwExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> ptrExpr;
+    TokenType op;
+    ptr<ResolvedExpr> valExpr;
+    ResolvedAtomicRmwExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedExpr> ptrExpr, TokenType op,
+                          ptr<ResolvedExpr> valExpr)
+        : ResolvedExpr(location, std::move(type)), ptrExpr(std::move(ptrExpr)), op(op), valExpr(std::move(valExpr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+};
+
 }  // namespace DMZ

@@ -701,4 +701,33 @@ void ResolvedTypeSimdExpr::dump(size_t level, bool onlySelf) const {
     sizeExpr->dump(level + 1, onlySelf);
 }
 
+void ResolvedAtomicLoadExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedAtomicLoadExpr:" << type->to_str() << '\n';
+    if (onlySelf) return;
+    ptrExpr->dump(level + 1, onlySelf);
+}
+
+void ResolvedAtomicStoreExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedAtomicStoreExpr\n";
+    if (onlySelf) return;
+    ptrExpr->dump(level + 1, onlySelf);
+    valExpr->dump(level + 1, onlySelf);
+}
+
+void ResolvedAtomicCmpExExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << (isWeak ? "ResolvedAtomicCmpExWeakExpr:" : "ResolvedAtomicCmpExStrongExpr:")
+              << type->to_str() << "\n";
+    if (onlySelf) return;
+    ptrExpr->dump(level + 1, onlySelf);
+    expected->dump(level + 1, onlySelf);
+    replacement->dump(level + 1, onlySelf);
+}
+
+void ResolvedAtomicRmwExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedAtomicRmwExpr(" << get_op_str(op) << "):" << type->to_str() << '\n';
+    if (onlySelf) return;
+    ptrExpr->dump(level + 1, onlySelf);
+    valExpr->dump(level + 1, onlySelf);
+}
+
 }  // namespace DMZ

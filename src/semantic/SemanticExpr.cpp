@@ -448,6 +448,18 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     if (const auto *hasMethodExpr = dynamic_cast<const HasMethodExpr *>(&expr)) {
         return resolve_has_method_expr(*hasMethodExpr);
     }
+    if (const auto *atomicLoad = dynamic_cast<const AtomicLoadExpr *>(&expr)) {
+        return resolve_atomic_load_expr(*atomicLoad);
+    }
+    if (const auto *atomicStore = dynamic_cast<const AtomicStoreExpr *>(&expr)) {
+        return resolve_atomic_store_expr(*atomicStore);
+    }
+    if (const auto *atomicCmpEx = dynamic_cast<const AtomicCmpExExpr *>(&expr)) {
+        return resolve_atomic_cmpex_expr(*atomicCmpEx);
+    }
+    if (const auto *atomicRmw = dynamic_cast<const AtomicRmwExpr *>(&expr)) {
+        return resolve_atomic_rmw_expr(*atomicRmw);
+    }
     if (const auto *simdSizeExpr = dynamic_cast<const SimdSizeExpr *>(&expr)) {
         return resolve_simd_size_expr(*simdSizeExpr);
     }
@@ -1436,4 +1448,103 @@ ptr<ResolvedSimdIotaExpr> Sema::resolve_simdiota_expr(const SimdIotaExpr &simdio
         makePtr<ResolvedTypeSimd>(simdiotaExpr.location, ResolvedTypeNumber::usize(simdiotaExpr.location), 0);
     return makePtr<ResolvedSimdIotaExpr>(simdiotaExpr.location, std::move(dummyType));
 }
+
+ptr<ResolvedAtomicLoadExpr> Sema::resolve_atomic_load_expr(const AtomicLoadExpr &loadExpr) {
+    debug_func(loadExpr.location);
+    varOrReturn(ptrExpr, resolve_expr(*loadExpr.ptr_expr));
+
+    auto ptrType = dynamic_cast<ResolvedTypePointer *>(ptrExpr->type.get());
+    if (!ptrType) {
+        return report(ptrExpr->location,
+                      "expected pointer type for @atomicLoad, actual '" + ptrExpr->type->to_str() + "'");
+    }
+
+    auto &baseType = ptrType->pointerType;
+    if (baseType->kind != ResolvedTypeKind::Number && baseType->kind != ResolvedTypeKind::Pointer) {
+        return report(baseType->location, "cannot perform @atomicLoad on non-atomic type '" + baseType->to_str() + "'");
+    }
+
+    return makePtr<ResolvedAtomicLoadExpr>(loadExpr.location, baseType->clone(), std::move(ptrExpr));
+}
+
+ptr<ResolvedAtomicStoreExpr> Sema::resolve_atomic_store_expr(const AtomicStoreExpr &storeExpr) {
+    debug_func(storeExpr.location);
+    varOrReturn(ptrExpr, resolve_expr(*storeExpr.ptr_expr));
+
+    auto ptrType = dynamic_cast<ResolvedTypePointer *>(ptrExpr->type.get());
+    if (!ptrType) {
+        return report(ptrExpr->location,
+                      "expected pointer type for @atomicStore, actual '" + ptrExpr->type->to_str() + "'");
+    }
+
+    auto &baseType = ptrType->pointerType;
+    varOrReturn(valExpr, resolve_expr(*storeExpr.val_expr));
+
+    if (!baseType->compare(*valExpr->type)) {
+        return report(valExpr->location, "type mismatch in @atomicStore: expected '" + baseType->to_str() +
+                                             "', actual '" + valExpr->type->to_str() + "'");
+    }
+
+    return makePtr<ResolvedAtomicStoreExpr>(storeExpr.location, std::move(ptrExpr), std::move(valExpr));
+}
+
+ptr<ResolvedAtomicCmpExExpr> Sema::resolve_atomic_cmpex_expr(const AtomicCmpExExpr &cmpexExpr) {
+    debug_func(cmpexExpr.location);
+    varOrReturn(ptrExpr, resolve_expr(*cmpexExpr.ptr_expr));
+
+    auto ptrType = dynamic_cast<ResolvedTypePointer *>(ptrExpr->type.get());
+    if (!ptrType) {
+        return report(ptrExpr->location,
+                      "expected pointer type for atomic compare-and-swap, actual '" + ptrExpr->type->to_str() + "'");
+    }
+
+    auto &baseType = ptrType->pointerType;
+    varOrReturn(expected, resolve_expr(*cmpexExpr.expected));
+    varOrReturn(replacement, resolve_expr(*cmpexExpr.replacement));
+
+    if (!baseType->compare(*expected->type)) {
+        return report(expected->location, "type mismatch in atomic CAS (expected argument): expected '" +
+                                              baseType->to_str() + "', actual '" + expected->type->to_str() + "'");
+    }
+
+    if (!baseType->compare(*replacement->type)) {
+        return report(replacement->location, "type mismatch in atomic CAS (replacement argument): expected '" +
+                                                 baseType->to_str() + "', actual '" + replacement->type->to_str() +
+                                                 "'");
+    }
+
+    auto resultType = makePtr<ResolvedTypeBool>(cmpexExpr.location);
+
+    return makePtr<ResolvedAtomicCmpExExpr>(cmpexExpr.location, std::move(resultType), std::move(ptrExpr),
+                                            std::move(expected), std::move(replacement), cmpexExpr.isWeak);
+}
+
+ptr<ResolvedAtomicRmwExpr> Sema::resolve_atomic_rmw_expr(const AtomicRmwExpr &rmwExpr) {
+    debug_func(rmwExpr.location);
+    varOrReturn(ptrExpr, resolve_expr(*rmwExpr.ptr_expr));
+
+    auto ptrType = dynamic_cast<ResolvedTypePointer *>(ptrExpr->type.get());
+    if (!ptrType) {
+        return report(ptrExpr->location,
+                      "expected pointer type for atomic read-modify-write, actual '" + ptrExpr->type->to_str() + "'");
+    }
+
+    auto &baseType = ptrType->pointerType;
+    varOrReturn(valExpr, resolve_expr(*rmwExpr.val_expr));
+
+    if (!baseType->compare(*valExpr->type)) {
+        return report(valExpr->location, "type mismatch in atomic RMW: expected '" + baseType->to_str() +
+                                             "', actual '" + valExpr->type->to_str() + "'");
+    }
+
+    if (baseType->kind != ResolvedTypeKind::Number &&
+        (rmwExpr.op != TokenType::op_assign || baseType->kind != ResolvedTypeKind::Pointer)) {
+        return report(rmwExpr.location, "atomic RMW operation '" + get_op_str(rmwExpr.op) +
+                                            "' only supported for numeric types, actual '" + baseType->to_str() + "'");
+    }
+
+    return makePtr<ResolvedAtomicRmwExpr>(rmwExpr.location, baseType->clone(), std::move(ptrExpr), rmwExpr.op,
+                                          std::move(valExpr));
+}
+
 }  // namespace DMZ

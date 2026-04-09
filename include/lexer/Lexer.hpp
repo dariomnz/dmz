@@ -39,6 +39,7 @@ enum class TokenType {
     op_excla_mark,
     amp,
     pipe,
+    caret,
     block_l,
     block_r,
     par_l,
@@ -101,6 +102,11 @@ enum class TokenType {
     kw_packed,
     kw_pub,
     unknown,
+    kw_atomicLoad,
+    kw_atomicStore,
+    kw_atomicCmpExW,
+    kw_atomicCmpExS,
+    kw_atomicRmw,
     eof,
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
@@ -119,6 +125,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t);
     if (op == TokenType::op_percent) return "%";
     if (op == TokenType::amp) return "&";
 
+    if (op == TokenType::caret) return "^";
     if (op == TokenType::op_not_equal) return "!=";
     if (op == TokenType::op_equal) return "==";
     if (op == TokenType::ampamp) return "&&";
@@ -129,6 +136,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t);
     if (op == TokenType::op_more_eq) return ">=";
     if (op == TokenType::op_excla_mark) return "!";
     if (op == TokenType::op_quest_mark) return "?";
+    if (op == TokenType::op_assign) return "=";
 
     dmz_unreachable("unexpected operator " + std::to_string(static_cast<int>(op)));
 }
@@ -168,6 +176,11 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"@simdSize", TokenType::kw_simdsize},
     {"@simdSplat", TokenType::kw_simdsplat},
     {"@simdIota", TokenType::kw_simdiota},
+    {"@atomicLoad", TokenType::kw_atomicLoad},
+    {"@atomicStore", TokenType::kw_atomicStore},
+    {"@atomicCmpExW", TokenType::kw_atomicCmpExW},
+    {"@atomicCmpExS", TokenType::kw_atomicCmpExS},
+    {"@atomicRmw", TokenType::kw_atomicRmw},
     {"packed", TokenType::kw_packed},
     {"pub", TokenType::kw_pub},
     // Types

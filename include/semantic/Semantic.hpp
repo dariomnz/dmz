@@ -177,6 +177,10 @@ class Sema {
     ptr<ResolvedSimdSplatExpr> resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr);
     ptr<ResolvedSimdIotaExpr> resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
+    ptr<ResolvedAtomicLoadExpr> resolve_atomic_load_expr(const AtomicLoadExpr &expr);
+    ptr<ResolvedAtomicStoreExpr> resolve_atomic_store_expr(const AtomicStoreExpr &expr);
+    ptr<ResolvedAtomicCmpExExpr> resolve_atomic_cmpex_expr(const AtomicCmpExExpr &expr);
+    ptr<ResolvedAtomicRmwExpr> resolve_atomic_rmw_expr(const AtomicRmwExpr &expr);
     void perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };
 }  // namespace DMZ

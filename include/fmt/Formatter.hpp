@@ -69,6 +69,10 @@ class Formatter {
     ptr<Node> fmt_orelse_error_expr(const OrElseErrorExpr& expr);
     ptr<Node> fmt_generic_expr(const GenericExpr& expr);
     ptr<Node> fmt_lambda_expr(const LambdaExpr& expr);
+    ptr<Node> fmt_atomic_load_expr(const AtomicLoadExpr& expr);
+    ptr<Node> fmt_atomic_store_expr(const AtomicStoreExpr& expr);
+    ptr<Node> fmt_atomic_cmp_ex_expr(const AtomicCmpExExpr& expr);
+    ptr<Node> fmt_atomic_rmw_expr(const AtomicRmwExpr& expr);
 
     // Stmt
     ptr<Node> fmt_stmt(const Stmt& stmt);

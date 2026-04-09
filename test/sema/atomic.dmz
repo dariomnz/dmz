@@ -1,0 +1,40 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let i: i32 = 42;
+    let ptr: *i32 = &i;
+
+    // Load
+    let val = @atomicLoad(ptr);
+    // CHECK: ResolvedVarDecl:i32 val
+    // CHECK-NEXT:   ResolvedAtomicLoadExpr:i32
+
+    // Store
+    @atomicStore(ptr, 10);
+    // CHECK: ResolvedAtomicStoreExpr
+
+    // CAS
+    let success = @atomicCmpExS(ptr, 10, 20);
+    // CHECK: ResolvedVarDecl:bool success
+    // CHECK-NEXT:   ResolvedAtomicCmpExStrongExpr:bool
+
+    let successW = @atomicCmpExW(ptr, 20, 30);
+    // CHECK: ResolvedVarDecl:bool successW
+    // CHECK-NEXT:   ResolvedAtomicCmpExWeakExpr:bool
+
+    // RMW
+    let old = @atomicRmw(ptr, +, 5);
+    // CHECK: ResolvedVarDecl:i32 old
+    // CHECK-NEXT:   ResolvedAtomicRmwExpr(+):i32
+
+    let old2 = @atomicRmw(ptr, =, 100);
+    // CHECK: ResolvedVarDecl:i32 old2
+    // CHECK-NEXT:   ResolvedAtomicRmwExpr(=):i32
+
+    // RMW with pointers (Exchange)
+    let p: *i32 = &i;
+    let p_ptr: **i32 = &p;
+    let old_p = @atomicRmw(p_ptr, =, ptr);
+    // CHECK: ResolvedVarDecl:*i32 old_p
+    // CHECK-NEXT:   ResolvedAtomicRmwExpr(=):*i32
+}

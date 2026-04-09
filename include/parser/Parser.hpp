@@ -165,5 +165,9 @@ class Parser {
     ptr<SimdSizeExpr> parse_simdsize_expr();
     ptr<SimdSplatExpr> parse_simdsplat_expr();
     ptr<SimdIotaExpr> parse_simdiota_expr();
+    ptr<AtomicLoadExpr> parse_atomic_load_expr();
+    ptr<AtomicStoreExpr> parse_atomic_store_expr();
+    ptr<AtomicCmpExExpr> parse_atomic_cmpex_expr();
+    ptr<AtomicRmwExpr> parse_atomic_rmw_expr();
 };
 }  // namespace DMZ

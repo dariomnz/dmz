@@ -29,3 +29,25 @@ test "thread mutex" {
 
     try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
 }
+
+test "thread atomic" {
+    let contador = 0;
+    let contador_ptr = &contador;
+    const INCREMENTOS = 100000;
+    const incrementar_contador = [contador_ptr, INCREMENTOS](arg: *void) -> void { for (0..INCREMENTOS) |i| {
+        @atomicRmw(contador_ptr, +, 1);
+    } };
+
+    const NUM_HILOS = 5;
+    let threads: thread[NUM_HILOS] = {};
+
+    for (0..NUM_HILOS) |i| {
+        threads[i] = try thread.init(incrementar_contador, null);
+    }
+
+    for (0..NUM_HILOS) |i| {
+        try threads[i].join();
+    }
+
+    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+}

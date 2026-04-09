@@ -372,5 +372,49 @@ ptr<Node> Formatter::fmt_lambda_expr(const LambdaExpr& expr) {
     ret->nodes.emplace_back(fmt_block(*expr.body));
     return ret;
 }
+
+ptr<Node> Formatter::fmt_atomic_load_expr(const AtomicLoadExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@atomicLoad"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_atomic_store_expr(const AtomicStoreExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@atomicStore"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
+    ret->nodes.emplace_back(makePtr<Text>(", "));
+    ret->nodes.emplace_back(fmt_expr(*expr.val_expr));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_atomic_cmp_ex_expr(const AtomicCmpExExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@atomicCmpEx"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
+    ret->nodes.emplace_back(makePtr<Text>(", "));
+    ret->nodes.emplace_back(fmt_expr(*expr.expected));
+    ret->nodes.emplace_back(makePtr<Text>(", "));
+    ret->nodes.emplace_back(fmt_expr(*expr.replacement));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
+
+ptr<Node> Formatter::fmt_atomic_rmw_expr(const AtomicRmwExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("@atomicRmw"));
+    ret->nodes.emplace_back(makePtr<Text>("("));
+    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
+    ret->nodes.emplace_back(makePtr<Text>(", "));
+    ret->nodes.emplace_back(fmt_expr(*expr.val_expr));
+    ret->nodes.emplace_back(makePtr<Text>(")"));
+    return ret;
+}
 }  // namespace fmt
 }  // namespace DMZ

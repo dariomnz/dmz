@@ -1,0 +1,14 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let i: i32 = 42;
+    let ptr: *i32 = &i;
+
+    let x = 10;
+    // CHECK: [[# @LINE + 1 ]]:17: error: expected pointer type for @atomicLoad, actual 'i32'
+    @atomicLoad(x);
+
+    // CHECK: [[# @LINE + 2 ]]:5: error: atomic RMW operation '+' only supported for numeric types, actual '*i32'
+    let p_ptr: **i32 = &ptr;
+    @atomicRmw(p_ptr, +, ptr);
+}

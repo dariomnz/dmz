@@ -115,6 +115,18 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *simdiota = dynamic_cast<const ResolvedSimdIotaExpr *>(&expr)) {
         return generate_simdiota_expr(*simdiota);
     }
+    if (auto *atomicLoad = dynamic_cast<const ResolvedAtomicLoadExpr *>(&expr)) {
+        return generate_atomic_load(*atomicLoad);
+    }
+    if (auto *atomicStore = dynamic_cast<const ResolvedAtomicStoreExpr *>(&expr)) {
+        return generate_atomic_store(*atomicStore);
+    }
+    if (auto *atomicCmpEx = dynamic_cast<const ResolvedAtomicCmpExExpr *>(&expr)) {
+        return generate_atomic_cmpex(*atomicCmpEx);
+    }
+    if (auto *atomicRmw = dynamic_cast<const ResolvedAtomicRmwExpr *>(&expr)) {
+        return generate_atomic_rmw(*atomicRmw);
+    }
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
@@ -588,7 +600,9 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
         type = generate_type(*arrayAtExpr.array->type);
         idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Simd) {
-        if (keepPointer) dmz_unreachable("This should not happend, simd types are not meant to be used as base of array at expressions");
+        if (keepPointer)
+            dmz_unreachable(
+                "This should not happend, simd types are not meant to be used as base of array at expressions");
         return m_builder.CreateExtractElement(generate_expr(*arrayAtExpr.array), generate_expr(*arrayAtExpr.index));
         // type = generate_type(*arrayAtExpr.array->type);
         // idxs = {m_builder.getInt32(0), generate_expr(*arrayAtExpr.index)};
@@ -1256,4 +1270,88 @@ llvm::Value *Codegen::generate_simdiota_expr(const ResolvedSimdIotaExpr &expr) {
     }
     return vec;
 }
+llvm::Value *Codegen::generate_atomic_load(const ResolvedAtomicLoadExpr &expr) {
+    debug_func(expr.location);
+    auto ptr = generate_expr(*expr.ptrExpr);
+    auto type = generate_type(*expr.type);
+    auto align = m_module->getDataLayout().getABITypeAlign(type);
+    auto ret = m_builder.CreateLoad(type, ptr);
+    ret->setAlignment(align);
+    ret->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
+    return ret;
+}
+
+llvm::Value *Codegen::generate_atomic_store(const ResolvedAtomicStoreExpr &expr) {
+    debug_func(expr.location);
+    auto ptr = generate_expr(*expr.ptrExpr);
+    auto val = generate_expr(*expr.valExpr);
+    auto align = m_module->getDataLayout().getABITypeAlign(val->getType());
+    auto ret = m_builder.CreateStore(val, ptr);
+    ret->setAlignment(align);
+    ret->setAtomic(llvm::AtomicOrdering::SequentiallyConsistent);
+    return ret;
+}
+
+llvm::Value *Codegen::generate_atomic_cmpex(const ResolvedAtomicCmpExExpr &expr) {
+    debug_func(expr.location);
+    auto ptr = generate_expr(*expr.ptrExpr);
+    auto expected = generate_expr(*expr.expected);
+    auto replacement = generate_expr(*expr.replacement);
+    auto align = m_module->getDataLayout().getABITypeAlign(expected->getType());
+    auto result = m_builder.CreateAtomicCmpXchg(
+        ptr, expected, replacement, llvm::MaybeAlign(align), llvm::AtomicOrdering::SequentiallyConsistent,
+        llvm::AtomicOrdering::SequentiallyConsistent, expr.isWeak ? llvm::SyncScope::System : llvm::SyncScope::System);
+    if (expr.isWeak) {
+        // LLVM's CreateAtomicCmpXchg doesn't have a direct 'weak' flag in the simplest helper,
+        // but it can be set on the instruction.
+        if (auto *inst = llvm::dyn_cast<llvm::AtomicCmpXchgInst>(result)) {
+            inst->setWeak(true);
+        }
+    }
+    // LLVM returns {oldValue, successBool}. We only return successBool as per user request.
+    return m_builder.CreateExtractValue(result, 1);
+}
+
+llvm::Value *Codegen::generate_atomic_rmw(const ResolvedAtomicRmwExpr &expr) {
+    debug_func(expr.location);
+    auto ptr = generate_expr(*expr.ptrExpr);
+    auto val = generate_expr(*expr.valExpr);
+    auto align = m_module->getDataLayout().getABITypeAlign(val->getType());
+    llvm::AtomicRMWInst::BinOp llvmOp;
+    bool isFloat = false;
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(expr.valExpr->type.get())) {
+        isFloat = numType->numberKind == ResolvedNumberKind::Float;
+    }
+    switch (expr.op) {
+        case TokenType::op_plus:
+            llvmOp = isFloat ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::Add;
+            break;
+        case TokenType::op_minus:
+            llvmOp = isFloat ? llvm::AtomicRMWInst::FSub : llvm::AtomicRMWInst::Sub;
+            break;
+        case TokenType::amp:
+            llvmOp = llvm::AtomicRMWInst::And;
+            break;
+        case TokenType::pipe:
+            llvmOp = llvm::AtomicRMWInst::Or;
+            break;
+        case TokenType::caret:
+            llvmOp = llvm::AtomicRMWInst::Xor;
+            break;
+        case TokenType::op_less:
+            llvmOp = isFloat ? llvm::AtomicRMWInst::FMin : llvm::AtomicRMWInst::Min;
+            break;
+        case TokenType::op_more:
+            llvmOp = isFloat ? llvm::AtomicRMWInst::FMax : llvm::AtomicRMWInst::Max;
+            break;
+        case TokenType::op_assign:
+            llvmOp = llvm::AtomicRMWInst::Xchg;
+            break;
+        default:
+            dmz_unreachable("unsupported atomic RMW operator");
+    }
+    return m_builder.CreateAtomicRMW(llvmOp, ptr, val, llvm::MaybeAlign(align),
+                                     llvm::AtomicOrdering::SequentiallyConsistent);
+}
+
 }  // namespace DMZ

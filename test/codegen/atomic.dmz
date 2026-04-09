@@ -1,0 +1,45 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let i: i32 = 42;
+
+    // Load
+    // CHECK: load atomic i32, ptr %i seq_cst, align 4
+    let val = @atomicLoad(&i);
+    printf("i %d val %d\n", i, val);
+
+    // Store
+    // CHECK: store atomic i32 10, ptr %i seq_cst, align 4
+    @atomicStore(&i, 10);
+    printf("i %d\n", i);
+
+    // CAS Strong
+    // CHECK: cmpxchg ptr %i, i32 10, i32 20 seq_cst seq_cst
+    let success = @atomicCmpExS(&i, 10, 20);
+    printf("i %d success %d\n", i, success);
+
+    // CAS Weak
+    // CHECK: cmpxchg weak ptr %i, i32 20, i32 30 seq_cst seq_cst
+    let successW = @atomicCmpExW(&i, 20, 30);
+    printf("i %d successW %d\n", i, successW);
+
+    // RMW Add
+    // CHECK: atomicrmw add ptr %i, i32 5 seq_cst, align 4
+    let old = @atomicRmw(&i, +, 5);
+    printf("i %d old %d\n", i, old);
+
+    // RMW Xchg (Exchange)
+    // CHECK: atomicrmw xchg ptr %i, i32 100 seq_cst, align 4
+    let old2 = @atomicRmw(&i, =, 100);
+    printf("i %d old2 %d\n", i, old2);
+
+    // RMW Xchg with pointers
+    let ptr: *i32 = &i;
+    let p: *i32 = &i;
+    let p_ptr: **i32 = &p;
+    // CHECK: atomicrmw xchg ptr %24, ptr %25 seq_cst, align 8
+    let old_p = @atomicRmw(p_ptr, =, ptr);
+    printf("i %d old_p %d\n", i, old_p);
+}

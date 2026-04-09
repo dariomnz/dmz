@@ -139,6 +139,10 @@ class Codegen {
     llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
+    llvm::Value *generate_atomic_load(const ResolvedAtomicLoadExpr &expr);
+    llvm::Value *generate_atomic_store(const ResolvedAtomicStoreExpr &expr);
+    llvm::Value *generate_atomic_cmpex(const ResolvedAtomicCmpExExpr &expr);
+    llvm::Value *generate_atomic_rmw(const ResolvedAtomicRmwExpr &expr);
     llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
                                        const ResolvedTypeSimd &vecType);
     llvm::Value *generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr);
