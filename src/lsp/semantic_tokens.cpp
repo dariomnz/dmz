@@ -10,6 +10,45 @@ namespace DMZ::lsp {
 SemanticTokensCollector::SemanticTokensCollector(const std::string& target_file, const std::string& source)
     : m_target_file(target_file), m_source(source) {}
 
+SemanticTokenType get_type_from_decl(const ResolvedDecl& decl, bool* is_this = nullptr) {
+    SemanticTokenType type = SemanticTokenType::Variable;
+    if (is_this) *is_this = false;
+    if (dynamic_cast<const ResolvedFuncDecl*>(&decl))
+        type = SemanticTokenType::Function;
+    else if (dynamic_cast<const ResolvedStructDecl*>(&decl)) {
+        type = SemanticTokenType::Type;
+        if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(decl.type.get())) {
+            if (is_this) *is_this = structDeclType->is_this;
+        }
+        if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(decl.type.get())) {
+            if (is_this) *is_this = structType->is_this;
+        }
+    } else if (dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
+        type = SemanticTokenType::Type;
+        if (auto* unionDeclType = dynamic_cast<const ResolvedTypeUnionDecl*>(decl.type.get())) {
+            if (is_this) *is_this = unionDeclType->is_this;
+        }
+        if (auto* unionType = dynamic_cast<const ResolvedTypeUnion*>(decl.type.get())) {
+            if (is_this) *is_this = unionType->is_this;
+        }
+    } else if (dynamic_cast<const ResolvedParamDecl*>(&decl))
+        type = SemanticTokenType::Parameter;
+    else if (dynamic_cast<const ResolvedModuleDecl*>(&decl))
+        type = SemanticTokenType::Namespace;
+    else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&decl))
+        type = SemanticTokenType::Type;
+
+    if (decl.type->kind == ResolvedTypeKind::Generic)
+        type = SemanticTokenType::Type;
+    else if (decl.type->kind == ResolvedTypeKind::StructDecl)
+        type = SemanticTokenType::Type;
+    else if (decl.type->kind == ResolvedTypeKind::Function)
+        type = SemanticTokenType::Function;
+    else if (decl.type->kind == ResolvedTypeKind::Module)
+        type = SemanticTokenType::Namespace;
+    return type;
+}
+
 std::vector<SemanticToken> SemanticTokensCollector::collect(const std::vector<ptr<ResolvedModuleDecl>>& resolvedAST) {
     m_tokens.clear();
     for (const auto& mod : resolvedAST) {
@@ -92,8 +131,8 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         } else if (auto* declStmt = dynamic_cast<const ResolvedDeclStmt*>(&decl)) {
             traverse_decl(*declStmt->varDecl);
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
-            add_token(varDecl->location, varDecl->identifier, SemanticTokenType::Variable,
-                      (uint32_t)SemanticTokenModifier::Declaration);
+            auto type = get_type_from_decl(*varDecl);
+            add_token(varDecl->location, varDecl->identifier, type, (uint32_t)SemanticTokenModifier::Declaration);
             if (varDecl->varDecl && varDecl->varDecl->type && varDecl->resolvedTypeExpr)
                 traverse_expr(*varDecl->resolvedTypeExpr);
             else if (varDecl->varDecl && varDecl->varDecl->type)
@@ -173,39 +212,8 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
     if (expr.location.file_name == m_target_file) {
         if (auto* declRef = dynamic_cast<const ResolvedDeclRefExpr*>(&expr)) {
             debug_msg("ResolvedDeclRefExpr");
-
-            SemanticTokenType type = SemanticTokenType::Variable;
             bool is_this = false;
-            if (dynamic_cast<const ResolvedFuncDecl*>(&declRef->decl))
-                type = SemanticTokenType::Function;
-            else if (dynamic_cast<const ResolvedStructDecl*>(&declRef->decl)) {
-                type = SemanticTokenType::Type;
-                if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(declRef->type.get())) {
-                    is_this = structDeclType->is_this;
-                }
-                if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(declRef->type.get())) {
-                    is_this = structType->is_this;
-                }
-            } else if (dynamic_cast<const ResolvedUnionDecl*>(&declRef->decl)) {
-                type = SemanticTokenType::Type;
-                if (auto* unionDeclType = dynamic_cast<const ResolvedTypeUnionDecl*>(declRef->type.get())) {
-                    is_this = unionDeclType->is_this;
-                }
-                if (auto* unionType = dynamic_cast<const ResolvedTypeUnion*>(declRef->type.get())) {
-                    is_this = unionType->is_this;
-                }
-            } else if (dynamic_cast<const ResolvedParamDecl*>(&declRef->decl))
-                type = SemanticTokenType::Parameter;
-            else if (dynamic_cast<const ResolvedModuleDecl*>(&declRef->decl))
-                type = SemanticTokenType::Namespace;
-            else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&declRef->decl))
-                type = SemanticTokenType::Type;
-            else if (declRef->type->kind == ResolvedTypeKind::Generic)
-                type = SemanticTokenType::Type;
-
-            if (declRef->type->kind == ResolvedTypeKind::Function) type = SemanticTokenType::Function;
-            if (declRef->type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
-
+            auto type = get_type_from_decl(declRef->decl, &is_this);
             add_token(declRef->location, is_this ? "@This" : declRef->decl.identifier, type);
         } else if (auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
             debug_msg("ResolvedGenericExpr");
@@ -221,9 +229,7 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             // .member -> starts at location + 1
             SourceLocation memberLoc = memberExpr->location;
             memberLoc.col += 1;
-            SemanticTokenType type = SemanticTokenType::Property;
-            if (memberExpr->member.type->kind == ResolvedTypeKind::Function) type = SemanticTokenType::Function;
-            if (memberExpr->member.type->kind == ResolvedTypeKind::Module) type = SemanticTokenType::Namespace;
+            auto type = get_type_from_decl(memberExpr->member);
             add_token(memberLoc, memberExpr->member.identifier, type);
             traverse_expr(*memberExpr->base);
         } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
