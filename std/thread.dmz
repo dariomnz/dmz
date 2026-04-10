@@ -1,5 +1,18 @@
-pub const mutex = import("./thread/mutex.dmz").mutex;
-pub const thread = import("./thread/thread.dmz").thread;
+pub const Mutex = import("./thread/mutex.dmz").Mutex;
+pub const Thread = import("./thread/thread.dmz").Thread;
+pub const Condition = import("./thread/condition.dmz").Condition;
+
+pub const FutexMutex = import("./thread/futexMutex.dmz").FutexMutex;
+pub const FutexCondition = import("./thread/futexCondition.dmz").FutexCondition;
+
+extern fn usleep(useconds: u32) -> i32;
+
+pub fn sleep(ms: u32) -> !void {
+    const result = usleep(ms * 1000);
+    if (result != 0) {
+        return std.errno.libc_errno();
+    }
+}
 
 const std = import("std");
 
@@ -7,7 +20,7 @@ test "thread mutex" {
     let contador = 0;
     let contador_ptr = &contador;
     const INCREMENTOS = 100000;
-    let cont_mutex = mutex.init();
+    let cont_mutex = Mutex.init();
     defer try cont_mutex.deinit();
     let cont_mutex_ptr = &cont_mutex;
     const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
@@ -17,10 +30,10 @@ test "thread mutex" {
     } };
 
     const NUM_HILOS = 5;
-    let threads: thread[NUM_HILOS] = {};
+    let threads: Thread[NUM_HILOS] = {};
 
     for (0..NUM_HILOS) |i| {
-        threads[i] = try thread.init(incrementar_contador, null);
+        threads[i] = try Thread.init(incrementar_contador, null);
     }
 
     for (0..NUM_HILOS) |i| {
@@ -39,10 +52,10 @@ test "thread atomic" {
     } };
 
     const NUM_HILOS = 5;
-    let threads: thread[NUM_HILOS] = {};
+    let threads: Thread[NUM_HILOS] = {};
 
     for (0..NUM_HILOS) |i| {
-        threads[i] = try thread.init(incrementar_contador, null);
+        threads[i] = try Thread.init(incrementar_contador, null);
     }
 
     for (0..NUM_HILOS) |i| {

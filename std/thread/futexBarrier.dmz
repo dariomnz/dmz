@@ -1,0 +1,53 @@
+
+const std = import("std");
+
+pub struct FutexBarrier {
+    mutex: std.thread.FutexMutex,
+    cv: std.thread.FutexCondition,
+    num: i32,
+    remaining: i32,
+    generation: i32,
+
+    pub fn init(count: u32) -> FutexBarrier {
+        return @This{
+            mutex: std.thread.FutexMutex{},
+            cv: std.thread.FutexCondition{},
+            num: count,
+            remaining: count,
+            generation: 0,
+        };
+    }
+
+    pub fn wait(self: *@This) -> !void {
+        try self.mutex.lock();
+        defer try self.mutex.unlock();
+        const my_gen = self.generation;
+        self.remaining -= 1;
+        if (self.remaining == 0) {
+            self.generation += 1;
+            self.remaining = self.num;
+            try self.cv.notifyAll();
+        }
+        while (my_gen == self.generation) {
+            try self.cv.wait(&self.mutex);
+        }
+    }
+}
+
+test "barrier test" {
+    const num_threads = 10;
+    const barrier = FutexBarrier.init(num_threads);
+    const barrier_ptr = &barrier;
+    const worker = [barrier_ptr](arg: *void) -> void {
+        std.io.printf("Worker: Before barrier.\n");
+        barrier_ptr.wait();
+        std.io.printf("Worker: After barrier.\n");
+    };
+    let threads: std.thread.Thread[num_threads] = {};
+    for (0..num_threads) |i| {
+        threads[i] = try std.thread.Thread.init(worker, null);
+    }
+    for (0..num_threads) |i| {
+        try threads[i].join();
+    }
+}

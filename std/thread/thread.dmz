@@ -4,10 +4,10 @@ extern fn pthread_create(thread_id: *usize, attr: *void, start_routine: *fn(*voi
 extern fn pthread_join(thread_id: usize, retval: *void) -> i32;
 extern fn pthread_exit(retval: *void) -> void;
 
-pub struct thread {
+pub struct Thread {
     thread_id: usize = {},
 
-    pub fn init(start_routine: *fn(*void)->void, arg: *void) -> !thread {
+    pub fn init(start_routine: *fn(*void)->void, arg: *void) -> !Thread {
         const this = @This{};
         const ret = pthread_create(&this.thread_id, null, start_routine, arg);
         if (ret != 0) {
@@ -32,8 +32,8 @@ test "thread test" {
     };
     let arg1: i32 = 1;
     let arg2: i32 = 2;
-    const t1 = try thread.init(func, &arg1);
-    const t2 = try thread.init(func, &arg2);
+    const t1 = try Thread.init(func, &arg1);
+    const t2 = try Thread.init(func, &arg2);
     t1.join();
     t2.join();
 }

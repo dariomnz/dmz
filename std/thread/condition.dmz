@@ -1,0 +1,86 @@
+
+const std = import("std");
+
+extern fn pthread_cond_init(cond: *void, attr: *void) -> i32;
+extern fn pthread_cond_signal(cond: *void) -> i32;
+extern fn pthread_cond_broadcast(cond: *void) -> i32;
+extern fn pthread_cond_wait(cond: *void, mutex: *void) -> i32;
+extern fn pthread_cond_destroy(cond: *void) -> i32;
+
+pub struct Condition {
+    opaque_data: u8[48] = {},
+
+    pub fn init() -> Condition {
+        const this = @This{};
+        const ret = pthread_cond_init(&this, null);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+        return this;
+    }
+
+    pub fn deinit(self: *@This) -> !void {
+        const ret = pthread_cond_destroy(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+
+    pub fn wait(self: *@This, mutex: *std.thread.Mutex) -> !void {
+        const ret = pthread_cond_wait(&self.opaque_data, &mutex.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+
+    pub fn notifyOne(self: *@This) -> !void {
+        const ret = pthread_cond_signal(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+
+    pub fn notifyAll(self: *@This) -> !void {
+        const ret = pthread_cond_broadcast(&self.opaque_data);
+        if (ret != 0) {
+            try std.errno.libc_error(ret);
+        }
+    }
+}
+
+test "conditional variable test" {
+    let m = std.thread.Mutex.init();
+    defer m.deinit();
+    let cv = std.thread.Condition.init();
+    defer cv.deinit();
+    let ready = 0;
+    const ready_ptr = &ready;
+    const m_ptr = &m;
+    const cv_ptr = &cv;
+    const worker = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
+        m_ptr.lock();
+
+        while (ready_ptr.* == 0) {
+            std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
+            // Se suelta el mutex y espera la señal
+            cv_ptr.wait(m_ptr);
+        }
+
+        std.io.printf("Worker: I was woken up! Time to work.\n");
+        m_ptr.unlock();
+    };
+
+    const boss = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
+        std.thread.sleep(100);
+        m_ptr.lock();
+
+        ready_ptr.* = 1;
+        std.io.printf("Boss: Task ready. Wake up!\n");
+        cv_ptr.notifyOne();
+        m_ptr.unlock();
+    };
+    const t1 = try std.thread.Thread.init(worker, null);
+    const t2 = try std.thread.Thread.init(boss, null);
+    try t1.join();
+    try t2.join();
+}
