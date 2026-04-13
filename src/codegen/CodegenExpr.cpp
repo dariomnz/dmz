@@ -196,8 +196,16 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
         callRetVal = args.emplace_back(allocate_stack_variable(call.location, "struct.ret.tmp", *fnType->returnType));
     }
 
-    for (auto &&arg : call.arguments) {
-        args.emplace_back(generate_expr(*arg, arg->type->generate_struct()));
+    bool isVarArg = false;
+    for (size_t i = 0; i < call.arguments.size(); i++) {
+        auto argExpr = generate_expr(*call.arguments[i], call.arguments[i]->type->generate_struct());
+        // Only cast if is not vararg
+        if (!isVarArg && fnType->paramsTypes[i]->kind != ResolvedTypeKind::VarArg) {
+            argExpr = cast_to(argExpr, *call.arguments[i]->type, *fnType->paramsTypes[i]);
+        } else {
+            isVarArg = true;
+        }
+        args.emplace_back(argExpr);
     }
 
     llvm::FunctionType *llvmType = static_cast<llvm::FunctionType *>(generate_type(*fnType));

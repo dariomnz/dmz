@@ -1,0 +1,25 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn foo(arg: u8) -> void {
+    printf("arg %d\n", arg);
+}
+
+fn main() -> void {
+    foo(1);
+    let x = 1;
+    foo(x);
+}
+
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %x, i8 0, i64 4, i1 false)
+// CHECK-NEXT:   call void @infer_type.foo(i8 1)
+// CHECK-NEXT:   store i32 1, ptr %x, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %int.to.uint = trunc i32 %0 to i8
+// CHECK-NEXT:   call void @infer_type.foo(i8 %int.to.uint)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
