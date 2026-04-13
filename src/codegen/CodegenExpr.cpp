@@ -856,7 +856,7 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
                                         m_currentFunction->identifier + "' that not return an optional\n");
         m_builder.CreateCall(printf_func, {fmt, error_value});
         auto exit_func = m_module->getOrInsertFunction(
-            "exit", llvm::FunctionType::get(m_builder.getVoidTy(), m_builder.getInt32Ty()));
+            "exit", llvm::FunctionType::get(m_builder.getVoidTy(), m_builder.getInt32Ty(), false));
         m_builder.CreateCall(exit_func, {m_builder.getInt32(1)});
     }
     break_into_bb(exitBB);

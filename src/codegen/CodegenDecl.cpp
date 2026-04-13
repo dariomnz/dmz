@@ -38,6 +38,31 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
     return name;
 }
 
+llvm::FunctionType *Codegen::generate_function_type(const ResolvedTypeFunction &fnType) {
+    llvm::Type *retType = generate_type(*fnType.returnType);
+    std::vector<llvm::Type *> paramTypes;
+
+    if (fnType.returnType->generate_struct()) {
+        paramTypes.emplace_back(llvm::PointerType::get(retType, 0));
+        retType = m_builder.getVoidTy();
+    }
+
+    bool isVararg = false;
+    for (auto &&param : fnType.paramsTypes) {
+        if (param->kind == ResolvedTypeKind::VarArg) {
+            isVararg = true;
+            continue;
+        }
+        llvm::Type *paramType = generate_type(*param);
+        if (param->generate_struct()) {
+            paramType = llvm::PointerType::get(paramType, 0);
+        }
+        paramTypes.emplace_back(paramType);
+    }
+
+    return llvm::FunctionType::get(retType, paramTypes, isVararg);
+}
+
 llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     debug_func(functionDecl.name());
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
@@ -60,28 +85,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
 
     auto fnType = functionDecl.getFnType();
 
-    llvm::Type *retType = generate_type(*fnType->returnType);
-    std::vector<llvm::Type *> paramTypes;
-
-    if (fnType->returnType->generate_struct()) {
-        paramTypes.emplace_back(llvm::PointerType::get(retType, 0));
-        retType = m_builder.getVoidTy();
-    }
-
-    bool isVararg = false;
-    for (auto &&param : functionDecl.params) {
-        if (param->isVararg) {
-            isVararg = true;
-            continue;
-        }
-        llvm::Type *paramType = generate_type(*param->type);
-        if (param->type->generate_struct()) {
-            paramType = llvm::PointerType::get(paramType, 0);
-        }
-        paramTypes.emplace_back(paramType);
-    }
-
-    auto *type = llvm::FunctionType::get(retType, paramTypes, isVararg);
+    auto *type = generate_function_type(*fnType);
     std::string funcName = generate_decl_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));

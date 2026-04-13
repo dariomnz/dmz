@@ -77,6 +77,7 @@ class Codegen {
     void unset_debug_location();
 
     std::string generate_decl_name(const ResolvedDecl &decl);
+    llvm::FunctionType *generate_function_type(const ResolvedTypeFunction &fnType);
     llvm::Function *generate_function_decl(const ResolvedFuncDecl &functionDecl);
     void generate_function_body(const ResolvedFuncDecl &functionDecl);
     llvm::AllocaInst *allocate_stack_variable(const SourceLocation &location, const std::string_view identifier,

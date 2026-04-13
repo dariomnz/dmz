@@ -184,26 +184,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         ret = llvm::FixedVectorType::get(baseType, typeVec->simdSize);
     } else if (auto fnType = dynamic_cast<const ResolvedTypeFunction *>(&type)) {
         debug_msg(fnType->to_str());
-        std::vector<llvm::Type *> paramsTypes;
-        paramsTypes.reserve(fnType->paramsTypes.size());
-        bool isVarArg = false;
-        for (auto &&t : fnType->paramsTypes) {
-            debug_msg(t->to_str());
-            if (t->kind == ResolvedTypeKind::VarArg) {
-                isVarArg = true;
-                continue;
-            }
-            paramsTypes.emplace_back(generate_type(*t));
-        }
-        debug_msg(fnType->returnType->to_str());
-        bool isReturningStruct = fnType->returnType->generate_struct();
-        llvm::Type *returnType = nullptr;
-        if (isReturningStruct) {
-            returnType = m_builder.getVoidTy();
-        } else {
-            returnType = generate_type(*fnType->returnType);
-        }
-        ret = llvm::FunctionType::get(returnType, paramsTypes, isVarArg);
+        ret = generate_function_type(*fnType);
     } else if (dynamic_cast<const ResolvedTypeSlice *>(&type)) {
         std::string structName("slice.struct");
         ret = llvm::StructType::getTypeByName(*m_context, structName);
