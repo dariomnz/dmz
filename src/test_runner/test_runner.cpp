@@ -1,24 +1,5 @@
 #include "test_runner/test_runner.hpp"
 
-#include <limits.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <mutex>
-#include <queue>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <vector>
-
 #include "Debug.hpp"
 
 namespace fs = std::filesystem;
@@ -188,8 +169,8 @@ static std::pair<bool, std::string> verify_checks(const std::string& filename, c
                 }
             }
             if (!found)
-                return {false,
-                        filename + ":" + std::to_string(check.line_num) + ": \nCHECK: '" + check.pattern + "' not found"};
+                return {false, filename + ":" + std::to_string(check.line_num) + ": \nCHECK: '" + check.pattern +
+                                   "' not found"};
         } else if (check.kind == CheckKind::CheckNext) {
             if (!has_matched_once)
                 return {false, filename + ":" + std::to_string(check.line_num) + ": CHECK-NEXT: used before any CHECK"};
