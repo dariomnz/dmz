@@ -38,7 +38,7 @@ pub struct Writer {
     pub fn write(w: *@This, bytes: []u8) -> !usize {
         if (w.end + bytes.len <= w.buffer.len) {
             let remaining = w.buffer[w.end..w.buffer.len];
-            std.mem.memcpy(remaining.ptr, bytes.ptr, bytes.len);
+            std.mem.memcpy<u8>(remaining, bytes);
             w.end += bytes.len;
             return bytes.len;
         }

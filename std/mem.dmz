@@ -2,10 +2,10 @@ extern fn malloc(size: usize) -> *void;
 extern fn realloc(ptr: *void, size: usize) -> *void;
 extern fn free(ptr: *void) -> void;
 pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
-pub extern fn memcpy(dest: *void, src: *void, size: usize) -> *void;
+// pub extern fn memcpy(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn strlen(str: *u8) -> usize;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
-pub extern fn memset(ptr: *void, value: i32, size: usize) -> *void;
+// pub extern fn memset(ptr: *void, value: i32, size: usize) -> *void;
 
 pub struct Allocator {
     allocator: *void,
@@ -116,6 +116,102 @@ pub fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     return -1;
 }
 
+pub fn memcpy<T>(dest: []T, src: []T) -> void {
+    memcpySIMD<T>(dest, src);
+}
+
+pub fn memcpyScalar<T>(dest: []T, src: []T) -> void {
+    let len = src.len;
+    if (dest.len < src.len) len = dest.len;
+    if (len == 0) return;
+
+    for (0..len) |i| {
+        dest[i] = src[i];
+    }
+}
+
+pub fn memcpySIMD<T>(dest: []T, src: []T) -> void {
+    let len = src.len;
+    if (dest.len < src.len) len = dest.len;
+    if (len == 0) return;
+
+    const simd_len = @simdSize(T);
+    if (len < simd_len) {
+        memcpyScalar<T>(dest, src);
+        return;
+    }
+
+    const alignment = @sizeof(@simd<T, simd_len>);
+    const dest_ptr_int: usize = dest.ptr;
+    const remainder = dest_ptr_int % alignment;
+
+    let offset: usize = 0;
+    if (remainder != 0) {
+        offset = (alignment - remainder) / @sizeof(T);
+        memcpyScalar<T>(dest[0..offset], src[0..offset]);
+    }
+
+    let i: usize = offset;
+    while (i <= len - simd_len) {
+        const src_ptr = &src[i];
+        const dest_ptr = &dest[i];
+
+        const data = @simd<T, simd_len>.load(src_ptr);
+        data.store(dest_ptr);
+
+        i += simd_len;
+    }
+
+    memcpyScalar<T>(dest[i..len], src[i..len]);
+}
+
+pub fn memset<T>(dest: []T, value: T) -> void {
+    memsetSIMD<T>(dest, value);
+}
+
+pub fn memsetScalar<T>(dest: []T, value: T) -> void {
+    if (dest.len == 0) return;
+    for (0..dest.len) |i| {
+        dest[i] = value;
+    }
+}
+
+pub fn memsetSIMD<T>(dest: []T, value: T) -> void {
+    let len = dest.len;
+    if (len == 0) return;
+
+    const simd_len = @simdSize(T);
+
+    if (len < simd_len) {
+        memsetScalar<T>(dest, value);
+        return;
+    }
+
+    const alignment = @sizeof(@simd<T, simd_len>);
+    const dest_ptr_int: usize = dest.ptr;
+    const remainder = dest_ptr_int % alignment;
+
+    let offset: usize = 0;
+    if (remainder != 0) {
+        offset = (alignment - remainder) / @sizeof(T);
+        if (offset > len) offset = len;
+        memsetScalar<T>(dest[0..offset], value);
+    }
+
+    const value_vec: @simd<T, simd_len> = @simdSplat(value);
+
+    let i: usize = offset;
+    while (i <= len - simd_len) {
+        const dest_ptr = &dest[i];
+        value_vec.store(dest_ptr);
+        i += simd_len;
+    }
+
+    if (i < len) {
+        memsetScalar<T>(dest[i..len], value);
+    }
+}
+
 const std = import("std");
 test "indexOfScalarSIMD string" {
     const slice: []u8 = "hello world! hello world! hello world! hello world! 88";
@@ -144,7 +240,7 @@ test "indexOfScalarSIMD i32" {
 test "indexOfScalar benchmark" {
     const size = 1024 * 1024 * 10;
     let ptr: *u8 = malloc(size);
-    memset(ptr, 123, size);
+    memset(ptr[0..size], 123);
     const scalar = 124;
     ptr[size - 1] = scalar;
     const start = std.time.get();
@@ -156,10 +252,51 @@ test "indexOfScalar benchmark" {
     const index2 = indexOfScalar<u8>(ptr[0..size], scalar);
     const end2 = std.time.get();
     const time_diff2 = (end2 - start2) * 1000;
-    
+
+    std.io.print("indexOfScalarSIMD: {d}ms indexOfScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(index2 == size - 1);
-    try std.testing.expect(time_diff< time_diff2);
+    try std.testing.expect(time_diff < time_diff2);
     free(ptr);
+}
+
+test "memcpy benchmark" {
+    const size = 1024 * 1024 * 10;
+    let ptr1: *u8 = malloc(size);
+    defer free(ptr1);
+    let ptr2: *u8 = malloc(size);
+    defer free(ptr2);
+    const scalar = 124;
+    ptr1[size - 1] = scalar;
+    const start = std.time.get();
+    memcpySIMD<u8>(ptr2[0..size], ptr1[0..size]);
+    const end = std.time.get();
+    const time_diff = (end - start) * 1000;
+    const start2 = std.time.get();
+    memcpyScalar<u8>(ptr2[0..size], ptr1[0..size]);
+    const end2 = std.time.get();
+    const time_diff2 = (end2 - start2) * 1000;
+
+    std.io.print("memcpySIMD: {d}ms memcpyScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
+    try std.testing.expect(time_diff < time_diff2);
+}
+
+
+test "memset benchmark" {
+    const size = 1024 * 1024 * 10;
+    let ptr: *u8 = malloc(size);
+    defer free(ptr);
+    const scalar = 124;
+    const start = std.time.get();
+    memsetSIMD<u8>(ptr[0..size], scalar);
+    const end = std.time.get();
+    const time_diff = (end - start) * 1000;
+    const start2 = std.time.get();
+    memsetScalar<u8>(ptr[0..size], scalar);
+    const end2 = std.time.get();
+    const time_diff2 = (end2 - start2) * 1000;
+
+    std.io.print("memsetSIMD: {d}ms memsetScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
+    try std.testing.expect(time_diff < time_diff2);
 }
 
 // test "leak" {

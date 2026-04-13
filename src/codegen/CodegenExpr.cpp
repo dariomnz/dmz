@@ -1127,14 +1127,18 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
         // load(ptr)
         llvm::Value *ptr = generate_expr(*call.arguments[0]);
         llvm::Type *llvmSimdType = generate_type(simdType);
-        return m_builder.CreateLoad(llvmSimdType, ptr, "simd.load");
+        auto load = m_builder.CreateLoad(llvmSimdType, ptr, "simd.load");
+        load->setAlignment(llvm::Align(1));
+        return load;
     } else if (name == "store") {
         // store(self_ptr, ptr)
         // arguments[0] is self_ptr (from resolve_call_expr), arguments[1] is dest ptr
         llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
         llvm::Value *destPtr = generate_expr(*call.arguments[1]);
         llvm::Value *simdVal = load_value(selfPtr, simdType);
-        return m_builder.CreateStore(simdVal, destPtr);
+        auto store = m_builder.CreateStore(simdVal, destPtr);
+        store->setAlignment(llvm::Align(1));
+        return store;
     } else if (name == "select") {
         // select(self_ptr, vec_b, mask)
         llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
