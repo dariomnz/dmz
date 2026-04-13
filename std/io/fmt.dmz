@@ -190,7 +190,11 @@ pub fn fmtPointer(w: std.io.Writer, ptr: *void, spec: FormatOptions) -> !usize {
 
 pub fn fmtSlice<T>(w: std.io.Writer, s: T, spec: FormatOptions) -> !usize {
     if (spec.tag == FormatOptions.string) {
-        return w.writeAll(s);
+        let str_slice: []u8 = {};
+        str_slice.ptr = s.ptr;
+        // str_slice.len = @sizeof(s[0]) * s.len;
+        str_slice.len = s.len;
+        return w.writeAll(str_slice);
     }
     let ret: usize = 0;
     ret += try w.writeAll("[len: ");

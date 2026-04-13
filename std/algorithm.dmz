@@ -14,29 +14,29 @@ pub fn bubbleSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     }
 }
 
+fn swap<T>(slice: []T, a: usize, b: usize) -> void {
+    let temp = slice[a];
+    slice[a] = slice[b];
+    slice[b] = temp;
+}
+
 pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     if (slice.len < 2) {
         return;
     }
-    const ptr: *T = slice.ptr;
-    const swap = [ptr](a: usize, b: usize) -> void {
-        let temp = ptr[a];
-        ptr[a] = ptr[b];
-        ptr[b] = temp;
-    };
     const mid = slice.len / 2;
     const last = slice.len - 1;
 
     if (cmp(slice[mid], slice[0])) {
-        swap(0, mid);
+        swap<T>(slice, 0, mid);
     }
     if (cmp(slice[last], slice[0])) {
-        swap(0, last);
+        swap<T>(slice, 0, last);
     }
     if (cmp(slice[last], slice[mid])) {
-        swap(mid, last);
+        swap<T>(slice, mid, last);
     }
-    swap(mid, last);
+    swap<T>(slice, mid, last);
 
     const piv_idx = slice.len - 1;
     // const piv_idx = slice.len / 2;
@@ -47,10 +47,10 @@ pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     for (0..piv_idx) |j| {
         if (cmp(slice[j], piv)) {
             i++;
-            swap(i, j);
+            swap<T>(slice, i, j);
         }
     }
-    swap(i + 1, piv_idx);
+    swap<T>(slice, i + 1, piv_idx);
 
     let pivot_idx = i + 1;
     quickSort<T>(slice[0..pivot_idx], cmp);

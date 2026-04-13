@@ -893,6 +893,7 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
     std::vector<ptr<ResolvedDecl>> resolvedCaptures;
 
     for (auto &&cap : expr.captures) {
+        return report(cap->location, "TODO: this is not implemented");
         varOrReturn(resolvedCap, resolve_expr(*cap));
 
         // Ensure it's a variable reference (DeclRefExpr)

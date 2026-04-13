@@ -74,7 +74,7 @@ class Driver {
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> codegen_pass(
         std::vector<ptr<ResolvedModuleDecl>> resolvedTrees);
     int asm_pass(ptr<llvm::Module>& module);
-    int jit_pass(ptr<llvm::Module>& module);
+    int jit_pass(ptr<llvm::LLVMContext>& context, ptr<llvm::Module>& module);
     int generate_exec_pass(ptr<llvm::Module>& module);
 
     int ptrBitSize();

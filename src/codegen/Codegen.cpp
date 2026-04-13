@@ -682,15 +682,16 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
             }
         }
     } else if (from.kind == ResolvedTypeKind::Error) {
-        if (to.kind == ResolvedTypeKind::Error) {
+        if (to.kind == ResolvedTypeKind::Error || to.kind == ResolvedTypeKind::Pointer) {
             return v;
         } else {
-            dmz_unreachable("unsuported type from Err");
+            dmz_unreachable("From: " + from.to_str() + " to: " + to.to_str() + " " + from.location.to_string() +
+                            "unsuported type from Err");
         }
     }
 
-    println("From: " << from.to_str() << " to: " << to.to_str());
-    dmz_unreachable("unsuported type in cast_to");
+    dmz_unreachable("From: " + from.to_str() + " to: " + to.to_str() + " " + from.location.to_string() +
+                    "unsuported type in cast_to");
 }
 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };

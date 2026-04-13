@@ -2,11 +2,11 @@
 extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
-    let x = 10;
-    let f1 = [x](a: i32) -> i32 { return x + a; };
+    const x = 10;
+    let f1 = [](a: i32) -> i32 { return x + a; };
 
-    let y = 20;
-    let f2 = [y](a: i32) -> i32 { return y + a; };
+    const y = 20;
+    let f2 = [](a: i32) -> i32 { return y + a; };
 
     // CHECK: 15
     printf("%d\n", f1(5));

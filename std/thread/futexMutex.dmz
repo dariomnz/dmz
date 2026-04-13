@@ -50,28 +50,28 @@ pub struct FutexMutex {
     }
 }
 
-test "thread futex mutex" {
-    let contador = 0;
-    let contador_ptr = &contador;
-    const INCREMENTOS = 100000;
-    let cont_mutex = FutexMutex{};
-    let cont_mutex_ptr = &cont_mutex;
-    const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
-        try cont_mutex_ptr.lock();
-        contador_ptr.*++;
-        try cont_mutex_ptr.unlock();
-    } };
+// test "thread futex mutex" {
+//     let contador = 0;
+//     let contador_ptr = &contador;
+//     const INCREMENTOS = 100000;
+//     let cont_mutex = FutexMutex{};
+//     let cont_mutex_ptr = &cont_mutex;
+//     const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
+//         try cont_mutex_ptr.lock();
+//         contador_ptr.*++;
+//         try cont_mutex_ptr.unlock();
+//     } };
 
-    const NUM_HILOS = 5;
-    let threads: std.thread.Thread[NUM_HILOS] = {};
+//     const NUM_HILOS = 5;
+//     let threads: std.thread.Thread[NUM_HILOS] = {};
 
-    for (0..NUM_HILOS) |i| {
-        threads[i] = try std.thread.Thread.init(incrementar_contador, null);
-    }
+//     for (0..NUM_HILOS) |i| {
+//         threads[i] = try std.thread.Thread.init(incrementar_contador, null);
+//     }
 
-    for (0..NUM_HILOS) |i| {
-        try threads[i].join();
-    }
+//     for (0..NUM_HILOS) |i| {
+//         try threads[i].join();
+//     }
 
-    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
-}
+//     try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+// }

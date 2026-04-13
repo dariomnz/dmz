@@ -48,39 +48,48 @@ pub struct Condition {
     }
 }
 
+struct test_ctx {
+    m: *std.thread.Mutex,
+    cv: *std.thread.Condition,
+    ready: *i32,
+}
+
 test "conditional variable test" {
     let m = std.thread.Mutex.init();
     defer m.deinit();
     let cv = std.thread.Condition.init();
     defer cv.deinit();
     let ready = 0;
-    const ready_ptr = &ready;
-    const m_ptr = &m;
-    const cv_ptr = &cv;
-    const worker = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
-        m_ptr.lock();
+    let ctx = test_ctx {
+        m: &m,
+        cv: &cv,
+        ready: &ready,
+    };
 
-        while (ready_ptr.* == 0) {
+    const worker = [](ctx: *test_ctx) -> void {
+        ctx.m.lock();
+
+        while (ctx.ready.* == 0) {
             std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
             // Se suelta el mutex y espera la señal
-            cv_ptr.wait(m_ptr);
+            ctx.cv.wait(ctx.m);
         }
 
         std.io.printf("Worker: I was woken up! Time to work.\n");
-        m_ptr.unlock();
+        ctx.m.unlock();
     };
 
-    const boss = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
+    const boss = [](ctx: *test_ctx) -> void {
         std.thread.sleep(100);
-        m_ptr.lock();
+        ctx.m.lock();
 
-        ready_ptr.* = 1;
+        ctx.ready.* = 1;
         std.io.printf("Boss: Task ready. Wake up!\n");
-        cv_ptr.notifyOne();
-        m_ptr.unlock();
+        ctx.cv.notifyOne();
+        ctx.m.unlock();
     };
-    const t1 = try std.thread.Thread.init(worker, null);
-    const t2 = try std.thread.Thread.init(boss, null);
+    const t1 = try std.thread.Thread.init(worker, &ctx);
+    const t2 = try std.thread.Thread.init(boss, &ctx);
     try t1.join();
     try t2.join();
 }

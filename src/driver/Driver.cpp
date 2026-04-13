@@ -485,58 +485,47 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     return module;
 }
 
-int Driver::jit_pass(ptr<llvm::Module> &module) {
-    debug_func("");
-    int pipefd[2];
-    if (pipe(pipefd) == -1) {
-        perror("pipe");
-        return 1;
-    }
-
+int Driver::jit_pass(ptr<llvm::LLVMContext> &context, ptr<llvm::Module> &module) {
+    debug_func("Ejecutando JIT interno...");
     ScopedTimer(StatType::Run);
 
-    pid_t pid = fork();
+    std::string errorMessage;
+    llvm::raw_string_ostream os(errorMessage);
 
-    int status;
-    if (pid == -1) {
-        perror("fork");
+    if (llvm::verifyModule(*module, &os)) {
+        llvm::errs() << "Invalid IR detected before JIT\n";
+        llvm::errs() << os.str();
         return 1;
-    } else if (pid == 0) {
-        // child
-        close(pipefd[1]);
-
-        dup2(pipefd[0], STDIN_FILENO);
-        close(pipefd[0]);
-
-        const char *cmd = nullptr;
-        std::vector<const char *> args;
-
-        cmd = "lli";
-        args.emplace_back("lli");
-        if (!m_options.optimizationLevel.empty()) {
-            args.emplace_back(m_options.optimizationLevel.c_str());
-        } else {
-            args.emplace_back("-O0");
-        }
-        args.emplace_back(nullptr);
-
-        execvp(cmd, const_cast<char *const *>(args.data()));
-        perror("execvp");
-        exit(EXIT_FAILURE);
-    } else {
-        // parent
-        close(pipefd[0]);
-
-        llvm::raw_fd_ostream pipe_stream(pipefd[1], false);
-
-        module->print(pipe_stream, nullptr);
-
-        close(pipefd[1]);
-
-        waitpid(pid, &status, 0);
-        return WEXITSTATUS(status);
     }
+
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
+    auto JIT = llvm::orc::LLJITBuilder().create();
+    if (!JIT) {
+        llvm::errs() << "Error creando LLJIT: " << JIT.takeError() << "\n";
+        return 1;
+    }
+
+    auto TSM = llvm::orc::ThreadSafeModule(std::move(module), std::move(context));
+    if (auto Err = (*JIT)->addIRModule(std::move(TSM))) {
+        llvm::errs() << "Error añadiendo módulo: " << std::move(Err) << "\n";
+        return 1;
+    }
+
+    auto MainSym = (*JIT)->lookup("main");
+    if (!MainSym) {
+        llvm::errs() << "No se encontró la función 'main': " << MainSym.takeError() << "\n";
+        return 1;
+    }
+
+    auto *MainPtr = MainSym->toPtr<int (*)(int, char **)>();
+
+    int result = MainPtr(0, nullptr);
+    return result;
 }
+
 int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
     debug_func("");
     int pipefd[2];
@@ -690,9 +679,7 @@ int Driver::target_simd_size() {
         return simdSize;
     }
 
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
+    llvm::InitializeNativeTarget();
     std::string TripleStr = llvm::sys::getDefaultTargetTriple();
     std::string Error;
     const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(TripleStr, Error);
@@ -774,7 +761,7 @@ int Driver::main() {
     }
 
     if (m_options.run) {
-        return jit_pass(module.second);
+        return jit_pass(module.first, module.second);
     } else {
         return generate_exec_pass(module.second);
     }

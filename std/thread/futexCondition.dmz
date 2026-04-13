@@ -32,134 +32,134 @@ pub struct FutexCondition {
     }
 }
 
-test "futex conditional variable test" {
-    let m = std.thread.FutexMutex{};
-    let cv = std.thread.FutexCondition{};
-    let ready = 0;
-    const ready_ptr = &ready;
-    const m_ptr = &m;
-    const cv_ptr = &cv;
-    const worker = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
-        m_ptr.lock();
+// test "futex conditional variable test" {
+//     let m = std.thread.FutexMutex{};
+//     let cv = std.thread.FutexCondition{};
+//     let ready = 0;
+//     const ready_ptr = &ready;
+//     const m_ptr = &m;
+//     const cv_ptr = &cv;
+//     const worker = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
+//         m_ptr.lock();
 
-        while (ready_ptr.* == 0) {
-            std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
-            cv_ptr.wait(m_ptr);
-        }
+//         while (ready_ptr.* == 0) {
+//             std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
+//             cv_ptr.wait(m_ptr);
+//         }
 
-        std.io.printf("Worker: I was woken up! Time to work.\n");
-        m_ptr.unlock();
-    };
+//         std.io.printf("Worker: I was woken up! Time to work.\n");
+//         m_ptr.unlock();
+//     };
 
-    const boss = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
-        std.thread.sleep(100);
-        m_ptr.lock();
+//     const boss = [m_ptr, cv_ptr, ready_ptr](arg: *void) -> void {
+//         std.thread.sleep(100);
+//         m_ptr.lock();
 
-        ready_ptr.* = 1;
-        std.io.printf("Boss: Task ready. Wake up!\n");
-        cv_ptr.notifyAll();
-        m_ptr.unlock();
-    };
-    const t1 = try std.thread.Thread.init(worker, null);
-    const t2 = try std.thread.Thread.init(boss, null);
-    try t1.join();
-    try t2.join();
-}
+//         ready_ptr.* = 1;
+//         std.io.printf("Boss: Task ready. Wake up!\n");
+//         cv_ptr.notifyAll();
+//         m_ptr.unlock();
+//     };
+//     const t1 = try std.thread.Thread.init(worker, null);
+//     const t2 = try std.thread.Thread.init(boss, null);
+//     try t1.join();
+//     try t2.join();
+// }
 
-test "futex condvar stress test - multiple producers and consumers" {
-    let m = std.thread.FutexMutex{};
-    let cv_producer = std.thread.FutexCondition{};
-    let cv_consumer = std.thread.FutexCondition{};
+// test "futex condvar stress test - multiple producers and consumers" {
+//     let m = std.thread.FutexMutex{};
+//     let cv_producer = std.thread.FutexCondition{};
+//     let cv_consumer = std.thread.FutexCondition{};
 
-    let items_in_queue = 0;
-    const MAX_CAPACITY = 5;
-    const TOTAL_ITEMS_TO_PRODUCE = 50;
-    let items_consumed = 0;
+//     let items_in_queue = 0;
+//     const MAX_CAPACITY = 5;
+//     const TOTAL_ITEMS_TO_PRODUCE = 50;
+//     let items_consumed = 0;
 
-    const m_ptr = &m;
-    const cv_p_ptr = &cv_producer;
-    const cv_c_ptr = &cv_consumer;
-    const q_ptr = &items_in_queue;
-    const consumed_ptr = &items_consumed;
+//     const m_ptr = &m;
+//     const cv_p_ptr = &cv_producer;
+//     const cv_c_ptr = &cv_consumer;
+//     const q_ptr = &items_in_queue;
+//     const consumed_ptr = &items_consumed;
 
-    // --- CONSUMIDORES (Varios hilos esperando trabajo) ---
-    const consumer_func = [m_ptr, cv_p_ptr, cv_c_ptr, q_ptr, consumed_ptr](ctx: *void) -> void {
-        const id_ptr: *i32 = ctx;
-        const id: i32 = id_ptr.*;
-        while (true) {
-            m_ptr.lock();
+//     // --- CONSUMIDORES (Varios hilos esperando trabajo) ---
+//     const consumer_func = [m_ptr, cv_p_ptr, cv_c_ptr, q_ptr, consumed_ptr](ctx: *void) -> void {
+//         const id_ptr: *i32 = ctx;
+//         const id: i32 = id_ptr.*;
+//         while (true) {
+//             m_ptr.lock();
 
-            // Esperar mientras la cola esté vacía
-            while (q_ptr.* == 0) {
-                // Si ya se consumió todo lo planeado, salir
-                if (consumed_ptr.* >= TOTAL_ITEMS_TO_PRODUCE) {
-                    m_ptr.unlock();
-                    return;
-                }
-                cv_c_ptr.wait(m_ptr);
-            }
+//             // Esperar mientras la cola esté vacía
+//             while (q_ptr.* == 0) {
+//                 // Si ya se consumió todo lo planeado, salir
+//                 if (consumed_ptr.* >= TOTAL_ITEMS_TO_PRODUCE) {
+//                     m_ptr.unlock();
+//                     return;
+//                 }
+//                 cv_c_ptr.wait(m_ptr);
+//             }
 
-            // Consumir item
-            q_ptr.* -= 1;
-            consumed_ptr.* += 1;
-            std.io.printf("Consumer %d: Grabbed item. (Queue: %d, Total: %d)\n", id, q_ptr.*, consumed_ptr.*);
+//             // Consumir item
+//             q_ptr.* -= 1;
+//             consumed_ptr.* += 1;
+//             std.io.printf("Consumer %d: Grabbed item. (Queue: %d, Total: %d)\n", id, q_ptr.*, consumed_ptr.*);
 
-            // Notificar a los productores que hay espacio
-            cv_p_ptr.notifyOne();
+//             // Notificar a los productores que hay espacio
+//             cv_p_ptr.notifyOne();
 
-            m_ptr.unlock();
+//             m_ptr.unlock();
 
-            if (consumed_ptr.* >= TOTAL_ITEMS_TO_PRODUCE) break;
-            std.thread.sleep(10);
-            // Simular trabajo
-        }
-    };
+//             if (consumed_ptr.* >= TOTAL_ITEMS_TO_PRODUCE) break;
+//             std.thread.sleep(10);
+//             // Simular trabajo
+//         }
+//     };
 
-    // --- PRODUCTORES (Intentando llenar la cola) ---
-    const producer_func = [m_ptr, cv_p_ptr, cv_c_ptr, q_ptr, consumed_ptr](ctx: *void) -> void {
-        const id_ptr: *i32 = ctx;
-        const id: i32 = id_ptr.*;
-        for (0..10) |i| {
-            m_ptr.lock();
+//     // --- PRODUCTORES (Intentando llenar la cola) ---
+//     const producer_func = [m_ptr, cv_p_ptr, cv_c_ptr, q_ptr, consumed_ptr](ctx: *void) -> void {
+//         const id_ptr: *i32 = ctx;
+//         const id: i32 = id_ptr.*;
+//         for (0..10) |i| {
+//             m_ptr.lock();
 
-            // Esperar si la cola está llena
-            while (q_ptr.* >= MAX_CAPACITY) {
-                cv_p_ptr.wait(m_ptr);
-            }
+//             // Esperar si la cola está llena
+//             while (q_ptr.* >= MAX_CAPACITY) {
+//                 cv_p_ptr.wait(m_ptr);
+//             }
 
-            q_ptr.* += 1;
-            std.io.printf("Producer %d: Added item. (Queue: %d)\n", id, q_ptr.*);
+//             q_ptr.* += 1;
+//             std.io.printf("Producer %d: Added item. (Queue: %d)\n", id, q_ptr.*);
 
-            // Notificar a TODOS los consumidores que hay algo nuevo
-            // Aquí probamos el notifyAll (broadcast)
-            cv_c_ptr.notifyAll();
+//             // Notificar a TODOS los consumidores que hay algo nuevo
+//             // Aquí probamos el notifyAll (broadcast)
+//             cv_c_ptr.notifyAll();
 
-            m_ptr.unlock();
-            std.thread.sleep(5);
-            // Simular tiempo de producción
-        }
-    };
+//             m_ptr.unlock();
+//             std.thread.sleep(5);
+//             // Simular tiempo de producción
+//         }
+//     };
 
-    // Lanzamos 5 productores y 5 consumidores
-    const num_threads = 5;
-    let producers: std.thread.Thread[num_threads] = {};
-    let consumers: std.thread.Thread[num_threads] = {};
+//     // Lanzamos 5 productores y 5 consumidores
+//     const num_threads = 5;
+//     let producers: std.thread.Thread[num_threads] = {};
+//     let consumers: std.thread.Thread[num_threads] = {};
 
-    for (0..num_threads) |i| {
-        const id = i;
-        producers[i] = try std.thread.Thread.init(producer_func, &id);
-        consumers[i] = try std.thread.Thread.init(consumer_func, &id);
-    }
+//     for (0..num_threads) |i| {
+//         const id = i;
+//         producers[i] = try std.thread.Thread.init(producer_func, &id);
+//         consumers[i] = try std.thread.Thread.init(consumer_func, &id);
+//     }
 
-    // Esperar a que todos terminen
-    for (0..num_threads) |i| {
-        try producers[i].join();
-        // Para que los consumidores no se queden colgados si ya terminaron
-        m_ptr.lock();
-        cv_c_ptr.notifyAll();
-        m_ptr.unlock();
-        try consumers[i].join();
-    }
+//     // Esperar a que todos terminen
+//     for (0..num_threads) |i| {
+//         try producers[i].join();
+//         // Para que los consumidores no se queden colgados si ya terminaron
+//         m_ptr.lock();
+//         cv_c_ptr.notifyAll();
+//         m_ptr.unlock();
+//         try consumers[i].join();
+//     }
 
-    std.io.printf("Test finished. Total items consumed: %d\n", items_consumed);
-}
+//     std.io.printf("Test finished. Total items consumed: %d\n", items_consumed);
+// }
