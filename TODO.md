@@ -22,3 +22,12 @@
 - [ ] benckmark
 - [x] add ops += ++
 - [x] add error. inplace
+- [ ] jit stack trace on segfault
+- [ ] all stmt are expr
+- [ ] permit types top be expr at compile time const t = i32;
+- [ ] struct to replace lambdas
+- [ ] @call
+- [ ] @compileError
+- [ ] stabilize lsp
+- [ ] enums with .name with auto resolve
+- [ ] 

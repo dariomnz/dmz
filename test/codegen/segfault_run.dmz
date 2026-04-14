@@ -1,0 +1,15 @@
+// RUN: gdb -batch --ex r --ex bt --args dmz ./test/codegen/segfault_run.dmz -run -g | filecheck %s
+
+// CHECK: Program received signal SIGSEGV, Segmentation fault.
+// CHECK-NEXT: segfault_run.main () at segfault_run.dmz:14
+// CHECK-NEXT: 14           ptr.* = 1;
+// CHECK-NEXT: segfault_run.main () at segfault_run.dmz:14
+// CHECK-NEXT: in main ()
+// CHECK-NEXT: in DMZ::Driver::jit_pass
+// CHECK-NEXT: in DMZ::Driver::main
+// CHECK-NEXT: in main
+
+fn main() -> void {
+    const ptr: *i32 = null;
+    ptr.* = 1;
+}

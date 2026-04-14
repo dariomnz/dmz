@@ -3,7 +3,6 @@
 #include "DMZPCH.hpp"
 #include "codegen/Codegen.hpp"
 #include "lexer/Lexer.hpp"
-#include "linker/Linker.hpp"
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/CFG.hpp"

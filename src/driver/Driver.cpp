@@ -485,47 +485,6 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     return module;
 }
 
-int Driver::jit_pass(ptr<llvm::LLVMContext> &context, ptr<llvm::Module> &module) {
-    debug_func("Ejecutando JIT interno...");
-    ScopedTimer(StatType::Run);
-
-    std::string errorMessage;
-    llvm::raw_string_ostream os(errorMessage);
-
-    if (llvm::verifyModule(*module, &os)) {
-        llvm::errs() << "Invalid IR detected before JIT\n";
-        llvm::errs() << os.str();
-        return 1;
-    }
-
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-
-    auto JIT = llvm::orc::LLJITBuilder().create();
-    if (!JIT) {
-        llvm::errs() << "Error creando LLJIT: " << JIT.takeError() << "\n";
-        return 1;
-    }
-
-    auto TSM = llvm::orc::ThreadSafeModule(std::move(module), std::move(context));
-    if (auto Err = (*JIT)->addIRModule(std::move(TSM))) {
-        llvm::errs() << "Error añadiendo módulo: " << std::move(Err) << "\n";
-        return 1;
-    }
-
-    auto MainSym = (*JIT)->lookup("main");
-    if (!MainSym) {
-        llvm::errs() << "No se encontró la función 'main': " << MainSym.takeError() << "\n";
-        return 1;
-    }
-
-    auto *MainPtr = MainSym->toPtr<int (*)(int, char **)>();
-
-    int result = MainPtr(0, nullptr);
-    return result;
-}
-
 int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
     debug_func("");
     int pipefd[2];
