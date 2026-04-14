@@ -22,12 +22,13 @@
 - [ ] benckmark
 - [x] add ops += ++
 - [x] add error. inplace
-- [ ] jit stack trace on segfault
+- [x] jit stack trace on segfault
+- [ ] stabilize lsp
 - [ ] all stmt are expr
 - [ ] permit types top be expr at compile time const t = i32;
 - [ ] struct to replace lambdas
+- [ ] enums with .name with auto resolve
+- [ ] remove builtin functions from lexer and be normal functions
+- [ ] change @atomicRmw to use enum in op
 - [ ] @call
 - [ ] @compileError
-- [ ] stabilize lsp
-- [ ] enums with .name with auto resolve
-- [ ] 
