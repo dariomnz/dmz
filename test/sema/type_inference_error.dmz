@@ -12,9 +12,9 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:9: error: an uninitialized variable is expected to have a type specifier
     let y2;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'x2' not found
+    // CHECK: [[# @LINE + 1 ]]:5: error: expression symbol 'x2' not found
     x2 = 0;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y2' not found
+    // CHECK: [[# @LINE + 1 ]]:5: error: expression symbol 'y2' not found
     y2 = 0;
 }

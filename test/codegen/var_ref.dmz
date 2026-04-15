@@ -108,18 +108,13 @@ fn main() -> void {
 // CHECK-NEXT:   %3 = load ptr, ptr %i_ptr, align 8
 // CHECK-NEXT:   %4 = load i32, ptr %3, align 4
 // CHECK-NEXT:   %5 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.1, i32 %4)
-// CHECK-NEXT:   %6 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 0
-// CHECK-NEXT:   store i32 1, ptr %6, align 4
-// CHECK-NEXT:   %7 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 1
-// CHECK-NEXT:   store i32 1, ptr %7, align 4
-// CHECK-NEXT:   %8 = getelementptr inbounds nuw %var_ref.Color, ptr %tmp.struct.var_ref.Color, i32 0, i32 2
-// CHECK-NEXT:   store i32 1, ptr %8, align 4
+// CHECK-NEXT:   store %var_ref.Color { i32 1, i32 1, i32 1 }, ptr %tmp.struct.var_ref.Color, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %col, ptr align 4 %tmp.struct.var_ref.Color, i64 12, i1 false)
 // CHECK-NEXT:   store ptr %col, ptr %col_ptr, align 8
 // CHECK-NEXT:   call void @var_ref.printColor(ptr byref(%var_ref.Color) %col)
-// CHECK-NEXT:   %9 = load ptr, ptr %col_ptr, align 8
-// CHECK-NEXT:   call void @var_ref.bar(ptr byref(%var_ref.Color) %9)
-// CHECK-NEXT:   %10 = load ptr, ptr %col_ptr, align 8
-// CHECK-NEXT:   call void @var_ref.printColor(ptr byref(%var_ref.Color) %10)
+// CHECK-NEXT:   %6 = load ptr, ptr %col_ptr, align 8
+// CHECK-NEXT:   call void @var_ref.bar(ptr byref(%var_ref.Color) %6)
+// CHECK-NEXT:   %7 = load ptr, ptr %col_ptr, align 8
+// CHECK-NEXT:   call void @var_ref.printColor(ptr byref(%var_ref.Color) %7)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

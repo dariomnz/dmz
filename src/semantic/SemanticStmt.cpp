@@ -57,7 +57,7 @@ ptr<ResolvedStmt> Sema::resolve_stmt(const Stmt &stmt) {
     }
 
     stmt.dump();
-    dmz_unreachable("unexpected statement");
+    dmz_unreachable(stmt.location, "unexpected statement");
 }
 
 ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) {

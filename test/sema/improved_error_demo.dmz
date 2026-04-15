@@ -4,6 +4,6 @@ fn main() -> void {
     let x = 10;
     let y = x + unknown_symbol;
 }
-// CHECK: error: symbol 'unknown_symbol' not found
+// CHECK: error: expression symbol 'unknown_symbol' not found
 // CHECK-NEXT:  5 |     let y = x + unknown_symbol;
 // CHECK-NEXT:    |                 ^^^^^^^^^^^^^^

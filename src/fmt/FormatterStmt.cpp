@@ -50,7 +50,7 @@ ptr<Node> Formatter::fmt_stmt(const Stmt& stmt) {
         needSemicolon = false;
     } else {
         stmt.dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(stmt.location, "TODO");
     }
 
     auto ret = makePtr<Group>(build.new_id(), vec<ptr<Node>>{});

@@ -48,10 +48,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %s, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.struct_parameter.S, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %struct_parameter.S, ptr %tmp.struct.struct_parameter.S, i32 0, i32 0
-// CHECK-NEXT:   store i32 1, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %struct_parameter.S, ptr %tmp.struct.struct_parameter.S, i32 0, i32 1
-// CHECK-NEXT:   store i32 2, ptr %1, align 4
+// CHECK-NEXT:   store %struct_parameter.S { i32 1, i32 2 }, ptr %tmp.struct.struct_parameter.S, align 4
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %tmp.struct.struct_parameter.S, i64 8, i1 false)
 // CHECK-NEXT:   call void @struct_parameter.foo(ptr readonly %s)
 // CHECK-NEXT:   call void @struct_parameter.bar(ptr sret(%struct_parameter.S) %struct.ret.tmp, ptr readonly %s)

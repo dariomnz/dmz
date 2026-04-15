@@ -55,16 +55,11 @@ fn bar() -> S {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.return_struct.S, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.return_struct.S2, i8 0, i64 12, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 16, i1 false)
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %return_struct.S2, ptr %tmp.struct.return_struct.S2, i32 0, i32 0
-// CHECK-NEXT:   store i32 1, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %return_struct.S2, ptr %tmp.struct.return_struct.S2, i32 0, i32 1
-// CHECK-NEXT:   store i32 2, ptr %1, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %return_struct.S2, ptr %tmp.struct.return_struct.S2, i32 0, i32 2
-// CHECK-NEXT:   store i32 3, ptr %2, align 4
-// CHECK-NEXT:   %3 = getelementptr inbounds nuw %return_struct.S, ptr %tmp.struct.return_struct.S, i32 0, i32 0
-// CHECK-NEXT:   store i32 0, ptr %3, align 4
-// CHECK-NEXT:   %4 = getelementptr inbounds nuw %return_struct.S, ptr %tmp.struct.return_struct.S, i32 0, i32 1
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %4, ptr align 4 %tmp.struct.return_struct.S2, i64 12, i1 false)
+// CHECK-NEXT:   store %return_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.return_struct.S2, align 4
+// CHECK-NEXT:   %0 = getelementptr inbounds nuw %return_struct.S, ptr %tmp.struct.return_struct.S, i32 0, i32 0
+// CHECK-NEXT:   store i32 0, ptr %0, align 4
+// CHECK-NEXT:   %1 = getelementptr inbounds nuw %return_struct.S, ptr %tmp.struct.return_struct.S, i32 0, i32 1
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 %tmp.struct.return_struct.S2, i64 12, i1 false)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ret, ptr align 4 %tmp.struct.return_struct.S, i64 16, i1 false)
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 

@@ -165,7 +165,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         }
     }
     function.dump();
-    dmz_unreachable("unexpected function");
+    dmz_unreachable(function.location, "unexpected function");
 }
 
 ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceLocation &location,
@@ -380,7 +380,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
     if (!varDecl.varDecl->initializer && !varDecl.type) {
         debug_msg(varDecl.varDecl);
         varDecl.varDecl->dump();
-        dmz_unreachable("unexpected malformed var decl");
+        dmz_unreachable(varDecl.location, "unexpected malformed var decl");
     }
 
     ptr<ResolvedExpr> resolvedInitializer = nullptr;
@@ -409,7 +409,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
                     if (arrType->arrayType->kind == ResolvedTypeKind::Void) {
                         resolvedInitializer->type = varDecl.type->clone();
                         auto rarrType = dynamic_cast<ResolvedTypeArray *>(resolvedInitializer->type.get());
-                        if (!rarrType) dmz_unreachable("unexpected error");
+                        if (!rarrType) dmz_unreachable(resolvedInitializer->location, "unexpected error");
                         rarrType->arraySize = 0;
                         shouldCheckType = false;
                     }
@@ -583,7 +583,8 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         ScopeRAII fieldScope(*this);
         if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
             for (auto &&genType : genStruct->genericTypeDecls) {
-                if (!insert_decl_to_current_scope(*genType, true)) dmz_unreachable("unexpected error");
+                if (!insert_decl_to_current_scope(*genType, true))
+                    dmz_unreachable(genType->location, "unexpected error");
             }
         }
 
@@ -1016,7 +1017,7 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
             continue;
         }
         currentDecl->dump();
-        dmz_unreachable("TODO: unexpected declaration");
+        dmz_unreachable(currentDecl->location, "TODO: unexpected declaration");
     }
     debug_msg("error " << error);
     if (error) return false;
@@ -1035,7 +1036,7 @@ bool Sema::resolve_pending_body() {
             std::erase(m_pending_decls, decl);
         } else {
             decl->dump();
-            dmz_unreachable("TODO");
+            dmz_unreachable(decl->location, "TODO");
         }
     }
     return !error;
@@ -1079,7 +1080,7 @@ bool Sema::resolve_builtin_function(const ResolvedFunctionDecl &fnDecl) {
         resolve_builtin_test_run(fnDecl);
         return true;
     }
-    if (dynamic_cast<const ResolvedSimdBuiltinFunctionDecl *>(&fnDecl)) {
+    if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&fnDecl)) {
         return true;
     }
     return false;
@@ -1150,7 +1151,7 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
         auto test_call = makePtr<ResolvedCallExpr>(loc, testType->returnType->clone(), std::move(test_ref),
                                                    std::vector<ptr<ResolvedExpr>>{});
         auto returnOptType = dynamic_cast<const ResolvedTypeOptional *>(testType->returnType.get());
-        if (!returnOptType) dmz_unreachable("internal error, test return type is not optional");
+        if (!returnOptType) dmz_unreachable(loc, "internal error, test return type is not optional");
         auto tryExpr = makePtr<ResolvedTryErrorExpr>(loc, returnOptType->optionalType->clone(), std::move(test_call),
                                                      std::vector<ptr<ResolvedDeferRefStmt>>{});
 

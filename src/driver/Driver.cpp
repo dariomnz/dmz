@@ -11,6 +11,9 @@
 
 namespace DMZ {
 
+Driver::Driver(CompilerOptions options) : m_options(options) {}
+Driver::~Driver() = default;
+
 void Driver::display_help() {
     println("Usage:");
     println("  dmz [options] <source_file>\n");
@@ -275,7 +278,8 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(SourceLoca
             std::string parent_path_str = parent_path.string();
             auto diff = module_path_str.substr(parent_path_str.size());
             if (diff.find_last_of(termination) != diff.size() - 1) {
-                dmz_unreachable("unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
+                dmz_unreachable(location,
+                                "unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
             }
 
             // convert the relative path to symbol name

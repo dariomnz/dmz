@@ -1,0 +1,21 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn callAdd<T>(tuple: T) -> i32 {
+    return @call(&add, tuple);
+}
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    const a = @call(&add, .{1, 2});
+    printf("@call(&add, .{1, 2}) = %d\n", a);
+    const b = callAdd(.{2, 3});
+    printf("callAdd(.{2, 3}) = %d\n", b);
+}
+
+// CHECK: @call(&add, .{1, 2}) = 3
+// CHECK: callAdd(.{2, 3}) = 5

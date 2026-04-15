@@ -48,7 +48,8 @@ class Driver {
 
    public:
     CompilerOptions m_options;
-    Driver(CompilerOptions options) : m_options(options) {}
+    Driver(CompilerOptions options);
+    ~Driver();
     int main();
     void display_help();
 

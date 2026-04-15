@@ -111,11 +111,11 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
                     ret = m_builder.getDoubleTy();
                     break;
                 default:
-                    dmz_unreachable("float type have an incorrect size");
+                    dmz_unreachable(type.location, "float type have an incorrect size");
                     break;
             }
         } else {
-            dmz_unreachable("internal error");
+            dmz_unreachable(type.location, "internal error");
         }
     } else if (type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::StructDecl) {
         ResolvedStructDecl *decl = nullptr;
@@ -125,18 +125,18 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
             decl = typeStruct->decl;
         }
-        if (!decl) dmz_unreachable("unexpected error");
+        if (!decl) dmz_unreachable(type.location, "unexpected error");
         std::string name = generate_decl_name(*decl);
         debug_msg("struct '" << name << "'");
         auto structType = get_struct_decl(*decl);
         ret = structType;
         if (!ret) {
-            dmz_unreachable("cannot get type '" + name + "'");
+            dmz_unreachable(type.location, "cannot get type '" + name + "'");
         }
         if (noOpaque && structType->isOpaque()) {
             generate_struct_fields(*decl);
             ret = llvm::StructType::getTypeByName(*m_context, name);
-            if (!ret) dmz_unreachable("unexpected error generating struct decl");
+            if (!ret) dmz_unreachable(type.location, "unexpected error generating struct decl");
         }
     } else if (type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::UnionDecl) {
         ResolvedUnionDecl *decl = nullptr;
@@ -146,18 +146,18 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
             decl = typeUnion->decl;
         }
-        if (!decl) dmz_unreachable("unexpected error");
+        if (!decl) dmz_unreachable(type.location, "unexpected error");
         std::string name = generate_decl_name(*decl);
         debug_msg("union '" << name << "'");
         auto unionType = get_union_decl(*decl);
         ret = unionType;
         if (!ret) {
-            dmz_unreachable("cannot get type '" + name + "'");
+            dmz_unreachable(type.location, "cannot get type '" + name + "'");
         }
         if (noOpaque && unionType->isOpaque()) {
             generate_union_fields(*decl);
             ret = llvm::StructType::getTypeByName(*m_context, name);
-            if (!ret) dmz_unreachable("unexpected error generating union decl");
+            if (!ret) dmz_unreachable(type.location, "unexpected error generating union decl");
         }
     } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
         ret = generate_type(*typeArray->arrayType, true);
@@ -198,7 +198,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
     }
     if (ret == nullptr) {
         type.dump();
-        dmz_unreachable("cannot generate type '" + type.to_str() + "'");
+        dmz_unreachable(type.location, "cannot generate type '" + type.to_str() + "'");
     }
     return ret;
 }
@@ -242,7 +242,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStructDecl *>(&type)) {
             decl = typeStruct->decl;
         }
-        if (!decl) dmz_unreachable("unexpected error");
+        if (!decl) dmz_unreachable(type.location, "unexpected error");
 
         if (auto it = m_debugTypes.find(decl->name()); it != m_debugTypes.end()) {
             return it->second;
@@ -371,7 +371,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         } else if (auto typeUnion = dynamic_cast<const ResolvedTypeUnionDecl *>(&type)) {
             decl = typeUnion->decl;
         }
-        if (!decl) dmz_unreachable("unexpected error");
+        if (!decl) dmz_unreachable(type.location, "unexpected error");
 
         if (auto it = m_debugTypes.find(decl->name()); it != m_debugTypes.end()) {
             return it->second;
@@ -439,7 +439,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         return finalType;
     }
     type.dump();
-    dmz_unreachable("TODO");
+    dmz_unreachable(type.location, "TODO");
 }
 
 llvm::DIFile *Codegen::generate_debug_file(const SourceLocation &location) {
@@ -618,7 +618,7 @@ llvm::Value *Codegen::to_bool(llvm::Value *v, const ResolvedType &type) {
         }
     }
     type.dump();
-    dmz_unreachable("unsuported type in to_bool");
+    dmz_unreachable(type.location, "unsuported type in to_bool");
 }
 
 llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const ResolvedType &to) {
@@ -628,6 +628,7 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                    else
                        std::cerr << "nullptr";
                }) << "'");
+    // debug_msg("From: '" << from.to_str() << "' to: '" << to.to_str());
     // m_module->dump();
     // v->dump();
     if (from.equal(to)) return v;
@@ -638,7 +639,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
         } else if (to.kind == ResolvedTypeKind::Number) {
             return m_builder.CreatePtrToInt(v, generate_type(to), "ptr.to.int");
         } else {
-            dmz_unreachable("unsuported type from ptr");
+            dmz_unreachable(from.location,
+                            "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from ptr");
         }
     } else if (auto fromNum = dynamic_cast<const ResolvedTypeNumber *>(&from)) {
         if (auto toNum = dynamic_cast<const ResolvedTypeNumber *>(&to)) {
@@ -651,7 +653,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                 } else if (toNum->numberKind == ResolvedNumberKind::Float) {
                     return m_builder.CreateSIToFP(v, generate_type(to), "int.to.float");
                 } else {
-                    dmz_unreachable("unsuported type from Int");
+                    dmz_unreachable(from.location,
+                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from Int");
                 }
             } else if (fromNum->numberKind == ResolvedNumberKind::UInt) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
@@ -661,7 +664,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                 } else if (toNum->numberKind == ResolvedNumberKind::Float) {
                     return m_builder.CreateUIToFP(v, generate_type(to));
                 } else {
-                    dmz_unreachable("unsuported type from UInt");
+                    dmz_unreachable(from.location,
+                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from UInt");
                 }
             } else if (fromNum->numberKind == ResolvedNumberKind::Float) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
@@ -677,7 +681,8 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                         return v;
                     }
                 } else {
-                    dmz_unreachable("unsuported type from UInt");
+                    dmz_unreachable(from.location,
+                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from UInt");
                 }
             }
         }
@@ -685,13 +690,12 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
         if (to.kind == ResolvedTypeKind::Error || to.kind == ResolvedTypeKind::Pointer) {
             return v;
         } else {
-            dmz_unreachable("From: " + from.to_str() + " to: " + to.to_str() + " " + from.location.to_string() +
-                            " unsuported type from Err");
+            dmz_unreachable(from.location,
+                            "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from Err");
         }
     }
 
-    dmz_unreachable("From: " + from.to_str() + " to: " + to.to_str() + " " + from.location.to_string() +
-                    " unsuported type in cast_to");
+    dmz_unreachable(from.location, "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type in cast_to");
 }
 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };
@@ -703,6 +707,18 @@ void Codegen::break_into_bb(llvm::BasicBlock *targetBB) {
     if (currentBB && !currentBB->getTerminator()) m_builder.CreateBr(targetBB);
 
     m_builder.ClearInsertionPoint();
+}
+
+bool Codegen::store_value_generate_memcpy(const ResolvedType &from) {
+    if (from.kind != ResolvedTypeKind::Pointer) {
+        if (from.generate_struct()) {
+            return true;
+        }
+        if (from.kind == ResolvedTypeKind::Array) {
+            return true;
+        }
+    }
+    return false;
 }
 
 llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from,
@@ -756,5 +772,52 @@ llvm::GlobalVariable *Codegen::create_global_string(const std::string &str, cons
     auto strVal = m_builder.CreateGlobalString(str, name, 0, m_module.get());
     m_globalStrings[str] = strVal;
     return strVal;
+}
+
+llvm::Value *Codegen::generate_builtin_call(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call) {
+    debug_func("" << builtin.name);
+    if (builtin.identifier == "@call") {
+        llvm::Value *callee = generate_expr(*call.arguments[0]);
+        llvm::Value *tuplePtr = generate_expr(*call.arguments[1], true);
+
+        auto *fnPtrType = dynamic_cast<const ResolvedTypePointer *>(call.arguments[0]->type.get());
+        if (!fnPtrType) {
+            dmz_unreachable(call.location, "@call: callee is not a function pointer");
+        }
+        auto *fnType = dynamic_cast<const ResolvedTypeFunction *>(fnPtrType->pointerType.get());
+        if (!fnType) {
+            dmz_unreachable(call.location, "@call: callee is not a function pointer");
+        }
+
+        auto *tupleTypeStruct = dynamic_cast<const ResolvedTypeStruct *>(call.arguments[1]->type.get());
+        if (!tupleTypeStruct) {
+            dmz_unreachable(call.location, "@call: argument is not a tuple");
+        }
+        auto *tupleDecl = tupleTypeStruct->decl;
+
+        std::vector<llvm::Value *> args;
+        bool isReturningStruct = fnType->returnType->generate_struct();
+        llvm::Value *callRetVal = nullptr;
+
+        if (isReturningStruct) {
+            callRetVal = allocate_stack_variable(call.location, "struct.ret.tmp", *fnType->returnType);
+            args.emplace_back(callRetVal);
+        }
+
+        for (size_t i = 0; i < tupleDecl->fields.size(); i++) {
+            auto &field = tupleDecl->fields[i];
+            llvm::Value *fieldPtr = m_builder.CreateStructGEP(generate_type(*tupleTypeStruct, true), tuplePtr, i);
+            llvm::Value *argVal = load_value(fieldPtr, *field->type);
+            argVal = cast_to(argVal, *field->type, *fnType->paramsTypes[i]);
+            args.emplace_back(argVal);
+        }
+
+        llvm::FunctionType *llvmType = generate_function_type(*fnType);
+        llvm::CallInst *callInst = m_builder.CreateCall(llvmType, callee, args);
+        callInst->setAttributes(construct_attr_list(*fnType));
+
+        return isReturningStruct ? callRetVal : callInst;
+    }
+    dmz_unreachable(call.location, "unsuported builtin function");
 }
 }  // namespace DMZ

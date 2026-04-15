@@ -166,10 +166,12 @@ bool Lexer::next_line() {
             if (!m_input_stream->good()) {
                 m_input_stream_file.reset();
                 m_input_stream = nullptr;
-                dmz_unreachable("unexpected cannot open " + m_source_name + " " + std::strerror(errno));
+                dmz_unreachable((SourceLocation{.file_name = m_source_name, .line = 0, .col = 0}),
+                                "unexpected cannot open " + m_source_name + " " + std::strerror(errno));
             }
         } else {
-            dmz_unreachable("Lexer was not initialized with a valid input stream.");
+            dmz_unreachable((SourceLocation{.file_name = m_source_name, .line = 0, .col = 0}),
+                            "Lexer was not initialized with a valid input stream.");
         }
     }
 

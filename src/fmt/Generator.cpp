@@ -86,7 +86,7 @@ void Generator::generate(const Node& node, Wrap wrap) {
         text(" ");
     } else {
         node.dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(SourceLocation{}, "TODO");
     }
 }
 

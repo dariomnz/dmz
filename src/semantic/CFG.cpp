@@ -86,7 +86,7 @@ int CFGBuilder::insert_stmt(const ResolvedStmt &stmt, int block) {
         return insert_continue_stmt(*continueStmt, block);
     }
     stmt.dump();
-    dmz_unreachable("unexpected expression");
+    dmz_unreachable(stmt.location, "unexpected statement");
 }
 
 int CFGBuilder::insert_return_stmt(const ResolvedReturnStmt &stmt, int block) {

@@ -138,7 +138,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t);
     if (op == TokenType::op_quest_mark) return "?";
     if (op == TokenType::op_assign) return "=";
 
-    dmz_unreachable("unexpected operator " + std::to_string(static_cast<int>(op)));
+    dmz_unreachable(SourceLocation{}, "unexpected operator " + std::to_string(static_cast<int>(op)));
 }
 
 const static std::unordered_map<std::string, TokenType> keywords = {

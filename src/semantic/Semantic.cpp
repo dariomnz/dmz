@@ -331,7 +331,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         auto decl = lookup(type.location, declRefType->identifier);
         if (!decl) {
             dump_scopes();
-            return report(declRefType->location, "symbol '" + declRefType->identifier + "' not found");
+            return report(declRefType->location, "type symbol '" + declRefType->identifier + "' not found");
         }
         if (dynamic_cast<ResolvedDeclStmt *>(decl) || dynamic_cast<ResolvedParamDecl *>(decl) ||
             dynamic_cast<ResolvedStructDecl *>(decl) || dynamic_cast<ResolvedUnionDecl *>(decl) ||
@@ -358,7 +358,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             }
         }
         decl->dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(decl->location, "TODO");
     }
     if (auto vecType = dynamic_cast<const TypeSimd *>(&type)) {
         return resolve_simd_type(*vecType);
@@ -385,7 +385,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     }
 
     type.dump();
-    dmz_unreachable("TODO");
+    dmz_unreachable(type.location, "TODO");
     (void)retPtr;
 }
 
@@ -475,7 +475,7 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     }
     (void)retPtr;
     type.dump();
-    dmz_unreachable("TODO");
+    dmz_unreachable(type.location, "TODO");
 }
 
 std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::path sourcePath, bool needMain) {
@@ -653,7 +653,8 @@ void Sema::mark_needed(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool b
     }
 
     if (worklist.empty())
-        dmz_unreachable("This should not happend. There are no main, __builtin_main or __builtin_main_test");
+        dmz_unreachable(SourceLocation{},
+                        "This should not happend. There are no main, __builtin_main or __builtin_main_test");
 
     while (worklist.size() > 0) {
         auto curr = worklist.front();
@@ -675,7 +676,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
     } else if (auto resfn = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&fn)) {
         block = resfn->body.get();
     } else {
-        dmz_unreachable("unexpected function");
+        dmz_unreachable(fn.location, "unexpected function");
     }
     CFG cfg = CFGBuilder().build(*block);
 
@@ -849,7 +850,7 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
         }
         if (!dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             decl->dump();
-            dmz_unreachable("unexpected declaration");
+            dmz_unreachable(decl->location, "unexpected declaration");
         }
     }
 
@@ -912,7 +913,7 @@ void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &decl
                    dynamic_cast<const ResolvedErrorDecl *>(e.decl) || dynamic_cast<const ResolvedTestDecl *>(e.decl)) {
         } else {
             e.decl->dump(0, true);
-            dmz_unreachable("TODO: unexpected declaration");
+            dmz_unreachable(e.decl->location, "TODO: unexpected declaration");
         }
     }
 }
@@ -1060,5 +1061,92 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
             }
         }
     }
+}
+
+ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::string &fnName) {
+    debug_func(fnName);
+    auto it = m_funcBuiltins.find(fnName);
+    if (it != m_funcBuiltins.end() && it->second != nullptr) {
+        debug_msg("found");
+        return it->second;
+    }
+
+    if (fnName == "@call") {
+        SourceLocation loc = SourceLocation::builtin();
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "fn", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "args", genericType->clone(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(genericType->clone());
+        paramsTypes.emplace_back(genericType->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(loc, "@call", std::move(fnType), std::move(params), true);
+        auto ret = funcDecl.get();
+        add_dependency(ret);
+        it->second = ret;
+        m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        debug_msg("created @call");
+        return ret;
+    }
+    debug_msg("return null");
+    return nullptr;
+}
+
+ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call,
+                                                              ResolvedBuiltinFunctionDecl &resolvedCallee,
+                                                              std::vector<ptr<ResolvedExpr>> &resolvedArguments) {
+    // Return real builtin function type to check params afterwards
+    if (resolvedCallee.identifier == "@call") {
+        auto &fnParam = resolvedArguments[0];
+        auto &argsParam = resolvedArguments[1];
+
+        // fn is a pointer to a function
+        ptr<ResolvedTypeFunction> fnType = nullptr;
+        if (auto *fnPtrType = dynamic_cast<const ResolvedTypePointer *>(fnParam->type.get())) {
+            if (auto *paramFnType = dynamic_cast<const ResolvedTypeFunction *>(fnPtrType->pointerType.get())) {
+                fnType = castPtr<ResolvedTypeFunction>(paramFnType->clone());
+            } else {
+                return report(fnParam->location, "@call: fn is not a pointer to a function");
+            }
+        } else if (fnParam->type->kind != ResolvedTypeKind::Generic) {
+            return report(fnParam->location, "@call: fn is not a pointer to a function");
+        }
+        // args is a touple with exactly the same number of params than the function
+        ptr<ResolvedTypeStruct> argsTupleType = nullptr;
+        if (auto *tupleType = dynamic_cast<const ResolvedTypeStruct *>(argsParam->type.get())) {
+            if (tupleType->decl && tupleType->decl->isTuple) {
+                if (fnType) {
+                    if (tupleType->decl->fields.size() == fnType->paramsTypes.size()) {
+                        if (auto *struInit = dynamic_cast<ResolvedStructInstantiationExpr *>(argsParam.get())) {
+                            for (size_t i = 0; i < struInit->fieldInitializers.size(); i++) {
+                                perform_implicit_cast(struInit->fieldInitializers[i]->initializer,
+                                                      *fnType->paramsTypes[i]);
+                            }
+                        }
+                        argsTupleType = castPtr<ResolvedTypeStruct>(tupleType->clone());
+                    } else {
+                        return report(argsParam->location, "@call: tuple size does not match function params size");
+                    }
+                } else {
+                    argsTupleType = castPtr<ResolvedTypeStruct>(tupleType->clone());
+                }
+            } else {
+                return report(argsParam->location, "@call: args is not a tuple");
+            }
+        } else if (argsParam->type->kind != ResolvedTypeKind::Generic) {
+            return report(argsParam->location, "@call: args is not a tuple");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(fnParam->type->clone());
+        paramsTypes.emplace_back(argsParam->type->clone());
+        auto retReturnType = fnType ? fnType->returnType->clone() : makePtr<ResolvedTypeGeneric>(call.location, nullptr);
+        auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                                 std::move(retReturnType));
+        call.type = ret->clone();
+        return ret;
+    }
+    return report(call.location, "unknown builtin function");
 }
 }  // namespace DMZ

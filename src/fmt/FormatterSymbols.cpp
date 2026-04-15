@@ -52,7 +52,7 @@ int Node::width(std::unordered_set<int>& wrapped) const {
         return 0;
     } else {
         dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(SourceLocation{}, "TODO");
     }
 }
 

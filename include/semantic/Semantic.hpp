@@ -1,7 +1,6 @@
 #pragma once
 
 #include "DMZPCH.hpp"
-#include "DMZPCHSymbols.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
 
@@ -49,7 +48,11 @@ class Sema {
     std::vector<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
-    std::unordered_map<std::string, ResolvedSimdBuiltinFunctionDecl *> m_vectorBuiltins;
+    std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_vectorBuiltins;
+
+    std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
+        {"@call", nullptr},
+    };
 
    public:
     explicit Sema(Driver &driver, ptr<ModuleDecl> ast)
@@ -167,6 +170,10 @@ class Sema {
     ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
+    ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const std::string &fnName);
+    ptr<ResolvedTypeFunction> resolve_builtin_function_expr(ResolvedExpr &callee,
+                                                            ResolvedBuiltinFunctionDecl &resolvedCallee,
+                                                            std::vector<ptr<ResolvedExpr>> &resolvedArguments);
     bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
@@ -176,9 +183,8 @@ class Sema {
     ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
     ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
-    ResolvedSimdBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr,
-                                                          const ResolvedExpr &resolvedBase,
-                                                          const ResolvedTypeSimd &vecType);
+    ResolvedBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr, const ResolvedExpr &resolvedBase,
+                                                      const ResolvedTypeSimd &vecType);
     ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
     ptr<ResolvedSimdSplatExpr> resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr);
     ptr<ResolvedSimdIotaExpr> resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr);

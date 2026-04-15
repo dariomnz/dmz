@@ -54,6 +54,7 @@ struct Expr : public Stmt {
 };
 
 struct Decoration : public Expr, public Decl {
+    using Expr::location;
     Decoration(SourceLocation location) : Expr(location), Decl(location, true, "") {}
 
     void dump(size_t level = 0) const override;

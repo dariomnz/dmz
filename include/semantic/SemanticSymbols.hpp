@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DMZPCH.hpp"
-#include "DMZPCHSymbols.hpp"
+#include "parser/ParserSymbols.hpp"
 #include "SemanticSymbolsTypes.hpp"
 #include "lexer/Lexer.hpp"
 
@@ -32,6 +32,7 @@ struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
     virtual ~ResolvedExpr() = default;
 
     void dump_constant_value(size_t level) const;
+    virtual bool isLiteral() const { return false; }
 };
 
 struct ResolvedDecl : public ConstantValueContainer<int> {
@@ -270,7 +271,8 @@ struct ResolvedFuncDecl : public ResolvedDependencies {
           params(std::move(params)) {}
 
     ResolvedTypeFunction *getFnType() const {
-        if (type->kind != ResolvedTypeKind::Function) dmz_unreachable("unexpected type in function " + type->to_str());
+        if (type->kind != ResolvedTypeKind::Function)
+            dmz_unreachable(location, "unexpected type in function " + type->to_str());
         return static_cast<ResolvedTypeFunction *>(type.get());
     }
 };
@@ -367,10 +369,10 @@ struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
-struct ResolvedSimdBuiltinFunctionDecl : public ResolvedMemberFunctionDecl {
-    ResolvedSimdBuiltinFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
-                                    ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params, bool isStatic)
-        : ResolvedMemberFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), nullptr, nullptr,
+struct ResolvedBuiltinFunctionDecl : public ResolvedMemberFunctionDecl {
+    ResolvedBuiltinFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
+                                std::vector<ptr<ResolvedParamDecl>> params, bool isStatic)
+        : ResolvedMemberFunctionDecl(location, true, identifier, std::move(type), std::move(params), nullptr, nullptr,
                                      nullptr, isStatic) {}
 };
 
@@ -498,6 +500,7 @@ struct ResolvedIntLiteral : public ResolvedExpr {
     ResolvedIntLiteral(SourceLocation location, int value)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 32)), value(value) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
@@ -507,6 +510,7 @@ struct ResolvedFloatLiteral : public ResolvedExpr {
     ResolvedFloatLiteral(SourceLocation location, double value)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Float, 64)), value(value) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
@@ -516,6 +520,7 @@ struct ResolvedCharLiteral : public ResolvedExpr {
     ResolvedCharLiteral(SourceLocation location, char value)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 8)), value(value) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
@@ -525,6 +530,7 @@ struct ResolvedBoolLiteral : public ResolvedExpr {
     ResolvedBoolLiteral(SourceLocation location, bool value)
         : ResolvedExpr(location, makePtr<ResolvedTypeBool>(location)), value(value) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
@@ -536,6 +542,7 @@ struct ResolvedStringLiteral : public ResolvedExpr {
                                      location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 8))),
           value(value) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
@@ -543,6 +550,7 @@ struct ResolvedNullLiteral : public ResolvedExpr {
     ResolvedNullLiteral(SourceLocation location)
         : ResolvedExpr(location, makePtr<ResolvedTypePointer>(location, makePtr<ResolvedTypeVoid>(location))) {}
 
+    bool isLiteral() const override { return true; }
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 

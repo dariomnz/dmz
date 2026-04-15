@@ -36,9 +36,7 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl, bool* is_this = n
     else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&decl))
         type = SemanticTokenType::Type;
 
-    if (decl.type->kind == ResolvedTypeKind::Generic)
-        type = SemanticTokenType::Type;
-    else if (decl.type->kind == ResolvedTypeKind::StructDecl)
+    if (decl.type->kind == ResolvedTypeKind::StructDecl)
         type = SemanticTokenType::Type;
     else if (decl.type->kind == ResolvedTypeKind::Function)
         type = SemanticTokenType::Function;

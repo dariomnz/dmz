@@ -1,5 +1,6 @@
 #include "Debug.hpp"
 #include "Stats.hpp"
+#include "codegen/Codegen.hpp"
 #include "driver/Driver.hpp"
 
 #pragma GCC diagnostic push

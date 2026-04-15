@@ -364,7 +364,7 @@ ptr<ErrorDecl> Parser::parse_error_decl() {
 
 ptr<ModuleDecl> Parser::parse_module_decl() {
     debug_func("");
-    dmz_unreachable("TODO: think if permit declaration of modules");
+    dmz_unreachable(m_nextToken.loc, "TODO: think if permit declaration of modules");
     // auto location = m_nextToken.loc;
     // matchOrReturn(TokenType::kw_module, "expected 'module'");
     // eat_next_token();  // eat module

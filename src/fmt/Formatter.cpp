@@ -20,7 +20,7 @@ ptr<Node> Formatter::fmt_decoration(const Decoration& decl) {
     }
 
     decl.dump();
-    dmz_unreachable("TODO");
+    dmz_unreachable(decl.location, "TODO");
 }
 
 ptr<Node> Formatter::fmt_comment(const Comment& decl) {

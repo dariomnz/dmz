@@ -89,7 +89,7 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
     } else {
         println(expr.location.to_string());
         expr.dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(expr.location, "TODO");
     }
     return node;
 }

@@ -143,7 +143,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
         return generate_typeinfo_expr(*typeinfoExpr);
     }
     expr.dump();
-    dmz_unreachable("unexpected expression");
+    dmz_unreachable(expr.location, "unexpected expression");
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
@@ -163,6 +163,11 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
             }
         }
     }
+    if (auto *declRef = dynamic_cast<const ResolvedDeclRefExpr *>(call.callee.get())) {
+        if (auto *builtin = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&declRef->decl)) {
+            return generate_builtin_call(*builtin, call);
+        }
+    }
     llvm::Value *callee = generate_expr(*call.callee);
     ResolvedTypeFunction *fnType = dynamic_cast<ResolvedTypeFunction *>(call.callee->type.get());
     if (!fnType) {
@@ -170,23 +175,18 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
             if (auto funcType = dynamic_cast<ResolvedTypeFunction *>(ptrType->pointerType.get())) {
                 fnType = funcType;
             } else {
-                dmz_unreachable("unexpected type '" + ptrType->pointerType->to_str() + "', expected function");
+                dmz_unreachable(call.callee->location,
+                                "unexpected type '" + ptrType->pointerType->to_str() + "', expected function");
             }
         } else {
-            dmz_unreachable("unexpected type '" + call.callee->type->to_str() + "', expected pointer to function");
+            dmz_unreachable(call.callee->location,
+                            "unexpected type '" + call.callee->type->to_str() + "', expected pointer to function");
         }
     }
 
     if (!fnType) {
-        dmz_unreachable("unexpected type in callee '" + call.callee->type->to_str() + "'");
+        dmz_unreachable(call.callee->location, "unexpected type in callee '" + call.callee->type->to_str() + "'");
     }
-
-    // // Implicitly clear error trace if this is a "root" call (non-failable calling failable)
-    // if (fnType->returnType->kind == ResolvedTypeKind::Optional) {
-    //     if (m_currentFunction && m_currentFunction->getFnType()->returnType->kind != ResolvedTypeKind::Optional) {
-    //         generate_error_trace_clear();
-    //     }
-    // }
 
     bool isReturningStruct = fnType->returnType->generate_struct();
     llvm::Value *callRetVal = nullptr;
@@ -227,9 +227,9 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
             else if (typeNum->numberKind == ResolvedNumberKind::Float)
                 return m_builder.CreateFNeg(rhs);
             else
-                dmz_unreachable("not expected type in op_minus");
+                dmz_unreachable(unop.location, "not expected type in op_minus");
         } else {
-            dmz_unreachable("not expected type in op_minus");
+            dmz_unreachable(unop.location, "not expected type in op_minus");
         }
     }
 
@@ -242,12 +242,12 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
             } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
                 ret = m_builder.CreateFAdd(rhs_value, llvm::ConstantFP::get(generate_type(*typeNum), 1));
             } else {
-                dmz_unreachable("not expected type in op_plusplus");
+                dmz_unreachable(unop.location, "not expected type in op_plusplus");
             }
             store_value(ret, rhs, *typeNum, *typeNum);
             return rhs_value;
         } else {
-            dmz_unreachable("not expected type in op_plusplus");
+            dmz_unreachable(unop.location, "not expected type in op_plusplus");
         }
     }
     if (unop.op == TokenType::op_minusminus) {
@@ -259,18 +259,18 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
             } else if (typeNum->numberKind == ResolvedNumberKind::Float) {
                 ret = m_builder.CreateFSub(rhs_value, llvm::ConstantFP::get(generate_type(*typeNum), 1));
             } else {
-                dmz_unreachable("not expected type in op_minusminus");
+                dmz_unreachable(unop.location, "not expected type in op_minusminus");
             }
             store_value(ret, rhs, *typeNum, *typeNum);
             return rhs_value;
         } else {
-            dmz_unreachable("not expected type in op_minusminus");
+            dmz_unreachable(unop.location, "not expected type in op_minusminus");
         }
     }
     if (unop.op == TokenType::op_excla_mark) return m_builder.CreateNot(to_bool(rhs, *unop.operand->type));
 
     unop.dump();
-    dmz_unreachable("unknown unary op");
+    dmz_unreachable(unop.location, "unknown unary op");
     return nullptr;
 }
 
@@ -358,7 +358,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         if (!typeNum) {
             binop.lhs->type->dump();
             println(binop.location);
-            dmz_unreachable("not expected type in binop");
+            dmz_unreachable(binop.location, "not expected type in binop");
         }
     }
     if (binop.op == TokenType::op_plus || binop.op == TokenType::op_plus_equal) {
@@ -367,7 +367,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFAdd(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_plus");
+            dmz_unreachable(binop.location, "not expected type in op_plus");
     }
     if (binop.op == TokenType::op_minus || binop.op == TokenType::op_minus_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
@@ -375,7 +375,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFSub(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_minus");
+            dmz_unreachable(binop.location, "not expected type in op_minus");
     }
     if (binop.op == TokenType::asterisk || binop.op == TokenType::op_asterisk_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
@@ -383,7 +383,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFMul(lhs, rhs);
         else
-            dmz_unreachable("not expected type in asterisk");
+            dmz_unreachable(binop.location, "not expected type in asterisk");
     }
     if (binop.op == TokenType::op_div || binop.op == TokenType::op_div_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -393,7 +393,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFDiv(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_div");
+            dmz_unreachable(binop.location, "not expected type in op_div");
     }
     if (binop.op == TokenType::op_percent) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -403,7 +403,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFRem(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_percent");
+            dmz_unreachable(binop.location, "not expected type in op_percent");
     }
     if (binop.op == TokenType::op_less) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -413,7 +413,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpULT(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_less");
+            dmz_unreachable(binop.location, "not expected type in op_less");
     }
     if (binop.op == TokenType::op_less_eq) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -423,7 +423,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpULE(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_less");
+            dmz_unreachable(binop.location, "not expected type in op_less");
     }
     if (binop.op == TokenType::op_more) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -433,7 +433,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpUGT(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_more");
+            dmz_unreachable(binop.location, "not expected type in op_more");
     }
     if (binop.op == TokenType::op_more_eq) {
         if (typeNum->numberKind == ResolvedNumberKind::Int)
@@ -443,7 +443,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpUGE(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_more_eq");
+            dmz_unreachable(binop.location, "not expected type in op_more_eq");
     }
     if (binop.op == TokenType::op_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
@@ -451,7 +451,7 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpUEQ(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_equal");
+            dmz_unreachable(binop.location, "not expected type in op_equal");
     }
     if (binop.op == TokenType::op_not_equal) {
         if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
@@ -459,11 +459,11 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         else if (typeNum->numberKind == ResolvedNumberKind::Float)
             return m_builder.CreateFCmpUNE(lhs, rhs);
         else
-            dmz_unreachable("not expected type in op_not_equal");
+            dmz_unreachable(binop.location, "not expected type in op_not_equal");
     }
 
     binop.dump();
-    dmz_unreachable("unexpected binary operator");
+    dmz_unreachable(binop.location, "unexpected binary operator");
     return nullptr;
 }
 
@@ -506,7 +506,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
             if (fnType->fnDecl) {
                 return generate_function_decl(*fnType->fnDecl);
             } else {
-                dmz_unreachable("TODO");
+                dmz_unreachable(dre.location, "TODO");
             }
         } else {
             auto ret = m_declarations[declStmt->varDecl.get()];
@@ -514,7 +514,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
                 ret = m_declarations[declStmt];
                 if (!ret) {
                     declStmt->dump();
-                    dmz_unreachable("TODO");
+                    dmz_unreachable(dre.location, "TODO");
                 }
             }
             return keepPointer ? ret : load_value(ret, *declStmt->type);
@@ -568,7 +568,7 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
             if (fnType->fnDecl) {
                 return generate_function_decl(*fnType->fnDecl);
             } else {
-                dmz_unreachable("TODO");
+                dmz_unreachable(memberExpr.location, "TODO");
             }
         } else {
             auto ret = m_declarations[declStmt->varDecl.get()];
@@ -576,7 +576,7 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
                 ret = m_declarations[declStmt];
                 if (!ret) {
                     declStmt->dump();
-                    dmz_unreachable("TODO");
+                    dmz_unreachable(memberExpr.location, "TODO");
                 }
             }
             return keepPointer ? ret : load_value(ret, *declStmt->type);
@@ -584,7 +584,7 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
     } else {
         memberExpr.member.dump();
         report(memberExpr.location, "unexpected member expresion");
-        dmz_unreachable("Unexpected member expresion");
+        dmz_unreachable(memberExpr.location, "Unexpected member expresion");
     }
     return nullptr;
 }
@@ -610,6 +610,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
     } else if (arrayAtExpr.array->type->kind == ResolvedTypeKind::Simd) {
         if (keepPointer)
             dmz_unreachable(
+                arrayAtExpr.location,
                 "This should not happend, simd types are not meant to be used as base of array at expressions");
         return m_builder.CreateExtractElement(generate_expr(*arrayAtExpr.array), generate_expr(*arrayAtExpr.index));
         // type = generate_type(*arrayAtExpr.array->type);
@@ -622,7 +623,7 @@ llvm::Value *Codegen::generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtE
         type = generate_type(*arrayAtExpr.type);
         idxs = {generate_expr(*arrayAtExpr.index)};
     } else {
-        dmz_unreachable("TODO");
+        dmz_unreachable(arrayAtExpr.location, "TODO");
     }
     llvm::Value *field = m_builder.CreateGEP(type, base, idxs);
     keepPointer |= arrayAtExpr.type->generate_struct();
@@ -642,17 +643,36 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     }
     llvm::Value *tmp = allocate_stack_variable(sie.location, tmpName, *sie.type);
 
+    llvm::Type *structType = generate_type(*sie.type, true);
+    llvm::Value *structVal = llvm::ConstantAggregateZero::get(structType);
+    bool canOptimize = true;
+    if (sie.fieldInitializers.size() == 0) canOptimize = false;
+    for (auto &&initStmt : sie.fieldInitializers) {
+        if (store_value_generate_memcpy(*initStmt->initializer->type) || !initStmt->initializer->isLiteral()) {
+            canOptimize = false;
+            break;
+        }
+    }
+
     std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
     for (auto &&initStmt : sie.fieldInitializers) {
         if (initStmt->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
         initializerVals[&initStmt->field] = generate_expr(*initStmt->initializer);
+        if (canOptimize) {
+            structVal = m_builder.CreateInsertValue(structVal, initializerVals[&initStmt->field],
+                                                    (unsigned)initStmt->field.index);
+        }
     }
 
-    for (size_t i = 0; i < sie.structDecl.fields.size(); i++) {
-        auto &field = sie.structDecl.fields[i];
-        if (sie.fieldInitializers[i]->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
-        llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*sie.type), tmp, i);
-        store_value(initializerVals[field.get()], dst, *field->type, *field->type);
+    if (canOptimize) {
+        m_builder.CreateStore(structVal, tmp);
+    } else {
+        for (size_t i = 0; i < sie.structDecl.fields.size(); i++) {
+            auto &field = sie.structDecl.fields[i];
+            if (sie.fieldInitializers[i]->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
+            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*sie.type), tmp, i);
+            store_value(initializerVals[field.get()], dst, *field->type, *field->type);
+        }
     }
 
     return tmp;
@@ -692,7 +712,7 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
     auto typeArray = dynamic_cast<const ResolvedTypeArray *>(aie.type.get());
     if (!typeArray) {
         aie.dump();
-        dmz_unreachable("unexpected type in array instantiation");
+        dmz_unreachable(aie.location, "unexpected type in array instantiation");
     }
     std::string varName = "array." + typeArray->to_str() + ".tmp";
     llvm::Value *tmp = allocate_stack_variable(aie.location, varName, *typeArray);
@@ -902,7 +922,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
     llvm::Value *return_value = allocate_stack_variable(orelseErrorExpr.location, "tmp.orelse", *orelseErrorExpr.type);
 
     auto typeOptional = dynamic_cast<const ResolvedTypeOptional *>(orelseErrorExpr.errorToOrElse->type.get());
-    if (!typeOptional) dmz_unreachable("unexpected type");
+    if (!typeOptional) dmz_unreachable(orelseErrorExpr.location, "unexpected type");
     auto error_expr_value_ptr =
         m_builder.CreateStructGEP(generate_type(*orelseErrorExpr.errorToOrElse->type), error_struct, 0);
     auto error_expr_value = load_value(error_expr_value_ptr, *typeOptional->optionalType);
@@ -937,7 +957,7 @@ llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr)
     if (typeId) {
         return m_builder.getInt32(typeId.value());
     } else {
-        dmz_unreachable("this should not happend");
+        dmz_unreachable(typeidExpr.location, "this should not happend");
         return m_builder.getInt32(-1);
     }
 }
@@ -945,7 +965,7 @@ llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr)
 llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const ResolvedExpr &from,
                                           const ResolvedRangeExpr &range) {
     const ResolvedTypeSlice *sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type);
-    if (!sliceType) dmz_unreachable("unexpected type " + type.to_str());
+    if (!sliceType) dmz_unreachable(from.location, "unexpected type " + type.to_str());
     llvm::Value *ptr = generate_expr(from, true);
     if (from.type->kind == ResolvedTypeKind::Array) {
         // ptr = ptr;
@@ -961,8 +981,8 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
 
     // ptr + sizeof(type)
     if (!range.startExpr->type->compare(*range.endExpr->type)) {
-        dmz_unreachable("unexpected types in range '" + range.startExpr->type->to_str() + "' '" +
-                        range.endExpr->type->to_str() + "'");
+        dmz_unreachable(range.location, "unexpected types in range '" + range.startExpr->type->to_str() + "' '" +
+                                            range.endExpr->type->to_str() + "'");
     }
     auto startRange = generate_expr(*range.startExpr);
     auto endRange = generate_expr(*range.endExpr);
@@ -985,7 +1005,7 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
 llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr) {
     auto targetType = typeinfoExpr.typeinfoExpr->type.get();
     auto returnStructPtrType = dynamic_cast<const ResolvedTypePointer *>(typeinfoExpr.type.get());
-    if (!returnStructPtrType) dmz_unreachable("unreachable: " + typeinfoExpr.type->to_str());
+    if (!returnStructPtrType) dmz_unreachable(typeinfoExpr.location, "unreachable: " + typeinfoExpr.type->to_str());
     auto returnStructType = returnStructPtrType->pointerType.get();
     // auto llvmUnionType = static_cast<llvm::StructType *>(generate_type(*returnStructType));
     llvm::Type *sizeTy = llvm::Type::getIntNTy(*m_context, m_module->getDataLayout().getPointerSizeInBits());
@@ -1000,7 +1020,7 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
         unionDecl = ut->decl;
     else if (auto ut = dynamic_cast<const ResolvedTypeUnionDecl *>(returnStructType))
         unionDecl = ut->decl;
-    if (!unionDecl) dmz_unreachable("TypeInfo must be a union");
+    if (!unionDecl) dmz_unreachable(typeinfoExpr.location, "TypeInfo must be a union");
 
     uint64_t maxSize = 0;
     const llvm::DataLayout &dl = m_module->getDataLayout();
@@ -1191,7 +1211,7 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
             return m_builder.CreateXorReduce(simdVal);
         }
     }
-    dmz_unreachable("unknown simd builtin");
+    dmz_unreachable(call.location, "unknown simd builtin");
     return nullptr;
 }
 
@@ -1252,7 +1272,7 @@ llvm::Value *Codegen::generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr)
     llvm::Value *val = generate_expr(*expr.value);
     auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
     if (!vecType) {
-        dmz_unreachable("unexpected type in simdsplat");
+        dmz_unreachable(expr.location, "unexpected type in simdsplat");
     }
     val = cast_to(val, *expr.value->type, *vecType->simdType);
     return m_builder.CreateVectorSplat(vecType->simdSize, val);
@@ -1262,11 +1282,11 @@ llvm::Value *Codegen::generate_simdiota_expr(const ResolvedSimdIotaExpr &expr) {
     debug_func("");
     auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
     if (!vecType) {
-        dmz_unreachable("unexpected type in simdiota");
+        dmz_unreachable(expr.location, "unexpected type in simdiota");
     }
     auto numType = dynamic_cast<const ResolvedTypeNumber *>(vecType->simdType.get());
     if (!numType) {
-        dmz_unreachable("unexpected type in simdiota");
+        dmz_unreachable(expr.location, "unexpected type in simdiota");
     }
     auto llvmVecType = generate_type(*expr.type);
     auto llvmNumType = generate_type(*numType);
@@ -1360,7 +1380,7 @@ llvm::Value *Codegen::generate_atomic_rmw(const ResolvedAtomicRmwExpr &expr) {
             llvmOp = llvm::AtomicRMWInst::Xchg;
             break;
         default:
-            dmz_unreachable("unsupported atomic RMW operator");
+            dmz_unreachable(expr.location, "unsupported atomic RMW operator");
     }
     return m_builder.CreateAtomicRMW(llvmOp, ptr, val, llvm::MaybeAlign(align),
                                      llvm::AtomicOrdering::SequentiallyConsistent);

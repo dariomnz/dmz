@@ -10,19 +10,13 @@ namespace DMZ {
 #define matchOrReturn(tok, msg) \
     if (m_nextToken.type != tok) return report(m_nextToken.loc, msg);
 
-#define dmz_unreachable(msg) ::DMZ::__internal_unreachable(msg, __FILE__, __LINE__)
-
-[[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(std::string msg, const char* source, int line) {
-    std::stringstream ss;
-    ss << "UNREACHABLE at " << source << ':' << line << ": " << msg;
-    std::string error_msg = ss.str();
-    std::cerr << error_msg << std::endl;
-    throw std::runtime_error(error_msg);
-}
+#define dmz_unreachable(loc, msg) ::DMZ::__internal_unreachable((loc), (msg), __FILE__, __LINE__)
 
 struct SourceLocation {
     std::string file_name = {};
     size_t line = 0, col = 0, len = 1;
+
+    static SourceLocation builtin() { return SourceLocation{"<builtin>", 0, 0, 1}; }
 
     std::string to_string() const {
         std::stringstream os;
@@ -59,6 +53,22 @@ struct SourceLocation {
     return "";
 }
 
+[[noreturn]] [[maybe_unused]] static inline void __internal_unreachable(const SourceLocation& loc, std::string msg,
+                                                                        const char* source, int line) {
+    std::stringstream ss;
+    ss << "UNREACHABLE at " << source << ':' << line << ": " << msg;
+    if (!loc.file_name.empty()) {
+        ss << "\n" << loc;
+        std::string line_str = get_file_line(loc.file_name, loc.line);
+        if (!line_str.empty()) {
+            ss << "\n" << line_str;
+        }
+    }
+    std::string error_msg = ss.str();
+    std::cerr << error_msg << std::endl;
+    throw std::runtime_error(error_msg);
+}
+
 [[maybe_unused]] static inline std::nullptr_t report(SourceLocation loc, std::string_view message,
                                                      bool isWarning = false) {
     static std::mutex reportMutex;
@@ -83,8 +93,10 @@ struct SourceLocation {
         std::cerr << " " << loc.line << " | ";
         if (is_terminal) {
             std::string before = line.substr(0, std::min(loc.col, line.size()));
-            std::string error_part = (loc.col < line.size()) ? line.substr(loc.col, std::min(loc.len, line.size() - loc.col)) : "";
-            std::string after = (loc.col + error_part.size() < line.size()) ? line.substr(loc.col + error_part.size()) : "";
+            std::string error_part =
+                (loc.col < line.size()) ? line.substr(loc.col, std::min(loc.len, line.size() - loc.col)) : "";
+            std::string after =
+                (loc.col + error_part.size() < line.size()) ? line.substr(loc.col + error_part.size()) : "";
             std::cerr << before << (isWarning ? yellow : red) << bold << error_part << reset << after << '\n';
         } else {
             std::cerr << line << '\n';
@@ -191,8 +203,8 @@ overload(Ts...) -> overload<Ts...>;
 [[maybe_unused]] static std::optional<std::string> str_from_source(std::string_view literal) {
     std::string res = "";
     static const std::unordered_map<char, char> specialChars = {
-        {'n', '\n'}, {'t', '\t'}, {'r', '\r'},  {'v', '\v'},  {'b', '\b'},  {'f', '\f'},
-        {'a', '\a'}, {'\\', '\\'}, {'\"', '\"'}, {'\'', '\''},
+        {'n', '\n'}, {'t', '\t'}, {'r', '\r'},  {'v', '\v'},  {'b', '\b'},
+        {'f', '\f'}, {'a', '\a'}, {'\\', '\\'}, {'\"', '\"'}, {'\'', '\''},
     };
     for (size_t i = 0; i < literal.length(); ++i) {
         if (literal[i] == '\\') {
@@ -312,7 +324,7 @@ std::vector<std::unique_ptr<to>> move_vector_ptr(std::vector<std::unique_ptr<fro
         if (auto ptr = dynamic_cast<to*>(ptr_derived.release())) {
             target_vector.emplace_back(ptr);
         } else {
-            dmz_unreachable("unexpected error, cannot convert in move_vector_ptr");
+            dmz_unreachable(SourceLocation{}, "unexpected error, cannot convert in move_vector_ptr");
         }
     }
 

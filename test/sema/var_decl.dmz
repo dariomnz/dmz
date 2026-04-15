@@ -20,6 +20,6 @@ fn main() -> void {
 
     let x5: i32 = bar();
 
-    // CHECK: [[# @LINE + 1 ]]:19: error: symbol 'y' not found
+    // CHECK: [[# @LINE + 1 ]]:19: error: expression symbol 'y' not found
     let x6: i32 = y;
 }

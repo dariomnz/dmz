@@ -106,8 +106,11 @@ class Codegen {
     llvm::Value *generate_for_stmt(const ResolvedForStmt &stmt);
     llvm::Value *generate_decl_stmt(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_assignment(const ResolvedAssignment &stmt);
+
+    bool store_value_generate_memcpy(const ResolvedType &from);
     llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from, const ResolvedType &to);
     llvm::Value *load_value(llvm::Value *v, const ResolvedType &type);
+
     llvm::Value *generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool keepPointer);
     llvm::Value *generate_member_expr(const ResolvedMemberExpr &memberExpr, bool keepPointer);
     llvm::Value *generate_array_at_expr(const ResolvedArrayAtExpr &arrayAtExpr, bool keepPointer);
@@ -152,6 +155,8 @@ class Codegen {
     llvm::Value *generate_error_trace_get_idx();
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
     llvm::Value *generate_get_error_trace();
+
+    llvm::Value *generate_builtin_call(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

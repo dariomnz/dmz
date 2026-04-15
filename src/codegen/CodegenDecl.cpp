@@ -65,13 +65,16 @@ llvm::FunctionType *Codegen::generate_function_type(const ResolvedTypeFunction &
 
 llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &functionDecl) {
     debug_func(functionDecl.name());
+    if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&functionDecl)) {
+        return nullptr;
+    }
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             debug_msg("Function specialization decl: " << func->name());
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
             if (!cast_func) {
                 func->dump();
-                dmz_unreachable("internal error: unexpected declaration in specializations");
+                dmz_unreachable(functionDecl.location, "internal error: unexpected declaration in specializations");
             }
             if (!func->is_needed(m_noRemoveUnused)) continue;
             if (func->specializedTypes->is_generic()) continue;
@@ -126,7 +129,7 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     debug_func(functionDecl.name() << " " << functionDecl.type->to_str());
-    if (dynamic_cast<const ResolvedSimdBuiltinFunctionDecl *>(&functionDecl)) {
+    if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&functionDecl)) {
         return;
     }
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
@@ -134,7 +137,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
             if (!cast_func) {
                 func->dump();
-                dmz_unreachable("internal error: unexpected declaration in specializations");
+                dmz_unreachable(functionDecl.location, "internal error: unexpected declaration in specializations");
             }
 
             if (!func->is_needed(m_noRemoveUnused)) continue;
@@ -149,7 +152,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     m_currentFunction = &functionDecl;
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
-    if (!function) dmz_unreachable("internal error no function '" + funcName + "'");
+    if (!function) dmz_unreachable(functionDecl.location, "internal error no function '" + funcName + "'");
 
     ptr<DebugScopeRAII> debugScope = nullptr;
     if (m_debugSymbols) {
@@ -187,7 +190,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
                 }
             } else {
                 lambdaFunc->dump();
-                dmz_unreachable("unreachable");
+                dmz_unreachable(lambdaFunc->location, "unreachable");
             }
         }
     }
@@ -250,7 +253,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     }
     if (!body) {
         functionDecl.dump();
-        dmz_unreachable("unexpected void body");
+        dmz_unreachable(functionDecl.location, "unexpected void body");
     }
     generate_block(*body);
 
@@ -472,7 +475,7 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
             continue;
         } else {
             decl->dump();
-            dmz_unreachable("unexpected top level in module declaration");
+            dmz_unreachable(decl->location, "unexpected top level in module declaration");
         }
     }
 
@@ -493,7 +496,7 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
             continue;
         } else {
             decl->dump();
-            dmz_unreachable("unexpected top level in module declaration");
+            dmz_unreachable(decl->location, "unexpected top level in module declaration");
         }
     }
 }
@@ -511,7 +514,7 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
             generate_union_fields(*ud);
         } else {
             decl->dump();
-            dmz_unreachable("unexpected top level in module declaration");
+            dmz_unreachable(decl->location, "unexpected top level in module declaration");
         }
     }
     for (auto &&decl : declarations) {
@@ -535,7 +538,7 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
             generate_function_body(*fn);
         } else {
             decl->dump();
-            dmz_unreachable("unexpected top level in module declaration");
+            dmz_unreachable(decl->location, "unexpected top level in module declaration");
         }
     }
 }
@@ -551,7 +554,7 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
             generate_error_group_expr_decl(*errorGroup);
         } else {
             stmt.varDecl->initializer->dump();
-            dmz_unreachable("unexpected declaration instead of error group");
+            dmz_unreachable(stmt.varDecl->location, "unexpected declaration instead of error group");
         }
         return;
     }

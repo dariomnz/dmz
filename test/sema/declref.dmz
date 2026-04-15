@@ -9,7 +9,7 @@ fn main() -> void {
 
     x;
 
-    // CHECK: [[# @LINE + 1 ]]:5: error: symbol 'y' not found
+    // CHECK: [[# @LINE + 1 ]]:5: error: expression symbol 'y' not found
     y;
 
     // CHECK: [[# @LINE + 1 ]]:9: error: redeclaration of 'foo'

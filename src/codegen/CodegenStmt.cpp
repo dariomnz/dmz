@@ -69,7 +69,7 @@ llvm::Value *Codegen::generate_stmt(const ResolvedStmt &stmt) {
         return generate_switch_stmt(*switchStmt);
     }
     stmt.dump();
-    dmz_unreachable("unknown statement");
+    dmz_unreachable(stmt.location, "unknown statement");
 }
 
 llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
@@ -82,7 +82,8 @@ llvm::Value *Codegen::generate_return_stmt(const ResolvedReturnStmt &stmt) {
             llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*retType), retVal, 1);
             store_value(generate_expr(*stmt.expr), dst, *stmt.expr->type, *stmt.expr->type);
         } else {
-            if (auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(retType)) {
+            auto fnTypeOptional = dynamic_cast<const ResolvedTypeOptional *>(retType);
+            if (fnTypeOptional && stmt.expr->type->kind != ResolvedTypeKind::Optional) {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type, *fnTypeOptional->optionalType);
             } else {
                 store_value(generate_expr(*stmt.expr), retVal, *stmt.expr->type,
@@ -166,7 +167,7 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     for (auto &&cond : stmt.conditions) {
         if (cond->type->kind != ResolvedTypeKind::Range && cond->type->kind != ResolvedTypeKind::Slice) {
             cond->type->dump();
-            dmz_unreachable("TODO");
+            dmz_unreachable(cond->location, "TODO");
         }
     }
     llvm::Function *function = get_current_function();
@@ -206,7 +207,7 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
             lenghtCaptures[i] = load_value(ptrOfLenInSlice, *isize);
 
         } else {
-            dmz_unreachable("TODO");
+            dmz_unreachable(stmt.location, "TODO");
         }
     }
 
@@ -270,7 +271,7 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
                                     m_builder.getInt32(1));
             store_value(added_capture, startCaptures[i], *opaquePtrType, *opaquePtrType);
         } else {
-            dmz_unreachable("TODO");
+            dmz_unreachable(stmt.location, "TODO");
         }
     }
     break_into_bb(header);
@@ -372,7 +373,7 @@ llvm::Value *Codegen::generate_break_stmt(const ResolvedBreakStmt &stmt) {
         return nullptr;
     }
 
-    if (m_loopExitStack.empty()) dmz_unreachable("unexpected break statement outside a loop");
+    if (m_loopExitStack.empty()) dmz_unreachable(stmt.location, "unexpected break statement outside a loop");
 
     for (auto &&d : stmt.defers) {
         generate_stmt(*d);

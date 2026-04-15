@@ -36,7 +36,7 @@ ptr<ResolvedGenericExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
         declToGeneric = const_cast<ResolvedDecl *>(&declRef->decl);
     } else {
         resolvedBase->dump();
-        dmz_unreachable(resolvedBase->location.to_string() + " unexpected base expresion in generic expresion");
+        dmz_unreachable(resolvedBase->location, "unexpected base expresion in generic expresion");
     }
 
     if (declToGeneric && (declToGeneric->type->kind == ResolvedTypeKind::StructDecl ||
@@ -52,7 +52,7 @@ ptr<ResolvedGenericExpr> Sema::resolve_generic_expr(const GenericExpr &genericEx
         resolvedBase->dump();
         genericExpr.dump();
         specializedType->dump();
-        dmz_unreachable("unexpected there are no decl to specialize");
+        dmz_unreachable(genericExpr.location, "unexpected there are no decl to specialize");
     }
 
     if (auto structDecl = dynamic_cast<ResolvedGenericStructDecl *>(declToGeneric)) {
@@ -90,17 +90,21 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     debug_func(declRefExpr.location);
     // Search in the module scope
     ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier);
+    if (!decl && declRefExpr.identifier.starts_with("@")) {
+        decl = resolve_builtin_function_symbol(declRefExpr.identifier);
+    }
+
     if (!decl) {
 #ifdef DEBUG
         dump_scopes();
 #endif
-        return report(declRefExpr.location, "symbol '" + declRefExpr.identifier + "' not found");
+        return report(declRefExpr.location, "expression symbol '" + declRefExpr.identifier + "' not found");
     }
 
     auto type = re_resolve_type(*decl->type);
     if (!type) {
         decl->dump();
-        dmz_unreachable("unreachable");
+        dmz_unreachable(declRefExpr.location, "unreachable");
     }
     if (declRefExpr.identifier == "@This") {
         if (auto *st = dynamic_cast<ResolvedTypeStruct *>(type.get())) {
@@ -298,6 +302,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
             // is not really generic function but has generic types, maybe a function pointer?
             // for now keep the error
             // return report(call.location, "try to call a generic function without specialization");
+            // dmz_unreachable("TODO: not generic function but has generic types " + call.location.to_string());
         }
     }
 
@@ -312,7 +317,17 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     if (isMemberCall) {
         if (resolvedArguments.size() == 0) {
             call.dump();
-            dmz_unreachable("unexpected member call without member pass as argument");
+            dmz_unreachable(call.location, "unexpected member call without member pass as argument");
+        }
+    }
+
+    ptr<ResolvedTypeFunction> resolvedFnType = nullptr;
+    if (auto *resolvedDeclRefExpr = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallee.get())) {
+        if (auto *builtinFn = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&resolvedDeclRefExpr->decl)) {
+            resolvedFnType = resolve_builtin_function_expr(*resolvedCallee, *const_cast<ResolvedBuiltinFunctionDecl *>(builtinFn),
+                                                           resolvedArguments);
+            if (!resolvedFnType) return nullptr;
+            fnType = resolvedFnType.get();
         }
     }
 
@@ -477,7 +492,7 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
         return resolve_lambda_expr(*lambdaExpr);
     }
     expr.dump();
-    dmz_unreachable("unexpected expression");
+    dmz_unreachable(expr.location, "unexpected expression");
 }
 
 ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &unary) {
@@ -574,7 +589,7 @@ ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &
         return resolve_deref_ptr_expr(*derefExpr);
 
     assignableExpr.dump();
-    dmz_unreachable("unexpected assignable expression");
+    dmz_unreachable(assignableExpr.location, "unexpected assignable expression");
 }
 
 ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
@@ -718,10 +733,9 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     return res;
 }
 
-ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &memberExpr,
-                                                            const ResolvedExpr &resolvedBase,
-                                                            const ResolvedTypeSimd &vecType) {
-    ResolvedSimdBuiltinFunctionDecl *decl;
+ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &memberExpr, const ResolvedExpr &resolvedBase,
+                                                        const ResolvedTypeSimd &vecType) {
+    ResolvedBuiltinFunctionDecl *decl;
     if (memberExpr.field == "load") {
         if (!dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
             return report(memberExpr.location, "cannot call static member 'load' on vector instance");
@@ -731,14 +745,15 @@ ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &me
         if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
             std::vector<ptr<ResolvedParamDecl>> params;
             params.emplace_back(makePtr<ResolvedParamDecl>(
-                SourceLocation{}, "ptr", makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone()),
-                false));
+                SourceLocation::builtin(), "ptr",
+                makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.simdType->clone()), false));
             std::vector<ptr<ResolvedType>> paramsTypes;
-            paramsTypes.emplace_back(makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone()));
-            auto fnType =
-                makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType.clone());
-            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "load", std::move(fnType),
-                                                                     std::move(params), true);
+            paramsTypes.emplace_back(
+                makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.simdType->clone()));
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation::builtin(), nullptr, std::move(paramsTypes),
+                                                        vecType.clone());
+            auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(SourceLocation::builtin(), "load", std::move(fnType),
+                                                                 std::move(params), true);
             m_vectorBuiltins[key] = funcDecl.get();
             m_currentModule->declarations.emplace_back(std::move(funcDecl));
         }
@@ -753,17 +768,18 @@ ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &me
         // println(key);
         if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
             std::vector<ptr<ResolvedParamDecl>> params;
-            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
-            auto ptrType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone());
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "ptr", ptrType->clone(), false));
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.clone());
+            auto ptrType = makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.simdType->clone());
+            params.emplace_back(
+                makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "self", selfType->clone(), false));
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "ptr", ptrType->clone(), false));
             std::vector<ptr<ResolvedType>> paramsTypes;
             paramsTypes.emplace_back(selfType->clone());
             paramsTypes.emplace_back(ptrType->clone());
-            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
-                                                        makePtr<ResolvedTypeVoid>(SourceLocation{}));
-            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "store", std::move(fnType),
-                                                                     std::move(params), false);
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation::builtin(), nullptr, std::move(paramsTypes),
+                                                        makePtr<ResolvedTypeVoid>(SourceLocation::builtin()));
+            auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(SourceLocation::builtin(), "store", std::move(fnType),
+                                                                 std::move(params), false);
             m_vectorBuiltins[key] = funcDecl.get();
             m_currentModule->declarations.emplace_back(std::move(funcDecl));
         }
@@ -779,20 +795,22 @@ ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &me
         // println(key);
         if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
             std::vector<ptr<ResolvedParamDecl>> params;
-            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
-            auto maskType = makePtr<ResolvedTypeSimd>(SourceLocation{}, makePtr<ResolvedTypeBool>(SourceLocation{}),
-                                                      vecType.simdSize);
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "b", vecType.clone(), false));
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "mask", maskType->clone(), false));
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.clone());
+            auto maskType = makePtr<ResolvedTypeSimd>(
+                SourceLocation::builtin(), makePtr<ResolvedTypeBool>(SourceLocation::builtin()), vecType.simdSize);
+            params.emplace_back(
+                makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "self", selfType->clone(), false));
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "b", vecType.clone(), false));
+            params.emplace_back(
+                makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "mask", maskType->clone(), false));
             std::vector<ptr<ResolvedType>> paramsTypes;
             paramsTypes.emplace_back(selfType->clone());
             paramsTypes.emplace_back(vecType.clone());
             paramsTypes.emplace_back(maskType->clone());
-            auto fnType =
-                makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType.clone());
-            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "select",
-                                                                     std::move(fnType), std::move(params), false);
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation::builtin(), nullptr, std::move(paramsTypes),
+                                                        vecType.clone());
+            auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(SourceLocation::builtin(), "select", std::move(fnType),
+                                                                 std::move(params), false);
             m_vectorBuiltins[key] = funcDecl.get();
             m_currentModule->declarations.emplace_back(std::move(funcDecl));
         }
@@ -825,14 +843,15 @@ ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &me
         // println(key);
         if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
             std::vector<ptr<ResolvedParamDecl>> params;
-            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
-            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.clone());
+            params.emplace_back(
+                makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "self", selfType->clone(), false));
             std::vector<ptr<ResolvedType>> paramsTypes;
             paramsTypes.emplace_back(selfType->clone());
-            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation::builtin(), nullptr, std::move(paramsTypes),
                                                         vecType.simdType->clone());
-            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, memberExpr.field,
-                                                                     std::move(fnType), std::move(params), false);
+            auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(SourceLocation::builtin(), memberExpr.field,
+                                                                 std::move(fnType), std::move(params), false);
             m_vectorBuiltins[key] = funcDecl.get();
             m_currentModule->declarations.emplace_back(std::move(funcDecl));
         }
@@ -892,7 +911,7 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
     } else if (auto vectorType = dynamic_cast<const ResolvedTypeSimd *>(resolvedBase->type.get())) {
         derefType = vectorType->simdType->clone();
     } else {
-        dmz_unreachable("TODO");
+        dmz_unreachable(arrayAtExpr.location, "TODO");
     }
 
     varOrReturn(index, resolve_expr(*arrayAtExpr.index));

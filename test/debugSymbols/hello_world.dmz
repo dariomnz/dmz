@@ -53,12 +53,9 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.hello_world.Point, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal), !dbg !37
 // CHECK-NEXT:     #dbg_declare(ptr %tmp.struct.hello_world.Point, !38, !DIExpression(), !39)
-// CHECK-NEXT:   %1 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 0, !dbg !39
-// CHECK-NEXT:   store i32 1, ptr %1, align 4, !dbg !39
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %hello_world.Point, ptr %tmp.struct.hello_world.Point, i32 0, i32 1, !dbg !39
-// CHECK-NEXT:   store i32 2, ptr %2, align 4, !dbg !39
+// CHECK-NEXT:   store %hello_world.Point { i32 1, i32 2 }, ptr %tmp.struct.hello_world.Point, align 4, !dbg !39
 // CHECK-NEXT:   call void @hello_world.foo(ptr readonly %tmp.struct.hello_world.Point, i32 1, i32 2, i32 3), !dbg !40
-// CHECK-NEXT:   ret void
+// CHECK-NEXT:   ret void, !dbg !41
 // CHECK-NEXT: }
 // CHECK-NEXT: 
 // CHECK-NEXT: ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

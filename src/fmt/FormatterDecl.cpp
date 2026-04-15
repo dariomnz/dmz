@@ -30,7 +30,7 @@ ptr<Node> Formatter::fmt_decl(const Decl& decl) {
         return makePtr<Text>(cast_decl->identifier);
     } else {
         decl.dump();
-        dmz_unreachable("TODO");
+        dmz_unreachable(decl.location, "TODO");
     }
 }
 

@@ -9,13 +9,13 @@ namespace DMZ {
 
 void Decoration::dump([[maybe_unused]] size_t level) const {}
 
-std::string Decoration::to_str() const { dmz_unreachable("TODO"); }
+std::string Decoration::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void GenericTypeDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericTypeDecl " << identifier << '\n';
 }
 
-std::string GenericTypeDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string GenericTypeDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void TypeVoid::dump(size_t level) const { std::cerr << indent(level) << "TypeVoid " << to_str() << '\n'; }
 
@@ -76,7 +76,7 @@ void FunctionDecl::dump(size_t level) const {
     body->dump(level + 1);
 }
 
-std::string FunctionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string FunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void GenericFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericFunctionDecl " << identifier << " -> " << type->to_str() << "\n";
@@ -87,18 +87,18 @@ void GenericFunctionDecl::dump(size_t level) const {
     body->dump(level + 1);
 }
 
-std::string GenericFunctionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string GenericFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void MemberFunctionDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
-std::string MemberFunctionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string MemberFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void MemberGenericFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "MemberGenericFunctionDecl:" << parentDecl->identifier << "\n";
     GenericFunctionDecl::dump(level + 1);
 }
 
-std::string MemberGenericFunctionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string MemberGenericFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ExternFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type->to_str() << "\n";
@@ -106,14 +106,14 @@ void ExternFunctionDecl::dump(size_t level) const {
     for (auto &&param : params) param->dump(level + 1);
 }
 
-std::string ExternFunctionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string ExternFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void Block::dump(size_t level) const {
     std::cerr << indent(level) << "Block\n";
     for (auto &&stmt : statements) stmt->dump(level + 1);
 }
 
-std::string Block::to_str() const { dmz_unreachable("TODO"); }
+std::string Block::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ReturnStmt::dump(size_t level) const {
     std::cerr << indent(level) << "ReturnStmt\n";
@@ -121,7 +121,7 @@ void ReturnStmt::dump(size_t level) const {
     if (expr) expr->dump(level + 1);
 }
 
-std::string ReturnStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string ReturnStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void BreakStmt::dump(size_t level) const { std::cerr << indent(level) << "BreakStmt\n"; }
 
@@ -137,15 +137,15 @@ std::string IntLiteral::to_str() const { return value; }
 
 void FloatLiteral::dump(size_t level) const { std::cerr << indent(level) << "FloatLiteral '" << value << "'\n"; }
 
-std::string FloatLiteral::to_str() const { dmz_unreachable("TODO"); }
+std::string FloatLiteral::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void CharLiteral::dump(size_t level) const { std::cerr << indent(level) << "CharLiteral '" << value << "'\n"; }
 
-std::string CharLiteral::to_str() const { dmz_unreachable("TODO"); }
+std::string CharLiteral::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void BoolLiteral::dump(size_t level) const { std::cerr << indent(level) << "BoolLiteral '" << value << "'\n"; }
 
-std::string BoolLiteral::to_str() const { dmz_unreachable("TODO"); }
+std::string BoolLiteral::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void StringLiteral::dump(size_t level) const { std::cerr << indent(level) << "StringLiteral '" << value << "'\n"; }
 
@@ -153,7 +153,7 @@ std::string StringLiteral::to_str() const { return "\"" + value + "\""; }
 
 void NullLiteral::dump(size_t level) const { std::cerr << indent(level) << "NullLiteral\n"; }
 
-std::string NullLiteral::to_str() const { dmz_unreachable("TODO"); }
+std::string NullLiteral::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void RangeExpr::dump(size_t level) const {
     std::cerr << indent(level) << "RangeExpr\n";
@@ -161,50 +161,50 @@ void RangeExpr::dump(size_t level) const {
     if (endExpr) endExpr->dump(level + 1);
 }
 
-std::string RangeExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string RangeExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType->to_str() << "\n"; }
 
-std::string SizeofExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string SizeofExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void TypeidExpr::dump(size_t level) const {
     std::cerr << indent(level) << "Typeid\n";
     typeidExpr->dump(level + 1);
 }
 
-std::string TypeidExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string TypeidExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void TypeinfoExpr::dump(size_t level) const {
     std::cerr << indent(level) << "Typeinfo\n";
     typeinfoExpr->dump(level + 1);
 }
 
-std::string TypeinfoExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string TypeinfoExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void HasMethodExpr::dump(size_t level) const {
     std::cerr << indent(level) << "HasMethod " << methodName << "\n";
     structType->dump(level + 1);
 }
 
-std::string HasMethodExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string HasMethodExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void SimdSizeExpr::dump(size_t level) const {
     std::cerr << indent(level) << "SimdSizeExpr\n";
     simdType->dump(level + 1);
 }
 
-std::string SimdSizeExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string SimdSizeExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void SimdSplatExpr::dump(size_t level) const {
     std::cerr << indent(level) << "SimdSplatExpr\n";
     value->dump(level + 1);
 }
 
-std::string SimdSplatExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string SimdSplatExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void SimdIotaExpr::dump(size_t level) const { std::cerr << indent(level) << "SimdIotaExpr\n"; }
 
-std::string SimdIotaExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string SimdIotaExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
@@ -218,7 +218,7 @@ void CallExpr::dump(size_t level) const {
     for (auto &&arg : arguments) arg->dump(level + 1);
 }
 
-std::string CallExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string CallExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl:";
@@ -230,7 +230,7 @@ void ParamDecl::dump(size_t level) const {
     std::cerr << " " << identifier << '\n';
 }
 
-std::string ParamDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string ParamDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void BinaryOperator::dump(size_t level) const {
     std::cerr << indent(level) << "BinaryOperator '" << get_op_str(op) << '\'' << '\n';
@@ -239,7 +239,7 @@ void BinaryOperator::dump(size_t level) const {
     rhs->dump(level + 1);
 }
 
-std::string BinaryOperator::to_str() const { dmz_unreachable("TODO"); }
+std::string BinaryOperator::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void UnaryOperator::dump(size_t level) const {
     std::cerr << indent(level) << "UnaryOperator '" << get_op_str(op) << '\'' << '\n';
@@ -255,7 +255,7 @@ void RefPtrExpr::dump(size_t level) const {
     expr->dump(level + 1);
 }
 
-std::string RefPtrExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string RefPtrExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void DerefPtrExpr::dump(size_t level) const {
     std::cerr << indent(level) << "DerefPtrExpr" << '\n';
@@ -271,7 +271,7 @@ void GroupingExpr::dump(size_t level) const {
     expr->dump(level + 1);
 }
 
-std::string GroupingExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string GroupingExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void IfStmt::dump(size_t level) const {
     std::cerr << indent(level) << (isInline ? "InlineIfStmt\n" : "IfStmt\n");
@@ -281,7 +281,7 @@ void IfStmt::dump(size_t level) const {
     if (falseBlock) falseBlock->dump(level + 1);
 }
 
-std::string IfStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string IfStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void WhileStmt::dump(size_t level) const {
     std::cerr << indent(level) << "WhileStmt\n";
@@ -290,11 +290,11 @@ void WhileStmt::dump(size_t level) const {
     body->dump(level + 1);
 }
 
-std::string WhileStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string WhileStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void CaptureDecl::dump(size_t level) const { std::cerr << indent(level) << "CaptureDecl " << identifier << "\n"; }
 
-std::string CaptureDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string CaptureDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ForStmt::dump(size_t level) const {
     std::cerr << indent(level) << (isInline ? "InlineForStmt\n" : "ForStmt\n");
@@ -308,7 +308,7 @@ void ForStmt::dump(size_t level) const {
     body->dump(level + 1);
 }
 
-std::string ForStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string ForStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void CaseStmt::dump(size_t level) const {
     std::cerr << indent(level) << "CaseStmt\n";
@@ -319,7 +319,7 @@ void CaseStmt::dump(size_t level) const {
     block->dump(level + 1);
 }
 
-std::string CaseStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string CaseStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void SwitchStmt::dump(size_t level) const {
     std::cerr << indent(level) << (isInline ? "InlineSwitchStmt\n" : "SwitchStmt\n");
@@ -333,7 +333,7 @@ void SwitchStmt::dump(size_t level) const {
     elseBlock->dump(level + 1);
 }
 
-std::string SwitchStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string SwitchStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void VarDecl::dump(size_t level) const {
     std::cerr << indent(level) << "VarDecl:" << (isMutable ? "" : "const ");
@@ -345,14 +345,14 @@ void VarDecl::dump(size_t level) const {
     if (initializer) initializer->dump(level + 1);
 }
 
-std::string VarDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string VarDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void DeclStmt::dump(size_t level) const {
     std::cerr << indent(level) << "DeclStmt\n";
     varDecl->dump(level + 1);
 }
 
-std::string DeclStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string DeclStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void Assignment::dump(size_t level) const {
     std::cerr << indent(level) << "Assignment\n";
@@ -360,7 +360,7 @@ void Assignment::dump(size_t level) const {
     expr->dump(level + 1);
 }
 
-std::string Assignment::to_str() const { dmz_unreachable("TODO"); }
+std::string Assignment::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void AssignmentOperator::dump(size_t level) const {
     std::cerr << indent(level) << "AssignmentOperator '" << get_op_str(op) << '\'' << '\n';
@@ -368,14 +368,14 @@ void AssignmentOperator::dump(size_t level) const {
     expr->dump(level + 1);
 }
 
-std::string AssignmentOperator::to_str() const { dmz_unreachable("TODO"); }
+std::string AssignmentOperator::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void FieldDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FieldDecl:" << type->to_str() << " " << identifier << '\n';
     if (default_initializer) default_initializer->dump(level + 1);
 }
 
-std::string FieldDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string FieldDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void StructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "StructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
@@ -383,7 +383,7 @@ void StructDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string StructDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string StructDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void GenericStructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericStructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
@@ -392,7 +392,7 @@ void GenericStructDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string GenericStructDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string GenericStructDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void UnionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "UnionDecl " << (isPacked ? "packed " : "") << identifier << '\n';
@@ -400,7 +400,7 @@ void UnionDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string UnionDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string UnionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void MemberExpr::dump(size_t level) const {
     std::cerr << indent(level) << "MemberExpr ." << field << '\n';
@@ -446,7 +446,7 @@ void StructInstantiationExpr::dump(size_t level) const {
     for (auto &&field : fieldInitializers) field->dump(level + 1);
 }
 
-std::string StructInstantiationExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string StructInstantiationExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void TupleInstantiationExpr::dump(size_t level) const {
     std::cerr << indent(level) << "TupleInstantiationExpr " << '\n';
@@ -454,7 +454,7 @@ void TupleInstantiationExpr::dump(size_t level) const {
     for (auto &&element : elements) element->dump(level + 1);
 }
 
-std::string TupleInstantiationExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string TupleInstantiationExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ArrayInstantiationExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ArrayInstantiationExpr " << '\n';
@@ -462,14 +462,14 @@ void ArrayInstantiationExpr::dump(size_t level) const {
     for (auto &&initializer : initializers) initializer->dump(level + 1);
 }
 
-std::string ArrayInstantiationExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string ArrayInstantiationExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void FieldInitStmt::dump(size_t level) const {
     std::cerr << indent(level) << "FieldInitStmt " << identifier << '\n';
     initializer->dump(level + 1);
 }
 
-std::string FieldInitStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string FieldInitStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void DeferStmt::dump(size_t level) const {
     std::cerr << indent(level);
@@ -481,17 +481,17 @@ void DeferStmt::dump(size_t level) const {
     block->dump(level + 1);
 }
 
-std::string DeferStmt::to_str() const { dmz_unreachable("TODO"); }
+std::string DeferStmt::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ErrorDecl::dump(size_t level) const { std::cerr << indent(level) << "ErrorDecl " << identifier << '\n'; }
 
-std::string ErrorDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string ErrorDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ErrorInPlaceExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ErrorInPlaceExpr " << identifier << '\n';
 }
 
-std::string ErrorInPlaceExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string ErrorInPlaceExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ErrorGroupExprDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ErrorGroupExprDecl " << '\n';
@@ -499,7 +499,7 @@ void ErrorGroupExprDecl::dump(size_t level) const {
     for (auto &&err : errs) err->dump(level + 1);
 }
 
-std::string ErrorGroupExprDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string ErrorGroupExprDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void CatchErrorExpr::dump(size_t level) const {
     std::cerr << indent(level) << "CatchErrorExpr " << (captureIdentifier.empty() ? "" : "|") << captureIdentifier
@@ -520,7 +520,7 @@ void TryErrorExpr::dump(size_t level) const {
     if (errorToTry) errorToTry->dump(level + 1);
 }
 
-std::string TryErrorExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string TryErrorExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void OrElseErrorExpr::dump(size_t level) const {
     std::cerr << indent(level) << "OrElseErrorExpr " << '\n';
@@ -529,7 +529,7 @@ void OrElseErrorExpr::dump(size_t level) const {
     if (orElseExpr) orElseExpr->dump(level + 1);
 }
 
-std::string OrElseErrorExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string OrElseErrorExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ModuleDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ModuleDecl " << identifier << '\n';
@@ -537,15 +537,15 @@ void ModuleDecl::dump(size_t level) const {
     for (auto &&decl : declarations) decl->dump(level + 1);
 }
 
-std::string ModuleDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string ModuleDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ImportExpr::dump(size_t level) const { std::cerr << indent(level) << "ImportExpr " << identifier << '\n'; }
 
-std::string ImportExpr::to_str() const { dmz_unreachable("TODO"); }
+std::string ImportExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void TestDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
-std::string TestDecl::to_str() const { dmz_unreachable("TODO"); }
+std::string TestDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void LambdaExpr::dump(size_t level) const {
     std::cerr << indent(level) << "LambdaExpr\n";
@@ -559,8 +559,7 @@ void LambdaExpr::dump(size_t level) const {
     body->dump(level + 2);
 }
 
-std::string LambdaExpr::to_str() const { dmz_unreachable("TODO"); }
-
+std::string LambdaExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void AtomicLoadExpr::dump(size_t level) const {
     std::cerr << indent(level) << "AtomicLoadExpr\n";
