@@ -1079,6 +1079,9 @@ bool Sema::resolve_builtin_function(const ResolvedFunctionDecl &fnDecl) {
         resolve_builtin_test_run(fnDecl);
         return true;
     }
+    if (dynamic_cast<const ResolvedSimdBuiltinFunctionDecl *>(&fnDecl)) {
+        return true;
+    }
     return false;
 }
 

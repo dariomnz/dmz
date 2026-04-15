@@ -8,6 +8,7 @@
 #include "Debug.hpp"
 #include "Stats.hpp"
 #include "Utils.hpp"
+#include "codegen/CodegenUtils.hpp"
 #include "driver/Driver.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -18,8 +19,6 @@
 // #endif
 
 namespace DMZ {
-
-std::unordered_map<std::string, ptr<ResolvedDecl>> Sema::m_vectorBuiltins{};
 
 void Sema::dump_scopes() const {
     debug_msg("m_scopes.size " << m_scopes.size());
@@ -245,7 +244,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         int bitSize = 0;
         bool isPlatformSize = num == "size";
         if (isPlatformSize) {
-            bitSize = Driver::instance().ptrBitSize();
+            bitSize = CodegenUtils::ptrBitSize();
         } else {
             auto res = std::from_chars(num.data(), num.data() + num.size(), bitSize);
             if (bitSize == 0 || res.ec != std::errc()) {
@@ -486,7 +485,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
     std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
     m_ast->module_path = sourceAbsPath;
 
-    auto &imported_modules = Driver::instance().imported_modules;
+    auto &imported_modules = m_driver.imported_modules;
     std::vector<ptr<ModuleDecl>> modules;
     std::vector<std::filesystem::path> modulesPaths;
 

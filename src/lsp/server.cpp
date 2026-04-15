@@ -1,11 +1,6 @@
 #include "lsp/server.hpp"
 
-#include <algorithm>
-#include <cctype>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-
+#include "DMZPCH.hpp"
 #include "driver/Driver.hpp"
 #include "lexer/Lexer.hpp"
 #include "lsp/node_finder.hpp"
@@ -32,7 +27,7 @@ void LSPServer::run() {
 
             std::string body(length, ' ');
             std::cin.read(&body[0], length);
-            std::cerr << "[LSP] Received: " << body << std::endl;
+            std::cerr << "[LSP] Received body: " << body << std::endl;
             handle_message(body);
         }
     }
@@ -140,10 +135,13 @@ void LSPServer::on_did_open(const std::string& params) {
 
     std::string text = get_json_value(params, "text");
     if (!text.empty()) {
+        std::cerr << "[LSP] Processing file with text:" << std::endl;
+        // std::cerr << text << std::endl;
         process_file(path, text);
         return;
     }
 
+    std::cerr << "[LSP] Processing file from disk" << std::endl;
     std::ifstream file(path);
     if (file.is_open()) {
         std::stringstream ss;
@@ -559,9 +557,11 @@ void LSPServer::publish_diagnostics(const std::string& filename, const std::vect
 
 void LSPServer::process_file(const std::string& filename, const std::string& source) {
     std::cerr << "[LSP] Processing file: " << filename << std::endl;
-    Driver::instance().m_options.source = filename;
+    CompilerOptions options;
+    options.source = filename;
+    Driver driver(options);
     if (m_documents.find(filename) == m_documents.end()) {
-        m_documents[filename] = {source, nullptr, nullptr, {}};
+        m_documents[filename] = {source, nullptr, {}};
     } else {
         m_documents[filename].source = source;
         m_documents[filename].resolvedAST.clear();
@@ -583,22 +583,15 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
             opts.imports["std"] = m_std_path;
         }
 
-        if (Driver::instance_ptr()) {
-            Driver::instance().m_options = opts;
-            Driver::instance().imported_modules.clear();
-        } else {
-            Driver::create_instance(opts);
-        }
-
         Lexer lexer(filename, source);
-        Parser parser(lexer);
+        Parser parser(driver, lexer);
         auto [ast, success] = parser.parse_source_file();
 
         if (ast) {
             // Resolve imports (recursively parse imported files)
-            Driver::instance().import_pass(ast);
+            driver.import_pass(ast);
 
-            auto sema = makePtr<Sema>(std::move(ast));
+            auto sema = makePtr<Sema>(driver, std::move(ast));
             auto resolvedTree = sema->resolve_ast_decl(filename, false);
             if (!resolvedTree.empty()) {
                 bool bodySuccess = sema->resolve_ast_body(resolvedTree);

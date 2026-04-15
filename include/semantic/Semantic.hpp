@@ -7,11 +7,13 @@
 
 namespace DMZ {
 
+class Driver;
 class Sema {
    public:
     ConstantExpressionEvaluator cee;
 
    private:
+    Driver &m_driver;
     ptr<ModuleDecl> m_ast;
     std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
 
@@ -47,10 +49,11 @@ class Sema {
     std::vector<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
-    static std::unordered_map<std::string, ptr<ResolvedDecl>> m_vectorBuiltins;
+    std::unordered_map<std::string, ResolvedSimdBuiltinFunctionDecl *> m_vectorBuiltins;
 
    public:
-    explicit Sema(ptr<ModuleDecl> ast) : m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
+    explicit Sema(Driver &driver, ptr<ModuleDecl> ast)
+        : m_driver(driver), m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
     // std::vector<ref<ResolvedDecl>> resolve_ast();
     std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
@@ -173,6 +176,9 @@ class Sema {
     ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
     ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
+    ResolvedSimdBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr,
+                                                          const ResolvedExpr &resolvedBase,
+                                                          const ResolvedTypeSimd &vecType);
     ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
     ptr<ResolvedSimdSplatExpr> resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr);
     ptr<ResolvedSimdIotaExpr> resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr);

@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "parser/ParserSymbols.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ::lsp {

@@ -3,7 +3,6 @@
 #define DEBUG
 #endif
 #endif
-#include <unordered_set>
 
 #include "Utils.hpp"
 #include "lexer/Lexer.hpp"

@@ -1,4 +1,4 @@
-// #define DEBUG
+#include "Debug.hpp"
 #include "Stats.hpp"
 #include "driver/Driver.hpp"
 

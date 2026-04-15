@@ -4,7 +4,7 @@
 #include "DMZPCH.hpp"
 #include "Debug.hpp"
 #include "Utils.hpp"
-#include "driver/Driver.hpp"
+#include "codegen/CodegenUtils.hpp"
 
 namespace DMZ {
 
@@ -100,11 +100,11 @@ std::string ResolvedTypeNumber::to_str() const {
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::isize(SourceLocation location) {
-    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, Driver::instance().ptrBitSize(), true);
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, CodegenUtils::ptrBitSize(), true);
 }
 
 ptr<ResolvedType> ResolvedTypeNumber::usize(SourceLocation location) {
-    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize(), true);
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, CodegenUtils::ptrBitSize(), true);
 }
 
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {

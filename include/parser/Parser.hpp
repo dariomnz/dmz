@@ -7,8 +7,10 @@
 
 namespace DMZ {
 
+class Driver;
 class Parser {
    private:
+    Driver &m_driver;
     Lexer &m_lexer;
     Token m_nextToken;
     bool m_incompleteAST = false;
@@ -103,7 +105,7 @@ class Parser {
     std::pair<ptr<ModuleDecl>, bool> parse_source_file();
 
    public:
-    explicit Parser(Lexer &lexer) : m_lexer(lexer) { eat_next_token(); }
+    explicit Parser(Driver &driver, Lexer &lexer) : m_driver(driver), m_lexer(lexer) { eat_next_token(); }
 
    private:
     bool nextToken_is_generic();

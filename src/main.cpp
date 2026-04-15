@@ -3,6 +3,6 @@
 int main(int argc, char *argv[]) {
     DMZ::CompilerOptions options = DMZ::CompilerOptions::parse_arguments(argc, argv);
 
-    DMZ::Driver& driver = DMZ::Driver::create_instance(options);
+    DMZ::Driver driver(options);
     return driver.main();
 }

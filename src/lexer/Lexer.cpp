@@ -1,9 +1,5 @@
 #include "lexer/Lexer.hpp"
 
-#include <fcntl.h>
-
-#include <cstring>
-
 #include "Debug.hpp"
 #include "Stats.hpp"
 

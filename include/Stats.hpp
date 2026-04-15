@@ -7,7 +7,6 @@
 #include <unordered_map>
 
 #include "Utils.hpp"
-#include "driver/Driver.hpp"
 
 namespace DMZ {
 enum class StatType : int {
@@ -134,6 +133,8 @@ class Stats {
 
     void add_parsed_line() { parsed_lines++; }
 
+    bool enabled = false;
+
     static Stats& instance() {
         static Stats s;
         return s;
@@ -141,7 +142,7 @@ class Stats {
 };
 #define __line2_ScopedTimer(type, name, line)          \
     ptr<__ScopedTimer> st##line;                       \
-    if (Driver::instance().m_options.printStats) {     \
+    if (Stats::instance().enabled) {                   \
         st##line = makePtr<__ScopedTimer>(type, name); \
     }
 #define __line1_ScopedTimer(type, name, line) __line2_ScopedTimer(type, name, line)

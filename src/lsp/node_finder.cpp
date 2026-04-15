@@ -1,7 +1,5 @@
 #include "lsp/node_finder.hpp"
 
-#include <iostream>
-
 #include "semantic/SemanticSymbols.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 

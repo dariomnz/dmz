@@ -1,12 +1,8 @@
 #pragma once
 
 #include "DMZPCH.hpp"
-#include "codegen/Codegen.hpp"
 #include "lexer/Lexer.hpp"
-#include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
-#include "semantic/CFG.hpp"
-#include "semantic/Semantic.hpp"
 
 namespace DMZ {
 struct CompilerOptions {
@@ -65,9 +61,9 @@ class Driver {
 
     void fmt_pass(ptr<ModuleDecl> asts);
     void import_pass(ptr<ModuleDecl>& asts);
-    static std::pair<std::string, std::filesystem::path> register_import(SourceLocation location,
-                                                                         const std::filesystem::path& source,
-                                                                         std::string_view imported);
+    std::pair<std::string, std::filesystem::path> register_import(SourceLocation location,
+                                                                  const std::filesystem::path& source,
+                                                                  std::string_view imported);
 
     std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> codegen_pass(
@@ -75,28 +71,5 @@ class Driver {
     int asm_pass(ptr<llvm::Module>& module);
     int jit_pass(ptr<llvm::LLVMContext>& context, ptr<llvm::Module>& module);
     int generate_exec_pass(ptr<llvm::Module>& module);
-
-    int ptrBitSize();
-    int typeBitSize(const ResolvedType& type);
-    int target_simd_size();
-
-   private:
-    static ptr<Driver> driver_instance;
-
-   public:
-    static Driver& create_instance(CompilerOptions options) {
-        if (driver_instance) dmz_unreachable("Driver instance already created");
-
-        driver_instance = makePtr<Driver>(options);
-        if (!driver_instance) dmz_unreachable("Driver instance not created");
-        return *driver_instance;
-    }
-
-    static Driver& instance() {
-        if (!driver_instance) dmz_unreachable("Driver instance not created");
-        return *driver_instance;
-    }
-
-    static ptr<Driver>& instance_ptr() { return driver_instance; }
 };
 }  // namespace DMZ

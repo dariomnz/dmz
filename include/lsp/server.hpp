@@ -1,12 +1,7 @@
 #pragma once
 
-#include <unordered_map>
-#include <vector>
-
 #include "DMZPCH.hpp"
-#include "DMZPCHSymbols.hpp"
 #include "Utils.hpp"
-#include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 
 namespace DMZ::lsp {
@@ -44,7 +39,6 @@ class LSPServer {
 
     struct Document {
         std::string source;
-        ptr<ModuleDecl> ast;
         ptr<Sema> sema;
         std::vector<ptr<ResolvedModuleDecl>> resolvedAST;
     };

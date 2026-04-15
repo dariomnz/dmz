@@ -1,14 +1,15 @@
 // #define DEBUG
 #include "driver/Driver.hpp"
 
+#include "Debug.hpp"
 #include "Stats.hpp"
+#include "codegen/Codegen.hpp"
 #include "fmt/Formatter.hpp"
 #include "lsp/server.hpp"
+#include "parser/Parser.hpp"
 #include "test_runner/test_runner.hpp"
 
 namespace DMZ {
-
-ptr<Driver> Driver::driver_instance = nullptr;
 
 void Driver::display_help() {
     println("Usage:");
@@ -116,6 +117,7 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.isModule = true;
             } else if (arg == "-print-stats") {
                 options.printStats = true;
+                Stats::instance().enabled = true;
             } else if (arg == "-lsp" || arg == "--lsp") {
                 options.lsp = true;
             } else if (arg == "-quiet") {
@@ -186,7 +188,7 @@ ptr<Lexer> Driver::lexer_pass(std::filesystem::path &source) {
 }
 
 ptr<ModuleDecl> Driver::parser_pass(ptr<Lexer> lexer) {
-    Parser parser(*lexer);
+    Parser parser(*this, *lexer);
     auto [ast, success] = parser.parse_source_file();
     if (!success) {
         m_haveError = true;
@@ -204,42 +206,12 @@ void Driver::fmt_pass(ptr<ModuleDecl> ast) {
     fmt::Formatter fmt(120);
 
     auto node = fmt.fmt_ast(*ast);
-    // auto gen = fmt::Generator(120);
-    // auto build = fmt::Builder();
-    // std::vector<ptr<fmt::Node>> args;
-    // args.emplace_back(makePtr<fmt::Text>("1000000000000000000000000000000"));
-    // auto node = build.call("foo", std::move(args));
-    // std::vector<ptr<Expr>> args;
-    // args.emplace_back(makePtr<IntLiteral>(SourceLocation{}, "100000000000000"));
-    // auto call = makePtr<CallExpr>(SourceLocation{}, makePtr<DeclRefExpr>(SourceLocation{}, "foo"), std::move(args));
 
     if (m_options.fmtDump) {
         node->dump();
     } else {
         fmt.print(node);
     }
-    // fmt.fmt_expr(*call);
-
-    // auto node = build.call(makeRef<fmt::Text>("foo"),
-    //                        {makeRef<fmt::Text>("1000000000000000000000000000000"),
-    //                         build.call(makeRef<fmt::Text>("bar"),
-    //                                    {makeRef<fmt::Text>("200000000000000000000"), build.string("this is a
-    //                                    string"),
-    //                                     build.call(makeRef<fmt::Text>("whithout_arguments"), {})})});
-    //   [
-    //     Node.Text('1000000000000000000000000000000'),
-    //     build.call(
-    //       'bar',
-    //       [
-    //         Node.Text('2000000000000000000000000000000'),
-    //         build.string('this is a string'),
-    //         build.call('without_arguments', []),
-    //       ],
-    //     ),
-    //   ],
-
-    // gen.generate(*node);
-    // gen.print();
 
     m_haveNormalExit = true;
 }
@@ -248,7 +220,7 @@ std::pair<std::string, std::filesystem::path> Driver::register_import(SourceLoca
                                                                       const std::filesystem::path &source,
                                                                       std::string_view imported) {
     debug_func("source: '" << source << "' imported '" << imported << "'");
-    auto &d = instance();
+    auto &d = *this;
 
 #ifdef DEBUG
     debug_msg("Registed modules " << d.imported_modules.size());
@@ -384,7 +356,7 @@ void Driver::import_pass(ptr<ModuleDecl> &ast) {
                     continue;
                 }
                 Lexer l(k.string());
-                Parser p(l);
+                Parser p(*this, l);
                 auto [parse_ast, success] = p.parse_source_file();
                 if (!success) {
                     // Even if parsing failed, we might have an incomplete AST that we want to keep
@@ -419,7 +391,7 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     debug_func("");
     ScopedTimer(StatType::Semantic);
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree;
-    Sema sema(std::move(ast));
+    Sema sema(*this, std::move(ast));
     bool needMain = !m_options.isModule && !m_options.test;
     resolvedTree = sema.resolve_ast_decl(m_options.source, needMain);
     if (resolvedTree.empty()) m_haveError = true;
@@ -609,63 +581,6 @@ int Driver::asm_pass(ptr<llvm::Module> &module) {
         waitpid(pid, &status, 0);
         return WEXITSTATUS(status);
     }
-}
-
-int Driver::ptrBitSize() {
-    static int ptrSize = -1;
-    if (ptrSize >= 0) {
-        return ptrSize;
-    }
-    llvm::LLVMContext context;
-    llvm::Module module("tmp", context);
-    ptrSize = module.getDataLayout().getPointerSizeInBits();
-    return ptrSize;
-}
-
-int Driver::typeBitSize(const ResolvedType &type) {
-    if (type.is_generic()) {
-        return ptrBitSize();
-    }
-    llvm::LLVMContext context;
-    llvm::Module module("tmp", context);
-    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true).generate_type(type);
-    return module.getDataLayout().getTypeSizeInBits(llvmType);
-}
-
-int Driver::target_simd_size() {
-    static int simdSize = -1;
-    if (simdSize >= 0) {
-        return simdSize;
-    }
-
-    llvm::InitializeNativeTarget();
-    std::string TripleStr = llvm::sys::getDefaultTargetTriple();
-    std::string Error;
-    const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(TripleStr, Error);
-
-    // 3. Crear el TargetMachine (aquí es donde defines CPU y Features)
-    llvm::TargetOptions opt;
-    auto RM = std::optional<llvm::Reloc::Model>();
-    std::string CPU = llvm::sys::getHostCPUName().str();
-    std::string Features;
-    auto allFeatures = llvm::sys::getHostCPUFeatures();
-    for (auto &feature : allFeatures) {
-        if (feature.second) {
-            Features += "+" + feature.first().str() + ",";
-        }
-    }
-    llvm::TargetMachine *TM = Target->createTargetMachine(TripleStr, CPU, Features, opt, RM);
-    llvm::LLVMContext ctx;
-    llvm::Module mod("tmp", ctx);
-    llvm::FunctionType *FTy = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), false);
-    llvm::Function *TempF = llvm::Function::Create(FTy, llvm::Function::ExternalLinkage, "__temp_tti", &mod);
-    llvm::TargetTransformInfo TTI = TM->getTargetTransformInfo(*TempF);
-
-    simdSize = TTI.getRegisterBitWidth(llvm::TargetTransformInfo::RGK_FixedWidthVector);
-
-    debug_msg("El ancho de banda SIMD para '" << TripleStr << "' cpu: '" << CPU << "' features: '" << Features
-                                              << "' es: " << simdSize << " bits");
-    return simdSize;
 }
 
 int Driver::main() {

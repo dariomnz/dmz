@@ -1,7 +1,5 @@
 #include "semantic/Constexpr.hpp"
 
-#include <optional>
-
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {

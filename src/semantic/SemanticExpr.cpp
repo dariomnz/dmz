@@ -4,8 +4,9 @@
 #endif
 #endif
 #include "DMZPCH.hpp"
+#include "Debug.hpp"
 #include "Utils.hpp"
-#include "driver/Driver.hpp"
+#include "codegen/CodegenUtils.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -585,7 +586,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             makePtr<ResolvedTypePointer>(SourceLocation{}, makePtr<ResolvedTypeVoid>(SourceLocation{})), 0, nullptr));
         sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
             SourceLocation{}, "len",
-            makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, Driver::instance().ptrBitSize()), 1,
+            makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, CodegenUtils::ptrBitSize()), 1,
             nullptr));
         return ResolvedStructDecl(SourceLocation{}, true, "slice", nullptr, false, std::move(sliceFields),
                                   std::vector<ptr<ResolvedMemberFunctionDecl>>{});
@@ -642,117 +643,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "slice only support 'len' and 'ptr' members");
         }
     } else if (auto vecType = dynamic_cast<const ResolvedTypeSimd *>(baseType)) {
-        if (memberExpr.field == "load") {
-            if (!dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
-                return report(memberExpr.location, "cannot call static member 'load' on vector instance");
-            }
-            std::string key = "load:" + vecType->to_str();
-            // println(key);
-            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
-                std::vector<ptr<ResolvedParamDecl>> params;
-                params.emplace_back(makePtr<ResolvedParamDecl>(
-                    SourceLocation{}, "ptr", makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone()),
-                    false));
-                std::vector<ptr<ResolvedType>> paramsTypes;
-                paramsTypes.emplace_back(makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone()));
-                auto fnType =
-                    makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType->clone());
-                m_vectorBuiltins[key] =
-                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "load", std::move(fnType),
-                                                        std::move(params), nullptr, nullptr, nullptr, true);
-            }
-            decl = m_vectorBuiltins[key].get();
-        } else if (memberExpr.field == "store") {
-            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
-                return report(memberExpr.location, "cannot call instance member 'store' on vector type");
-            }
-            std::string key = "store:" + vecType->to_str();
-            // println(key);
-            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
-                std::vector<ptr<ResolvedParamDecl>> params;
-                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
-                auto ptrType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->simdType->clone());
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "ptr", ptrType->clone(), false));
-                std::vector<ptr<ResolvedType>> paramsTypes;
-                paramsTypes.emplace_back(selfType->clone());
-                paramsTypes.emplace_back(ptrType->clone());
-                auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
-                                                            makePtr<ResolvedTypeVoid>(SourceLocation{}));
-                m_vectorBuiltins[key] =
-                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "store", std::move(fnType),
-                                                        std::move(params), nullptr, nullptr, nullptr, false);
-            }
-            decl = m_vectorBuiltins[key].get();
-        } else if (memberExpr.field == "select") {
-            // The format is a.select(b, mask);
-            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
-                return report(memberExpr.location, "cannot call instance member 'select' on vector type");
-            }
-            std::string key = "select:" + vecType->to_str();
-            // println(key);
-            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
-                std::vector<ptr<ResolvedParamDecl>> params;
-                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
-                auto maskType = makePtr<ResolvedTypeSimd>(SourceLocation{}, makePtr<ResolvedTypeBool>(SourceLocation{}),
-                                                          vecType->simdSize);
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "b", vecType->clone(), false));
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "mask", maskType->clone(), false));
-                std::vector<ptr<ResolvedType>> paramsTypes;
-                paramsTypes.emplace_back(selfType->clone());
-                paramsTypes.emplace_back(vecType->clone());
-                paramsTypes.emplace_back(maskType->clone());
-                auto fnType =
-                    makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType->clone());
-                m_vectorBuiltins[key] =
-                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, "select", std::move(fnType),
-                                                        std::move(params), nullptr, nullptr, nullptr, false);
-            }
-            decl = m_vectorBuiltins[key].get();
-        } else if (memberExpr.field == "reduceAdd" || memberExpr.field == "reduceMul" ||
-                   memberExpr.field == "reduceMin" || memberExpr.field == "reduceMax" ||
-                   memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" ||
-                   memberExpr.field == "reduceXor") {
-            if (dynamic_cast<const ResolvedTypeSimdExpr *>(resolvedBase.get())) {
-                return report(memberExpr.location,
-                              "cannot call instance member '" + memberExpr.field + "' on vector type");
-            }
-
-            auto elementType = vecType->simdType.get();
-            auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
-            if (!numType && elementType->kind != ResolvedTypeKind::Generic) {
-                return report(memberExpr.location,
-                              "reduction operations only supported for numeric vector elements, actual '" +
-                                  vecType->to_str() + "'");
-            }
-
-            if (memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" || memberExpr.field == "reduceXor") {
-                if (numType && numType->numberKind == ResolvedNumberKind::Float) {
-                    return report(memberExpr.location,
-                                  "bitwise reduction '" + memberExpr.field + "' only supported for integer vectors");
-                }
-            }
-
-            std::string key = memberExpr.field + ":" + vecType->to_str();
-            // println(key);
-            if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
-                std::vector<ptr<ResolvedParamDecl>> params;
-                auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType->clone());
-                params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
-                std::vector<ptr<ResolvedType>> paramsTypes;
-                paramsTypes.emplace_back(selfType->clone());
-                auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
-                                                            vecType->simdType->clone());
-                m_vectorBuiltins[key] =
-                    makePtr<ResolvedMemberFunctionDecl>(SourceLocation{}, true, memberExpr.field, std::move(fnType),
-                                                        std::move(params), nullptr, nullptr, nullptr, false);
-            }
-            decl = m_vectorBuiltins[key].get();
-        } else {
-            return report(memberExpr.location, "vector type \'" + resolvedBase->type->to_str() +
-                                                   "' only support 'load', 'store', and reduction members");
-        }
+        decl = resolve_simd_buildin(memberExpr, *resolvedBase, *vecType);
     } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
@@ -825,6 +716,134 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     }
     res->set_constant_value(cee.evaluate(*res, false));
     return res;
+}
+
+ResolvedSimdBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &memberExpr,
+                                                            const ResolvedExpr &resolvedBase,
+                                                            const ResolvedTypeSimd &vecType) {
+    ResolvedSimdBuiltinFunctionDecl *decl;
+    if (memberExpr.field == "load") {
+        if (!dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
+            return report(memberExpr.location, "cannot call static member 'load' on vector instance");
+        }
+        std::string key = "load:" + vecType.to_str();
+        // println(key);
+        if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+            std::vector<ptr<ResolvedParamDecl>> params;
+            params.emplace_back(makePtr<ResolvedParamDecl>(
+                SourceLocation{}, "ptr", makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone()),
+                false));
+            std::vector<ptr<ResolvedType>> paramsTypes;
+            paramsTypes.emplace_back(makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone()));
+            auto fnType =
+                makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType.clone());
+            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "load", std::move(fnType),
+                                                                     std::move(params), true);
+            m_vectorBuiltins[key] = funcDecl.get();
+            m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        }
+        auto vectorDecl = m_vectorBuiltins[key];
+        decl = vectorDecl;
+        add_dependency(vectorDecl);
+    } else if (memberExpr.field == "store") {
+        if (dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
+            return report(memberExpr.location, "cannot call instance member 'store' on vector type");
+        }
+        std::string key = "store:" + vecType.to_str();
+        // println(key);
+        if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+            std::vector<ptr<ResolvedParamDecl>> params;
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
+            auto ptrType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.simdType->clone());
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "ptr", ptrType->clone(), false));
+            std::vector<ptr<ResolvedType>> paramsTypes;
+            paramsTypes.emplace_back(selfType->clone());
+            paramsTypes.emplace_back(ptrType->clone());
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
+                                                        makePtr<ResolvedTypeVoid>(SourceLocation{}));
+            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "store", std::move(fnType),
+                                                                     std::move(params), false);
+            m_vectorBuiltins[key] = funcDecl.get();
+            m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        }
+        auto vectorDecl = m_vectorBuiltins[key];
+        decl = vectorDecl;
+        add_dependency(vectorDecl);
+    } else if (memberExpr.field == "select") {
+        // The format is a.select(b, mask);
+        if (dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
+            return report(memberExpr.location, "cannot call instance member 'select' on vector type");
+        }
+        std::string key = "select:" + vecType.to_str();
+        // println(key);
+        if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+            std::vector<ptr<ResolvedParamDecl>> params;
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
+            auto maskType = makePtr<ResolvedTypeSimd>(SourceLocation{}, makePtr<ResolvedTypeBool>(SourceLocation{}),
+                                                      vecType.simdSize);
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "b", vecType.clone(), false));
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "mask", maskType->clone(), false));
+            std::vector<ptr<ResolvedType>> paramsTypes;
+            paramsTypes.emplace_back(selfType->clone());
+            paramsTypes.emplace_back(vecType.clone());
+            paramsTypes.emplace_back(maskType->clone());
+            auto fnType =
+                makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes), vecType.clone());
+            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, "select",
+                                                                     std::move(fnType), std::move(params), false);
+            m_vectorBuiltins[key] = funcDecl.get();
+            m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        }
+        auto vectorDecl = m_vectorBuiltins[key];
+        decl = vectorDecl;
+        add_dependency(vectorDecl);
+    } else if (memberExpr.field == "reduceAdd" || memberExpr.field == "reduceMul" || memberExpr.field == "reduceMin" ||
+               memberExpr.field == "reduceMax" || memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" ||
+               memberExpr.field == "reduceXor") {
+        if (dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
+            return report(memberExpr.location, "cannot call instance member '" + memberExpr.field + "' on vector type");
+        }
+
+        auto elementType = vecType.simdType.get();
+        auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
+        if (!numType && elementType->kind != ResolvedTypeKind::Generic) {
+            return report(
+                memberExpr.location,
+                "reduction operations only supported for numeric vector elements, actual '" + vecType.to_str() + "'");
+        }
+
+        if (memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" || memberExpr.field == "reduceXor") {
+            if (numType && numType->numberKind == ResolvedNumberKind::Float) {
+                return report(memberExpr.location,
+                              "bitwise reduction '" + memberExpr.field + "' only supported for integer vectors");
+            }
+        }
+
+        std::string key = memberExpr.field + ":" + vecType.to_str();
+        // println(key);
+        if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
+            std::vector<ptr<ResolvedParamDecl>> params;
+            auto selfType = makePtr<ResolvedTypePointer>(SourceLocation{}, vecType.clone());
+            params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation{}, "self", selfType->clone(), false));
+            std::vector<ptr<ResolvedType>> paramsTypes;
+            paramsTypes.emplace_back(selfType->clone());
+            auto fnType = makePtr<ResolvedTypeFunction>(SourceLocation{}, nullptr, std::move(paramsTypes),
+                                                        vecType.simdType->clone());
+            auto funcDecl = makePtr<ResolvedSimdBuiltinFunctionDecl>(SourceLocation{}, true, memberExpr.field,
+                                                                     std::move(fnType), std::move(params), false);
+            m_vectorBuiltins[key] = funcDecl.get();
+            m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        }
+        auto vectorDecl = m_vectorBuiltins[key];
+        decl = vectorDecl;
+        add_dependency(vectorDecl);
+    } else {
+        return report(memberExpr.location, "vector type \'" + resolvedBase.type->to_str() +
+                                               "' only support 'load', 'store', 'select', and reduction members");
+    }
+    return decl;
 }
 
 ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr) {
@@ -1403,9 +1422,9 @@ ptr<ResolvedSimdSizeExpr> Sema::resolve_simd_size_expr(const SimdSizeExpr &simdS
     debug_func(simdSizeExpr.location);
     varOrReturn(typeExpr, resolve_expr(*simdSizeExpr.simdType));
 
-    int bit_simd_size = Driver::instance().target_simd_size();
+    int bit_simd_size = CodegenUtils::target_simd_size();
 
-    int bit_type_size = Driver::instance().typeBitSize(*typeExpr->type);
+    int bit_type_size = CodegenUtils::typeBitSize(*typeExpr->type);
     debug_msg("bit_simd_size: " << bit_simd_size << " bit_type_size: " << bit_type_size
                                 << " type: " << typeExpr->type->to_str());
 

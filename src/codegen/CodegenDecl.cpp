@@ -126,6 +126,9 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
 
 void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     debug_func(functionDecl.name() << " " << functionDecl.type->to_str());
+    if (dynamic_cast<const ResolvedSimdBuiltinFunctionDecl *>(&functionDecl)) {
+        return;
+    }
     if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         for (auto &&func : resolvedFunctionDecl->specializations) {
             auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());

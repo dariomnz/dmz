@@ -367,6 +367,13 @@ struct ResolvedMemberFunctionDecl : public ResolvedFunctionDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };
 
+struct ResolvedSimdBuiltinFunctionDecl : public ResolvedMemberFunctionDecl {
+    ResolvedSimdBuiltinFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+                                    ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params, bool isStatic)
+        : ResolvedMemberFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), nullptr, nullptr,
+                                     nullptr, isStatic) {}
+};
+
 struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
     const ResolvedDecl *parentDecl;
     ResolvedMemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
@@ -600,8 +607,7 @@ struct ResolvedSimdSplatExpr : public ResolvedExpr {
 };
 
 struct ResolvedSimdIotaExpr : public ResolvedExpr {
-    ResolvedSimdIotaExpr(SourceLocation location, ptr<ResolvedType> type)
-        : ResolvedExpr(location, std::move(type)) {}
+    ResolvedSimdIotaExpr(SourceLocation location, ptr<ResolvedType> type) : ResolvedExpr(location, std::move(type)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 };

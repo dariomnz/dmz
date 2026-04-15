@@ -3,12 +3,11 @@
 #define DEBUG
 #endif
 #endif
-#include <memory>
-#include <string>
 
 #include "DMZPCH.hpp"
+#include "Debug.hpp"
 #include "Utils.hpp"
-#include "driver/Driver.hpp"
+#include "codegen/CodegenUtils.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -336,7 +335,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 size_of_forloop = currentSize;
             }
             captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[i]->location, ResolvedNumberKind::Int,
-                                                      Driver::instance().ptrBitSize());
+                                                      CodegenUtils::ptrBitSize());
         } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
             captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
         } else {
@@ -482,7 +481,8 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
         if (switchStmt.isInline) {
             if (caseMatchedInInline) {
                 varOrReturn(block, resolve_block(*cas->block));
-                cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
+                cases.emplace_back(
+                    makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
             } else {
                 auto emptyBlock = makePtr<ResolvedBlock>(cas->location, std::vector<ptr<ResolvedStmt>>{},
                                                          std::vector<ptr<ResolvedDeferRefStmt>>{});
@@ -491,7 +491,8 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
             }
         } else {
             varOrReturn(block, resolve_block(*cas->block));
-            cases.emplace_back(makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
+            cases.emplace_back(
+                makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
         }
     }
 

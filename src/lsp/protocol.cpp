@@ -1,8 +1,5 @@
 #include "lsp/protocol.hpp"
 
-#include <cctype>
-#include <string>
-
 namespace DMZ::lsp {
 
 std::string unescape(const std::string &s) {

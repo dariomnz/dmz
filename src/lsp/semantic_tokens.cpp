@@ -1,8 +1,6 @@
 // #define DEBUG
 #include "lsp/semantic_tokens.hpp"
 
-#include <algorithm>
-
 #include "Debug.hpp"
 
 namespace DMZ::lsp {
@@ -234,8 +232,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_expr(*memberExpr->base);
         } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedStructInstantiationExpr");
-            std::cerr << "ResolvedStructInstantiationExpr: " << instantiation->structDecl.identifier
-                      << (instantiation->isTuple ? " tuple" : " struct") << std::endl;
             if (!instantiation->isTuple) {
                 bool is_this = false;
                 if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(instantiation->type.get())) {
@@ -245,7 +241,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
                     is_this = structType->is_this;
                 }
 
-                std::cerr << "color: " << (is_this ? "@This" : instantiation->structDecl.identifier) << std::endl;
                 add_token(instantiation->location, is_this ? "@This" : instantiation->structDecl.identifier,
                           SemanticTokenType::Type);
             }
@@ -257,7 +252,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             }
         } else if (auto* instantiation = dynamic_cast<const ResolvedUnionInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedUnionInstantiationExpr");
-            std::cerr << "ResolvedUnionInstantiationExpr: " << instantiation->unionDecl.identifier << std::endl;
             bool is_this = false;
             if (auto* unionDeclType = dynamic_cast<const ResolvedTypeUnionDecl*>(instantiation->type.get())) {
                 is_this = unionDeclType->is_this;
@@ -266,7 +260,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
                 is_this = unionType->is_this;
             }
 
-            std::cerr << "color: " << (is_this ? "@This" : instantiation->unionDecl.identifier) << std::endl;
             add_token(instantiation->location, is_this ? "@This" : instantiation->unionDecl.identifier,
                       SemanticTokenType::Type);
             if (instantiation->fieldInitializer) {
