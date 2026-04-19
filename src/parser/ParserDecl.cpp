@@ -165,11 +165,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
     matchOrReturn(TokenType::kw_struct, "expected 'struct'");
     eat_next_token();  // eat struct
 
-    matchOrReturn(TokenType::id, "expected identifier");
-
-    auto structIdentifier = m_nextToken.str;
-    eat_next_token();  // eat identifier
-
+    std::string structIdentifier = "structL" + std::to_string(location.line) + "C" + std::to_string(location.col);
     auto genericTypes = parse_generic_types_decl();
 
     matchOrReturn(TokenType::block_l, "expected '{'");
@@ -197,7 +193,7 @@ ptr<StructDecl> Parser::parse_struct_decl() {
             varOrReturn(init, parse_field_decl());
             declList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
-                eat_next_token();  // eat ','
+            eat_next_token();  // eat ','
         } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
             bool isPublic = m_nextToken.type == TokenType::kw_pub;
             if (isPublic) {
@@ -240,11 +236,7 @@ ptr<UnionDecl> Parser::parse_union_decl() {
     matchOrReturn(TokenType::kw_union, "expected 'union'");
     eat_next_token();  // eat union
 
-    matchOrReturn(TokenType::id, "expected identifier");
-
-    auto unionIdentifier = m_nextToken.str;
-    eat_next_token();  // eat identifier
-
+    std::string unionIdentifier = "unionL" + std::to_string(location.line) + "C" + std::to_string(location.col);
     auto genericTypes = parse_generic_types_decl();
     if (!genericTypes.empty()) {
         return report(m_nextToken.loc, "unions cannot be generic");
@@ -270,7 +262,7 @@ ptr<UnionDecl> Parser::parse_union_decl() {
             varOrReturn(init, parse_field_decl());
             declList.emplace_back(std::move(init));
             if (m_nextToken.type != TokenType::comma) break;
-                eat_next_token();  // eat ','
+            eat_next_token();  // eat ','
         } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
             bool isPublic = m_nextToken.type == TokenType::kw_pub;
             if (isPublic) {
@@ -404,18 +396,6 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
             if (auto st = parse_decl_stmt(true)) {
                 declarations.emplace_back(std::move(st));
                 continue;
-            }
-        } else if (ttype == TokenType::kw_struct || ttype == TokenType::kw_packed || ttype == TokenType::kw_union) {
-            if (ttype == TokenType::kw_union) {
-                if (auto st = parse_union_decl()) {
-                    declarations.emplace_back(std::move(st));
-                    continue;
-                }
-            } else {
-                if (auto st = parse_struct_decl()) {
-                    declarations.emplace_back(std::move(st));
-                    continue;
-                }
             }
         } else if (ttype == TokenType::kw_module) {
             if (auto st = parse_module_decl()) {

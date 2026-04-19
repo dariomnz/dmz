@@ -10,7 +10,7 @@ fn futex(uaddr: *i32, futex_op: i32, val: i32) -> i64 {
     return syscall(SYS_futex, uaddr, futex_op, val, null, null, 0);
 }
 
-pub struct FutexMutex {
+pub const FutexMutex = struct {
     state: i32 = 0,
     // 0: free, 1: locked, 2: contention
 
@@ -48,7 +48,7 @@ pub struct FutexMutex {
             futex(&self.state, FUTEX_WAKE, 1);
         }
     }
-}
+};
 
 // test "thread futex mutex" {
 //     let contador = 0;

@@ -14,19 +14,18 @@
 #include "semantic/SemanticSymbols.hpp"
 
 // #define DEBUG_SCOPES
-// #ifdef DEBUG
-// #define DEBUG_SCOPES
-// #endif
+#ifdef DEBUG
+#define DEBUG_SCOPES
+#endif
 
 namespace DMZ {
 
 void Sema::dump_scopes() const {
-    debug_msg("m_scopes.size " << m_scopes.size());
     size_t level = 0;
-    for (auto &&scope : m_scopes) {
-        debug_msg("m_scopes[" << level << "].size " << scope.size());
-        for (auto &&[id, decl] : scope) {
-            println(indent(level) << "Identifier: " << id);
+    for (auto scope = m_currentScope; scope; scope = scope->parent) {
+        debug_msg("Scope level " << level << " size " << scope->table.size());
+        for (auto &&[id, decl] : scope->table) {
+            println(indent(level) << "Identifier: " << id << " type " << decl->className());
             decl->dump(level, true);
         }
         level++;
@@ -55,7 +54,7 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) 
         return false;
     }
 
-    m_scopes.back().emplace(decl.identifier, &decl);
+    m_currentScope->table.emplace(decl.identifier, &decl);
 #ifdef DEBUG_SCOPES
     dump_scopes();
     println("======================<<insert_decl_to_current_scope " << decl.identifier << " ======================");
@@ -64,92 +63,75 @@ bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) 
 }
 
 void Sema::remove_decl_to_current_scope(ResolvedDecl &decl) {
-    for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
-        std::erase_if(*it, [&decl](auto &pair) { return &decl == pair.second; });
+    for (auto scope = m_currentScope; scope; scope = scope->parent) {
+        std::erase_if(scope->table, [&decl](auto &pair) { return &decl == pair.second; });
     }
 }
 
 bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl) {
     [[maybe_unused]] auto declPtr = decl.get();
     debug_func("module: '" << moduleDecl.name() << "' decl '" << declPtr->identifier << "' " << declPtr->location);
-    auto it = std::find_if(moduleDecl.declarations.begin(), moduleDecl.declarations.end(),
-                           [&](const ptr<ResolvedDecl> &d) { return decl->identifier == d->identifier; });
-    if (it != moduleDecl.declarations.end()) {
-        report(decl->location, "redeclaration of '" + decl->identifier + '\'');
-        return false;
+    if (!declPtr->identifier.empty()) {
+        auto it = std::find_if(moduleDecl.declarations.begin(), moduleDecl.declarations.end(),
+                               [&](const ptr<ResolvedDecl> &d) { return declPtr->identifier == d->identifier; });
+        if (it != moduleDecl.declarations.end()) {
+            report(declPtr->location, "redeclaration of '" + declPtr->identifier + '\'');
+            return false;
+        }
     }
     moduleDecl.declarations.emplace_back(std::move(decl));
     return true;
 }
 
-std::vector<ResolvedDecl *> Sema::collect_scope() {
-    debug_func("");
-    std::vector<ResolvedDecl *> out;
-    size_t needSize = 0;
-    for (auto &&scope : m_scopes) {
-        needSize += scope.size();
+std::string Sema::resolve_decl_name(std::string_view identifier) {
+    std::string ret(identifier);
+    if (m_currentStruct) {
+        ret = m_currentStruct->identifier;
+        ret += ".";
+        ret += identifier;
     }
-
-    out.reserve(needSize);
-
-    for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
-        for (auto &&[declID, decl] : *it) {
-            debug_msg("Collect scope " << declID);
-            out.emplace_back(decl);
-        }
+    if (m_currentModule) {
+        ret = m_currentModule->identifier;
+        ret += ".";
+        ret += identifier;
     }
-    return out;
+    return ret;
 }
 
-ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps) {
+ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps,
+                           ResolvedScope *scopeToUse) {
     debug_func(loc << " " << id);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
     dump_scopes();
     println("----------------------<<lookup " << std::quoted(std::string(id)) << " ----------------------");
 #endif
-
+    if (!scopeToUse) scopeToUse = m_currentScope;
     if (id == "@This") {
         if (m_currentStruct) {
             return m_currentStruct;
-        } else if (m_currentUnion) {
-            return m_currentUnion;
         } else {
             return report(loc, "unexpected use of @This outside a struct or union");
         }
     }
 
     std::string identifier(id);
-    for (auto it = m_scopes.rbegin(); it != m_scopes.rend(); ++it) {
-        auto it_decl = (*it).find(identifier);
-        if (it_decl != (*it).end()) {
+    for (auto scope = scopeToUse; scope; scope = scope->parent) {
+        auto it_decl = scope->table.find(identifier);
+        if (it_decl != scope->table.end()) {
+            auto declPtr = it_decl->second;
             // Delayed initialization if it was not initialized
-            if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(it_decl->second)) {
+            if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(declPtr)) {
                 if (!declStmt->type) {
-                    if (!resolve_decl_stmt_initialize(*declStmt)) return nullptr;
+                    if (!resolve_decl_stmt_initialize(*declStmt)) return debug_ret(nullptr);
                 }
             }
-            if (needAddDeps) add_dependency(it_decl->second);
-            return it_decl->second;
+            if (needAddDeps) add_dependency(declPtr);
+            return debug_ret(it_decl->second);
         }
     }
 
-    if (m_currentModule) {
-        auto ret = lookup_in_module(loc, *m_currentModule, id, needAddDeps);
-        if (ret) return ret;
-    }
-
-    if (m_currentStruct) {
-        auto ret = lookup_in_struct(loc, *m_currentStruct, id, needAddDeps);
-        if (ret) return ret;
-    }
-
-    if (m_currentUnion) {
-        auto ret = lookup_in_union(loc, *m_currentUnion, id, needAddDeps);
-        if (ret) return ret;
-    }
-
-    return nullptr;
+    return debug_ret(nullptr);
 }
 
 ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
@@ -158,17 +140,18 @@ ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedMo
     if (needAddDeps) add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
-        debug_msg("Search: " << decl->identifier << " in " << moduleDecl.identifier << " to find " << id);
+        if (auto ds = dynamic_cast<ResolvedDeclStmt *>(declPtr)) {
+            if (id == ds->varDecl->identifier) declPtr = ds->varDecl.get();
+        }
         if (id != declPtr->identifier) continue;
-        if (&moduleDecl != m_currentModule && !decl->isPublic) {
+        debug_msg("Search: " << declPtr->identifier << " in " << moduleDecl.identifier << " to find " << id);
+        if (&moduleDecl != m_currentModule && !declPtr->isPublic) {
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
         }
         // Delayed initialization if it was not initialized
-        if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(declPtr)) {
-            if (!declStmt->type) {
-                if (!resolve_decl_stmt_initialize(*declStmt)) return nullptr;
-            }
+        if (!declPtr->type || declPtr->state != ResolvedState::FullyResolved) {
+            if (!ensure_fully_resolved(*declPtr)) return nullptr;
         }
         if (needAddDeps) add_dependency(declPtr);
         return declPtr;
@@ -180,6 +163,8 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
                                      const std::string_view id, bool needAddDeps) {
     debug_func("Struct " << structDecl.identifier << " " << id);
     if (needAddDeps) add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
+    // Lazy: ensure members and functions are resolved before searching
+    if (!ensure_struct_funcs_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return nullptr;
     for (auto &&decl : structDecl.functions) {
         if (id != decl->identifier) continue;
         if (&structDecl != m_currentStruct && !decl->isPublic) {
@@ -189,32 +174,15 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
         if (needAddDeps) add_dependency(decl.get());
         return decl.get();
     }
+    if (!ensure_struct_members_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return nullptr;
     for (auto &&decl : structDecl.fields) {
         if (id != decl->identifier) continue;
         return decl.get();
     }
-    return nullptr;
-}
-
-ResolvedDecl *Sema::lookup_in_union(const SourceLocation &loc, const ResolvedUnionDecl &unionDecl,
-                                    const std::string_view id, bool needAddDeps) {
-    debug_func("Union " << unionDecl.identifier << " " << id);
-    if (needAddDeps) add_dependency(const_cast<ResolvedUnionDecl *>(&unionDecl));
-    for (auto &&decl : unionDecl.functions) {
-        if (id != decl->identifier) continue;
-        if (&unionDecl != m_currentUnion && !decl->isPublic) {
-            report(loc, "cannot access private member '" + std::string(id) + "'");
-            return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
+    if (auto unionDecl = dynamic_cast<const ResolvedUnionDecl *>(&structDecl)) {
+        if (id == "tag") {
+            return unionDecl->tag.get();
         }
-        if (needAddDeps) add_dependency(decl.get());
-        return decl.get();
-    }
-    for (auto &&decl : unionDecl.fields) {
-        if (id != decl->identifier) continue;
-        return decl.get();
-    }
-    if (id == "tag") {
-        return unionDecl.tag.get();
     }
     return nullptr;
 }
@@ -227,17 +195,17 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     if (dynamic_cast<const TypeVoid *>(&type)) {
         ret = makePtr<ResolvedTypeVoid>(type.location);
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (dynamic_cast<const TypeError *>(&type)) {
         ret = makePtr<ResolvedTypeError>(type.location);
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (dynamic_cast<const TypeBool *>(&type)) {
         ret = makePtr<ResolvedTypeBool>(type.location);
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto numType = dynamic_cast<const TypeNumber *>(&type)) {
         auto num = numType->name.substr(1);
@@ -267,19 +235,19 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         }
         ret = makePtr<ResolvedTypeNumber>(type.location, kind, bitSize, isPlatformSize);
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto slcType = dynamic_cast<const TypeSlice *>(&type)) {
         varOrReturn(sliceType, resolve_type(*slcType->sliceType));
         ret = makePtr<ResolvedTypeSlice>(type.location, std::move(sliceType));
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto ptrType = dynamic_cast<const TypePointer *>(&type)) {
         varOrReturn(pointerType, resolve_type(*ptrType->pointerType));
         ret = makePtr<ResolvedTypePointer>(type.location, std::move(pointerType));
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto fnType = dynamic_cast<const TypeFunction *>(&type)) {
         std::vector<ptr<ResolvedType>> paramsTypes;
@@ -291,14 +259,14 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
 
         ret = makePtr<ResolvedTypeFunction>(type.location, nullptr, std::move(paramsTypes), std::move(returnType));
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto ptrType = dynamic_cast<const DerefPtrExpr *>(&type)) {
         varOrReturn(pointerType, resolve_type(*ptrType->expr));
 
         ret = makePtr<ResolvedTypePointer>(type.location, std::move(pointerType));
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto optType = dynamic_cast<const UnaryOperator *>(&type)) {
         if (optType->op != TokenType::op_excla_mark)
@@ -307,7 +275,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
 
         ret = makePtr<ResolvedTypeOptional>(type.location, std::move(optionalType));
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto arrType = dynamic_cast<const ArrayAtExpr *>(&type)) {
         varOrReturn(arrayType, resolve_type(*arrType->array));
@@ -325,36 +293,47 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
 
         ret = makePtr<ResolvedTypeArray>(type.location, std::move(arrayType), arraySize);
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto declRefType = dynamic_cast<const DeclRefExpr *>(&type)) {
         auto decl = lookup(type.location, declRefType->identifier);
         if (!decl) {
+#ifdef DEBUG_SCOPES
             dump_scopes();
+#endif
             return report(declRefType->location, "type symbol '" + declRefType->identifier + "' not found");
         }
         if (dynamic_cast<ResolvedDeclStmt *>(decl) || dynamic_cast<ResolvedParamDecl *>(decl) ||
             dynamic_cast<ResolvedStructDecl *>(decl) || dynamic_cast<ResolvedUnionDecl *>(decl) ||
             dynamic_cast<ResolvedCaptureDecl *>(decl) || dynamic_cast<ResolvedVarDecl *>(decl)) {
+            // Lazy: trigger full resolution if type is missing (e.g., from uninitialized DeclStmt)
+            if (!decl->type) {
+                if (!ensure_fully_resolved(*decl)) return nullptr;
+                if (!decl->type) {
+                    return report(declRefType->location,
+                                  "could not resolve type for '" + declRefType->identifier + "'");
+                }
+            }
             if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
             } else if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->decl, declRefType->identifier == "@This");
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl(),
+                                                 declRefType->identifier == "@This");
             } else {
                 ret = decl->type->clone();
             }
             retPtr = ret.get();
-            return ret;
+            return debug_ret(ret);
         }
         if (auto genDecl = dynamic_cast<ResolvedGenericTypeDecl *>(decl)) {
             if (genDecl->specializedType) {
                 ret = genDecl->specializedType->clone();
                 retPtr = ret.get();
-                return ret;
+                return debug_ret(ret);
             } else {
                 ret = makePtr<ResolvedTypeGeneric>(type.location, genDecl);
                 retPtr = ret.get();
-                return ret;
+                return debug_ret(ret);
             }
         }
         decl->dump();
@@ -371,7 +350,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             ret = specExpr->type->clone();
         }
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
     }
     if (auto memType = dynamic_cast<const MemberExpr *>(&type)) {
         varOrReturn(resolvedMem, resolve_member_expr(*memType));
@@ -381,7 +360,32 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             ret = resolvedMem->type->clone();
         }
         retPtr = ret.get();
-        return ret;
+        return debug_ret(ret);
+    }
+    if (const auto *stru = dynamic_cast<const StructDecl *>(&type)) {
+        ptr<ResolvedStructDecl> ownedStructDecl = nullptr;
+        ResolvedStructDecl *res = nullptr;
+        auto it = m_resolvedStructs.find(stru);
+        if (it != m_resolvedStructs.end()) {
+            res = it->second;
+        } else {
+            varOrReturn(structDecl, resolve_struct_decl(*stru));
+            res = structDecl.get();
+            ownedStructDecl = std::move(structDecl);
+        }
+        ptr<ResolvedTypeStructDecl> retTypeStruct;
+        if (auto unionDecl = dynamic_cast<ResolvedUnionDecl *>(res)) {
+            retTypeStruct = makePtr<ResolvedTypeUnionDecl>(type.location, unionDecl);
+        } else {
+            retTypeStruct = makePtr<ResolvedTypeStructDecl>(type.location, res);
+        }
+        retTypeStruct->ownedDecl = std::move(ownedStructDecl);
+        if (retTypeStruct->ownedDecl) {
+            m_pending_decls.emplace_back(retTypeStruct->ownedDecl.get());
+        }
+        ret = std::move(retTypeStruct);
+        retPtr = ret.get();
+        return debug_ret(ret);
     }
 
     type.dump();
@@ -928,6 +932,8 @@ void Sema::add_dependency(ResolvedDecl *decl) {
         if (!varDecl->isGlobal) return;
     }
 
+    if (!decl->type) return;
+
     if (!decl->isMutable &&
         (decl->type->kind == ResolvedTypeKind::Module || decl->type->kind == ResolvedTypeKind::StructDecl ||
          decl->type->kind == ResolvedTypeKind::Function || decl->type->kind == ResolvedTypeKind::ErrorGroup)) {
@@ -1141,7 +1147,8 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(fnParam->type->clone());
         paramsTypes.emplace_back(argsParam->type->clone());
-        auto retReturnType = fnType ? fnType->returnType->clone() : makePtr<ResolvedTypeGeneric>(call.location, nullptr);
+        auto retReturnType =
+            fnType ? fnType->returnType->clone() : makePtr<ResolvedTypeGeneric>(call.location, nullptr);
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                                  std::move(retReturnType));
         call.type = ret->clone();

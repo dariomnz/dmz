@@ -3,10 +3,10 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-struct Point<T> {
+const Point = struct<T> {
     x:T,
     y:T,
-}
+};
 // CHECK: %"generic_struct.Point<f64>" = type { double, double }
 // CHECK: %"generic_struct.Point<i32>" = type { i32, i32 }
 

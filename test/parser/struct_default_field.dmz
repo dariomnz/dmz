@@ -1,11 +1,11 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 
-struct StructWithDefault {
+const StructWithDefault = struct {
     r: i32,
     g: i32 = 0,
     b: i32 = 1,
-}
-// CHECK:   StructDecl StructWithDefault
+};
+// CHECK: StructDecl structL3C26
 // CHECK-NEXT:     FieldDecl:i32 r
 // CHECK-NEXT:     FieldDecl:i32 g
 // CHECK-NEXT:       IntLiteral '0'

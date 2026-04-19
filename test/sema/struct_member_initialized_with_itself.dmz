@@ -1,7 +1,7 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
-}
+};
 
 fn main() -> void {
     let s = S{x: x};

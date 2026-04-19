@@ -2,7 +2,7 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
@@ -10,8 +10,9 @@ struct Color {
     fn print(self: *@This) -> i32 {
         return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
     }
-}
-// CHECK: StructDecl Color
+};
+// CHECK:     VarDecl:const  Color global
+// CHECK-NEXT:       StructDecl structL5C14
 // CHECK-NEXT:     FieldDecl:i32 r
 // CHECK-NEXT:     FieldDecl:i32 g
 // CHECK-NEXT:     FieldDecl:i32 b

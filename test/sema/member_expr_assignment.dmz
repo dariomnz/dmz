@@ -1,10 +1,10 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
-}
-struct S2 {
+};
+const S2 = struct {
     x: i32,
-}
+};
 
 fn main() -> void {
     let s = S{x: 0};
@@ -12,5 +12,5 @@ fn main() -> void {
 
     s.x = 1;
     s2.x = s2;
-    // CHECK: [[# @LINE - 1 ]]:12: error: assigned value type 'S2{}' doesn't match variable type 'i32'
+    // CHECK: [[# @LINE - 1 ]]:12: error: assigned value type 'member_expr_assignment.S2{}' doesn't match variable type 'i32'
 }

@@ -609,7 +609,7 @@ int Driver::main() {
     check_sources_pass(m_options.source);
     if (need_exit()) return exit_code();
 
-    if ((m_options.test || m_options.testCompiler) && std::filesystem::is_directory(m_options.source)) {
+    if (m_options.testCompiler) {
         TestOptions testOpts;
         testOpts.parallel_jobs = m_options.parallelJobs;
         testOpts.quiet = m_options.quiet;

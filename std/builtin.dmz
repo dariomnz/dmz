@@ -14,17 +14,17 @@ fn @builtin_test_name(n: i32) -> *u8 {
     return "";
 }
 
-struct ErrorTraceEntry {
+const ErrorTraceEntry = struct {
     file: []u8,
     line: i32,
     col: i32,
     func: []u8,
-}
+};
 
-struct ErrorTrace {
+const ErrorTrace = struct {
     size: i32,
     entries: ErrorTraceEntry[20],
-}
+};
 
 fn @getErrorTrace() -> ErrorTrace {
     // Internaly implemented

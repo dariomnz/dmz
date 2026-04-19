@@ -1,23 +1,26 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
-struct Empty {}
-// CHECK: StructDecl Empty
+const Empty = struct {};
+// CHECK: VarDecl:const  Empty global
+// CHECK-NEXT:   StructDecl structL2C14
 
-struct WithTrailingComma {
+const WithTrailingComma = struct {
     r: i32,
     g: i32,
     b: i32,
-}
-// CHECK: StructDecl WithTrailingComma
+};
+// CHECK: VarDecl:const  WithTrailingComma global
+// CHECK-NEXT:   StructDecl structL6C26
 // CHECK-NEXT:   FieldDecl:i32 r
 // CHECK-NEXT:   FieldDecl:i32 g
 // CHECK-NEXT:   FieldDecl:i32 b
 
-struct WithoutTrailingComma {
+const WithoutTrailingComma = struct {
     a: i32,
     b: i32,
     c: i32
-}
-// CHECK: StructDecl WithoutTrailingComma
+};
+// CHECK: VarDecl:const  WithoutTrailingComma global
+// CHECK-NEXT:   StructDecl structL17C29
 // CHECK-NEXT:   FieldDecl:i32 a
 // CHECK-NEXT:   FieldDecl:i32 b
 // CHECK-NEXT:   FieldDecl:i32 c

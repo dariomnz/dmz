@@ -1,6 +1,6 @@
 const std = import("std");
 
-pub struct Writer {
+pub const Writer = struct {
 
     buffer: []u8,
     end: usize = 0,
@@ -68,7 +68,7 @@ pub struct Writer {
         const emptySlice: []u8 = {};
         return w.vtable_flush(w.vtable_ptr, w, emptySlice, 0);
     }
-}
+};
 
 test "Writer init" {
     let array: u8[1024] = {};

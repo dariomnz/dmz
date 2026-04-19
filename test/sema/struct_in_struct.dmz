@@ -1,0 +1,39 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+const A = struct {
+    pub fn foo() -> void {
+        const B = struct {
+            C: i32,
+        };
+            
+        let x = B{ C: 1 };
+        printf("x.C %d\n", x.C);
+    }
+};
+
+fn main() -> void {
+    A.foo();
+}
+
+// CHECK:  ResolvedStaticMemberFunctionDecl foo fn()->void
+// CHECK-NEXT:            ResolvedBlock
+// CHECK-NEXT:              ResolvedDeclStmt struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                ResolvedVarDecl:const struct_in_struct.A.structL7C18.B B
+// CHECK-NEXT:                  ResolvedTypeExpr:struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                    ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                  ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                    ResolvedStructDecl struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                      ResolvedFieldDecl:i32 C
+// CHECK-NEXT:              ResolvedDeclStmt struct_in_struct.A.structL7C18.B{}
+// CHECK-NEXT:                ResolvedVarDecl:struct_in_struct.A.structL7C18.B{} x
+// CHECK-NEXT:                  ResolvedStructInstantiationExpr:struct_in_struct.A.structL7C18.B{}
+// CHECK-NEXT:                    ResolvedFieldInitStmt:i32 C
+// CHECK-NEXT:                      ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                      | value: 1
+// CHECK-NEXT:              ResolvedCallExpr:i32
+// CHECK-NEXT:                ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:                ResolvedStringLiteral:*u8 'x.C %d\n'
+// CHECK-NEXT:                ResolvedMemberExpr:i32 C
+// CHECK-NEXT:                  ResolvedDeclRefExpr:struct_in_struct.A.structL7C18.B{} x

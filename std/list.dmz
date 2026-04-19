@@ -1,11 +1,11 @@
 const std = import("std");
 
-pub struct Node<T> {
+pub const Node = struct<T> {
     value: T,
     next: *@This,
-}
+};
 
-pub struct NodeIterator<T> {
+pub const NodeIterator = struct<T> {
     current: *Node<T>,
 
     pub fn next(self: *@This) -> *T {
@@ -18,9 +18,9 @@ pub struct NodeIterator<T> {
 
         return value_ptr;
     }
-}
+};
 
-pub struct SimplyLinkedList<T> {
+pub const SimplyLinkedList = struct<T> {
     head: *Node<i32>,
     len: usize,
     alloc: std.mem.Allocator,
@@ -79,7 +79,7 @@ pub struct SimplyLinkedList<T> {
             current: self.head,
         };
     }
-}
+};
 
 test "SimplyLinkedList insertAtFirst" {
     let libc_alloc = std.mem.libc_allocator.init();

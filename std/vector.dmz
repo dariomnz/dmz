@@ -4,7 +4,7 @@ const vector_error = error {
     OutOfMemory,
 };
 
-pub struct vec<T> {
+pub const vec = struct<T> {
     buf: []T,
     len: usize,
     alloc: std.mem.Allocator,
@@ -77,4 +77,4 @@ pub struct vec<T> {
     pub fn slice(self: *@This) -> []T {
         return self.buf[0..self.len];
     }
-}
+};

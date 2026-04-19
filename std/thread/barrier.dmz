@@ -5,7 +5,7 @@ extern fn pthread_barrier_init(barrier: *void, attr: *void, count: u32) -> i32;
 extern fn pthread_barrier_wait(barrier: *void) -> i32;
 extern fn pthread_barrier_destroy(barrier: *void) -> i32;
 
-pub struct Barrier {
+pub const Barrier = struct {
     opaque_data: u8[32] = {},
 
     pub fn init(count: u32) -> Barrier {
@@ -30,7 +30,7 @@ pub struct Barrier {
             try std.errno.libc_error(ret);
         }
     }
-}
+};
 
 test "barrier test" {
     const num_threads = 10;

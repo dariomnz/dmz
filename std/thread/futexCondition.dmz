@@ -11,7 +11,7 @@ fn futex(uaddr: *i32, futex_op: i32, val: i32) -> i64 {
     return syscall(SYS_futex, uaddr, futex_op, val, null, null, 0);
 }
 
-pub struct FutexCondition {
+pub const FutexCondition = struct {
     sequence: i32 = 0,
 
     pub fn wait(self: *@This, mutex: *std.thread.FutexMutex) -> !void {
@@ -30,7 +30,7 @@ pub struct FutexCondition {
         @atomicRmw(&self.sequence, +, 1);
         futex(&self.sequence, FUTEX_WAKE, 2147483647);
     }
-}
+};
 
 // test "futex conditional variable test" {
 //     let m = std.thread.FutexMutex{};

@@ -4,11 +4,11 @@ fn one() -> i32 {
     return 1;
 }
 
-struct StructWithDefault {
+const StructWithDefault = struct {
     r: i32,
     g: i32 = 0,
     b: i32 = one(),
-}
+};
 // CHECK: ResolvedStructDecl struct_default_field.StructWithDefault
 // CHECK-NEXT:     ResolvedFieldDecl:i32 r
 // CHECK-NEXT:     ResolvedFieldDecl:i32 g

@@ -5,17 +5,17 @@ fn foo(s: S) -> S2 {
 
 fn main() -> void {}
 
-struct S { x: i32, y:i32}
-struct S2 { x: i32, y:i32}
+const S = struct { x: i32, y:i32};
+const S2 = struct { x: i32, y:i32};
 // CHECK: ResolvedStructDecl structs_resolved_first.S
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-// CHECK-NEXT: ResolvedStructDecl  structs_resolved_first.S2
+// CHECK: ResolvedStructDecl  structs_resolved_first.S2
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-// CHECK-NEXT: ResolvedFunctionDecl foo fn(structs_resolved_first.S{})->structs_resolved_first.S2{}
+// CHECK: ResolvedFunctionDecl foo fn(structs_resolved_first.S{})->structs_resolved_first.S2{}
 // CHECK-NEXT:   ResolvedParamDecl:structs_resolved_first.S{} s
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt

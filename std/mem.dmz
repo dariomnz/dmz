@@ -7,7 +7,7 @@ pub extern fn strlen(str: *u8) -> usize;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
 // pub extern fn memset(ptr: *void, value: i32, size: usize) -> *void;
 
-pub struct Allocator {
+pub const Allocator = struct {
     allocator: *void,
     vtable_malloc: *fn(*void, usize)->*void,
     vtable_realloc: *fn(*void, *void, usize)->*void,
@@ -24,9 +24,9 @@ pub struct Allocator {
     pub fn free(self: *@This, ptr: *void) -> void {
         self.vtable_free(self.allocator, ptr);
     }
-}
+};
 
-pub struct libc_allocator {
+pub const libc_allocator = struct {
     allocated: usize,
     allocated_count: usize,
 
@@ -67,7 +67,7 @@ pub struct libc_allocator {
             vtable_free: &self.free,
         };
     }
-}
+};
 
 pub fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
     for (0..slice.len) |i| {

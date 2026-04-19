@@ -1,7 +1,7 @@
 
 const std = import("std");
 
-pub struct FutexBarrier {
+pub const FutexBarrier = struct {
     mutex: std.thread.FutexMutex,
     cv: std.thread.FutexCondition,
     num: i32,
@@ -32,7 +32,7 @@ pub struct FutexBarrier {
             try self.cv.wait(&self.mutex);
         }
     }
-}
+};
 
 test "barrier test" {
     const num_threads = 10;

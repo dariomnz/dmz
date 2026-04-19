@@ -1,15 +1,15 @@
 const std = import("std");
 
-struct elem<K, V> {
+const elem = struct<K, V> {
     key: K,
     value: V,
-}
+};
 
-struct HashMap_bucket<K, V> {
+const HashMap_bucket = struct<K, V> {
     elems: std.vec<elem<K, V>>,
-}
+};
 
-pub struct HashMap<K, V> {
+pub const HashMap = struct<K, V> {
     buckets: []HashMap_bucket<K, V>,
     len: usize,
     fn_hash: *fn(K)->usize,
@@ -138,7 +138,7 @@ pub struct HashMap<K, V> {
         }
         return error.KeyNotFound;
     }
-}
+};
 
 test "HashMap<i32, i32>" {
     let libc_alloc = std.mem.libc_allocator.init();

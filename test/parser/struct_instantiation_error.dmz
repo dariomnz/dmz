@@ -1,9 +1,9 @@
 // RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
-}
+};
 
 fn main() -> void {
     let err1 = Color {
@@ -15,7 +15,7 @@ fn main() -> void {
 
     let x = 1;
 }
-// CHECK: StructDecl Color
+// CHECK: StructDecl structL2C14
 // CHECK-NEXT:   FieldDecl:i32 r
 // CHECK-NEXT:   FieldDecl:i32 g
 // CHECK-NEXT:   FieldDecl:i32 b

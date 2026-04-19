@@ -25,7 +25,10 @@
 - [x] jit stack trace on segfault
 - [x] stabilize lsp
 - [x] @call
-- [ ] all stmt are expr
+- [ ] all stmt are expr (struct and union for the moment)
+- [ ] new semantic system with lazy resolution
+- [ ] new scopes system tied to each declaration
+- [ ] lsp completion with new scope system
 - [ ] permit types top be expr at compile time const t = i32;
 - [ ] struct to replace lambdas
 - [ ] enums with .name with auto resolve

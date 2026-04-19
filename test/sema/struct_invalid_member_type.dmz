@@ -1,8 +1,8 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     nested: INVALID,
     // CHECK: [[# @LINE - 1 ]]:13: error: type symbol 'INVALID' not found
-}
+};
 
 fn main() -> void {
 }

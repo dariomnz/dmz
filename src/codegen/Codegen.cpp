@@ -121,8 +121,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
         ResolvedStructDecl *decl = nullptr;
         if (auto typeStruct = dynamic_cast<const ResolvedTypeStructDecl *>(&type)) {
             decl = typeStruct->decl;
-        }
-        if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+        } else if (auto typeStruct = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
             decl = typeStruct->decl;
         }
         if (!decl) dmz_unreachable(type.location, "unexpected error");
@@ -139,12 +138,11 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             if (!ret) dmz_unreachable(type.location, "unexpected error generating struct decl");
         }
     } else if (type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::UnionDecl) {
-        ResolvedUnionDecl *decl = nullptr;
+        const ResolvedUnionDecl *decl = nullptr;
         if (auto typeUnion = dynamic_cast<const ResolvedTypeUnionDecl *>(&type)) {
-            decl = typeUnion->decl;
-        }
-        if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
-            decl = typeUnion->decl;
+            decl = typeUnion->unionDecl();
+        } else if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
+            decl = typeUnion->unionDecl();
         }
         if (!decl) dmz_unreachable(type.location, "unexpected error");
         std::string name = generate_decl_name(*decl);
@@ -365,11 +363,11 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmArrayType).value() * 8;
         return m_debugBuilder.createArrayType(typeArray->arraySize, alingSize, llvmElemType, nullptr);
     } else if (type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::UnionDecl) {
-        ResolvedUnionDecl *decl = nullptr;
+        const ResolvedUnionDecl *decl = nullptr;
         if (auto typeUnion = dynamic_cast<const ResolvedTypeUnion *>(&type)) {
-            decl = typeUnion->decl;
+            decl = typeUnion->unionDecl();
         } else if (auto typeUnion = dynamic_cast<const ResolvedTypeUnionDecl *>(&type)) {
-            decl = typeUnion->decl;
+            decl = typeUnion->unionDecl();
         }
         if (!decl) dmz_unreachable(type.location, "unexpected error");
 
@@ -775,7 +773,7 @@ llvm::GlobalVariable *Codegen::create_global_string(const std::string &str, cons
 }
 
 llvm::Value *Codegen::generate_builtin_call(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call) {
-    debug_func("" << builtin.name);
+    debug_func("" << builtin.identifier);
     if (builtin.identifier == "@call") {
         llvm::Value *callee = generate_expr(*call.arguments[0]);
         llvm::Value *tuplePtr = generate_expr(*call.arguments[1], true);

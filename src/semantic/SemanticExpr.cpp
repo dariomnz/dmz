@@ -101,6 +101,16 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "expression symbol '" + declRefExpr.identifier + "' not found");
     }
 
+    if (!decl->type) {
+        if (!ensure_fully_resolved(*decl)) return nullptr;
+        if (!decl->type) {
+            decl->dump();
+            return report(declRefExpr.location, "could not resolve type for '" + declRefExpr.identifier + "'");
+        }
+    }
+
+    debug_msg("Resolving decl ref " << declRefExpr.identifier << " with type "
+                                    << (decl->type ? decl->type->to_str() : "NULL"));
     auto type = re_resolve_type(*decl->type);
     if (!type) {
         decl->dump();
@@ -324,8 +334,8 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     ptr<ResolvedTypeFunction> resolvedFnType = nullptr;
     if (auto *resolvedDeclRefExpr = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallee.get())) {
         if (auto *builtinFn = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&resolvedDeclRefExpr->decl)) {
-            resolvedFnType = resolve_builtin_function_expr(*resolvedCallee, *const_cast<ResolvedBuiltinFunctionDecl *>(builtinFn),
-                                                           resolvedArguments);
+            resolvedFnType = resolve_builtin_function_expr(
+                *resolvedCallee, *const_cast<ResolvedBuiltinFunctionDecl *>(builtinFn), resolvedArguments);
             if (!resolvedFnType) return nullptr;
             fnType = resolvedFnType.get();
         }
@@ -594,7 +604,7 @@ ptr<ResolvedAssignableExpr> Sema::resolve_assignable_expr(const AssignableExpr &
 
 ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) {
     debug_func(memberExpr.location);
-    static ResolvedStructDecl sliceDecl = [] {
+    static ResolvedStructDecl sliceDecl = [this] {
         std::vector<ptr<ResolvedFieldDecl>> sliceFields;
         sliceFields.emplace_back(makePtr<ResolvedFieldDecl>(
             SourceLocation{}, "ptr",
@@ -603,8 +613,9 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             SourceLocation{}, "len",
             makePtr<ResolvedTypeNumber>(SourceLocation{}, ResolvedNumberKind::UInt, CodegenUtils::ptrBitSize()), 1,
             nullptr));
+        ScopeRAII sliceScope(*this);
         return ResolvedStructDecl(SourceLocation{}, true, "slice", nullptr, false, std::move(sliceFields),
-                                  std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+                                  std::vector<ptr<ResolvedMemberFunctionDecl>>{}, sliceScope.takeScope());
     }();
     const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
@@ -633,22 +644,24 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     }
 
     if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
+        if (struType->is_generic()) {
+            return report(memberExpr.location,
+                          "cannot use generic struct '" + struType->to_str() + "' without specialization");
+        }
         decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
-    } else if (auto unionType = dynamic_cast<const ResolvedTypeUnionDecl *>(baseType)) {
-        decl = lookup_in_union(memberExpr.location, *unionType->decl, memberExpr.field);
-        if (!decl) {
-            return report(memberExpr.location, "union \'" + resolvedBase->type->to_str() + "' has no member called '" +
-                                                   memberExpr.field + '\'');
+        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
+            if (!memberFunc->isStatic) {
+                return report(memberExpr.location,
+                              "cannot call non-static member '" + memberExpr.field + "' without an instance");
+            }
+        } else if (dynamic_cast<const ResolvedFieldDecl *>(decl)) {
+            return report(memberExpr.location,
+                          "cannot access non-static field '" + memberExpr.field + "' without an instance");
         }
-        // auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl);
-        // auto fieldDecl = dynamic_cast<const ResolvedFieldDecl *>(decl);
-        // if ((memberFunc && !memberFunc->isStatic) || fieldDecl) {
-        //     return report(memberExpr.location, "expected an instance of '" + struType->to_str() + "'");
-        // }
     } else if (dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
         if (memberExpr.field == "ptr") {
             decl = sliceDecl.fields[0].get();
@@ -665,22 +678,27 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
-        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
-            if (memberFunc->isStatic) {
-                return report(memberExpr.location, "cannot call a static member with a instance of struct \'" +
-                                                       resolvedBase->type->to_str() + "'");
+
+        bool baseIsType = false;
+        if (auto genExpr = dynamic_cast<const ResolvedGenericExpr *>(resolvedBase.get())) {
+            if (dynamic_cast<const ResolvedStructDecl *>(&genExpr->decl)) {
+                baseIsType = true;
             }
         }
-    } else if (auto unionType = dynamic_cast<const ResolvedTypeUnion *>(baseType)) {
-        decl = lookup_in_union(memberExpr.location, *unionType->decl, memberExpr.field);
-        if (!decl) {
-            return report(memberExpr.location, "union \'" + resolvedBase->type->to_str() + "' has no member called '" +
-                                                   memberExpr.field + '\'');
-        }
+
         if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
-            if (memberFunc->isStatic) {
-                return report(memberExpr.location, "cannot call a static member with a instance of struct \'" +
+            if (baseIsType && !memberFunc->isStatic) {
+                return report(memberExpr.location,
+                              "cannot call non-static member '" + memberExpr.field + "' without an instance");
+            }
+            if (!baseIsType && memberFunc->isStatic) {
+                return report(memberExpr.location, "cannot call a static member with an instance of struct \'" +
                                                        resolvedBase->type->to_str() + "'");
+            }
+        } else if (dynamic_cast<const ResolvedFieldDecl *>(decl)) {
+            if (baseIsType) {
+                return report(memberExpr.location,
+                              "cannot access non-static field '" + memberExpr.field + "' without an instance");
             }
         }
     } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(baseType)) {
@@ -726,7 +744,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
     auto res = makePtr<ResolvedMemberExpr>(memberExpr.location, std::move(resolvedBase), *decl);
     if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(res->base->type.get())) {
         if (dynamic_cast<const ResolvedFieldDecl *>(&res->member)) {
-            res->type = unionDecl->decl->tag->type->clone();
+            res->type = unionDecl->unionDecl()->tag->type->clone();
         }
     }
     res->set_constant_value(cee.evaluate(*res, false));
@@ -947,7 +965,7 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
 
     // Create a new scope for the lambda
     ScopeRAII lambdaScope(*this);
-
+    auto takenScope = lambdaScope.takeScope();
     // Inject captures into the scope
     for (auto &&cap : resolvedCaptures) {
         if (!insert_decl_to_current_scope(*cap, true)) return nullptr;
@@ -982,9 +1000,8 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
 
     auto prevFunc = m_currentFunction;
     m_currentFunction = lambdaFunc.get();
-    auto savedDefers = std::move(m_defers);
+
     auto resolvedBody = resolve_block(*expr.body);
-    m_defers = std::move(savedDefers);
     m_currentFunction = prevFunc;
 
     if (!resolvedBody) return nullptr;
@@ -993,7 +1010,7 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
     auto resType = makePtr<ResolvedTypePointer>(expr.location, fnType->clone());
 
     return makePtr<ResolvedLambdaExpr>(expr.location, std::move(resType), std::move(lambdaFunc),
-                                       std::move(captureInitializers));
+                                       std::move(captureInitializers), std::move(takenScope));
 }
 
 ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationExpr &structInstantiation) {
@@ -1001,9 +1018,19 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
     varOrReturn(resolvedBase, resolve_expr(*structInstantiation.base));
 
-    if (resolvedBase->type->kind == ResolvedTypeKind::UnionDecl) {
-        auto auxUnionType = static_cast<const ResolvedTypeUnionDecl *>(resolvedBase->type.get());
-        auto un = auxUnionType->decl;
+    if (resolvedBase->type->kind == ResolvedTypeKind::UnionDecl ||
+        resolvedBase->type->kind == ResolvedTypeKind::Union) {
+        ResolvedUnionDecl *un = nullptr;
+        if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(resolvedBase->type.get())) {
+            un = unionDecl->unionDecl();
+        } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(resolvedBase->type.get())) {
+            un = unionType->unionDecl();
+        } else {
+            dmz_unreachable(structInstantiation.location, "TODO: this should not happend");
+        }
+
+        // Lazy: ensure union members are resolved before accessing fields
+        if (!ensure_struct_members_resolved(*un)) return nullptr;
 
         if (structInstantiation.fieldInitializers.size() != 1) {
             return report(structInstantiation.location, "union instantiation must initialize exactly one field");
@@ -1043,11 +1070,17 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
     if (resolvedBase->type->kind != ResolvedTypeKind::StructDecl) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
-    auto auxstruType = static_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get());
-    auto st = auxstruType->decl;
+    auto auxstruType = dynamic_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get());
+    if (!auxstruType) {
+        return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
+    }
+    auto &st = auxstruType->decl;
     if (!st) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
+
+    // Lazy: ensure struct members are resolved before accessing fields
+    if (!ensure_struct_members_resolved(*st)) return nullptr;
 
     bool is_this = false;
     if (auto declRefExpr = dynamic_cast<const DeclRefExpr *>(structInstantiation.base.get())) {
@@ -1173,10 +1206,10 @@ ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr
                 makePtr<ResolvedFieldDecl>(el->location, fieldName, el->type->clone(), index, nullptr));
             index++;
         }
-
-        auto structDecl =
-            makePtr<ResolvedStructDecl>(tupleInstantiation.location, false, tupleName, nullptr, false,
-                                        std::move(tupleFields), std::vector<ptr<ResolvedMemberFunctionDecl>>{});
+        ScopeRAII tupleScope(*this);
+        auto structDecl = makePtr<ResolvedStructDecl>(
+            tupleInstantiation.location, false, tupleName, nullptr, false, std::move(tupleFields),
+            std::vector<ptr<ResolvedMemberFunctionDecl>>{}, tupleScope.takeScope());
         structDecl->isTuple = true;
         structDeclPtr = structDecl.get();
         m_instantiatedTuples[tupleName] = structDeclPtr;
@@ -1241,19 +1274,20 @@ ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr 
     auto optionalType = static_cast<const ResolvedTypeOptional *>(errorToCatch->type.get());
     auto resultType = optionalType->optionalType->clone();
 
-    auto resolvedCatch = makePtr<ResolvedCatchErrorExpr>(catchErrorExpr.location, resultType->clone());
-    m_catchStack.push_back(resolvedCatch.get());
-    defer([&]() { m_catchStack.pop_back(); });
-
     ptr<ResolvedVarDecl> errorVar = nullptr;
-    std::unique_ptr<ScopeRAII> captureScope;
+    std::optional<ScopeRAII> captureScope;
     if (!catchErrorExpr.captureIdentifier.empty()) {
-        captureScope = std::make_unique<ScopeRAII>(*this);
+        captureScope.emplace(*this);
         auto errorType = makePtr<ResolvedTypeError>(catchErrorExpr.location);
         errorVar = makePtr<ResolvedVarDecl>(catchErrorExpr.location, nullptr, true, catchErrorExpr.captureIdentifier,
                                             std::move(errorType), false);
         insert_decl_to_current_scope(*errorVar);
     }
+
+    auto resolvedCatch = makePtr<ResolvedCatchErrorExpr>(
+        catchErrorExpr.location, resultType->clone(), captureScope.has_value() ? captureScope->takeScope() : nullptr);
+    m_catchStack.push_back(resolvedCatch.get());
+    defer([&]() { m_catchStack.pop_back(); });
 
     ptr<ResolvedStmt> handler = resolve_stmt(*catchErrorExpr.handler);
 
@@ -1392,7 +1426,7 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     }
     add_dependency(typeInfoDecl->decl);
     auto returnType = makePtr<ResolvedTypePointer>(
-        typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->decl));
+        typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->unionDecl()));
     return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
 }
 
@@ -1406,29 +1440,29 @@ ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &ha
     }
 
     bool hasMethod = false;
+    ResolvedStructDecl *structToSearch = nullptr;
     if (auto struDeclType = dynamic_cast<ResolvedTypeStructDecl *>(baseType)) {
-        if (struDeclType->decl) {
-            for (auto &&func : struDeclType->decl->functions) {
-                if (func->identifier == hasMethodExpr.methodName) {
-                    hasMethod = true;
-                    break;
-                }
-            }
-        }
+        structToSearch = struDeclType->decl;
     } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(baseType)) {
-        if (struType->decl) {
-            for (auto &&func : struType->decl->functions) {
-                if (func->identifier == hasMethodExpr.methodName) {
-                    hasMethod = true;
-                    break;
-                }
-            }
-        }
-    } else if (baseType->kind == ResolvedTypeKind::Generic) {
-        hasMethod = false;
+        structToSearch = struType->decl;
     } else {
         return report(hasMethodExpr.location,
                       "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
+    }
+    if (structToSearch) {
+        // Lazy: ensure functions are resolved before checking for methods
+        if (!ensure_struct_funcs_resolved(*structToSearch)) return nullptr;
+        debug_msg("structToSearch->functions_strs.size() " << structToSearch->functions_strs.size());
+        for (auto &&func : structToSearch->functions_strs) {
+            debug_msg("func " << func << " method " << hasMethodExpr.methodName);
+            if (func == hasMethodExpr.methodName) {
+                hasMethod = true;
+                break;
+            }
+        }
+    } else {
+        return report(hasMethodExpr.location,
+                      "expected struct decl for @hasMethod, actual '" + baseType->to_str() + "'");
     }
 
     auto resolved =

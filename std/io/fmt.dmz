@@ -1,14 +1,14 @@
 const std = import("std");
 
-pub struct FormatFloat {
+pub const FormatFloat = struct {
     precision: usize,
-}
+};
 
-pub struct FormatHex {
+pub const FormatHex = struct {
     upper: bool,
-}
+};
 
-pub union FormatOptions {
+pub const FormatOptions = union {
     none: void,
     string: void,
     character: void,
@@ -16,7 +16,7 @@ pub union FormatOptions {
     hex: FormatHex,
     binary: void,
     float: FormatFloat,
-}
+};
 
 pub fn fmtType<T>(w: std.io.Writer, arg: T, spec: FormatOptions) -> !usize {
     const t = @typeid(arg);
@@ -314,7 +314,7 @@ pub fn fmt<T>(w: std.io.Writer, format: []u8, args: T) -> !usize {
     return ret;
 }
 
-struct Test_struct {
+const Test_struct = struct {
     a: i32,
     b: i32,
     c: i32,
@@ -329,14 +329,14 @@ struct Test_struct {
         ret += try fmtInteger<s.c>(w, s.c, FormatOptions{none: void});
         return ret;
     }
-}
+};
 
-struct Test_struct2 {
+const Test_struct2 = struct {
     a: i32,
     b: i32,
     c2: i32,
     tst: Test_struct,
-}
+};
 
 test "print integers" {
     let a = 6;

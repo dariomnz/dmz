@@ -1,18 +1,18 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct Point {
+const Point = struct {
     x: i32,
     y: i32,
-}
+};
 // CHECK: ResolvedStructDecl  struct_with_struct_field.Point
 // CHECK-NEXT:   ResolvedFieldDecl:i32 x
 // CHECK-NEXT:   ResolvedFieldDecl:i32 y
 
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
     p: Point,
-}
+};
 // CHECK: ResolvedStructDecl  struct_with_struct_field.Color
 // CHECK-NEXT:   ResolvedFieldDecl:i32 r
 // CHECK-NEXT:   ResolvedFieldDecl:i32 g

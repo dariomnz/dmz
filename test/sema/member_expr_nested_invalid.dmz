@@ -1,16 +1,16 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
     n: S2,
-}
+};
 
-struct S2 {
+const S2 = struct {
     x: i32,
-}
+};
 
 fn main() -> void {
     let s = S{x: 0, n: S2{x: 1}};
 
     let x = s.y.x;
-    // CHECK: [[# @LINE - 1 ]]:14: error: struct 'S{}' has no member called 'y'
+    // CHECK: [[# @LINE - 1 ]]:14: error: struct 'member_expr_nested_invalid.S{}' has no member called 'y'
 }

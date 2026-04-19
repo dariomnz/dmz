@@ -1,8 +1,11 @@
 #pragma once
 
 #include "DMZPCH.hpp"
+#include "UtilsPtr.hpp"
 #include "semantic/CFG.hpp"
 #include "semantic/Constexpr.hpp"
+#include "semantic/ResolvedScope.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -19,28 +22,37 @@ class Sema {
     void dump_scopes() const;
     void dump_modules_for_import() const;
 
-    std::vector<std::unordered_map<std::string, ResolvedDecl *>> m_scopes;
-    std::vector<std::vector<ResolvedDeferStmt *>> m_defers;
+    ResolvedScope *m_currentScope = nullptr;
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;
-    ResolvedUnionDecl *m_currentUnion = nullptr;
     int m_loopDepth = 0;
     std::vector<ResolvedCatchErrorExpr *> m_catchStack;
 
     class ScopeRAII {
         Sema &m_sema;
+        ResolvedScope *m_oldScope;
+        std::unique_ptr<ResolvedScope> m_ownedScope;
+        ResolvedScope *m_currentScopePtr;
 
        public:
-        explicit ScopeRAII(Sema &sema) : m_sema(sema) {
-            m_sema.m_scopes.emplace_back();
-            m_sema.m_defers.emplace_back();
+        explicit ScopeRAII(Sema &sema, ResolvedScope *scopeToUse = nullptr)
+            : m_sema(sema), m_oldScope(sema.m_currentScope) {
+            if (scopeToUse) {
+                m_currentScopePtr = scopeToUse;
+            } else {
+                m_ownedScope = makePtr<ResolvedScope>(m_oldScope);
+                m_currentScopePtr = m_ownedScope.get();
+            }
+            m_sema.m_currentScope = m_currentScopePtr;
         }
         ~ScopeRAII() {
-            m_sema.m_scopes.pop_back();
-            m_sema.m_defers.pop_back();
+            m_sema.m_currentScope = m_oldScope;
+            if (m_ownedScope) dmz_unreachable(SourceLocation{}, "ScopeRAII: Scope not taken");
         }
+
+        ResolvedScope *getScope() { return m_currentScopePtr; }
+        std::unique_ptr<ResolvedScope> takeScope() { return std::move(m_ownedScope); }
     };
-    ptr<ScopeRAII> m_globalScope;
     ResolvedModuleDecl *m_currentModule = nullptr;
 
     std::vector<ResolvedTestDecl *> m_tests;
@@ -48,6 +60,7 @@ class Sema {
     std::vector<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
+    std::unordered_map<const StructDecl *, ResolvedStructDecl *> m_resolvedStructs;
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_vectorBuiltins;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
@@ -55,9 +68,8 @@ class Sema {
     };
 
    public:
-    explicit Sema(Driver &driver, ptr<ModuleDecl> ast)
-        : m_driver(driver), m_ast(std::move(ast)), m_globalScope(makePtr<ScopeRAII>(*this)) {}
-    // std::vector<ref<ResolvedDecl>> resolve_ast();
+    explicit Sema(Driver &driver, ptr<ModuleDecl> ast) : m_driver(driver), m_ast(std::move(ast)) {}
+
     std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
@@ -65,20 +77,18 @@ class Sema {
     void mark_needed(std::vector<ptr<ResolvedModuleDecl>> &decls, bool buildTest);
 
    private:
-    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true);
+    std::string resolve_decl_name(std::string_view identifier);
+    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true,
+                         ResolvedScope *scope = nullptr);
     ResolvedDecl *lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
                                    const std::string_view id, bool needAddDeps = true);
     ResolvedDecl *lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
                                    const std::string_view id, bool needAddDeps = true);
-    ResolvedDecl *lookup_in_union(const SourceLocation &loc, const ResolvedUnionDecl &unionDecl,
-                                  const std::string_view id, bool needAddDeps = true);
-    // ResolvedDecl *lookup_in_modules(const ModuleID &moduleID, const std::string_view id, ResolvedDeclType type);
+
     bool insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound = false);
     void remove_decl_to_current_scope(ResolvedDecl &decl);
     bool insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl);
-    std::vector<ResolvedDecl *> collect_scope();
-    // bool insert_decl_to_modules(ResolvedDecl &decl);
-    // ref<ResolvedFunctionDecl> create_builtin_println();
+
     ptr<ResolvedType> resolve_type(const Expr &parsedType);
     ptr<ResolvedType> resolve_simd_type(const TypeSimd &simdType);
     ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericExpr &parsedType);
@@ -138,10 +148,7 @@ class Sema {
     bool resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl);
-    ptr<ResolvedUnionDecl> resolve_union_decl(const UnionDecl &unionDecl);
     bool resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl);
-    bool resolve_union_decl_funcs(ResolvedUnionDecl &resolvedUnionDecl);
-    bool resolve_union_body_funcs(ResolvedUnionDecl &resolvedUnionDecl);
     ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
     ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);
@@ -152,19 +159,18 @@ class Sema {
     std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
                                                                const std::filesystem::path &sourcePath);
     ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
-    bool resolve_module_struct_decls(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_union_decls(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_decl_stmts(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_struct_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_union_decl_funcs(ResolvedModuleDecl &resolvedModuleDecl);
-    bool resolve_module_function_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath);
 
-    // bool resolve_module_decl(const ModuleDecl &moduleDecl, ResolvedModuleDecl &resolvedModuleDecl);
+    // Lazy resolution: single discovery pass + on-demand resolution
+    bool discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath);
+
+    // Lazy ensure methods — resolve only when needed
+    bool ensure_struct_members_resolved(ResolvedStructDecl &st);
+    bool ensure_struct_funcs_resolved(ResolvedStructDecl &st);
+    bool ensure_struct_bodies_resolved(ResolvedStructDecl &st);
+    bool ensure_fully_resolved(ResolvedDecl &decl);
+
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     bool resolve_pending_body();
-    // std::vector<ptr<ResolvedDecl>> resolve_in_module_decl(const std::vector<ptr<Decl>> &decls,
-    //                                                       std::vector<ptr<ResolvedDecl>> alreadyResolved = {});
-    // bool resolve_in_module_body(const std::vector<ptr<ResolvedDecl>> &decls);
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);

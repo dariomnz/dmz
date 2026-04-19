@@ -2,6 +2,7 @@
 
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
+#include "UtilsPtr.hpp"
 #include "lexer/Lexer.hpp"
 
 namespace DMZ {
@@ -622,10 +623,10 @@ struct GenericFunctionDecl : public FunctionDecl {
 // Forware declaration
 struct StructDecl;
 struct MemberFunctionDecl : public FunctionDecl {
-    Decl* parentDecl;
+    Type* parentDecl;
 
     MemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, Decl* parentDecl)
+                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, Type* parentDecl)
         : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
           parentDecl(parentDecl) {}
 
@@ -634,11 +635,11 @@ struct MemberFunctionDecl : public FunctionDecl {
 };
 
 struct MemberGenericFunctionDecl : public GenericFunctionDecl {
-    Decl* parentDecl;
+    Type* parentDecl;
 
     MemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                               std::vector<ptr<ParamDecl>> params, ptr<Block> body,
-                              std::vector<ptr<GenericTypeDecl>> genericTypes, Decl* parentDecl)
+                              std::vector<ptr<GenericTypeDecl>> genericTypes, Type* parentDecl)
         : GenericFunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params),
                               std::move(body), std::move(genericTypes)),
           parentDecl(parentDecl) {}
@@ -660,13 +661,21 @@ struct FieldDecl : public Decl {
     std::string to_str() const override;
 };
 
-struct StructDecl : public Decl {
+struct StructDecl : public Type {
+    SourceLocation location;
+    bool isPublic;
+    std::string identifier;
     bool isPacked;
     std::vector<ptr<Decl>> decls;
 
     StructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
                std::vector<ptr<Decl>> decls)
-        : Decl(location, isPublic, std::move(identifier)), isPacked(isPacked), decls(std::move(decls)) {}
+        : Type(location),
+          location(location),
+          isPublic(isPublic),
+          identifier(std::move(identifier)),
+          isPacked(isPacked),
+          decls(std::move(decls)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -677,20 +686,17 @@ struct GenericStructDecl : public StructDecl {
 
     GenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
                       std::vector<ptr<Decl>> decls, std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : StructDecl(location, isPublic, std::move(identifier), isPacked, std::move(decls)),
+        : StructDecl(location, isPublic, identifier, isPacked, std::move(decls)),
           genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
 };
 
-struct UnionDecl : public Decl {
-    bool isPacked;
-    std::vector<ptr<Decl>> decls;
-
+struct UnionDecl : public StructDecl {
     UnionDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
               std::vector<ptr<Decl>> decls)
-        : Decl(location, isPublic, std::move(identifier)), isPacked(isPacked), decls(std::move(decls)) {}
+        : StructDecl(location, isPublic, identifier, isPacked, std::move(decls)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -866,8 +872,7 @@ struct LambdaExpr : public Expr {
 };
 struct AtomicLoadExpr : public Expr {
     ptr<Expr> ptr_expr;
-    AtomicLoadExpr(SourceLocation location, ptr<Expr> ptr_expr)
-        : Expr(location), ptr_expr(std::move(ptr_expr)) {}
+    AtomicLoadExpr(SourceLocation location, ptr<Expr> ptr_expr) : Expr(location), ptr_expr(std::move(ptr_expr)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -904,13 +909,10 @@ struct AtomicRmwExpr : public Expr {
     ptr<Expr> ptr_expr;
     TokenType op;
     ptr<Expr> val_expr;
-    
+
     AtomicRmwExpr(SourceLocation location, ptr<Expr> ptr_expr, TokenType op, ptr<Expr> val_expr)
-        : Expr(location),
-          ptr_expr(std::move(ptr_expr)),
-          op(op),
-          val_expr(std::move(val_expr)) {}
-          
+        : Expr(location), ptr_expr(std::move(ptr_expr)), op(op), val_expr(std::move(val_expr)) {}
+
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
 };

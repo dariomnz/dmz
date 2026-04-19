@@ -1,9 +1,9 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
-struct Point {
+const Point = struct {
     x: i32,
     y: i32,
-}
+};
 
 fn foo(x: Point) -> i32 {
     return x.x;

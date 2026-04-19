@@ -15,7 +15,7 @@ void GenericTypeDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericTypeDecl " << identifier << '\n';
 }
 
-std::string GenericTypeDecl::to_str() const { dmz_unreachable(location, "TODO"); }
+std::string GenericTypeDecl::to_str() const { return identifier; }
 
 void TypeVoid::dump(size_t level) const { std::cerr << indent(level) << "TypeVoid " << to_str() << '\n'; }
 
@@ -94,7 +94,7 @@ void MemberFunctionDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 std::string MemberFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void MemberGenericFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << parentDecl->identifier << "\n";
+    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << parentDecl->to_str() << "\n";
     GenericFunctionDecl::dump(level + 1);
 }
 
@@ -383,7 +383,7 @@ void StructDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string StructDecl::to_str() const { dmz_unreachable(location, "TODO"); }
+std::string StructDecl::to_str() const { return (isPacked ? "packed " : "") + identifier; }
 
 void GenericStructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "GenericStructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
@@ -392,7 +392,16 @@ void GenericStructDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string GenericStructDecl::to_str() const { dmz_unreachable(location, "TODO"); }
+std::string GenericStructDecl::to_str() const {
+    std::stringstream out;
+    out << (isPacked ? "packed " : "") << identifier << "<";
+    for (size_t i = 0; i < genericTypes.size(); i++) {
+        out << genericTypes[i]->to_str();
+        if (i != genericTypes.size() - 1) out << ", ";
+    }
+    out << ">";
+    return out.str();
+}
 
 void UnionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "UnionDecl " << (isPacked ? "packed " : "") << identifier << '\n';
@@ -400,7 +409,7 @@ void UnionDecl::dump(size_t level) const {
     for (auto &&decl : decls) decl->dump(level + 1);
 }
 
-std::string UnionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
+std::string UnionDecl::to_str() const { return (isPacked ? "packed " : "") + identifier; }
 
 void MemberExpr::dump(size_t level) const {
     std::cerr << indent(level) << "MemberExpr ." << field << '\n';

@@ -1,21 +1,20 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S1 {
+const S1 = struct {
     nested: S2,
-}
+};
 
-struct S2 {
-    // CHECK: [[# @LINE - 1 ]]:1: error: struct 'S2' contains itself
-
+const S2 = struct {
     nested: S3,
-}
+};
 
-struct S3 {
+const S3 = struct {
     nested: S4,
-}
+};
 
-struct S4 {
+const S4 = struct {
+    // CHECK: [[# @LINE - 1 ]]:12: error: struct 'struct_cycle_nested.S4' contains itself
     nested: S2,
-}
+};
 
 fn main() -> void {
 }

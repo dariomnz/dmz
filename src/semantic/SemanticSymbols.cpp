@@ -450,6 +450,11 @@ void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
               << (type ? type->to_str() : "nullptr") << " " << identifier << '\n';
     if (onlySelf) return;
     if (initializer) initializer->dump(level + 1, onlySelf);
+    if (type) {
+        if (auto strType = dynamic_cast<ResolvedTypeStructDecl *>(type.get())) {
+            strType->dump(level + 1);
+        }
+    }
 }
 
 void ResolvedDeclStmt::dump(size_t level, bool onlySelf) const {

@@ -2,6 +2,10 @@
 
 #include "DMZPCH.hpp"
 #include "Utils.hpp"
+#include "UtilsPtr.hpp"
+
+#define DMZ_TYPE_NAME() \
+    std::string_view className() const override { return type_name<std::remove_cvref_t<decltype(*this)>>(); }
 
 namespace DMZ {
 
@@ -43,6 +47,7 @@ struct ResolvedType {
 
     virtual bool is_generic() const;
     bool generate_struct() const;
+    virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
 struct ResolvedTypeVoid : public ResolvedType {
@@ -53,6 +58,7 @@ struct ResolvedTypeVoid : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 enum class ResolvedNumberKind { Int, UInt, Float };
@@ -75,6 +81,7 @@ struct ResolvedTypeNumber : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 
     static ptr<ResolvedType> isize(SourceLocation location);
     static ptr<ResolvedType> usize(SourceLocation location);
@@ -88,12 +95,14 @@ struct ResolvedTypeBool : public ResolvedTypeNumber {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedStructDecl;  // Forward declaration
 struct ResolvedUnionDecl;   // Forward declaration
 
 struct ResolvedTypeStructDecl : public ResolvedType {
+    ptr<ResolvedStructDecl> ownedDecl;
     ResolvedStructDecl *decl;
     bool is_this = false;
     ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl, bool is_this = false)
@@ -105,6 +114,7 @@ struct ResolvedTypeStructDecl : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     bool is_generic() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedTypeStruct : public ResolvedType {
@@ -119,32 +129,35 @@ struct ResolvedTypeStruct : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     bool is_generic() const override;
+    DMZ_TYPE_NAME();
 };
 
-struct ResolvedTypeUnionDecl : public ResolvedType {
-    ResolvedUnionDecl *decl;
-    bool is_this = false;
-    ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false)
-        : ResolvedType(ResolvedTypeKind::UnionDecl, std::move(location)), decl(decl), is_this(is_this) {}
+struct ResolvedTypeUnionDecl : public ResolvedTypeStructDecl {
+    // Implementation in cpp
+    ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false);
+
+    ResolvedUnionDecl *unionDecl() const;
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
-struct ResolvedTypeUnion : public ResolvedType {
-    ResolvedUnionDecl *decl;
-    bool is_this = false;
-    ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false)
-        : ResolvedType(ResolvedTypeKind::Union, std::move(location)), decl(decl), is_this(is_this) {}
+struct ResolvedTypeUnion : public ResolvedTypeStruct {
+    // Implementation in cpp
+    ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false);
+
+    ResolvedUnionDecl *unionDecl() const;
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedGenericTypeDecl;  // Forward declaration
@@ -158,6 +171,7 @@ struct ResolvedTypeGeneric : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 };
 
@@ -172,6 +186,7 @@ struct ResolvedTypeSpecialized : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 };
 
@@ -184,6 +199,7 @@ struct ResolvedTypeError : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedErrorGroupExprDecl;  // Forward declaration
@@ -197,6 +213,7 @@ struct ResolvedTypeErrorGroup : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedModuleDecl;  // Forward declaration
@@ -210,6 +227,7 @@ struct ResolvedTypeModule : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedTypeOptional : public ResolvedType {
@@ -222,6 +240,7 @@ struct ResolvedTypeOptional : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 
     static ptr<ResolvedType> voidOptional(SourceLocation location);
@@ -237,6 +256,7 @@ struct ResolvedTypePointer : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 
     static ptr<ResolvedType> opaquePtr(SourceLocation location);
@@ -252,6 +272,7 @@ struct ResolvedTypeSlice : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 };
 
@@ -263,6 +284,7 @@ struct ResolvedTypeRange : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedTypeArray : public ResolvedType {
@@ -278,6 +300,7 @@ struct ResolvedTypeArray : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 };
 
@@ -294,6 +317,7 @@ struct ResolvedTypeSimd : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     bool is_generic() const override;
 };
 
@@ -315,6 +339,7 @@ struct ResolvedTypeFunction : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
     std::string to_str_with_params(bool with_params = true) const;
 
     bool is_generic() const override;
@@ -328,6 +353,7 @@ struct ResolvedTypeVarArg : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ResolvedTypeDefaultInit : public ResolvedType {
@@ -339,5 +365,6 @@ struct ResolvedTypeDefaultInit : public ResolvedType {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 }  // namespace DMZ

@@ -69,9 +69,9 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec) {
 }
 #define debug_ret(ret)                                          \
     ({                                                          \
-        auto return_value = ret;                                \
+        auto return_value = std::move(ret);                     \
         debug_msg_func(__func__, "Returning " << return_value); \
-        return_value;                                           \
+        std::move(return_value);                                \
     })
 #define debug_msg(out_format) debug_msg_func(__func__, out_format)
 #define debug_msg_func(func, out_format)                                                                             \

@@ -2,7 +2,7 @@
 
 #include "DMZPCH.hpp"
 #include "lexer/Lexer.hpp"
-#include "parser/ParserSymbols.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 struct CompilerOptions {

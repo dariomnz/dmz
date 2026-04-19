@@ -1,9 +1,9 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
-}
+const S = struct {
+};
 
-struct S2 {
-}
+const S2 = struct {
+};
 
 fn foo(s: S) -> S {
     return S{};

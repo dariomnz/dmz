@@ -6,7 +6,7 @@ extern fn pthread_mutex_lock(mutexPtr: *void) -> i32;
 extern fn pthread_mutex_unlock(mutexPtr: *void) -> i32;
 extern fn pthread_mutex_destroy(mutexPtr: *void) -> i32;
 
-pub struct Mutex {
+pub const Mutex = struct {
     opaque_data: u8[40] = {},
 
     pub fn init() -> Mutex {
@@ -38,7 +38,7 @@ pub struct Mutex {
             try std.errno.libc_error(ret);
         }
     }
-}
+};
 
 test "mutex test" {
     let m = Mutex.init();

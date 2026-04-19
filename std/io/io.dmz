@@ -12,7 +12,7 @@ pub fn print<T>(fmt: []u8, args: T) -> !usize {
     return std.fmt.fmt<T>(w, fmt, args);
 }
 
-pub struct stdout {
+pub const stdout = struct {
     pub fn writer(buf: []u8) -> Writer {
         let ret = Writer{
             buffer: buf,
@@ -31,9 +31,9 @@ pub struct stdout {
         }
         return flused;
     }
-}
+};
 
-pub struct stdin {
+pub const stdin = struct {
     pub fn reader(buf: []u8) -> Reader {
         let ret = Reader{
             buffer: buf,
@@ -51,7 +51,7 @@ pub struct stdin {
         r.end += readed;
         return readed;
     }
-}
+};
 
 test "stdout splat" {
     let buf: u8[24] = {};

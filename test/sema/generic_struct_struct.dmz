@@ -1,9 +1,9 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
-struct Point<T> {
+const Point = struct<T> {
     x: T,
     y: T,
-}
+};
 // CHECK: ResolvedGenericStructDecl generic_struct_struct.Point<T>
 // CHECK-NEXT:     ResolvedGenericTypeDecl T
 // CHECK-NEXT:     ResolvedFieldDecl:T x
@@ -11,10 +11,10 @@ struct Point<T> {
 // CHECK-NEXT:     ResolvedSpecializedStructDecl generic_struct_struct.Point<i32>
 // CHECK-NEXT:       ResolvedFieldDecl:i32 x
 // CHECK-NEXT:       ResolvedFieldDecl:i32 y
-struct Points<T> {
+const Points = struct<T> {
     a: Point<T>,
     b: Point<T>,
-}
+};
 // CHECK: ResolvedGenericStructDecl generic_struct_struct.Points<T>
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedFieldDecl:generic_struct_struct.Point<T>{} a

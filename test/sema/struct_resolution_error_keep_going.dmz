@@ -1,18 +1,18 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     f: void,
-}
+};
 // CHECK: [[# @LINE - 2 ]]:5: error: struct field cannot be void
 
-struct S2 {
-}
+const S2 = struct {
+};
 
-struct S3 {
-}
+const S3 = struct {
+};
 
-struct S4 {
+const S4 = struct {
     f: void,
-}
+};
 // CHECK: [[# @LINE - 2 ]]:5: error: struct field cannot be void
 
 fn main() -> void {

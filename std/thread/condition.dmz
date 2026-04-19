@@ -7,7 +7,7 @@ extern fn pthread_cond_broadcast(cond: *void) -> i32;
 extern fn pthread_cond_wait(cond: *void, mutex: *void) -> i32;
 extern fn pthread_cond_destroy(cond: *void) -> i32;
 
-pub struct Condition {
+pub const Condition = struct {
     opaque_data: u8[48] = {},
 
     pub fn init() -> Condition {
@@ -46,13 +46,13 @@ pub struct Condition {
             try std.errno.libc_error(ret);
         }
     }
-}
+};
 
-struct test_ctx {
+const test_ctx = struct {
     m: *std.thread.Mutex,
     cv: *std.thread.Condition,
     ready: *i32,
-}
+};
 
 test "conditional variable test" {
     let m = std.thread.Mutex.init();

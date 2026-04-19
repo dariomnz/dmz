@@ -1,22 +1,17 @@
 // RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
 fn error1() -> void {
 
-struct S {
-// CHECK: [[# @LINE -1 ]]:1: error: expected '}' at the end of a block
+const S = struct {
     x: i32,
-}
+};
 
+// CHECK: [[# @LINE + 1 ]]:1: error: expected '}' at the end of a block
 fn error2() -> void {
     let y: i32 = 
 
-struct S2 {
+const S2 = struct {
 // CHECK: [[# @LINE -2 ]]:1: error: expected expression
-// CHECK: [[# @LINE -2 ]]:1: error: expected '}' at the end of a block
     x: i32,
-}
+};
 
-// CHECK: StructDecl S
-// CHECK-NEXT:   FieldDecl:i32 x
-// CHECK-NEXT: StructDecl S2
-// CHECK-NEXT:   FieldDecl:i32 x
-// CHECK-NOT: {{.*}}
+// CHECK: [[# @LINE ]]:69: error: expected '}' at the end of a block

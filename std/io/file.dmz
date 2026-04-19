@@ -39,7 +39,7 @@ pub fn readOne(fd: i32, buffer: []u8) -> !usize {
     return readed;
 }
 
-pub struct reader {
+pub const reader = struct {
     fd: i32,
 
     pub fn init(file_fd: i32) -> @This {
@@ -65,4 +65,4 @@ pub struct reader {
         r.end += readed;
         return readed;
     }
-}
+};

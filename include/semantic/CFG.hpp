@@ -1,7 +1,9 @@
 #pragma once
 
 #include "DMZPCH.hpp"
+#include "Utils.hpp"
 #include "semantic/Constexpr.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 

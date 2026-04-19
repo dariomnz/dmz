@@ -13,10 +13,15 @@ FLAGS=""
 for arg in "$@"; do
     if [ "$arg" == "clean" ]; then
         FLAGS="--clean-first"
-        break # Salir del bucle una vez encontrado
+        break
     fi
 done
 cmake --build ${build_dir} -j $(nproc) --target dmz ${FLAGS}
-# cmake --build ${build_dir} --target $TARGET ${FLAGS}
+# cmake --build ${build_dir} --target dmz ${FLAGS}
 
-./build/bin/dmz -test-compiler ./test/ -j 0
+for arg in "$@"; do
+    if [ "$arg" == "test" ]; then
+        ./build/bin/dmz -test-compiler ./test/ -j 0
+        break
+    fi
+done

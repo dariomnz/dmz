@@ -5,6 +5,7 @@
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/CodegenUtils.hpp"
+#include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
 
@@ -153,6 +154,7 @@ bool ResolvedTypeStructDecl::equal(const ResolvedType &other) const {
 
 bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStructDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
     if (auto strType = dynamic_cast<const ResolvedTypeStructDecl *>(&other)) {
         if (dynamic_cast<const ResolvedGenericStructDecl *>(decl) ||
@@ -171,9 +173,26 @@ ptr<ResolvedType> ResolvedTypeStructDecl::clone() const {
 
 void ResolvedTypeStructDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeStructDecl " << to_str() << "\n";
+
+    if (ownedDecl) ownedDecl->dump(level + 1);
 }
 
-std::string ResolvedTypeStructDecl::to_str() const { return decl->name(); }
+std::string ResolvedTypeStructDecl::to_str() const {
+    std::string ret = decl->name();
+    if (auto generic = dynamic_cast<ResolvedGenericStructDecl *>(decl)) {
+        std::stringstream out;
+        out << "<";
+        for (size_t i = 0; i < generic->genericTypeDecls.size(); i++) {
+            out << generic->genericTypeDecls[i]->identifier;
+            if (i != generic->genericTypeDecls.size() - 1) {
+                out << ", ";
+            }
+        }
+        out << ">";
+        ret += out.str();
+    }
+    return ret;
+}
 
 bool ResolvedTypeStructDecl::is_generic() const {
     if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
@@ -219,7 +238,24 @@ void ResolvedTypeStruct::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeStruct " << to_str() << "\n";
 }
 
-std::string ResolvedTypeStruct::to_str() const { return decl->name() + "{}"; }
+std::string ResolvedTypeStruct::to_str() const {
+    if (!decl) return "unknown{}";
+
+    std::string ret = decl->name();
+    if (auto generic = dynamic_cast<ResolvedGenericStructDecl *>(decl)) {
+        std::stringstream out;
+        out << "<";
+        for (size_t i = 0; i < generic->genericTypeDecls.size(); i++) {
+            out << generic->genericTypeDecls[i]->identifier;
+            if (i != generic->genericTypeDecls.size() - 1) {
+                out << ", ";
+            }
+        }
+        out << ">";
+        ret += out.str();
+    }
+    return ret + "{}";
+}
 
 bool ResolvedTypeStruct::is_generic() const {
     if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
@@ -234,6 +270,13 @@ bool ResolvedTypeStruct::is_generic() const {
     return debug_ret(false);
 }
 
+ResolvedTypeUnionDecl::ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this)
+    : ResolvedTypeStructDecl(std::move(location), decl, is_this) {
+    kind = ResolvedTypeKind::UnionDecl;
+}
+
+ResolvedUnionDecl *ResolvedTypeUnionDecl::unionDecl() const { return static_cast<ResolvedUnionDecl *>(decl); }
+
 bool ResolvedTypeUnionDecl::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeUnionDecl " << to_str() << " " << other.to_str() << " " << location);
     if (auto strType = dynamic_cast<const ResolvedTypeUnionDecl *>(&other)) {
@@ -245,20 +288,30 @@ bool ResolvedTypeUnionDecl::equal(const ResolvedType &other) const {
 
 bool ResolvedTypeUnionDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeUnionDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
     return debug_ret(false);
 }
 
 ptr<ResolvedType> ResolvedTypeUnionDecl::clone() const {
     debug_func("ResolvedTypeUnionDecl " << location);
-    return makePtr<ResolvedTypeUnionDecl>(location, decl);
+    return makePtr<ResolvedTypeUnionDecl>(location, unionDecl(), is_this);
 }
 
 void ResolvedTypeUnionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeUnionDecl " << to_str() << "\n";
+
+    if (ownedDecl) ownedDecl->dump(level + 1);
 }
 
 std::string ResolvedTypeUnionDecl::to_str() const { return decl->name(); }
+
+ResolvedTypeUnion::ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this)
+    : ResolvedTypeStruct(std::move(location), decl, is_this) {
+    kind = ResolvedTypeKind::Union;
+}
+
+ResolvedUnionDecl *ResolvedTypeUnion::unionDecl() const { return static_cast<ResolvedUnionDecl *>(decl); }
 
 bool ResolvedTypeUnion::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeUnion " << to_str() << " " << other.to_str() << " " << location);
@@ -278,14 +331,17 @@ bool ResolvedTypeUnion::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeUnion::clone() const {
     debug_func("ResolvedTypeUnion " << location);
-    return makePtr<ResolvedTypeUnion>(location, decl);
+    return makePtr<ResolvedTypeUnion>(location, unionDecl(), is_this);
 }
 
 void ResolvedTypeUnion::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeUnion " << to_str() << "\n";
 }
 
-std::string ResolvedTypeUnion::to_str() const { return decl->name() + "{}"; }
+std::string ResolvedTypeUnion::to_str() const {
+    if (!decl) return "unknown{}";
+    return decl->name() + "{}";
+}
 
 bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);

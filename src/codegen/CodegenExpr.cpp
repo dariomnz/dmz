@@ -1017,9 +1017,9 @@ llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinf
 
     const ResolvedUnionDecl *unionDecl = nullptr;
     if (auto ut = dynamic_cast<const ResolvedTypeUnion *>(returnStructType))
-        unionDecl = ut->decl;
+        unionDecl = ut->unionDecl();
     else if (auto ut = dynamic_cast<const ResolvedTypeUnionDecl *>(returnStructType))
-        unionDecl = ut->decl;
+        unionDecl = ut->unionDecl();
     if (!unionDecl) dmz_unreachable(typeinfoExpr.location, "TypeInfo must be a union");
 
     uint64_t maxSize = 0;

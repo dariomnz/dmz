@@ -14,7 +14,7 @@ pub const error_t = 12;
 pub const optional_t = 13;
 pub const simd_t = 14;
 
-pub union TypeInfo {
+pub const TypeInfo = union {
     infoVoid: void,
     infoInt: TypeInfoNumber,
     infoUint: TypeInfoNumber,
@@ -38,19 +38,19 @@ pub union TypeInfo {
     infoOptional: void,
     infoSimd: TypeInfoSimd,
 
-}
+};
 
-pub struct TypeInfoStruct {
+pub const TypeInfoStruct = struct {
     name: []u8,
     fields: [][]u8,
     methods: [][]u8,
-}
+};
 
-pub struct TypeInfoNumber {
+pub const TypeInfoNumber = struct {
     bits: u32,
-}
+};
 
-pub struct TypeInfoSimd {
+pub const TypeInfoSimd = struct {
     type: []u8,
     len: u32,
-}
+};

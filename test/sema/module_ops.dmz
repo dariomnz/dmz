@@ -1,9 +1,9 @@
 // RUN: dmz %s -module -res-dump -no-remove-unused 2>&1 | filecheck %s
-struct str_ops {
+const str_ops = struct {
     x:i32,
     y:i32,
     z:i32,
-}
+};
 
 pub fn print(x:i32) -> void {
     println(x);
@@ -20,16 +20,16 @@ pub const integer = import("module_ops_integer.dmz");
 // CHECK-NEXT:     ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
 // CHECK-NEXT:     ResolvedFieldDecl:i32 z
-// CHECK-NEXT:   ResolvedFunctionDecl print fn(i32)->void
+// CHECK:   ResolvedFunctionDecl print fn(i32)->void
 // CHECK-NEXT:     ResolvedParamDecl:i32 x
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:void
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->void println
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
+// CHECK:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
-// CHECK-NEXT:   ResolvedFunctionDecl println fn(i32)->void
+// CHECK:   ResolvedFunctionDecl println fn(i32)->void
 // CHECK-NEXT:     ResolvedParamDecl:i32 n
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:i32

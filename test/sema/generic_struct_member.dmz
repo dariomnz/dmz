@@ -2,7 +2,7 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-struct Point<T> {
+const Point = struct<T> {
     x:T,
     y:T,
 
@@ -35,7 +35,7 @@ struct Point<T> {
 // CHECK-NEXT:             ResolvedDerefPtrExpr:generic_struct_member.Point<i32>{}
 // CHECK-NEXT:               ResolvedDeclRefExpr:*generic_struct_member.Point<i32>{} self
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 n
-}
+};
 
 fn main() -> void {
     let p = Point<i32>{x:1, y:2};

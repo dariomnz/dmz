@@ -2,11 +2,11 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-struct a<T> {
+const a = struct<T> {
     pub fn method(self: *@This, other: b<T>) -> void {
         printf("a.method\n");
     }
-}
+};
 // CHECK:   ResolvedGenericStructDecl structs_generic_mutual.a<T>
 // CHECK-NEXT:     ResolvedGenericTypeDecl T
 // CHECK-NEXT:     ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.a<T>{}, structs_generic_mutual.b<T>{})->void
@@ -25,11 +25,11 @@ struct a<T> {
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 'a.method\n'
 
-struct b<T> {
+const b = struct<T> {
     pub fn method(self: *@This, other: a<T>) -> void {
         printf("b.method\n");
     }
-}
+};
 // CHECK:   ResolvedGenericStructDecl structs_generic_mutual.b<T>
 // CHECK-NEXT:     ResolvedGenericTypeDecl T
 // CHECK-NEXT:     ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.b<T>{}, structs_generic_mutual.a<T>{})->void

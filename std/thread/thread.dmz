@@ -4,7 +4,7 @@ extern fn pthread_create(thread_id: *usize, attr: *void, start_routine: *fn(*voi
 extern fn pthread_join(thread_id: usize, retval: *void) -> i32;
 extern fn pthread_exit(retval: *void) -> void;
 
-pub struct Thread {
+pub const Thread = struct {
     thread_id: usize = {},
 
     pub fn init(start_routine: *fn(*void)->void, arg: *void) -> !Thread {
@@ -22,7 +22,7 @@ pub struct Thread {
             try std.errno.libc_error(ret);
         }
     }
-}
+};
 
 test "thread test" {
     const func = [](arg: *void) -> void {

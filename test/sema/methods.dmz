@@ -2,7 +2,7 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
@@ -10,7 +10,7 @@ struct Color {
     pub fn print(self: *@This) -> i32 {
         return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
     }
-}
+};
 // CHECK:       ResolvedMemberFunctionDecl print fn(*methods.Color{})->i32
 // CHECK-NEXT:         ResolvedParamDecl:*methods.Color 
 // CHECK-NEXT:         ResolvedBlock

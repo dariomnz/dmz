@@ -1,7 +1,7 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
-}
+};
 
 fn foo(S: S) -> void {
     // CHECK: [[# @LINE - 1 ]]:8: error: redeclaration of 'S'

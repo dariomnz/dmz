@@ -2,10 +2,10 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-struct Point<T> {
+const Point = struct<T> {
     x: T,
     y: T,
-}
+};
 
 fn add<T>(x: i32) -> T {
     return x;
@@ -13,7 +13,7 @@ fn add<T>(x: i32) -> T {
 
 fn main() -> void {
     let p1 = Point{x: 1, y: 2};
-    // CHECK: [[# @LINE - 1 ]]:14: error: 'Point' is a generic and need specialization
+    // CHECK: [[# @LINE - 1 ]]:14: error: 'generic_struct_error.Point' is a generic and need specialization
 
     add(63);
     // CHECK: [[# @LINE - 1 ]]:8: error: could not infer generic type for 'T'

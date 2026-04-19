@@ -1,0 +1,39 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+const U = union {
+    a: i32,
+    b: f32,
+};
+
+fn main() -> void {
+    let u = U { a: 2 };
+    let p = Point { x: 1, y: 2 };
+    {
+        const LocalStruct = struct {
+            val: i32,
+        };
+    }
+    {
+        const LocalStruct = struct {
+            val: i32,
+            val2: i32,
+        };
+        let s = LocalStruct { val: 42, val2: 43 };
+    }
+    
+}
+// CHECK:   ResolvedStructDecl struct_expr_duplicate.Point
+// CHECK-NEXT:     ResolvedFieldDecl:i32 x
+// CHECK-NEXT:     ResolvedFieldDecl:i32 y
+// CHECK:   ResolvedUnionDecl struct_expr_duplicate.U
+// CHECK-NEXT:     ResolvedFieldDecl:i32 a
+// CHECK-NEXT:     ResolvedFieldDecl:f32 b
+// CHECK:   ResolvedStructDecl struct_expr_duplicate.structL16C28.LocalStruct
+// CHECK-NEXT:     ResolvedFieldDecl:i32 val
+// CHECK:   ResolvedStructDecl struct_expr_duplicate.structL21C28.LocalStruct
+// CHECK-NEXT:     ResolvedFieldDecl:i32 val
+// CHECK-NEXT:     ResolvedFieldDecl:i32 val2

@@ -2,10 +2,10 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-struct Point<T> {
+const Point = struct<T> {
     x: T,
     y: T,
-}
+};
 // CHECK: ResolvedGenericStructDecl generic_func_struct.Point<T>
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedFieldDecl:T x

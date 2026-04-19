@@ -95,16 +95,18 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
 
 ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
     debug_func(block.location);
-    std::vector<ptr<ResolvedStmt>> resolvedStatements;
 
     bool error = false;
     int reportUnreachableCount = 0;
 
     ScopeRAII blockScope(*this);
+    auto ret = makePtr<ResolvedBlock>(block.location, std::vector<ptr<ResolvedStmt>>{},
+                                      std::vector<ptr<ResolvedDeferRefStmt>>{}, blockScope.takeScope());
+
     for (auto &&stmt : block.statements) {
         if (dynamic_cast<Decoration *>(stmt.get())) continue;
         auto resolvedStmt = resolve_stmt(*stmt);
-        error |= !resolvedStatements.emplace_back(std::move(resolvedStmt));
+        error |= !ret->statements.emplace_back(std::move(resolvedStmt));
         if (error) continue;
 
         if (reportUnreachableCount == 1) {
@@ -119,13 +121,12 @@ ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
 
     if (error) return nullptr;
 
-    std::vector<ptr<ResolvedDeferRefStmt>> defers;
     // Only if not finish in return, return handle that part
-    if (resolvedStatements.size() == 0 || !dynamic_cast<ResolvedReturnStmt *>(resolvedStatements.back().get())) {
-        defers = resolve_defer_ref_stmt(true, false);
+    if (ret->statements.size() == 0 || !dynamic_cast<ResolvedReturnStmt *>(ret->statements.back().get())) {
+        ret->defers = resolve_defer_ref_stmt(true, false);
     }
 
-    return makePtr<ResolvedBlock>(block.location, std::move(resolvedStatements), std::move(defers));
+    return ret;
 }
 
 ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
@@ -151,13 +152,14 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
             varOrReturn(trueBlock, resolve_block(*ifStmt.trueBlock));
             resolvedTrueBlock = std::move(trueBlock);
             if (ifStmt.falseBlock) {
-                resolvedFalseBlock =
-                    makePtr<ResolvedBlock>(ifStmt.falseBlock->location, std::vector<ptr<ResolvedStmt>>{},
-                                           std::vector<ptr<ResolvedDeferRefStmt>>{});
+                resolvedFalseBlock = makePtr<ResolvedBlock>(
+                    ifStmt.falseBlock->location, std::vector<ptr<ResolvedStmt>>{},
+                    std::vector<ptr<ResolvedDeferRefStmt>>{}, makePtr<ResolvedScope>(m_currentScope));
             }
         } else {
             resolvedTrueBlock = makePtr<ResolvedBlock>(ifStmt.trueBlock->location, std::vector<ptr<ResolvedStmt>>{},
-                                                       std::vector<ptr<ResolvedDeferRefStmt>>{});
+                                                       std::vector<ptr<ResolvedDeferRefStmt>>{},
+                                                       makePtr<ResolvedScope>(m_currentScope));
             if (ifStmt.falseBlock) {
                 varOrReturn(falseBlock, resolve_block(*ifStmt.falseBlock));
                 resolvedFalseBlock = std::move(falseBlock);
@@ -239,7 +241,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
     if (forStmt.isInline) {
         if (forStmt.conditions.size() != 1 || forStmt.captures.size() != 1)
             return report(forStmt.location, "inline for expects exactly 1 condition and 1 capture");
-
+        ScopeRAII forScope(*this);
         varOrReturn(condTypeCheck, resolve_expr(*forStmt.conditions[0]));
         auto structType = dynamic_cast<const ResolvedTypeStruct *>(condTypeCheck->type.get());
         if (!structType) {
@@ -258,7 +260,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 captures.emplace_back(std::move(resolvedCapture));
 
                 return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
-                                                std::move(resolvedBody), true);
+                                                std::move(resolvedBody), iterationScope.takeScope(), true);
             }
             return report(condTypeCheck->location,
                           "inline for requires a tuple or struct iteration, but got: " + condTypeCheck->type->to_str());
@@ -266,9 +268,12 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
 
         auto stDecl = structType->decl;
         std::vector<ptr<ResolvedStmt>> unrolledBody;
+        ScopeRAII forIterationScope(*this);
+        auto takenForIterationScope = forIterationScope.takeScope();
 
         for (size_t i = 0; i < stDecl->fields.size(); i++) {
             ScopeRAII iterationScope(*this);
+            auto takenIterationScope = iterationScope.takeScope();
             varOrReturn(iterCond, resolve_expr(*forStmt.conditions[0]));
 
             auto fieldType = stDecl->fields[i]->type->clone();
@@ -285,12 +290,13 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
 
             varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
             resolvedIteration->statements.insert(resolvedIteration->statements.begin(), std::move(resolvedDeclStmt));
-
+            resolvedIteration->scope->merge(std::move(takenIterationScope), forIterationScope.getScope());
             unrolledBody.emplace_back(std::move(resolvedIteration));
         }
 
         auto resolvedBody =
-            makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{});
+            makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{},
+                                   std::move(takenForIterationScope));
         auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr);
         auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location,
                                                             forStmt.captures[0]->identifier, std::move(captureType));
@@ -301,10 +307,11 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         captures.emplace_back(std::move(resolvedCapture));
 
         return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
-                                        std::move(resolvedBody), true);
+                                        std::move(resolvedBody), forScope.takeScope(), true);
     }
 
     ScopeRAII forCapturesScope(*this);
+    auto forCapturesScopeTaken = forCapturesScope.takeScope();
     std::vector<ptr<ResolvedExpr>> conditions;
     std::vector<ptr<ResolvedCaptureDecl>> captures;
 
@@ -360,8 +367,9 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
     varOrReturn(resolvedBody, resolve_block(*forStmt.body));
     m_loopDepth--;
 
-    return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
-                                    std::move(resolvedBody));
+    auto ret = makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
+                                        std::move(resolvedBody), std::move(forCapturesScopeTaken));
+    return ret;
 }
 
 ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
@@ -370,13 +378,37 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    return makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), m_currentModule,
-                                     m_currentStruct);
+    if (declStmt.varDecl->initializer) {
+        if (dynamic_cast<const StructDecl *>(declStmt.varDecl->initializer.get()) ||
+            dynamic_cast<const UnionDecl *>(declStmt.varDecl->initializer.get())) {
+            resolvedVarDecl->type = resolve_type(*declStmt.varDecl->initializer);
+
+            // give it the name of the variable if it's currently anonymous.
+            if (auto *structType = dynamic_cast<ResolvedTypeStructDecl *>(resolvedVarDecl->type.get())) {
+                if (structType->decl->identifier.find("structL") != std::string::npos ||
+                    structType->decl->identifier.find("unionL") != std::string::npos) {
+                    if (m_currentFunction == nullptr) {
+                        structType->decl->identifier = resolve_decl_name(resolvedVarDecl->identifier);
+                    } else {
+                        structType->decl->identifier += "." + resolvedVarDecl->identifier;
+                    }
+                    structType->decl->isPublic = resolvedVarDecl->isPublic;
+                }
+            }
+        }
+    }
+    auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), m_currentModule,
+                                         m_currentStruct);
+    ret->varDecl->parentDeclStmt = ret.get();
+    return ret;
 }
 
 bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
     debug_func(declStmt.location);
-    if (declStmt.initialized) return true;
+    if (declStmt.state == ResolvedState::FullyResolved) return debug_ret(true);
+    if (declStmt.state == ResolvedState::InProgress && declStmt.initialized) return debug_ret(true);  // Cycle detected
+
+    declStmt.state = ResolvedState::InProgress;
 
     auto prevModule = m_currentModule;
     defer([&]() { m_currentModule = prevModule; });
@@ -387,11 +419,13 @@ bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
 
     if (!resolve_var_decl_initialize(*declStmt.varDecl)) {
         remove_decl_to_current_scope(*declStmt.varDecl);
-        return false;
+        declStmt.state = ResolvedState::Unresolved;
+        return debug_ret(false);
     }
     declStmt.type = declStmt.varDecl->type->clone();
+    declStmt.state = ResolvedState::FullyResolved;
     declStmt.initialized = true;
-    return true;
+    return debug_ret(true);
 }
 
 ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
@@ -432,17 +466,17 @@ ptr<ResolvedDeferStmt> Sema::resolve_defer_stmt(const DeferStmt &deferStmt) {
     debug_func(deferStmt.location);
     varOrReturn(block, resolve_block(*deferStmt.block));
     auto resolvedDeferStmt = makePtr<ResolvedDeferStmt>(deferStmt.location, std::move(block), deferStmt.isErrDefer);
-    m_defers.back().emplace_back(resolvedDeferStmt.get());
+    m_currentScope->defers.emplace_back(resolvedDeferStmt.get());
     return resolvedDeferStmt;
 }
 
 std::vector<ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope, bool isError) {
     debug_func("");
     std::vector<ptr<ResolvedDeferRefStmt>> defers;
-    // Traversing in reverse the defers vector
-    for (int i = m_defers.size() - 1; i >= 0; --i) {
-        for (int j = m_defers[i].size() - 1; j >= 0; --j) {
-            auto deferStmt = m_defers[i][j];
+    // Traversing the scope tree to collect defers
+    for (auto scope = m_currentScope; scope; scope = scope->parent) {
+        for (auto it = scope->defers.rbegin(); it != scope->defers.rend(); ++it) {
+            auto deferStmt = *it;
             if (!isError && deferStmt->isErrDefer) continue;
             defers.emplace_back(makePtr<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
         }
@@ -485,7 +519,8 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
                     makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(block)));
             } else {
                 auto emptyBlock = makePtr<ResolvedBlock>(cas->location, std::vector<ptr<ResolvedStmt>>{},
-                                                         std::vector<ptr<ResolvedDeferRefStmt>>{});
+                                                         std::vector<ptr<ResolvedDeferRefStmt>>{},
+                                                         makePtr<ResolvedScope>(m_currentScope));
                 cases.emplace_back(
                     makePtr<ResolvedCaseStmt>(cas->location, std::move(resolvedConditions), std::move(emptyBlock)));
             }
@@ -499,8 +534,9 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
     ptr<ResolvedBlock> resolvedElseBlock = nullptr;
     if (switchStmt.isInline && caseMatched) {
         // Ignore else
-        resolvedElseBlock = makePtr<ResolvedBlock>(switchStmt.elseBlock->location, std::vector<ptr<ResolvedStmt>>{},
-                                                   std::vector<ptr<ResolvedDeferRefStmt>>{});
+        resolvedElseBlock =
+            makePtr<ResolvedBlock>(switchStmt.elseBlock->location, std::vector<ptr<ResolvedStmt>>{},
+                                   std::vector<ptr<ResolvedDeferRefStmt>>{}, makePtr<ResolvedScope>(m_currentScope));
     } else {
         resolvedElseBlock = resolve_block(*switchStmt.elseBlock);
         if (!resolvedElseBlock) return nullptr;
@@ -531,7 +567,8 @@ ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::opt
     if (!block) {
         if (isInline && !caseMatchedInInline) {
             block = makePtr<ResolvedBlock>(caseStmt.location, std::vector<ptr<ResolvedStmt>>{},
-                                           std::vector<ptr<ResolvedDeferRefStmt>>{});
+                                           std::vector<ptr<ResolvedDeferRefStmt>>{},
+                                           makePtr<ResolvedScope>(m_currentScope));
         } else {
             return nullptr;
         }

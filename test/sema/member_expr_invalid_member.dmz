@@ -1,11 +1,11 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct Struct {
+const Struct = struct {
     x: i32,
-}
+};
 
 fn main() -> void {
     let s = Struct{x: 0};
 
     let y = s.y;
-    // CHECK: [[# @LINE - 1 ]]:14: error: struct 'Struct{}' has no member called 'y'
+    // CHECK: [[# @LINE - 1 ]]:14: error: struct 'member_expr_invalid_member.Struct{}' has no member called 'y'
 }

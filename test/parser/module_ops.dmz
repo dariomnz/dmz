@@ -1,10 +1,10 @@
 // RUN: dmz %s -module -ast-dump 2>&1 | filecheck %s
 const std = import("asdf");
-struct str_ops {
+const str_ops = struct {
     x:i32,
     y:i32,
     z:i32,
-}
+};
 
 fn print(x:i32) -> void {
     println(x);
@@ -26,10 +26,12 @@ fn sub(x:i32, y:i32) -> i32 {
 // CHECK:   DeclStmt
 // CHECK-NEXT:     VarDecl:const  std
 // CHECK-NEXT:       ImportExpr asdf
-// CHECK-NEXT:   StructDecl str_ops
-// CHECK-NEXT:     FieldDecl:i32 x
-// CHECK-NEXT:     FieldDecl:i32 y
-// CHECK-NEXT:     FieldDecl:i32 z
+
+// CHECK:   VarDecl:const  str_ops
+// CHECK-NEXT:     StructDecl structL3C16
+// CHECK-NEXT:       FieldDecl:i32 x
+// CHECK-NEXT:       FieldDecl:i32 y
+// CHECK-NEXT:       FieldDecl:i32 z
 // CHECK-NEXT:   FunctionDecl print -> void
 // CHECK-NEXT:     ParamDecl:i32 x
 // CHECK-NEXT:     Block

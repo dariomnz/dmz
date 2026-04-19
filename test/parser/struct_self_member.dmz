@@ -1,6 +1,6 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
 
-struct Point {
+const Point = struct {
     x: i32,
     y: i32,
 
@@ -19,7 +19,7 @@ struct Point {
 // CHECK-NEXT:       MemberExpr .y
 // CHECK-NEXT:         DeclRefExpr self
 // CHECK-NEXT:       IntLiteral '1'
-}
+};
 
 fn main() -> void {
     let p = Point{x:1,y:1};

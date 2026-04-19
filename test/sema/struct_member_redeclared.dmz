@@ -1,9 +1,9 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
     x: i32,
     // CHECK: [[# @LINE - 1 ]]:5: error: member 'x' is already declared
-}
+};
 
 fn main() -> void {
 }

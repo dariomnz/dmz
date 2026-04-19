@@ -1,12 +1,12 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
-struct S {
+const S = struct {
     x: i32,
-}
+};
 
-struct S2 {
+const S2 = struct {
     x: i32,
     s: S,
-}
+};
 
 fn foo() -> S {
     return S{x: 1};
@@ -24,6 +24,7 @@ fn bar(structParam: S) -> void {
     // CHECK: [[# @LINE - 1 ]]:9: error: 's' cannot be mutated
 
     structParam.x = 3;
+    // CHECK: [[# @LINE - 1 ]]:19: error: 'structParam' cannot be mutated
 }
 
 fn main() -> void {

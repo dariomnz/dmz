@@ -59,9 +59,10 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeidExp
     return evaluate_type(*expr.typeidExpr->type);
 }
 
-std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeExpr &expr,
+std::optional<int> ConstantExpressionEvaluator::evaluate([[maybe_unused]] const ResolvedTypeExpr &expr,
                                                          [[maybe_unused]] bool allowSideEffects) {
-    return evaluate_type(*expr.resolvedType);
+    return std::nullopt;
+    // return evaluate_type(*expr.resolvedType);
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_type(const ResolvedType &type) {
