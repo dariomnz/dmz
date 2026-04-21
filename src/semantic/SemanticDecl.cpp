@@ -1085,6 +1085,10 @@ bool Sema::resolve_pending_body() {
 
 bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) {
     debug_func("");
+
+    if (function.state == ResolvedState::Error) return debug_ret(false);
+    if (function.state == ResolvedState::FullyResolved) return debug_ret(true);
+
     ScopeRAII paramScope(*this, function.scope.get());
     std::vector<ptr<ResolvedType>> savedTypes;
     std::optional<DeferAction> deferSpecializedType = std::nullopt;
@@ -1105,12 +1109,15 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
         });
     }
     if (auto resolvedBody = resolve_block(body)) {
+        if (function.body) dmz_unreachable(function.location, "Function already have a body");
         function.body = std::move(resolvedBody);
         if (run_flow_sensitive_checks(function)) return false;
         debug_msg("true");
         function.state = ResolvedState::FullyResolved;
         return true;
     }
+
+    function.state = ResolvedState::Error;
     debug_msg("false");
     return false;
 }
