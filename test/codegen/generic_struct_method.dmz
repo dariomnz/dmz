@@ -3,16 +3,28 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-struct Point<T> {
+const Point = struct<T> {
     x:T,
     y:T,
 
     pub fn print(self: *@This) -> void {
         printf("Point %d %d\n", self.x, self.y);
     }
-}
+};
+
 // CHECK: %"generic_struct_method.Point<i64>" = type { i64, i64 }
 // CHECK: %"generic_struct_method.Point<i32>" = type { i32, i32 }
+
+fn main() -> void {
+    let p1 = Point<i64>{x:10, y:20};
+    let p:Point<i32> = Point<i32>{x:1, y:2};
+    p.x = 1;
+    p.y = 2;
+    p.print();
+    p1.print();
+}
+// CHECK: call void @"generic_struct_method.Point<i32>.print"(ptr byref(%"generic_struct_method.Point<i32>") %p)
+// CHECK: call void @"generic_struct_method.Point<i64>.print"(ptr byref(%"generic_struct_method.Point<i64>") %p1)
 
 // CHECK: define void @"generic_struct_method.Point<i64>.print"(ptr byref(%"generic_struct_method.Point<i64>") %0) {
 // CHECK-NEXT: entry:
@@ -43,13 +55,3 @@ struct Point<T> {
 // CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %3, i32 %6)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-fn main() -> void {
-    let p1 = Point<i64>{x:10, y:20};
-    let p:Point<i32> = Point<i32>{x:1, y:2};
-    p.x = 1;
-    p.y = 2;
-    p.print();
-    p1.print();
-}
-// CHECK: call void @"generic_struct_method.Point<i32>.print"(ptr byref(%"generic_struct_method.Point<i32>") %p)
-// CHECK: call void @"generic_struct_method.Point<i64>.print"(ptr byref(%"generic_struct_method.Point<i64>") %p1)

@@ -250,6 +250,10 @@ void ResolvedGenericFunctionDecl::dump_dependencies(size_t level, bool dot_forma
     for (auto &&function : specializations) function->dump_dependencies(level + 1, dot_format);
 }
 
+std::string ResolvedGenericFunctionDecl::name() const {
+    return ResolvedDecl::name() + ResolvedGenericTypeDecl::generic_types_to_str(genericTypeDecls);
+}
+
 void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
     ResolvedFunctionDecl::dump(level, onlySelf);
     if (onlySelf) return;
@@ -265,15 +269,7 @@ void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
     body->dump(level + 1, onlySelf);
 }
 
-std::string ResolvedSpecializedFunctionDecl::name() const {
-    std::string base;
-    if (symbolName.empty()) {
-        base = identifier;
-    } else {
-        base = symbolName;
-    }
-    return base + specializedTypes->to_str();
-}
+std::string ResolvedSpecializedFunctionDecl::name() const { return ResolvedDecl::name() + specializedTypes->to_str(); }
 
 void ResolvedReturnStmt::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedReturnStmt\n";
@@ -410,6 +406,17 @@ void ResolvedDeclStmt::dump(size_t level, bool onlySelf) const {
     varDecl->dump(level + 1, onlySelf);
 }
 
+void ResolvedDeclStmt::dump_dependencies(size_t level, bool dot_format) const {
+    ResolvedDecl::dump_dependencies(level, dot_format);
+    if (varDecl->type && varDecl->type->kind == ResolvedTypeKind::StructDecl) {
+        if (auto strDecl = dynamic_cast<ResolvedTypeStructDecl *>(varDecl->type.get())) {
+            if (strDecl->ownedDecl) {
+                strDecl->ownedDecl->dump_dependencies(level + 1, dot_format);
+            }
+        }
+    }
+}
+
 void ResolvedAssignment::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedAssignment\n";
     if (onlySelf) return;
@@ -465,6 +472,10 @@ void ResolvedGenericStructDecl::dump_dependencies(size_t level, bool dot_format)
     for (auto &&spec : specializations) spec->dump_dependencies(level + 1, dot_format);
 }
 
+std::string ResolvedGenericStructDecl::name() const {
+    return ResolvedDecl::name() + ResolvedGenericTypeDecl::generic_types_to_str(genericTypeDecls);
+}
+
 void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSpecializedStructDecl " << (isPacked ? "packed " : "") << type->to_str()
               << '\n';
@@ -474,15 +485,7 @@ void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
 }
 
-std::string ResolvedSpecializedStructDecl::name() const {
-    std::string base;
-    if (symbolName.empty()) {
-        base = identifier;
-    } else {
-        base = symbolName;
-    }
-    return base + specializedTypes->to_str();
-}
+std::string ResolvedSpecializedStructDecl::name() const { return ResolvedDecl::name() + specializedTypes->to_str(); }
 
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type->to_str() << " " << member.identifier << '\n';

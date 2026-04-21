@@ -3,7 +3,10 @@ extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
 
-    let f = [](a: i32) -> i32 { return 10 + a; };
+    const lambda = struct {
+        pub fn call(a: i32) -> i32 { return 10 + a; }
+    };
+    const f = lambda.call;
 
     // CHECK: 15
     printf("%d\n", f(5));

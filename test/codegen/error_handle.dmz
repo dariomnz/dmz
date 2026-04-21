@@ -211,14 +211,14 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push:                                 ; preds = %if.true.try
 // CHECK-NEXT:   %5 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %3
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 140, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %5, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 140, i32 24, %slice.struct { ptr @global.str.trace.data.4, i64 17 } }, ptr %5, align 8
 // CHECK-NEXT:   %6 = add i32 %3, 1
 // CHECK-NEXT:   store i32 %6, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.merge:                                ; preds = %error_trace.push, %if.true.try
 // CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr @global.str)
-// CHECK-NEXT:   %8 = call i32 (ptr, ...) @printf(ptr @global.str.4, ptr %1)
+// CHECK-NEXT:   %8 = call i32 (ptr, ...) @printf(ptr @global.str.5, ptr %1)
 // CHECK-NEXT:   call void @exit(i32 1)
 // CHECK-NEXT:   br label %if.exit.try
 // CHECK-NEXT: 
@@ -242,7 +242,7 @@ fn main() -> void {
 // CHECK-NEXT:   %17 = load ptr, ptr %12, align 8
 // CHECK-NEXT:   store ptr %17, ptr %result_e, align 8
 // CHECK-NEXT:   %18 = load ptr, ptr %result_e, align 8
-// CHECK-NEXT:   %19 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.5, ptr %18)
+// CHECK-NEXT:   %19 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.6, ptr %18)
 // CHECK-NEXT:   br label %catch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: catch.exit:                                       ; preds = %catch.has_error, %catch.no_error
@@ -263,7 +263,7 @@ fn main() -> void {
 // CHECK-NEXT:   %26 = load ptr, ptr %21, align 8
 // CHECK-NEXT:   store ptr %26, ptr %err1, align 8
 // CHECK-NEXT:   %27 = load ptr, ptr %err1, align 8
-// CHECK-NEXT:   %28 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.5, ptr %27)
+// CHECK-NEXT:   %28 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.6, ptr %27)
 // CHECK-NEXT:   store i1 true, ptr %result_error, align 1
 // CHECK-NEXT:   br label %catch.exit4
 // CHECK-NEXT: 
@@ -274,7 +274,7 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %31, label %if.true, label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %catch.exit4
-// CHECK-NEXT:   %32 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.6)
+// CHECK-NEXT:   %32 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.7)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.true, %catch.exit4
@@ -293,14 +293,14 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push9:                                ; preds = %if.true.try8
 // CHECK-NEXT:   %38 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %36
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 155, i32 24, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %38, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 155, i32 24, %slice.struct { ptr @global.str.trace.data.4, i64 17 } }, ptr %38, align 8
 // CHECK-NEXT:   %39 = add i32 %36, 1
 // CHECK-NEXT:   store i32 %39, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge10
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.merge10:                              ; preds = %error_trace.push9, %if.true.try8
 // CHECK-NEXT:   %40 = call i32 (ptr, ...) @printf(ptr @global.str)
-// CHECK-NEXT:   %41 = call i32 (ptr, ...) @printf(ptr @global.str.7, ptr %34)
+// CHECK-NEXT:   %41 = call i32 (ptr, ...) @printf(ptr @global.str.8, ptr %34)
 // CHECK-NEXT:   call void @exit(i32 1)
 // CHECK-NEXT:   br label %if.exit.try11
 // CHECK-NEXT: 
@@ -321,7 +321,7 @@ fn main() -> void {
 // CHECK-NEXT:   br label %catch.exit14
 // CHECK-NEXT: 
 // CHECK-NEXT: catch.has_error13:                                ; preds = %if.exit.try11
-// CHECK-NEXT:   %50 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.8)
+// CHECK-NEXT:   %50 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.9)
 // CHECK-NEXT:   br label %catch.exit14
 // CHECK-NEXT: 
 // CHECK-NEXT: catch.exit14:                                     ; preds = %catch.has_error13, %catch.no_error12
@@ -339,7 +339,7 @@ fn main() -> void {
 // CHECK-NEXT:   br label %catch.exit18
 // CHECK-NEXT: 
 // CHECK-NEXT: catch.has_error17:                                ; preds = %catch.exit14
-// CHECK-NEXT:   %57 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.8)
+// CHECK-NEXT:   %57 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.9)
 // CHECK-NEXT:   br label %catch.exit18
 // CHECK-NEXT: 
 // CHECK-NEXT: catch.exit18:                                     ; preds = %catch.has_error17, %catch.no_error16
@@ -359,14 +359,14 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push24:                               ; preds = %if.true.try23
 // CHECK-NEXT:   %64 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %62
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 164, i32 33, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %64, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 164, i32 33, %slice.struct { ptr @global.str.trace.data.4, i64 17 } }, ptr %64, align 8
 // CHECK-NEXT:   %65 = add i32 %62, 1
 // CHECK-NEXT:   store i32 %65, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge25
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.merge25:                              ; preds = %error_trace.push24, %if.true.try23
 // CHECK-NEXT:   %66 = call i32 (ptr, ...) @printf(ptr @global.str)
-// CHECK-NEXT:   %67 = call i32 (ptr, ...) @printf(ptr @global.str.10, ptr %60)
+// CHECK-NEXT:   %67 = call i32 (ptr, ...) @printf(ptr @global.str.11, ptr %60)
 // CHECK-NEXT:   call void @exit(i32 1)
 // CHECK-NEXT:   br label %if.exit.try26
 // CHECK-NEXT: 
@@ -374,7 +374,7 @@ fn main() -> void {
 // CHECK-NEXT:   store i32 %errorTraceGlobal.idx21, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   %68 = getelementptr inbounds nuw %error.struct.i32, ptr %result, i32 0, i32 0
 // CHECK-NEXT:   %69 = load i32, ptr %68, align 4
-// CHECK-NEXT:   %70 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.9, i32 %69)
+// CHECK-NEXT:   %70 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.10, i32 %69)
 // CHECK-NEXT:   store i32 0, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp27, i32 10)
 // CHECK-NEXT:   %71 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp27, i32 0, i32 1
@@ -391,14 +391,14 @@ fn main() -> void {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push31:                               ; preds = %if.true.try30
 // CHECK-NEXT:   %76 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %74
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 165, i32 38, %slice.struct { ptr @global.str.trace.data.3, i64 17 } }, ptr %76, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 49 }, i32 165, i32 38, %slice.struct { ptr @global.str.trace.data.4, i64 17 } }, ptr %76, align 8
 // CHECK-NEXT:   %77 = add i32 %74, 1
 // CHECK-NEXT:   store i32 %77, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge32
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.merge32:                              ; preds = %error_trace.push31, %if.true.try30
 // CHECK-NEXT:   %78 = call i32 (ptr, ...) @printf(ptr @global.str)
-// CHECK-NEXT:   %79 = call i32 (ptr, ...) @printf(ptr @global.str.12, ptr %72)
+// CHECK-NEXT:   %79 = call i32 (ptr, ...) @printf(ptr @global.str.13, ptr %72)
 // CHECK-NEXT:   call void @exit(i32 1)
 // CHECK-NEXT:   br label %if.exit.try33
 // CHECK-NEXT: 
@@ -406,6 +406,6 @@ fn main() -> void {
 // CHECK-NEXT:   store i32 %errorTraceGlobal.idx28, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   %80 = getelementptr inbounds nuw %error.struct.i32, ptr %struct.ret.tmp27, i32 0, i32 0
 // CHECK-NEXT:   %81 = load i32, ptr %80, align 4
-// CHECK-NEXT:   %82 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.11, i32 %81)
+// CHECK-NEXT:   %82 = call i32 (i32, ptr, ...) @dprintf(i32 1, ptr byref(i8) @string.literal.12, i32 %81)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

@@ -103,6 +103,8 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     }
 
     if (!decl->type && !ensure_fully_resolved(*decl)) return nullptr;
+
+    debug_msg("Adding decl ref " << decl->name() << " to pending decls");
     m_pending_decls.emplace(decl);
     if (!decl->type) {
         decl->dump();
@@ -1460,7 +1462,7 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
                                                 "path is included using the '-I' flag during compilation.");
                 return nullptr;
             }
-            
+
             if (imported == "builtin" || imported == "types") {
                 identifier = "std." + imported;
             } else {

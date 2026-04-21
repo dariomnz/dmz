@@ -2,7 +2,7 @@
 const S = struct {
   x: i32,
   y: i32
-}
+};
 
 fn main() -> void {
   let s = S { y: 2, x: 1 };

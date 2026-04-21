@@ -3,7 +3,27 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-struct Color {
+fn main() -> void {
+    let c:Color = Color{r:1, g:2, b:3};
+    c.print();
+    c.add(10);
+    c.print();
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %c = alloca %methods.Color, align 8
+// CHECK-NEXT:   %tmp.struct.methods.Color = alloca %methods.Color, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.methods.Color, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   store %methods.Color { i32 1, i32 2, i32 3 }, ptr %tmp.struct.methods.Color, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %c, ptr align 4 %tmp.struct.methods.Color, i64 12, i1 false)
+// CHECK-NEXT:   %0 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
+// CHECK-NEXT:   call void @methods.Color.add(ptr byref(%methods.Color) %c, i32 10)
+// CHECK-NEXT:   %1 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
@@ -16,7 +36,7 @@ struct Color {
         self.g += n;
         self.b += n;
     }
-}
+};
 // CHECK: define i32 @methods.Color.print(ptr byref(%methods.Color) %0) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4
@@ -74,25 +94,5 @@ struct Color {
 // CHECK-NEXT:   %21 = load ptr, ptr %self, align 8
 // CHECK-NEXT:   %22 = getelementptr inbounds nuw %methods.Color, ptr %21, i32 0, i32 2
 // CHECK-NEXT:   store i32 %20, ptr %22, align 4
-// CHECK-NEXT:   ret void
-// CHECK-NEXT: }
-
-fn main() -> void {
-    let c:Color = Color{r:1, g:2, b:3};
-    c.print();
-    c.add(10);
-    c.print();
-}
-// CHECK: define void @__builtin_main() {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %c = alloca %methods.Color, align 8
-// CHECK-NEXT:   %tmp.struct.methods.Color = alloca %methods.Color, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.methods.Color, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   store %methods.Color { i32 1, i32 2, i32 3 }, ptr %tmp.struct.methods.Color, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %c, ptr align 4 %tmp.struct.methods.Color, i64 12, i1 false)
-// CHECK-NEXT:   %0 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
-// CHECK-NEXT:   call void @methods.Color.add(ptr byref(%methods.Color) %c, i32 10)
-// CHECK-NEXT:   %1 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

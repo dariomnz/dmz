@@ -1,11 +1,11 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '1\n2\n3\n2\n1\n3\n3\n2\n1\n')
 extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
-struct Color {
+const Color = struct {
   r: i32,
   g: i32,
   b: i32,
-}
+};
 
 fn printAndReturn(n: i32) -> i32 {
   println(n);

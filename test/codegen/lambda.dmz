@@ -3,13 +3,21 @@ extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
     const x = 10;
-    let f1 = [](a: i32) -> i32 { return x + a; };
+    const lambda = struct {
+        x: i32,
+        pub fn call(self: *@This, a: i32) -> i32 { return self.x + a; }
+    };
+    let f1 = lambda{x: x};
 
     const y = 20;
-    let f2 = [](a: i32) -> i32 { return y + a; };
+    const lambda2 = struct {
+        y: i32,
+        pub fn call(self: *@This, a: i32) -> i32 { return self.y + a; }
+    };
+    let f2 = lambda2{y: y};
 
     // CHECK: 15
-    printf("%d\n", f1(5));
+    printf("%d\n", f1.call(5));
     // CHECK: 25
-    printf("%d\n", f2(5));
+    printf("%d\n", f2.call(5));
 }

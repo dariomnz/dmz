@@ -291,6 +291,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     resolvedFunc->scope->currentFunction = resolvedFunc.get();
     auto *retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc)).get();
 
+    debug_msg("Adding specialized function " << retFunc->name() << " to pending decls");
     m_pending_decls.emplace(retFunc);
 
     return retFunc;
@@ -359,6 +360,7 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
 
     if (!ensure_struct_funcs_resolved(*retStruct)) return nullptr;
     if (!ensure_struct_members_resolved(*retStruct)) return nullptr;
+    debug_msg("Adding specialized struct " << retStruct->name() << " to pending decls");
     m_pending_decls.emplace(retStruct);
 
     return retStruct;
@@ -1043,16 +1045,22 @@ bool Sema::ensure_fully_resolved(ResolvedDecl &decl) {
 }
 
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
-    debug_func("");
+    debug_func("resolve_module_body for " << moduleDecl.module_path);
     bool error = false;
     ScopeRAII moduleScope(*this, moduleDecl.scope.get());
 
-    // Single unified pass: resolve everything lazily via ensure_fully_resolved
-    debug_msg("moduleDecl.declarations.size() " << moduleDecl.declarations.size());
-    for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
-        auto currentDecl = moduleDecl.declarations[i].get();
-        if (!ensure_fully_resolved(*currentDecl)) {
-            error = true;
+    debug_msg(moduleDecl.module_path << " " << m_driver.m_options.source);
+    bool isSourceModule = (moduleDecl.module_path == m_driver.m_options.source);
+
+    if (isSourceModule) {
+        debug_msg("Source module: resolving entry points only");
+        for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
+            auto currentDecl = moduleDecl.declarations[i].get();
+
+            if (!ensure_fully_resolved(*currentDecl)) {
+                error = true;
+                continue;
+            }
         }
     }
     debug_msg("error " << error);
@@ -1100,6 +1108,7 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
         function.body = std::move(resolvedBody);
         if (run_flow_sensitive_checks(function)) return false;
         debug_msg("true");
+        function.state = ResolvedState::FullyResolved;
         return true;
     }
     debug_msg("false");

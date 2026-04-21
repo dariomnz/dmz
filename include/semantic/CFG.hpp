@@ -8,13 +8,8 @@
 namespace DMZ {
 
 struct BasicBlock {
-    struct pair_hash {
-        inline std::size_t operator()(const std::pair<int, bool> &v) const {
-            return std::hash<int>{}(v.first) ^ (std::hash<bool>{}(v.second) << 1);
-        }
-    };
-    std::unordered_set<std::pair<int, bool>, pair_hash> predecessors;
-    std::unordered_set<std::pair<int, bool>, pair_hash> successors;
+    std::set<std::pair<int, bool>> predecessors;
+    std::set<std::pair<int, bool>> successors;
     std::vector<const ResolvedStmt *> statements;
 };
 

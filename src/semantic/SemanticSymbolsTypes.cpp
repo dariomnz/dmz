@@ -178,20 +178,8 @@ void ResolvedTypeStructDecl::dump(size_t level) const {
 }
 
 std::string ResolvedTypeStructDecl::to_str() const {
-    std::string ret = decl->name();
-    if (auto generic = dynamic_cast<ResolvedGenericStructDecl *>(decl)) {
-        std::stringstream out;
-        out << "<";
-        for (size_t i = 0; i < generic->genericTypeDecls.size(); i++) {
-            out << generic->genericTypeDecls[i]->identifier;
-            if (i != generic->genericTypeDecls.size() - 1) {
-                out << ", ";
-            }
-        }
-        out << ">";
-        ret += out.str();
-    }
-    return ret;
+    if (!decl) return "unknown";
+    return decl->name();
 }
 
 bool ResolvedTypeStructDecl::is_generic() const {
@@ -240,21 +228,7 @@ void ResolvedTypeStruct::dump(size_t level) const {
 
 std::string ResolvedTypeStruct::to_str() const {
     if (!decl) return "unknown{}";
-
-    std::string ret = decl->name();
-    if (auto generic = dynamic_cast<ResolvedGenericStructDecl *>(decl)) {
-        std::stringstream out;
-        out << "<";
-        for (size_t i = 0; i < generic->genericTypeDecls.size(); i++) {
-            out << generic->genericTypeDecls[i]->identifier;
-            if (i != generic->genericTypeDecls.size() - 1) {
-                out << ", ";
-            }
-        }
-        out << ">";
-        ret += out.str();
-    }
-    return ret + "{}";
+    return decl->name() + "{}";
 }
 
 bool ResolvedTypeStruct::is_generic() const {

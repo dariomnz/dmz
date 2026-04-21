@@ -1,13 +1,13 @@
 // RUN: dmz %s -cfg-dump 2>&1 | filecheck %s --match-full-lines
-struct S {
+const S = struct {
   x: i32,
   s2: S2,
   y: i32,
-}
+};
 
-struct S2 {
+const S2 = struct {
   y: i32
-}
+};
 
 fn main() -> void {
   let s = S { s2: S2 { y : 1 }, x: 0, y: 2 };

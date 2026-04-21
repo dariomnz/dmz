@@ -80,12 +80,12 @@ bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDec
 std::string Sema::resolve_decl_name(std::string_view identifier) {
     std::string ret(identifier);
     if (m_currentStruct) {
-        ret = m_currentStruct->identifier;
+        ret = m_currentStruct->name();
         ret += ".";
         ret += identifier;
         debug_msg("With struct " << ret);
     } else if (m_currentModule) {
-        ret = m_currentModule->identifier;
+        ret = m_currentModule->name();
         ret += ".";
         ret += identifier;
         debug_msg("With module " << ret);
@@ -163,6 +163,9 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
         }
+
+        debug_msg("Adding struct func " << decl->name() << " to pending decls");
+        m_pending_decls.emplace(decl.get());
         return decl.get();
     }
     if (!ensure_struct_members_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return debug_ret(nullptr);
@@ -378,7 +381,10 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         }
         retTypeStruct->ownedDecl = std::move(ownedStructDecl);
         if (retTypeStruct->ownedDecl) {
-            m_pending_decls.emplace(retTypeStruct->ownedDecl.get());
+            if (m_currentModule && m_currentModule->module_path == m_driver.m_options.source){
+                debug_msg("Adding struct " << retTypeStruct->ownedDecl->name() << " to pending decls");
+                m_pending_decls.emplace(retTypeStruct->ownedDecl.get());
+            }
         }
         ret = std::move(retTypeStruct);
         retPtr = ret.get();
@@ -559,6 +565,7 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
         m_lazy_modules.swap(moduleDecls);
         for (size_t i = 0; i < m_lazy_modules.size(); i++) {
             auto &&module = m_lazy_modules[i];
+            if (module->module_path != m_driver.m_options.source) continue;
             ScopedTimerName(StatType::Semantic_Body, module->name());
             if (!resolve_module_body(*module)) {
                 error = true;

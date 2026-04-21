@@ -9,7 +9,7 @@
 
 // CHECK-NOT: {{.*}}
 
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
@@ -26,7 +26,7 @@ struct Color {
         aux.b = n.b + value;
         return aux;
     }
-}
+};
 
 extern fn printf(fmt: *u8, ...) -> i32;
 

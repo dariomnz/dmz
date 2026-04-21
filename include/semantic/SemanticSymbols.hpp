@@ -377,6 +377,7 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
+    std::string name() const override;
 };
 
 // Forward declaration
@@ -530,6 +531,7 @@ struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
+    std::string name() const override;
 };
 
 struct ResolvedIntLiteral : public ResolvedExpr {
@@ -878,6 +880,7 @@ struct ResolvedDeclStmt : public ResolvedDecl, public ResolvedStmt {
           varDecl(std::move(varDecl)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
+    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
     DMZ_TYPE_NAME();
 };
 
