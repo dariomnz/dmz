@@ -56,6 +56,7 @@ pub const Writer = struct {
     }
 
     pub fn writeStr(w: *@This, str: *u8) -> !usize {
+        if (str == null) return 0;
         const str_len = std.mem.strlen(str);
         const str_slice: []u8 = str[0..str_len];
         return w.writeAll(str_slice);

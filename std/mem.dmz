@@ -69,14 +69,18 @@ pub const libc_allocator = struct {
     }
 };
 
-pub fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
+pub fn indexOf<T>(slice: []T, scalar: T) -> isize {
+    return indexOfScalarSIMD<T>(slice, scalar);
+}
+
+fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
     for (0..slice.len) |i| {
         if (slice[i] == scalar) return i;
     }
     return -1;
 }
 
-pub fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
+fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     const simd_len = @simdSize(T);
 
     if (slice.len < simd_len) {
@@ -120,7 +124,7 @@ pub fn memcpy<T>(dest: []T, src: []T) -> void {
     memcpySIMD<T>(dest, src);
 }
 
-pub fn memcpyScalar<T>(dest: []T, src: []T) -> void {
+fn memcpyScalar<T>(dest: []T, src: []T) -> void {
     let len = src.len;
     if (dest.len < src.len) len = dest.len;
     if (len == 0) return;
@@ -130,7 +134,7 @@ pub fn memcpyScalar<T>(dest: []T, src: []T) -> void {
     }
 }
 
-pub fn memcpySIMD<T>(dest: []T, src: []T) -> void {
+fn memcpySIMD<T>(dest: []T, src: []T) -> void {
     let len = src.len;
     if (dest.len < src.len) len = dest.len;
     if (len == 0) return;
@@ -169,14 +173,14 @@ pub fn memset<T>(dest: []T, value: T) -> void {
     memsetSIMD<T>(dest, value);
 }
 
-pub fn memsetScalar<T>(dest: []T, value: T) -> void {
+fn memsetScalar<T>(dest: []T, value: T) -> void {
     if (dest.len == 0) return;
     for (0..dest.len) |i| {
         dest[i] = value;
     }
 }
 
-pub fn memsetSIMD<T>(dest: []T, value: T) -> void {
+fn memsetSIMD<T>(dest: []T, value: T) -> void {
     let len = dest.len;
     if (len == 0) return;
 

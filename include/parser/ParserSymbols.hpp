@@ -830,14 +830,8 @@ struct ModuleDecl : public Decl {
 
 struct ImportExpr : public Expr {
     std::string identifier;
-    std::string module_id;
-    std::filesystem::path module_path;
-    ImportExpr(SourceLocation location, std::string_view identifier, std::string module_id,
-               std::filesystem::path module_path)
-        : Expr(location),
-          identifier(identifier),
-          module_id(std::move(module_id)),
-          module_path(std::move(module_path)) {}
+    ImportExpr(SourceLocation location, std::string_view identifier)
+        : Expr(location), identifier(identifier) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

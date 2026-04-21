@@ -285,12 +285,11 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
 
             auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(),
-                                                              std::move(varDecl), m_currentModule, m_currentStruct);
+                                                              std::move(varDecl), std::move(takenIterationScope));
             resolvedDeclStmt->initialized = true;
 
             varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
             resolvedIteration->statements.insert(resolvedIteration->statements.begin(), std::move(resolvedDeclStmt));
-            resolvedIteration->scope->merge(std::move(takenIterationScope), forIterationScope.getScope());
             unrolledBody.emplace_back(std::move(resolvedIteration));
         }
 
@@ -378,6 +377,7 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
+    ScopeRAII scope(*this);
     if (declStmt.varDecl->initializer) {
         if (dynamic_cast<const StructDecl *>(declStmt.varDecl->initializer.get()) ||
             dynamic_cast<const UnionDecl *>(declStmt.varDecl->initializer.get())) {
@@ -397,29 +397,26 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
             }
         }
     }
-    auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), m_currentModule,
-                                         m_currentStruct);
+    auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), scope.takeScope());
     ret->varDecl->parentDeclStmt = ret.get();
+    ret->symbolName = resolve_decl_name(ret->identifier);
+    ret->varDecl->symbolName = resolve_decl_name(ret->varDecl->identifier);
     return ret;
 }
 
 bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
     debug_func(declStmt.location);
     if (declStmt.state == ResolvedState::FullyResolved) return debug_ret(true);
+    if (declStmt.state == ResolvedState::Error) return debug_ret(false);
     if (declStmt.state == ResolvedState::InProgress && declStmt.initialized) return debug_ret(true);  // Cycle detected
 
     declStmt.state = ResolvedState::InProgress;
 
-    auto prevModule = m_currentModule;
-    defer([&]() { m_currentModule = prevModule; });
-    m_currentModule = declStmt.saveCurrentModule;
-    auto prevStruct = m_currentStruct;
-    defer([&]() { m_currentStruct = prevStruct; });
-    m_currentStruct = declStmt.saveCurrentStruct;
+    ScopeRAII scope(*this, declStmt.scope.get());
 
     if (!resolve_var_decl_initialize(*declStmt.varDecl)) {
         remove_decl_to_current_scope(*declStmt.varDecl);
-        declStmt.state = ResolvedState::Unresolved;
+        declStmt.state = ResolvedState::Error;
         return debug_ret(false);
     }
     declStmt.type = declStmt.varDecl->type->clone();
@@ -431,7 +428,11 @@ bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
 ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     debug_func(assignment.location);
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
+    debug_msg("resolvedRHS: " << resolvedRHS->className() << " " << resolvedRHS->type->className() << " '"
+                              << resolvedRHS->type->to_str() << "'");
     varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
+    debug_msg("resolvedLHS: " << resolvedLHS->className() << " " << resolvedLHS->type->className() << " '"
+                              << resolvedLHS->type->to_str() << "'");
 
     if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(resolvedLHS.get())) {
         if (!declRef->decl.isMutable) {
@@ -443,6 +444,10 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     }
     perform_implicit_cast(resolvedRHS, *resolvedLHS->type);
     if (!resolvedLHS->type->compare(*resolvedRHS->type)) {
+        debug_msg("assigned value type " << resolvedRHS->type->className()
+                                         << " '" + resolvedRHS->type->to_str() + "' doesn't match variable type "
+                                         << resolvedLHS->type->className()
+                                         << " '" + resolvedLHS->type->to_str() + "'\n");
         return report(resolvedRHS->location, "assigned value type '" + resolvedRHS->type->to_str() +
                                                  "' doesn't match variable type '" + resolvedLHS->type->to_str() + "'");
     }

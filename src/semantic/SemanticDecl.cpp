@@ -5,6 +5,8 @@
 #endif
 #include "Debug.hpp"
 #include "Utils.hpp"
+#include "driver/Driver.hpp"
+#include "parser/Parser.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
@@ -62,15 +64,21 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
 
     bool isStatic = true;
 
-    if (resolvedFunctionDecl->params.size() > 0) {
-        ptr<ResolvedType> parentType = nullptr;
-        if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&parentDecl)) {
-            parentType = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(sd));
-        } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&parentDecl)) {
-            parentType = makePtr<ResolvedTypeUnion>(function.location, const_cast<ResolvedUnionDecl *>(ud));
-        }
+    ResolvedStructDecl *parentStructDecl = nullptr;
+    ptr<ResolvedType> parentType = nullptr;
+    if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&parentDecl)) {
+        parentType = makePtr<ResolvedTypeUnion>(function.location, const_cast<ResolvedUnionDecl *>(ud));
+        parentStructDecl = const_cast<ResolvedUnionDecl *>(ud);
+    } else if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&parentDecl)) {
+        parentType = makePtr<ResolvedTypeStruct>(function.location, const_cast<ResolvedStructDecl *>(sd));
+        parentStructDecl = const_cast<ResolvedStructDecl *>(sd);
+    } else {
+        dmz_unreachable(function.location,
+                        "parentDecl " + std::string(parentDecl.className()) + " is not a struct or union");
+    }
 
-        if (parentType) {
+    if (parentType) {
+        if (resolvedFunctionDecl->params.size() > 0) {
             auto paramType = makePtr<ResolvedTypePointer>(function.location, std::move(parentType));
             if (resolvedFunctionDecl->params[0]->type->equal(*paramType)) {
                 isStatic = false;
@@ -78,13 +86,26 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
         }
     }
 
-    auto ret = makePtr<ResolvedMemberFunctionDecl>(
-        resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
-        std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
-        std::move(resolvedFunctionDecl->scope), resolvedFunctionDecl->functionDecl, &parentDecl, isStatic);
+    ptr<ResolvedMemberFunctionDecl> ret = nullptr;
+    if (dynamic_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl.get())) {
+        dmz_unreachable(function.location, "TODO");
+        // ret = makePtr<ResolvedGenericFunctionDecl>(
+        //     genFunc->location, genFunc->isPublic, genFunc->identifier, std::move(genFunc->type),
+        //     std::move(genFunc->params), std::move(genFunc->scope), std::move(genFunc->genericScope),
+        //     genFunc->functionDecl, std::move(genFunc->genericTypeDecls), &parentDecl, isStatic);
+    } else {
+        ret = makePtr<ResolvedMemberFunctionDecl>(
+            resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
+            std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
+            std::move(resolvedFunctionDecl->scope), resolvedFunctionDecl->functionDecl, &parentDecl, isStatic);
+    }
+
     auto fnType = ret->getFnType();
     fnType->fnDecl = ret.get();
     ret->body = std::move(resolvedFunctionDecl->body);
+    ret->symbolName = std::move(resolvedFunctionDecl->symbolName);
+    ret->scope->currentFunction = ret.get();
+    ret->scope->currentStruct = parentStructDecl;
     return ret;
 }
 
@@ -111,6 +132,8 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     if (!returnType)
         return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                              function.type->to_str() + "' return type");
+
+    debug_msg("returnType: " << returnType->className() << " " << returnType->to_str());
 
     if (function.identifier == "main") {
         if (returnType->kind != ResolvedTypeKind::Void)
@@ -148,6 +171,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             makePtr<ResolvedExternFunctionDecl>(function.location, function.isPublic, function.identifier,
                                                 std::move(fnType), std::move(resolvedParams), std::move(takenScope));
         ret->getFnType()->fnDecl = ret.get();
+        if (ret->scope) ret->scope->currentFunction = ret.get();
         return ret;
     }
     if (auto functionDecl = dynamic_cast<const FunctionDecl *>(&function)) {
@@ -155,20 +179,26 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             auto ret =
                 makePtr<ResolvedTestDecl>(function.location, function.identifier, functionDecl, std::move(takenScope));
             ret->getFnType()->fnDecl = ret.get();
+            ret->symbolName = resolve_decl_name(function.identifier);
+            if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         }
         if (resolvedGenericTypeDecl.size() != 0) {
             auto ret = makePtr<ResolvedGenericFunctionDecl>(
                 function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
-                std::move(takenScope), std::move(takenGenericScope), functionDecl, std::move(resolvedGenericTypeDecl),
-                m_currentModule, m_currentStruct);
+                std::move(takenScope), std::move(takenGenericScope), functionDecl, std::move(resolvedGenericTypeDecl));
             ret->getFnType()->fnDecl = ret.get();
+            ret->symbolName = resolve_decl_name(function.identifier);
+            if (ret->genericScope) ret->genericScope->currentFunction = ret.get();
+            if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         } else {
             auto ret = makePtr<ResolvedFunctionDecl>(function.location, function.isPublic, function.identifier,
                                                      std::move(fnType), std::move(resolvedParams),
                                                      std::move(takenScope), functionDecl);
             ret->getFnType()->fnDecl = ret.get();
+            ret->symbolName = resolve_decl_name(function.identifier);
+            if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         }
     }
@@ -200,7 +230,6 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     // Search if is specified
     for (auto &&func : funcDecl.specializations) {
         if (genericTypes.equal(*func->specializedTypes)) {
-            add_dependency(func.get());
             return func.get();
         }
     }
@@ -218,13 +247,6 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         }
     });
     // Restore scope
-    auto savedCurrentModule = std::move(m_currentModule);
-    m_currentModule = funcDecl.saveCurrentModule;
-    defer([&]() { m_currentModule = std::move(savedCurrentModule); });
-    auto savedCurrentStruct = std::move(m_currentStruct);
-    m_currentStruct = funcDecl.saveCurrentStruct;
-    defer([&]() { m_currentStruct = std::move(savedCurrentStruct); });
-
     ScopeRAII parentFunctionScope(*this, funcDecl.genericScope.get());
     ScopeRAII functionScope(*this);
     auto takenScope = functionScope.takeScope();
@@ -262,22 +284,11 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         funcDecl.location, funcDecl.isPublic, funcDecl.identifier, std::move(fnType), std::move(resolvedParams),
         std::move(takenScope), funcDecl.functionDecl, castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
     resolvedFunc->getFnType()->fnDecl = resolvedFunc.get();
-    // auto &retFunc = resolvedFunc;
+    resolvedFunc->symbolName = funcDecl.symbolName;
     auto *retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc)).get();
-    bool error = false;
-    auto prevFunc = m_currentFunction;
-    m_currentFunction = retFunc;
-    auto body = funcDecl.functionDecl->body.get();
-    if (auto resolvedBody = resolve_block(*body)) {
-        retFunc->body = std::move(resolvedBody);
-        if (run_flow_sensitive_checks(*retFunc)) error = true;
-    } else {
-        error = true;
-    }
-    m_currentFunction = prevFunc;
-    // println("m_currentFunction " << m_currentFunction->identifier << " prev " << prevFunc->identifier);
-    if (error) return nullptr;
-    add_dependency(retFunc);
+
+    if (!ensure_fully_resolved(*retFunc)) return nullptr;
+
     return retFunc;
 }
 
@@ -306,7 +317,6 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     // Search if is specified
     for (auto &&stru : struDecl.specializations) {
         if (genericTypes.equal(*stru->specializedTypes)) {
-            add_dependency(stru.get());
             return stru.get();
         }
     }
@@ -324,10 +334,6 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
         }
     });
     // Restore scope
-    auto savedCurrentModule = std::move(m_currentModule);
-    m_currentModule = struDecl.saveCurrentModule;
-    defer([&]() { m_currentModule = std::move(savedCurrentModule); });
-
     ScopeRAII parentStructScope(*this, struDecl.genericScope.get());
     ScopeRAII structScope(*this);
 
@@ -341,14 +347,12 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
 
     auto *retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct)).get();
     retStruct->specializedTypes = castPtr<ResolvedTypeSpecialized>(genericTypes.clone());
-    add_dependency(retStruct);
+    retStruct->scope->currentStruct = retStruct;
 
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = retStruct;
-    defer([&]() { m_currentStruct = prevStruct; });
+    ScopeRAII specStructScope(*this, retStruct->scope.get());
 
-    if (!resolve_struct_members(*retStruct)) return nullptr;
-    if (!resolve_struct_decl_funcs(*retStruct)) return nullptr;
+    if (!ensure_struct_funcs_resolved(*retStruct)) return nullptr;
+    if (!ensure_struct_members_resolved(*retStruct)) return nullptr;
     m_pending_decls.emplace_back(retStruct);
 
     return retStruct;
@@ -375,6 +379,7 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     ptr<ResolvedType> type = resolvedvarType ? std::move(resolvedvarType) : nullptr;
     auto ret = makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier,
                                         std::move(type), varDecl.isMutable, nullptr, varDecl.isGlobal);
+    ret->symbolName = resolve_decl_name(varDecl.identifier);
     if (varDecl.type) {
         ret->resolvedTypeExpr = resolve_expr(*varDecl.type);
     }
@@ -383,22 +388,26 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
 
 bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
     debug_func(varDecl.location);
+    if (varDecl.state == ResolvedState::Error) return debug_ret(false);
     if (varDecl.state == ResolvedState::FullyResolved) return debug_ret(true);
     if (varDecl.state == ResolvedState::InProgress && varDecl.nameResolved) return debug_ret(true);  // Cycle
 
     varDecl.state = ResolvedState::InProgress;
-    defer([&]() { varDecl.nameResolved = true; });
+    varDecl.nameResolved = true;
 
-    if (!varDecl.varDecl->initializer && !varDecl.type) {
+    if (varDecl.varDecl && !varDecl.varDecl->initializer && !varDecl.type) {
         debug_msg(varDecl.varDecl);
         varDecl.varDecl->dump();
         dmz_unreachable(varDecl.location, "unexpected malformed var decl");
     }
 
     ptr<ResolvedExpr> resolvedInitializer = nullptr;
-    if (varDecl.varDecl->initializer) {
+    if (varDecl.varDecl && varDecl.varDecl->initializer) {
         resolvedInitializer = resolve_expr(*varDecl.varDecl->initializer);
-        if (!resolvedInitializer) return debug_ret(false);
+        if (!resolvedInitializer) {
+            varDecl.state = ResolvedState::Error;
+            return debug_ret(false);
+        }
     }
 
     ResolvedType *type = nullptr;
@@ -410,6 +419,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
         if (!type) {
             report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +
                                          resolvedInitializer->type->to_str() + "' type");
+            varDecl.state = ResolvedState::Error;
             return debug_ret(false);
         }
 
@@ -433,7 +443,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
                     report(resolvedInitializer->location, "initializer type mismatch expected '" +
                                                               varDecl.type->to_str() + "' actual '" +
                                                               resolvedInitializer->type->to_str() + "'");
-                    varDecl.state = ResolvedState::Unresolved;
+                    varDecl.state = ResolvedState::Error;
                     return debug_ret(false);
                 }
             }
@@ -445,7 +455,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 
     if (type->kind == ResolvedTypeKind::Void) {
         report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" + type->to_str() + "' type");
-        varDecl.state = ResolvedState::Unresolved;
+        varDecl.state = ResolvedState::Error;
         return debug_ret(false);
     }
 
@@ -461,11 +471,7 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
     debug_func(resolvedUnionDecl.location);
 
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = &resolvedUnionDecl;
-    defer([&]() { m_currentStruct = prevStruct; });
-
-    if (!resolvedUnionDecl.fields.empty()) return true;
+    ScopeRAII unionScope(*this, resolvedUnionDecl.scope.get());
 
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     std::vector<std::string> resolvedFields_strs;
@@ -492,6 +498,9 @@ bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
         resolvedFields_strs.emplace_back(field->identifier);
     }
 
+    if (resolvedUnionDecl.fields.size() != 0) {
+        dmz_unreachable(resolvedUnionDecl.location, "resolvedUnionDecl.fields.size() != 0");
+    }
     resolvedUnionDecl.fields = std::move(resolvedFields);
     resolvedUnionDecl.fields_strs = std::move(resolvedFields_strs);
 
@@ -517,11 +526,12 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
     auto takenFieldScope = fieldScope.takeScope();
     ptr<ResolvedStructDecl> resStructDecl;
     if (dynamic_cast<const GenericStructDecl *>(&structDecl)) {
-        resStructDecl = makePtr<ResolvedGenericStructDecl>(
+        auto resGenStructDecl = makePtr<ResolvedGenericStructDecl>(
             structDecl.location, structDecl.isPublic, resolve_decl_name(structDecl.identifier), &structDecl,
             structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{},
-            std::move(takenFieldScope), std::move(takenGenericScope), std::move(resolvedGenericTypesDecl),
-            m_currentModule);
+            std::move(takenFieldScope), std::move(takenGenericScope), std::move(resolvedGenericTypesDecl));
+        if (resGenStructDecl->genericScope) resGenStructDecl->genericScope->currentStruct = resGenStructDecl.get();
+        resStructDecl = std::move(resGenStructDecl);
     } else if (auto unionDecl = dynamic_cast<const UnionDecl *>(&structDecl)) {
         resStructDecl = makePtr<ResolvedUnionDecl>(
             unionDecl->location, unionDecl->isPublic, resolve_decl_name(unionDecl->identifier), unionDecl,
@@ -533,6 +543,7 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
             structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{},
             std::move(takenFieldScope));
     }
+    if (resStructDecl->scope) resStructDecl->scope->currentStruct = resStructDecl.get();
 
     debug_msg("structDecl.decls.size() " << structDecl.decls.size());
     for (auto &&decl : structDecl.decls) {
@@ -553,14 +564,13 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         return resolve_union_members(*unionStruct);
     }
 
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = &resolvedStructDecl;
-    defer([&]() { m_currentStruct = prevStruct; });
-
     ResolvedScope *scopeToUse = resolvedStructDecl.scope.get();
-    if (auto genStruct = dynamic_cast<ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
+    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
         scopeToUse = genStruct->genericScope.get();
+    } else if (auto genstruct = dynamic_cast<const ResolvedSpecializedStructDecl *>(&resolvedStructDecl)) {
+        scopeToUse = genstruct->scope.get();
     }
+
     ScopeRAII structScope(*this, scopeToUse);
 
     std::optional<DeferAction> deferSpecializedType = std::nullopt;
@@ -610,11 +620,14 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
             resolvedFields_strs.emplace_back(field->identifier);
         }
 
+        if (resolvedStructDecl.fields.size() != 0) {
+            dmz_unreachable(resolvedStructDecl.location, "resolvedStructDecl.fields.size() != 0");
+        }
         resolvedStructDecl.fields = std::move(resolvedFields);
         resolvedStructDecl.fields_strs = std::move(resolvedFields_strs);
     }
 
-    std::stack<std::pair<ResolvedStructDecl *, std::set<const ResolvedStructDecl *>>> worklist;
+    std::stack<std::pair<ResolvedStructDecl *, std::unordered_set<const ResolvedStructDecl *>>> worklist;
     worklist.push({&resolvedStructDecl, {}});
 
     while (!worklist.empty()) {
@@ -647,20 +660,12 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
 }
 
 bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = &resolvedStructDecl;
-    defer([&]() { m_currentStruct = prevStruct; });
-
     ResolvedScope *scopeToUse = resolvedStructDecl.scope.get();
     if (auto genstruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
         scopeToUse = genstruct->genericScope.get();
     }
     ScopeRAII structScope(*this, scopeToUse);
     if (auto genstruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
-        auto prevModule = m_currentModule;
-        m_currentModule = genstruct->saveCurrentModule;
-        defer([&]() { m_currentModule = prevModule; });
-
         for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
             auto &resfunc = resolvedStructDecl.functions[i];
             if (!resolve_func_body(*resfunc, *resfunc->functionDecl->body)) return false;
@@ -681,10 +686,7 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
                 }
             });
 
-            auto prevStruct = m_currentStruct;
-            m_currentStruct = spec.get();
-            defer([&]() { m_currentStruct = prevStruct; });
-
+            ScopeRAII specializedStructScope(*this, spec->scope.get());
             // Resolve functions body
             for (size_t i = 0; i < spec->functions.size(); i++) {
                 auto &resfunc = spec->functions[i];
@@ -693,12 +695,8 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
         }
         // dmz_unreachable("TODO");
     } else {
-        auto prevModule = m_currentModule;
-        defer([&]() { m_currentModule = prevModule; });
-        auto prevStruct = m_currentStruct;
-        defer([&]() { m_currentStruct = prevStruct; });
-
         if (auto specStruct = dynamic_cast<ResolvedSpecializedStructDecl *>(&resolvedStructDecl)) {
+            ScopeRAII specializedStructScope(*this, specStruct->scope.get());
             // Specialize types
             for (size_t i = 0; i < specStruct->genStruct->genericTypeDecls.size(); i++) {
                 debug_msg("Specialize " << specStruct->genStruct->genericTypeDecls[i]->identifier << " to "
@@ -713,9 +711,6 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
                     specStruct->genStruct->genericTypeDecls[i]->specializedType = nullptr;
                 }
             });
-
-            m_currentModule = specStruct->genStruct->saveCurrentModule;
-            m_currentStruct = specStruct;
         }
 
         for (size_t i = 0; i < resolvedStructDecl.functions.size(); i++) {
@@ -730,12 +725,11 @@ bool Sema::resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl) {
 bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
     debug_func(resolvedStructDecl.location << " " << resolvedStructDecl.name());
 
-    auto prevStruct = m_currentStruct;
-    m_currentStruct = &resolvedStructDecl;
-    defer([&]() { m_currentStruct = prevStruct; });
     ResolvedScope *scopeToUse = resolvedStructDecl.scope.get();
     if (auto genstruct = dynamic_cast<const ResolvedGenericStructDecl *>(&resolvedStructDecl)) {
         scopeToUse = genstruct->genericScope.get();
+    } else if (auto genstruct = dynamic_cast<const ResolvedSpecializedStructDecl *>(&resolvedStructDecl)) {
+        scopeToUse = genstruct->scope.get();
     }
 
     ScopeRAII structScope(*this, scopeToUse);
@@ -770,6 +764,9 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
         }
     }
 
+    if (resolvedStructDecl.functions.size() != 0) {
+        dmz_unreachable(resolvedStructDecl.location, "resolvedStructDecl.functions.size() != 0");
+    }
     resolvedStructDecl.functions = std::move(resolvedFunctions);
     resolvedStructDecl.functions_strs = std::move(resolvedFunctions_strs);
 
@@ -790,31 +787,42 @@ ptr<ResolvedErrorGroupExprDecl> Sema::resolve_error_group_expr_decl(const ErrorG
     return makePtr<ResolvedErrorGroupExprDecl>(ErrorGroupExprDecl.location, std::move(resolvedErrors));
 }
 
-std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
+std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(std::vector<ptr<ModuleDecl>> &modules,
                                                                  const std::filesystem::path &sourcePath) {
     bool error = false;
     debug_func("error " << (error ? "true" : "false"));
     debug_msg("[Sema] resolve_modules_decls: resolving " << modules.size() << " modules");
     std::vector<ptr<ResolvedModuleDecl>> resolvedModules;
 
-    // Pass 1: Create all empty module declarations
+    // Pass 1: Create all module declarations (some might be lazy/empty AST)
     for (auto &&module : modules) {
-        module->module_path = std::filesystem::canonical(module->module_path);
-        debug_msg("[Sema]   - module path: " << module->module_path);
-        auto resolvedModule = resolve_module_decl(*module);
+        std::string identifier;
+        std::filesystem::path module_path;
+        if (module) {
+            module->module_path = std::filesystem::canonical(module->module_path);
+            identifier = module->identifier;
+            module_path = module->module_path;
+        }
+
+        debug_msg("[Sema]   - module path: " << module_path);
+        auto resolvedModule = resolve_module_decl(std::move(module), identifier, module_path);
         if (!resolvedModule) {
             error = true;
             continue;
         }
-        auto *resMod = resolvedModules.emplace_back(std::move(resolvedModule)).get();
-        m_modules_for_import.emplace(module->module_path, resMod);
+        resolvedModules.emplace_back(std::move(resolvedModule));
     }
     if (error) return {};
 
-    // Pass 2: Discover all declarations (register names, lazy resolution)
+    // Pass 2: Discover declarations only for modules that are already parsed
+    // (the main source file, usually)
     for (auto &&module : resolvedModules) {
-        if (!discover_module_decls(*module, sourcePath)) {
-            error = true;
+        if (module->moduleDecl) {
+            if (!discover_module_decls(*module, sourcePath)) {
+                error = true;
+            }
+        } else {
+            module->state = ResolvedState::Unresolved;
         }
     }
     if (error) return {};
@@ -822,28 +830,66 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(const std::vect
     return resolvedModules;
 }
 
-ptr<ResolvedModuleDecl> Sema::resolve_module_decl(const ModuleDecl &moduleDecl) {
-    debug_func(moduleDecl.location);
+ptr<ResolvedModuleDecl> Sema::resolve_module_decl(ptr<ModuleDecl> moduleDecl, std::string identifier,
+                                                  std::filesystem::path module_path) {
+    debug_func((moduleDecl ? moduleDecl->location : SourceLocation{}));
     std::vector<ptr<DMZ::ResolvedDecl>> declarations;
 
     auto modDecl =
-        makePtr<ResolvedModuleDecl>(moduleDecl.location, moduleDecl.identifier, moduleDecl, moduleDecl.module_path,
-                                    std::vector<ptr<DMZ::ResolvedDecl>>{}, makePtr<ResolvedScope>(m_currentScope));
+        makePtr<ResolvedModuleDecl>(moduleDecl ? moduleDecl->location : SourceLocation{}, identifier,
+                                    std::move(moduleDecl), module_path, std::vector<ptr<DMZ::ResolvedDecl>>{}, nullptr);
+    modDecl->scope = makePtr<ResolvedScope>(modDecl.get());
 
     return modDecl;
 }
 
+bool Sema::ensure_module_parsed(ResolvedModuleDecl &mod) {
+    debug_func(mod.location << " " << mod.name() << " " << mod.state);
+    if (mod.moduleDecl) return true;
+    debug_msg("Lazily parsing module: " << mod.module_path);
+
+    Lexer l(mod.module_path.string());
+    Parser p(m_driver, l);
+    auto [parse_ast, success] = p.parse_source_file();
+    if (!success || !parse_ast) {
+        return false;
+    }
+    parse_ast->module_path = mod.module_path;
+    mod.moduleDecl = std::move(parse_ast);
+    return true;
+}
+
+bool Sema::ensure_module_discovered(ResolvedModuleDecl &mod) {
+    debug_func(mod.location << " " << mod.name() << " " << mod.state);
+    if (mod.state == ResolvedState::Error) return debug_ret(false);
+    if (mod.state >= ResolvedState::DeclResolved) return debug_ret(true);
+    if (mod.state == ResolvedState::InProgress) {
+        dmz_unreachable(mod.location, "Module discovery cycle detected for " + mod.identifier);
+    }
+
+    if (!ensure_module_parsed(mod)) {
+        mod.state = ResolvedState::Error;
+        return false;
+    }
+
+    if (!discover_module_decls(mod, m_driver.m_options.source)) {
+        mod.state = ResolvedState::Error;
+        return false;
+    }
+    mod.state = ResolvedState::DeclResolved;
+    return true;
+}
+
 bool Sema::discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath) {
     debug_func(resolvedModuleDecl.location);
-    auto prevModule = m_currentModule;
-    m_currentModule = &resolvedModuleDecl;
-    defer([&]() { m_currentModule = prevModule; });
     bool error = false;
     ScopeRAII moduleScope{*this, resolvedModuleDecl.scope.get()};
 
+    if (!ensure_module_parsed(resolvedModuleDecl)) return false;
+
     // Sub-pass 1: Register all type-like declarations (structs, unions, const decls)
     // This ensures types are available before function signatures reference them
-    for (auto &&decl : resolvedModuleDecl.moduleDecl.declarations) {
+    for (auto &&decl : resolvedModuleDecl.moduleDecl->declarations) {
         if (const auto *ds = dynamic_cast<const DeclStmt *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             ptr<ResolvedDecl> resolvedDecl = resolve_decl_stmt(*ds);
@@ -857,7 +903,7 @@ bool Sema::discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const s
 
     // Sub-pass 2: Register function declarations (signatures only, no bodies)
     // Now all type names are available for param/return type resolution
-    for (auto &&decl : resolvedModuleDecl.moduleDecl.declarations) {
+    for (auto &&decl : resolvedModuleDecl.moduleDecl->declarations) {
         if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             auto resolvedDecl = resolve_function_decl(*fn);
@@ -886,18 +932,15 @@ bool Sema::discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const s
 // --- Lazy ensure methods ---
 
 bool Sema::ensure_struct_members_resolved(ResolvedStructDecl &st) {
-    debug_func(st.location << " " << st.name());
-    if (st.membersResolved) return debug_ret(true);
-    if (st.state == ResolvedState::InProgress && st.membersResolved) {
-        // Cycle detected or re-entrant call during member resolution
-        // For members, we might need a more sophisticated cycle detection if we allow circular dependencies
-        // but for now we just prevent infinite recursion.
-        return debug_ret(true);
-    }
+    debug_func(st.location << " " << st.name() << " " << st.state);
+    if (st.state == ResolvedState::Error) return debug_ret(false);
+    if (st.state >= ResolvedState::DeclResolved && st.membersResolved) return debug_ret(true);
+    if (st.state == ResolvedState::InProgress && st.membersResolved) return debug_ret(true);
+
     st.state = ResolvedState::InProgress;
     st.membersResolved = true;
     if (!resolve_struct_members(st)) {
-        st.state = ResolvedState::Unresolved;
+        st.state = ResolvedState::Error;
         st.membersResolved = false;
         return debug_ret(false);
     }
@@ -906,35 +949,34 @@ bool Sema::ensure_struct_members_resolved(ResolvedStructDecl &st) {
 }
 
 bool Sema::ensure_struct_funcs_resolved(ResolvedStructDecl &st) {
-    debug_func(st.location << " " << st.name());
-    if (st.functionsResolved) return debug_ret(true);
-    if (st.state == ResolvedState::InProgress && st.membersResolved)
-        return debug_ret(true);  // Already resolving funcs or members
+    debug_func(st.location << " " << st.name() << " " << st.state);
+    if (st.state == ResolvedState::Error) return debug_ret(false);
+    if (st.state >= ResolvedState::DeclResolved && st.functionsResolved) return debug_ret(true);
+    if (st.state == ResolvedState::InProgress && st.functionsResolved) return debug_ret(true);
 
-    ResolvedState prevState = st.state;
-    if (st.state != ResolvedState::InProgress) st.state = ResolvedState::InProgress;
+    st.state = ResolvedState::InProgress;
     st.functionsResolved = true;
     if (!resolve_struct_decl_funcs(st)) {
-        st.state = prevState;
+        st.state = ResolvedState::Error;
         st.functionsResolved = false;
         return debug_ret(false);
     }
-    if (st.state == ResolvedState::InProgress) st.state = ResolvedState::DeclResolved;
+    st.state = ResolvedState::DeclResolved;
     return debug_ret(true);
 }
 
 bool Sema::ensure_struct_bodies_resolved(ResolvedStructDecl &st) {
-    debug_func(st.location << " " << st.name());
-    if (st.functionBodiesResolved) return debug_ret(true);
+    debug_func(st.location << " " << st.name() << " " << st.state);
+    if (st.state == ResolvedState::Error) return debug_ret(false);
     if (st.state == ResolvedState::FullyResolved) return debug_ret(true);
+    if (st.state == ResolvedState::InProgress && st.functionBodiesResolved) return debug_ret(true);
 
-    ResolvedState prevState = st.state;
     st.state = ResolvedState::InProgress;
     st.functionBodiesResolved = true;
-    if (!ensure_struct_members_resolved(st)) return debug_ret(false);
     if (!ensure_struct_funcs_resolved(st)) return debug_ret(false);
+    if (!ensure_struct_members_resolved(st)) return debug_ret(false);
     if (!resolve_struct_body_funcs(st)) {
-        st.state = prevState;
+        st.state = ResolvedState::Error;
         st.functionBodiesResolved = false;
         return debug_ret(false);
     }
@@ -943,15 +985,11 @@ bool Sema::ensure_struct_bodies_resolved(ResolvedStructDecl &st) {
 }
 
 bool Sema::ensure_fully_resolved(ResolvedDecl &decl) {
-    debug_func(decl.location << " " << decl.className() << " " << decl.name());
+    debug_func(decl.location << " " << decl.className() << " " << decl.name() << " " << decl.state);
+    if (decl.state == ResolvedState::Error) return debug_ret(false);
     if (decl.state == ResolvedState::FullyResolved) return debug_ret(true);
-    if (decl.state == ResolvedState::InProgress) {
-        // Cycle detected. We return true to break the cycle, assuming it will be resolved by the caller.
-        // This is safe for functions as they can be recursive.
-        return debug_ret(true);
-    }
+    if (decl.state == ResolvedState::InProgress) return debug_ret(true);
 
-    ResolvedState prevState = decl.state;
     decl.state = ResolvedState::InProgress;
 
     bool success = true;
@@ -963,31 +1001,33 @@ bool Sema::ensure_fully_resolved(ResolvedDecl &decl) {
         }
     } else if (auto *vr = dynamic_cast<ResolvedVarDecl *>(&decl)) {
         success = resolve_var_decl_initialize(*vr);
+        if ((!vr->type && vr->parentDeclStmt) || (vr->parentDeclStmt && !vr->parentDeclStmt->type)) {
+            success = ensure_fully_resolved(*vr->parentDeclStmt);
+        }
     } else if (auto *fn = dynamic_cast<ResolvedFunctionDecl *>(&decl)) {
         if (resolve_builtin_function(*fn)) {
             success = true;
         } else if (fn->functionDecl && fn->functionDecl->body && !fn->body) {
             success = resolve_func_body(*fn, *fn->functionDecl->body);
         }
-    } else if (auto *vr = dynamic_cast<ResolvedVarDecl *>(&decl)) {
-        if (!vr->type && vr->parentDeclStmt) {
-            success = ensure_fully_resolved(*vr->parentDeclStmt);
+    } else if (auto *vr = dynamic_cast<ResolvedDeclStmt *>(&decl)) {
+        if (!vr->type) {
+            success = ensure_fully_resolved(*vr);
         }
+    } else if (auto *mod = dynamic_cast<ResolvedModuleDecl *>(&decl)) {
+        success = resolve_module_body(*mod);
     }
 
     if (success) {
         decl.state = ResolvedState::FullyResolved;
     } else {
-        decl.state = prevState;
+        decl.state = ResolvedState::Error;
     }
     return debug_ret(success);
 }
 
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_func("");
-    auto prevModule = m_currentModule;
-    m_currentModule = &moduleDecl;
-    defer([&]() { m_currentModule = prevModule; });
     bool error = false;
     ScopeRAII moduleScope(*this, moduleDecl.scope.get());
 
@@ -1002,6 +1042,7 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_msg("error " << error);
     if (error) return false;
 
+    moduleDecl.state = ResolvedState::FullyResolved;
     return true;
 }
 
@@ -1021,9 +1062,6 @@ bool Sema::resolve_pending_body() {
 bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) {
     debug_func("");
     ScopeRAII paramScope(*this, function.scope.get());
-    auto prevFunc = m_currentFunction;
-    m_currentFunction = &function;
-    defer([&]() { m_currentFunction = prevFunc; });
     if (auto resolvedBody = resolve_block(body)) {
         function.body = std::move(resolvedBody);
         if (run_flow_sensitive_checks(function)) return false;
@@ -1119,7 +1157,6 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
                                makePtr<ResolvedScope>(m_currentScope));
     std::vector<ptr<ResolvedCaseStmt>> cases;
     for (size_t i = 0; i < m_tests.size(); i++) {
-        add_dependency(const_cast<ResolvedTestDecl *>(m_tests[i]));
 
         auto testType = m_tests[i]->getFnType();
         auto test_ref = makePtr<ResolvedDeclRefExpr>(loc, *m_tests[i], testType->clone());

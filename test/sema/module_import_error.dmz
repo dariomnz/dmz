@@ -1,6 +1,6 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
-// CHECK: [[# @LINE + 1 ]]:13: error: file 'not_exits.dmz' doesn't exists
+// CHECK: [[# @LINE + 1 ]]:13: error: file 'not_exits.dmz' doesn't exist
 const ops = import("not_exits.dmz");
 
 fn main() -> void {

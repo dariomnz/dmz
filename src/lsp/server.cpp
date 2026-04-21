@@ -588,9 +588,6 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
         auto [ast, success] = parser.parse_source_file();
 
         if (ast) {
-            // Resolve imports (recursively parse imported files)
-            driver.import_pass(ast);
-
             auto sema = makePtr<Sema>(driver, std::move(ast));
             auto resolvedTree = sema->resolve_ast_decl(filename, false);
             if (!resolvedTree.empty()) {

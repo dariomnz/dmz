@@ -7,6 +7,7 @@
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/CodegenUtils.hpp"
+#include "driver/Driver.hpp"
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -101,15 +102,14 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "expression symbol '" + declRefExpr.identifier + "' not found");
     }
 
+    if (!ensure_fully_resolved(*decl)) return nullptr;
     if (!decl->type) {
-        if (!ensure_fully_resolved(*decl)) return nullptr;
-        if (!decl->type) {
-            decl->dump();
-            return report(declRefExpr.location, "could not resolve type for '" + declRefExpr.identifier + "'");
-        }
+        decl->dump();
+        return report(declRefExpr.location, "could not resolve type for '" + declRefExpr.identifier + "'");
     }
 
     debug_msg("Resolving decl ref " << declRefExpr.identifier << " with type "
+                                    << (decl->type ? decl->type->className() : "NULL") << " "
                                     << (decl->type ? decl->type->to_str() : "NULL"));
     auto type = re_resolve_type(*decl->type);
     if (!type) {
@@ -360,7 +360,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 }
 
 ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
-    debug_func(expr.location);
+    debug_func((m_currentModule ? m_currentModule->module_path : "<no module>") << " " << expr.location);
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
         return makePtr<ResolvedIntLiteral>(number->location, std::stod(number->value));
     }
@@ -643,24 +643,52 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         }
     }
 
-    if (auto struType = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
-        if (struType->is_generic()) {
-            return report(memberExpr.location,
-                          "cannot use generic struct '" + struType->to_str() + "' without specialization");
+    if (dynamic_cast<const ResolvedTypeStructDecl *>(baseType) || dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
+        ResolvedStructDecl *struTypeDecl = nullptr;
+        bool isDecl = false;
+        bool isUnion = false;
+        bool isThis = false;
+        if (auto st = dynamic_cast<const ResolvedTypeUnion *>(baseType)) {
+            struTypeDecl = st->decl;
+            isUnion = true;
+            isDecl = false;
+            isThis = st->is_this;
+        } else if (auto st = dynamic_cast<const ResolvedTypeUnionDecl *>(baseType)) {
+            struTypeDecl = st->decl;
+            isDecl = true;
+            isUnion = true;
+            isThis = st->is_this;
+        } else if (auto st = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
+            struTypeDecl = st->decl;
+            isDecl = false;
+            isThis = st->is_this;
+        } else if (auto st = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
+            struTypeDecl = st->decl;
+            isDecl = true;
+            isThis = st->is_this;
+        } else {
+            dmz_unreachable(memberExpr.location, "unexpected type");
         }
-        decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
+        if (!isThis && isDecl && baseType->is_generic()) {
+            return report(memberExpr.location,
+                          "cannot use generic struct '" + baseType->to_str() + "' without specialization");
+        }
+        decl = lookup_in_struct(memberExpr.location, *struTypeDecl, memberExpr.field);
         if (!decl) {
             return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
                                                    memberExpr.field + '\'');
         }
+
         if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
-            if (!memberFunc->isStatic) {
-                return report(memberExpr.location,
-                              "cannot call non-static member '" + memberExpr.field + "' without an instance");
+            if (!isDecl && memberFunc->isStatic) {
+                return report(memberExpr.location, "cannot use static member with an instance of struct '" +
+                                                       resolvedBase->type->to_str() + "'");
             }
         } else if (dynamic_cast<const ResolvedFieldDecl *>(decl)) {
-            return report(memberExpr.location,
-                          "cannot access non-static field '" + memberExpr.field + "' without an instance");
+            if (isDecl && !isUnion) {
+                return report(memberExpr.location,
+                              "cannot access non-static field '" + memberExpr.field + "' without an instance");
+            }
         }
     } else if (dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
         if (memberExpr.field == "ptr") {
@@ -672,35 +700,6 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         }
     } else if (auto vecType = dynamic_cast<const ResolvedTypeSimd *>(baseType)) {
         decl = resolve_simd_buildin(memberExpr, *resolvedBase, *vecType);
-    } else if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
-        decl = lookup_in_struct(memberExpr.location, *struType->decl, memberExpr.field);
-        if (!decl) {
-            return report(memberExpr.location, "struct \'" + resolvedBase->type->to_str() + "' has no member called '" +
-                                                   memberExpr.field + '\'');
-        }
-
-        bool baseIsType = false;
-        if (auto genExpr = dynamic_cast<const ResolvedGenericExpr *>(resolvedBase.get())) {
-            if (dynamic_cast<const ResolvedStructDecl *>(&genExpr->decl)) {
-                baseIsType = true;
-            }
-        }
-
-        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
-            if (baseIsType && !memberFunc->isStatic) {
-                return report(memberExpr.location,
-                              "cannot call non-static member '" + memberExpr.field + "' without an instance");
-            }
-            if (!baseIsType && memberFunc->isStatic) {
-                return report(memberExpr.location, "cannot call a static member with an instance of struct \'" +
-                                                       resolvedBase->type->to_str() + "'");
-            }
-        } else if (dynamic_cast<const ResolvedFieldDecl *>(decl)) {
-            if (baseIsType) {
-                return report(memberExpr.location,
-                              "cannot access non-static field '" + memberExpr.field + "' without an instance");
-            }
-        }
     } else if (auto modType = dynamic_cast<const ResolvedTypeModule *>(baseType)) {
         auto moduleDecl = modType->moduleDecl;
         if (!moduleDecl)
@@ -726,7 +725,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (!decl) return report(memberExpr.location, "error group has no member called '" + memberExpr.field + '\'');
     } else if (baseType->kind == ResolvedTypeKind::Generic) {
         // Return a dummy member expression for generic types to allow LSP highlighting
-        static std::map<std::string, ptr<ResolvedFieldDecl>> genericFields;
+        static std::unordered_map<std::string, ptr<ResolvedFieldDecl>> genericFields;
         if (genericFields.find(memberExpr.field) == genericFields.end()) {
             genericFields[memberExpr.field] =
                 makePtr<ResolvedFieldDecl>(SourceLocation{}, memberExpr.field,
@@ -777,7 +776,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &member
         }
         auto vectorDecl = m_vectorBuiltins[key];
         decl = vectorDecl;
-        add_dependency(vectorDecl);
     } else if (memberExpr.field == "store") {
         if (dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
             return report(memberExpr.location, "cannot call instance member 'store' on vector type");
@@ -803,7 +801,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &member
         }
         auto vectorDecl = m_vectorBuiltins[key];
         decl = vectorDecl;
-        add_dependency(vectorDecl);
     } else if (memberExpr.field == "select") {
         // The format is a.select(b, mask);
         if (dynamic_cast<const ResolvedTypeSimdExpr *>(&resolvedBase)) {
@@ -834,7 +831,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &member
         }
         auto vectorDecl = m_vectorBuiltins[key];
         decl = vectorDecl;
-        add_dependency(vectorDecl);
     } else if (memberExpr.field == "reduceAdd" || memberExpr.field == "reduceMul" || memberExpr.field == "reduceMin" ||
                memberExpr.field == "reduceMax" || memberExpr.field == "reduceAnd" || memberExpr.field == "reduceOr" ||
                memberExpr.field == "reduceXor") {
@@ -875,7 +871,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &member
         }
         auto vectorDecl = m_vectorBuiltins[key];
         decl = vectorDecl;
-        add_dependency(vectorDecl);
     } else {
         return report(memberExpr.location, "vector type \'" + resolvedBase.type->to_str() +
                                                "' only support 'load', 'store', 'select', and reduction members");
@@ -996,7 +991,6 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
     auto lambdaFunc = makePtr<ResolvedLambdaFunctionDecl>(
         expr.location, lambdaName, fnType->clone(), std::move(resolvedParams), nullptr, std::move(resolvedCaptures));
     lambdaFunc->getFnType()->fnDecl = lambdaFunc.get();
-    add_dependency(lambdaFunc.get());
 
     auto prevFunc = m_currentFunction;
     m_currentFunction = lambdaFunc.get();
@@ -1094,9 +1088,9 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
     }
 
     std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
-    std::map<std::string, const ResolvedFieldInitStmt *> inits;
+    std::unordered_map<std::string, const ResolvedFieldInitStmt *> inits;
 
-    std::map<std::string, const ResolvedFieldDecl *> fields;
+    std::unordered_map<std::string, const ResolvedFieldDecl *> fields;
     for (auto &&fieldDecl : st->fields) fields[fieldDecl->identifier] = fieldDecl.get();
 
     bool error = false;
@@ -1123,6 +1117,14 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
             error = true;
             continue;
         }
+        debug_msg("Resolved init expr:\n"
+                  << Dumper([&]() {
+                         resolvedInitExpr->dump();
+                         if (auto dre = dynamic_cast<ResolvedDeclRefExpr *>(resolvedInitExpr.get())) {
+                             debug_msg("Resolved init expr decl: " << &dre->decl << "\n"
+                                                                   << Dumper([&]() { dre->decl.dump(); }));
+                         }
+                     }));
 
         perform_implicit_cast(resolvedInitExpr, *fieldDecl->type);
         if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
@@ -1137,6 +1139,8 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
         inits[id] = resolvedFieldInits.emplace_back(std::move(init)).get();
     }
 
+    if (error) return nullptr;
+
     // Add the default initilizers if there was not initialized
     for (auto &&decl : st->structDecl->decls) {
         if (inits.count(decl->identifier)) continue;
@@ -1144,7 +1148,9 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
         auto fieldDecl = dynamic_cast<const FieldDecl *>(decl.get());
         if (!fieldDecl) continue;
         if (fieldDecl->default_initializer) {
+            debug_msg("Default initialice " << fieldDecl->identifier);
             const std::string &id = fieldDecl->identifier;
+            ScopeRAII default_initializer(*this, st->scope.get());
             auto resolvedInitExpr = resolve_expr(*fieldDecl->default_initializer);
             if (!resolvedInitExpr) {
                 error = true;
@@ -1152,11 +1158,14 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
             }
 
             const ResolvedFieldDecl *resolvedfieldDecl = fields[id];
+            if (!resolvedfieldDecl) dmz_unreachable(structInstantiation.location, "field not found");
             auto init = makePtr<ResolvedFieldInitStmt>(fieldDecl->default_initializer->location, *resolvedfieldDecl,
                                                        std::move(resolvedInitExpr));
             inits[id] = resolvedFieldInits.emplace_back(std::move(init)).get();
         }
     }
+
+    if (error) return nullptr;
 
     for (auto &&fieldDecl : st->fields) {
         if (!inits.count(fieldDecl->identifier)) {
@@ -1164,8 +1173,9 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
             error = true;
             continue;
         }
-
+        debug_msg("Evaluate " << fieldDecl->identifier);
         auto &initStmt = inits[fieldDecl->identifier];
+        if (!initStmt) dmz_unreachable(structInstantiation.location, "init not found");
         initStmt->initializer->set_constant_value(cee.evaluate(*initStmt->initializer, false));
     }
 
@@ -1221,8 +1231,6 @@ ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr
         resolvedFieldInits.emplace_back(makePtr<ResolvedFieldInitStmt>(
             resolvedElements[i]->location, *structDeclPtr->fields[i], std::move(resolvedElements[i])));
     }
-
-    add_dependency(structDeclPtr);
 
     return makePtr<ResolvedStructInstantiationExpr>(tupleInstantiation.location, *structDeclPtr,
                                                     std::move(resolvedFieldInits), true);
@@ -1317,9 +1325,11 @@ ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryEr
     auto defers = resolve_defer_ref_stmt(false, true);
 
     ResolvedFunctionDecl *printErrorDecl = nullptr;
-    for (auto &[path, mod] : m_modules_for_import) {
-        debug_msg("Module " << mod->name() << " path " << path);
-        if (path.ends_with("std/builtin.dmz")) {
+    for (auto &lazy_mod : m_lazy_modules) {
+        auto mod = lazy_mod.get();
+        auto pathStr = mod->module_path.string();
+        debug_msg("Module " << mod->name() << " path " << pathStr);
+        if (pathStr.ends_with("std/builtin.dmz")) {
             for (auto &decl : mod->declarations) {
                 debug_msg("Target " << "printErrorTrace" << " search " << decl->identifier);
                 if (decl->identifier == "printErrorTrace") {
@@ -1331,10 +1341,6 @@ ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryEr
             }
         }
         if (printErrorDecl != nullptr) break;
-    }
-
-    if (printErrorDecl) {
-        add_dependency(printErrorDecl);
     }
 
     return makePtr<ResolvedTryErrorExpr>(tryErrorExpr.location, optType->optionalType->clone(), std::move(resolvedErr),
@@ -1360,24 +1366,124 @@ ptr<ResolvedOrElseErrorExpr> Sema::resolve_orelse_error_expr(const OrElseErrorEx
 ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) {
     debug_func(importExpr.location);
 
-    if (importExpr.module_path.empty()) {
-        if (importExpr.identifier.ends_with(".dmz")) {
-            return report(importExpr.location, "file '" + importExpr.identifier + "' doesn't exists");
+    std::string identifier = "";
+    std::filesystem::path module_path;
+    std::string imported = importExpr.identifier;
+
+    if (imported.ends_with(".dmz")) {
+        auto directory = m_driver.m_options.source.parent_path();
+        debug_msg("imported " << importExpr.identifier << " " << m_currentModule);
+        if (m_currentModule) {
+            debug_msg("module " << m_currentModule->identifier << " " << m_currentModule->module_path);
+            directory = m_currentModule->module_path.parent_path();
+        }
+        module_path = directory.append(imported);
+
+        debug_msg("module_path " << module_path);
+        if (!std::filesystem::exists(module_path)) {
+            report(importExpr.location,
+                   std::string("file '") + imported + "' doesn't exist (" + module_path.string() + ")");
+            return nullptr;
+        }
+        module_path = std::filesystem::canonical(module_path);
+
+        std::filesystem::path parent_path = "";
+        std::string module_path_str = module_path.string();
+        for (auto &&[k, v] : m_driver.m_options.imports) {
+            auto imported_dir = std::filesystem::canonical(v.parent_path());
+            if (module_path_str.find(imported_dir.string()) != std::string::npos) {
+                parent_path = imported_dir;
+                identifier = k;
+                break;
+            }
+        }
+        if (parent_path.empty()) {
+            std::filesystem::path project_path = std::filesystem::canonical(m_driver.m_options.source.parent_path());
+            if (module_path_str.find(project_path.string()) != std::string::npos) {
+                parent_path = project_path;
+            }
+        }
+        std::string termination = ".dmz";
+        if (parent_path.empty()) {
+            std::string name = module_path.filename();
+            identifier = name.substr(0, name.size() - termination.size());
         } else {
-            return report(importExpr.location, "The required module '" + importExpr.identifier +
-                                                   "' could not be found.\n Please ensure the module is specified and "
-                                                   "its path is included using the '-I' "
-                                                   "flag during compilation, e.g., `-I <module> <path>`.");
+            std::string parent_path_str = parent_path.string();
+            auto diff = module_path_str.substr(parent_path_str.size());
+            int start_pos = (diff.size() > 0 && diff[0] == '/') ? 1 : 0;
+            diff = diff.substr(start_pos, diff.size() - (termination.size() + start_pos));
+            std::replace(diff.begin(), diff.end(), '/', '.');
+            if (!identifier.empty() && !diff.empty()) {
+                identifier += ".";
+            }
+            identifier += diff;
+        }
+    } else {
+        auto it = m_driver.m_options.imports.find(imported);
+        if (it == m_driver.m_options.imports.end()) {
+            if (imported == "std") {
+                std::filesystem::path stdPath = m_driver.m_options.source.parent_path() / "std" / "std.dmz";
+                if (std::filesystem::exists(stdPath)) {
+                    module_path = std::filesystem::canonical(stdPath);
+                }
+                if (module_path.empty()) {
+                    stdPath = std::filesystem::absolute("std/std.dmz");
+                    if (std::filesystem::exists(stdPath)) {
+                        module_path = std::filesystem::canonical(stdPath);
+                    }
+                }
+                if (!module_path.empty()) {
+                    m_driver.m_options.imports.emplace("std", module_path);
+                }
+            }
+            if (imported == "builtin") {
+                std::filesystem::path builtinPath = m_driver.m_options.source.parent_path() / "std" / "builtin.dmz";
+                if (std::filesystem::exists(builtinPath)) {
+                    module_path = std::filesystem::canonical(builtinPath);
+                }
+                if (module_path.empty()) {
+                    builtinPath = std::filesystem::absolute("std/builtin.dmz");
+                    if (std::filesystem::exists(builtinPath)) {
+                        module_path = std::filesystem::canonical(builtinPath);
+                    }
+                }
+                if (!module_path.empty()) {
+                    m_driver.m_options.imports.emplace("builtin", module_path);
+                }
+            }
+            if (module_path.empty()) {
+                report(importExpr.location, "The required module '" + imported +
+                                                "' could not be found.\n Please ensure the module is specified and its "
+                                                "path is included using the '-I' flag during compilation.");
+                return nullptr;
+            }
+            identifier = imported;
+        } else {
+            module_path = (*it).second;
+            identifier = imported;
         }
     }
 
-    auto it = m_modules_for_import.find(importExpr.module_path);
-    if (it == m_modules_for_import.end()) {
-        return report(importExpr.location, "not resolved module '" + importExpr.identifier + "'");
+    ResolvedModuleDecl *im = nullptr;
+    for (auto &lazy_mod : m_lazy_modules) {
+        if (lazy_mod->module_path == module_path) {
+            im = lazy_mod.get();
+            break;
+        }
     }
 
-    auto im = (*it).second;
-    im->symbolName = importExpr.module_id;
+    if (!im) {
+        auto resolvedModule = resolve_module_decl(nullptr, identifier, module_path);
+        im = resolvedModule.get();
+        m_lazy_modules.push_back(std::move(resolvedModule));
+    }
+
+    if (!im) {
+        return report(importExpr.location, "not resolved module '" + identifier + "'");
+    }
+
+    if (!ensure_module_discovered(*im)) return nullptr;
+    im->symbolName = identifier;
 
     return makePtr<ResolvedImportExpr>(importExpr.location, *im);
 }
@@ -1403,12 +1509,21 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     debug_func(typeinfoExpr.location);
     varOrReturn(expr, resolve_expr(*typeinfoExpr.typeinfoExpr));
 
+    if (!already_import_types) {
+        ImportExpr typesImportExpr(SourceLocation::builtin(), "types");
+        auto types_import_expr = resolve_import_expr(typesImportExpr);
+        if (!types_import_expr) return {};
+        already_import_types = true;
+    }
+
     std::string targetUnionName = "TypeInfo";
 
     ResolvedTypeUnionDecl *typeInfoDecl = nullptr;
-    for (auto &[path, mod] : m_modules_for_import) {
-        debug_msg("Module " << mod->name() << " path " << path);
-        if (path.ends_with("std/types.dmz")) {
+    for (auto &lazy_mod : m_lazy_modules) {
+        auto mod = lazy_mod.get();
+        auto pathStr = mod->module_path.string();
+        debug_msg("Module " << mod->name() << " path " << pathStr);
+        if (pathStr.ends_with("std/types.dmz")) {
             for (auto &decl : mod->declarations) {
                 debug_msg("Target " << targetUnionName << " search " << decl->identifier);
                 if (decl->identifier == targetUnionName) {
@@ -1424,7 +1539,6 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
     if (!typeInfoDecl) {
         return report(typeinfoExpr.location, "could not find " + targetUnionName + " in types.dmz");
     }
-    add_dependency(typeInfoDecl->decl);
     auto returnType = makePtr<ResolvedTypePointer>(
         typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->unionDecl()));
     return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));

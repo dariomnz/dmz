@@ -10,11 +10,14 @@
 namespace DMZ {
 
 enum class ResolvedState {
-    Unresolved,    // Only name registered, nothing resolved
-    InProgress,    // Resolution in progress (for cycle detection)
-    DeclResolved,  // Signature/type resolved, body pending
-    FullyResolved  // Completely resolved including body
+    Error,          // Error in resolution
+    Unresolved,     // Only name registered, nothing resolved
+    InProgress,     // Resolution in progress (for cycle detection)
+    DeclResolved,   // Signature/type resolved, body pending
+    FullyResolved,  // Completely resolved including body
 };
+
+std::ostream &operator<<(std::ostream &os, const ResolvedState &state);
 
 struct ResolvedCatchErrorExpr;
 
@@ -61,32 +64,13 @@ struct ResolvedDecl : public ConstantValueContainer<int> {
     virtual ~ResolvedDecl() = default;
 
     virtual void dump(size_t level = 0, bool onlySelf = false) const = 0;
-    virtual void dump_dependencies([[maybe_unused]] size_t level = 0, [[maybe_unused]] bool dot_format = false) const {
-    };
+    virtual void dump_dependencies([[maybe_unused]] size_t level = 0, [[maybe_unused]] bool dot_format = false) const;
     virtual std::string name() const {
         if (symbolName.empty()) return identifier;
         return symbolName;
     }
 
-    bool is_needed(bool noRemoveUnused);
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
-};
-
-struct ResolvedDependencies : public ResolvedDecl {
-    bool isNeeded = false;
-    std::unordered_set<ResolvedDependencies *> dependsOn;
-    std::unordered_set<ResolvedDependencies *> isUsedBy;
-
-    ResolvedDependencies(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type, bool isMutable,
-                         bool isPublic)
-        : ResolvedDecl(location, identifier, std::move(type), isMutable, isPublic) {}
-    virtual ~ResolvedDependencies();
-
-    void clean_dependencies();
-
-    virtual void dump(size_t level = 0, bool onlySelf = false) const override = 0;
-    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
-    DMZ_TYPE_NAME();
 };
 
 struct ResolvedGenericTypeDecl : public ResolvedDecl {
@@ -277,7 +261,7 @@ struct ResolvedFieldDecl : public ResolvedDecl {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedVarDecl : public ResolvedDependencies {
+struct ResolvedVarDecl : public ResolvedDecl {
     ptr<ResolvedExpr> resolvedTypeExpr = nullptr;
     const VarDecl *varDecl;
     ptr<ResolvedExpr> initializer;
@@ -288,7 +272,7 @@ struct ResolvedVarDecl : public ResolvedDependencies {
     ResolvedVarDecl(SourceLocation location, const VarDecl *varDecl, bool isPublic, std::string_view identifier,
                     ptr<ResolvedType> type, bool isMutable, ptr<ResolvedExpr> initializer = nullptr,
                     bool isGlobal = false)
-        : ResolvedDependencies(location, std::move(identifier), std::move(type), isMutable, isPublic),
+        : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable, isPublic),
           varDecl(varDecl),
           initializer(std::move(initializer)),
           isGlobal(isGlobal) {}
@@ -297,13 +281,13 @@ struct ResolvedVarDecl : public ResolvedDependencies {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedFuncDecl : public ResolvedDependencies {
+struct ResolvedFuncDecl : public ResolvedDecl {
     std::vector<ptr<ResolvedParamDecl>> params;
     ptr<ResolvedScope> scope;
 
     ResolvedFuncDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
                      std::vector<ptr<ResolvedParamDecl>> params, ptr<ResolvedScope> scope)
-        : ResolvedDependencies(location, std::move(identifier), std::move(type), false, isPublic),
+        : ResolvedDecl(location, std::move(identifier), std::move(type), false, isPublic),
           params(std::move(params)),
           scope(std::move(scope)) {}
 
@@ -374,21 +358,16 @@ struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
 struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
     std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};         // The types used for lookup
     std::vector<ptr<ResolvedSpecializedFunctionDecl>> specializations = {};  // List of specializations
-    ResolvedModuleDecl *saveCurrentModule;
-    ResolvedStructDecl *saveCurrentStruct;
     ptr<ResolvedScope> genericScope;
 
     ResolvedGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                 ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                 ptr<ResolvedScope> scope, ptr<ResolvedScope> genericScope,
                                 const FunctionDecl *functionDecl,
-                                std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
-                                ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct)
+                                std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls)
         : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), std::move(scope),
                                functionDecl),
           genericTypeDecls(std::move(genericTypeDecls)),
-          saveCurrentModule(saveCurrentModule),
-          saveCurrentStruct(saveCurrentStruct),
           genericScope(std::move(genericScope)) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -423,17 +402,18 @@ struct ResolvedBuiltinFunctionDecl : public ResolvedMemberFunctionDecl {
 
 struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
     const ResolvedDecl *parentDecl;
+    bool isStatic;
     ResolvedMemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                       ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                       ptr<ResolvedScope> scope, ptr<ResolvedScope> genericScope,
                                       const FunctionDecl *functionDecl,
                                       std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
-                                      ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct,
-                                      const ResolvedDecl *parentDecl)
+                                      const ResolvedDecl *parentDecl, bool isStatic)
         : ResolvedGenericFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params),
                                       std::move(scope), std::move(genericScope), functionDecl,
-                                      std::move(genericTypeDecls), saveCurrentModule, saveCurrentStruct),
-          parentDecl(parentDecl) {}
+                                      std::move(genericTypeDecls)),
+          parentDecl(parentDecl),
+          isStatic(isStatic) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
@@ -441,20 +421,22 @@ struct ResolvedMemberGenericFunctionDecl : public ResolvedGenericFunctionDecl {
 
 struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctionDecl {
     const ResolvedStructDecl *structDecl;
+    bool isStatic;
     ResolvedMemberSpecializedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                           ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                           ptr<ResolvedScope> scope, const FunctionDecl *functionDecl,
                                           ptr<ResolvedTypeSpecialized> specializedTypes,
-                                          const ResolvedStructDecl *structDecl)
+                                          const ResolvedStructDecl *structDecl, bool isStatic)
         : ResolvedSpecializedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params),
                                           std::move(scope), functionDecl, std::move(specializedTypes)),
-          structDecl(structDecl) {}
+          structDecl(structDecl),
+          isStatic(isStatic) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedStructDecl : public ResolvedDependencies {
+struct ResolvedStructDecl : public ResolvedDecl {
     const StructDecl *structDecl;
     bool isPacked;
     bool isTuple = false;
@@ -472,15 +454,13 @@ struct ResolvedStructDecl : public ResolvedDependencies {
     ResolvedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                        const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                        std::vector<ptr<ResolvedMemberFunctionDecl>> functions, ptr<ResolvedScope> scope)
-        : ResolvedDependencies(location, std::move(identifier), makePtr<ResolvedTypeStructDecl>(location, this), false,
-                               isPublic),
+        : ResolvedDecl(location, std::move(identifier), makePtr<ResolvedTypeStructDecl>(location, this), false,
+                       isPublic),
           structDecl(structDecl),
           isPacked(isPacked),
           fields(std::move(fields)),
           functions(std::move(functions)),
-          scope(std::move(scope)) {
-        if (!this->scope) dmz_unreachable(location, "Struct scope is null");
-    }
+          scope(std::move(scope)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -529,19 +509,16 @@ struct ResolvedUnionDecl : public ResolvedStructDecl {
 struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};       // The types used for lookup
     std::vector<ptr<ResolvedSpecializedStructDecl>> specializations = {};  // List of specializations
-    ResolvedModuleDecl *saveCurrentModule;
     ptr<ResolvedScope> genericScope;
 
     ResolvedGenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                               const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
                               std::vector<ptr<ResolvedMemberFunctionDecl>> functions, ptr<ResolvedScope> scope,
                               ptr<ResolvedScope> genericScope,
-                              std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
-                              ResolvedModuleDecl *saveCurrentModule)
+                              std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls)
         : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
                              std::move(functions), std::move(scope)),
           genericTypeDecls(std::move(genericTypeDecls)),
-          saveCurrentModule(saveCurrentModule),
           genericScope(std::move(genericScope)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -883,21 +860,19 @@ struct ResolvedDerefPtrExpr : public ResolvedAssignableExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedDeclStmt : public ResolvedDependencies, public ResolvedStmt {
+struct ResolvedDeclStmt : public ResolvedDecl, public ResolvedStmt {
     SourceLocation location;
     ptr<ResolvedVarDecl> varDecl;
     bool initialized = false;
-    ResolvedModuleDecl *saveCurrentModule;
-    ResolvedStructDecl *saveCurrentStruct;
+    ptr<ResolvedScope> scope;
 
     ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl,
-                     ResolvedModuleDecl *saveCurrentModule, ResolvedStructDecl *saveCurrentStruct)
-        : ResolvedDependencies(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
+                     ptr<ResolvedScope> scope)
+        : ResolvedDecl(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
           ResolvedStmt(location),
           location(location),
           varDecl(std::move(varDecl)),
-          saveCurrentModule(saveCurrentModule),
-          saveCurrentStruct(saveCurrentStruct) {}
+          scope(std::move(scope)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -1007,13 +982,13 @@ struct ResolvedErrorInPlaceExpr : public ResolvedExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDependencies {
+struct ResolvedErrorGroupExprDecl : public ResolvedExpr, public ResolvedDecl {
     SourceLocation location;
     std::vector<ptr<ResolvedErrorDecl>> errors;
 
     ResolvedErrorGroupExprDecl(SourceLocation location, std::vector<ptr<ResolvedErrorDecl>> errors)
         : ResolvedExpr(location, makePtr<ResolvedTypeErrorGroup>(location, this)),
-          ResolvedDependencies(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false, true),
+          ResolvedDecl(location, "", makePtr<ResolvedTypeErrorGroup>(location, this), false, true),
           location(location),
           errors(std::move(errors)) {}
 
@@ -1066,18 +1041,18 @@ struct ResolvedOrElseErrorExpr : public ResolvedExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedModuleDecl : public ResolvedDependencies {
-    const ModuleDecl &moduleDecl;
+struct ResolvedModuleDecl : public ResolvedDecl {
+    ptr<ModuleDecl> moduleDecl;
     std::filesystem::path module_path;
     std::vector<ptr<ResolvedDecl>> declarations;
     ptr<ResolvedScope> scope;
     int tuple_counter = 0;
 
-    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, const ModuleDecl &moduleDecl,
+    ResolvedModuleDecl(SourceLocation location, std::string_view identifier, ptr<ModuleDecl> moduleDecl,
                        std::filesystem::path module_path, std::vector<ptr<ResolvedDecl>> declarations,
                        ptr<ResolvedScope> scope)
-        : ResolvedDependencies(location, identifier, makePtr<ResolvedTypeModule>(location, this), false, true),
-          moduleDecl(moduleDecl),
+        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeModule>(location, this), false, true),
+          moduleDecl(std::move(moduleDecl)),
           module_path(std::move(module_path)),
           declarations(std::move(declarations)),
           scope(std::move(scope)) {}

@@ -329,7 +329,7 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         }
     } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         // 'import("' is 8 characters. We estimate the length to cover the string.
-        if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.moduleDecl.identifier.length())) {
+        if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {
             found_decl = &importExpr->moduleDecl;
         }
     } else if (auto* lambdaExpr = dynamic_cast<const ResolvedLambdaExpr*>(&expr)) {

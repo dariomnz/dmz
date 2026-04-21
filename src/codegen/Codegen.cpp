@@ -29,7 +29,7 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
     ScopedTimer(StatType::Codegen);
 
     if (m_debugSymbols) {
-        m_debugBuilder.createCompileUnit(llvm::dwarf::DW_LANG_C, generate_debug_file(m_resolvedTree.back()->location),
+        m_debugBuilder.createCompileUnit(llvm::dwarf::DW_LANG_C, generate_debug_file(m_module->getSourceFileName()),
                                          "dmz Compiler", false, "", 0);
 
         m_module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
@@ -38,6 +38,7 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
 
     generate_in_module_decl(m_resolvedTree);
     generate_in_module_body(m_resolvedTree);
+    generate_pending_decls();
 
     generate_main_wrapper(runTest);
     if (m_debugSymbols) {
@@ -246,7 +247,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
             return it->second;
         }
 
-        auto structFile = generate_debug_file(decl->location);
+        auto structFile = generate_debug_file(decl->location.file_name);
         auto llvmStructType = generate_type(type, true);
         auto bitSize = m_module->getDataLayout().getTypeSizeInBits(llvmStructType);
         auto alingSize = m_module->getDataLayout().getPrefTypeAlign(llvmStructType).value() * 8;
@@ -263,7 +264,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
             auto llvmMemberType = generate_type(*field->type, true);
             auto fieldBitSize = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType);
             auto fieldAlingSize = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType).value() * 8;
-            auto memberFile = generate_debug_file(field->location);
+            auto memberFile = generate_debug_file(field->location.file_name);
             auto memberType = m_debugBuilder.createMemberType(
                 memberFile, field->name(), memberFile, field->location.line, fieldBitSize, fieldAlingSize, offset,
                 llvm::DINode::DIFlags::FlagPublic, generate_debug_type(*field->type));
@@ -290,7 +291,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
     } else if (auto typeSlice = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
         std::vector<llvm::Metadata *> Elements;
         uint64_t offset = 0;
-        auto structFile = generate_debug_file(typeSlice->location);
+        auto structFile = generate_debug_file(typeSlice->location.file_name);
         auto type_ptr = ResolvedTypePointer::opaquePtr(typeSlice->location);
         auto type_len = ResolvedTypeNumber::usize(typeSlice->location);
         // ptr
@@ -323,7 +324,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         std::vector<llvm::Metadata *> Elements;
         uint64_t offset = 0;
         std::string structName("error.struct." + typeOptional->optionalType->to_str());
-        auto structFile = generate_debug_file(typeOptional->location);
+        auto structFile = generate_debug_file(typeOptional->location.file_name);
         ptr<ResolvedType> type_value = nullptr;
         if (typeOptional->optionalType->kind == ResolvedTypeKind::Void) {
             type_value = makePtr<ResolvedTypeNumber>(typeOptional->location, ResolvedNumberKind::Int, 1);
@@ -375,7 +376,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
             return it->second;
         }
 
-        auto unionFile = generate_debug_file(decl->location);
+        auto unionFile = generate_debug_file(decl->location.file_name);
         auto llvmUnionType = llvm::cast<llvm::StructType>(generate_type(type, true));
         const auto &dl = m_module->getDataLayout();
         const auto *structLayout = dl.getStructLayout(llvmUnionType);
@@ -440,10 +441,13 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
     dmz_unreachable(type.location, "TODO");
 }
 
-llvm::DIFile *Codegen::generate_debug_file(const SourceLocation &location) {
+llvm::DIFile *Codegen::generate_debug_file(const std::string &file_name) {
     debug_func("");
-    auto path = std::filesystem::path(location.file_name);
-    path = std::filesystem::canonical(path);
+    auto path = std::filesystem::path(file_name);
+    if (path.empty()) dmz_unreachable(SourceLocation{.file_name = file_name}, "Path cannot be empty");
+    if (std::filesystem::exists(path)) {
+        path = std::filesystem::canonical(path);
+    }
     return m_debugBuilder.createFile(path.filename().string(), path.parent_path().string());
 }
 

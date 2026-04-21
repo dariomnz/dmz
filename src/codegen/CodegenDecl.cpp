@@ -13,6 +13,7 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
     std::string name;
     debug_func(Dumper([&name]() { std::cerr << name; }));
     if (dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
+        debug_msg("Generating decl name for: " << decl.name());
         if (decl.identifier == "main") {
             name = "__builtin_main";
             return name;
@@ -76,7 +77,10 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
                 func->dump();
                 dmz_unreachable(functionDecl.location, "internal error: unexpected declaration in specializations");
             }
-            if (!func->is_needed(m_noRemoveUnused)) continue;
+            if (func->state != ResolvedState::FullyResolved) {
+                debug_msg(func->symbolName << " is not fully resolved skiping");
+                continue;
+            }
             if (func->specializedTypes->is_generic()) continue;
             generate_function_decl(*cast_func);
         }
@@ -92,6 +96,8 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     std::string funcName = generate_decl_name(functionDecl);
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));
+
+    m_pendingFunctions.insert(&functionDecl);
 
     return fn;
 }
@@ -140,7 +146,10 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
                 dmz_unreachable(functionDecl.location, "internal error: unexpected declaration in specializations");
             }
 
-            if (!func->is_needed(m_noRemoveUnused)) continue;
+            if (func->state != ResolvedState::FullyResolved) {
+                debug_msg(func->symbolName << " is not fully resolved skiping");
+                continue;
+            }
             if (func->specializedTypes->is_generic()) continue;
             generate_function_body(*cast_func);
         }
@@ -153,6 +162,9 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     std::string funcName = generate_decl_name(functionDecl);
     auto *function = m_module->getFunction(funcName);
     if (!function) dmz_unreachable(functionDecl.location, "internal error no function '" + funcName + "'");
+
+    if (!function->empty()) return;
+    if (dynamic_cast<const ResolvedExternFunctionDecl *>(&functionDecl)) return;
 
     ptr<DebugScopeRAII> debugScope = nullptr;
     if (m_debugSymbols) {
@@ -285,6 +297,7 @@ llvm::StructType *Codegen::get_struct_decl(const ResolvedStructDecl &structDecl)
     auto name = generate_decl_name(structDecl);
     auto structType = llvm::StructType::getTypeByName(*m_context, name);
     if (structType) return structType;
+    m_pendingStructs.insert(&structDecl);
 
     auto ret = generate_struct_decl(structDecl);
     generate_struct_fields(structDecl);
@@ -295,7 +308,10 @@ llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &struct
     debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
-            if (!espec->is_needed(m_noRemoveUnused)) continue;
+            if (espec->state != ResolvedState::FullyResolved) {
+                debug_msg(espec->symbolName << " is not fully resolved skiping");
+                continue;
+            }
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_decl(*espec);
         }
@@ -315,7 +331,10 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
-            if (!espec->is_needed(m_noRemoveUnused)) continue;
+            if (espec->state != ResolvedState::FullyResolved) {
+                debug_msg(espec->symbolName << " is not fully resolved skiping");
+                continue;
+            }
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_fields(*espec);
         }
@@ -341,7 +360,10 @@ void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
     if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         for (auto &&espec : genStruct->specializations) {
-            if (!espec->is_needed(m_noRemoveUnused)) continue;
+            if (espec->state != ResolvedState::FullyResolved) {
+                debug_msg(espec->symbolName << " is not fully resolved skiping");
+                continue;
+            }
             if (espec->specializedTypes->is_generic()) continue;
             generate_struct_functions(*espec);
         }
@@ -356,6 +378,7 @@ llvm::StructType *Codegen::get_union_decl(const ResolvedUnionDecl &unionDecl) {
     auto name = generate_decl_name(unionDecl);
     auto unionType = llvm::StructType::getTypeByName(*m_context, name);
     if (unionType) return unionType;
+    m_pendingUnions.insert(&unionDecl);
 
     auto ret = generate_union_decl(unionDecl);
     generate_union_fields(unionDecl);
@@ -420,15 +443,21 @@ void Codegen::generate_error_no_err() {
 void Codegen::generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl) {
     debug_func("");
     for (auto &error : ErrorGroupExprDecl.errors) {
-        std::string errName = "error.str." + error->identifier;
-        auto global = m_module->getNamedGlobal(errName);
-        if (!global) {
-            llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, error->identifier, true);
-            global = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
-                                              llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, errName);
-        }
-        m_declarations[error.get()] = global;
+        generate_error_decl(*error);
     }
+}
+
+llvm::Value *Codegen::generate_error_decl(const ResolvedErrorDecl &errorDecl) {
+    debug_func(errorDecl.identifier);
+    std::string errName = "error.str." + errorDecl.identifier;
+    auto global = m_module->getNamedGlobal(errName);
+    if (!global) {
+        llvm::Constant *stringConst = llvm::ConstantDataArray::getString(*m_context, errorDecl.identifier, true);
+        global = new llvm::GlobalVariable(*m_module, stringConst->getType(), true,
+                                          llvm::GlobalVariable::LinkageTypes::PrivateLinkage, stringConst, errName);
+    }
+    m_declarations[&errorDecl] = global;
+    return global;
 }
 
 void Codegen::generate_module_decl(const ResolvedModuleDecl &moduleDecl) {
@@ -462,8 +491,13 @@ void Codegen::generate_module_body(const ResolvedModuleDecl &moduleDecl) {
 void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     generate_error_no_err();
+    debug_msg("Declarations: " << declarations.size());
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
+        debug_msg(decl->name() << " " << decl->state);
+        if (decl->state != ResolvedState::FullyResolved) {
+            debug_msg(decl->symbolName << " is not fully resolved skiping");
+            continue;
+        }
         if (const auto *sd = dynamic_cast<const ResolvedStructDecl *>(decl.get())) {
             generate_struct_decl(*sd);
         } else if (const auto *ud = dynamic_cast<const ResolvedUnionDecl *>(decl.get())) {
@@ -480,13 +514,15 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
     }
 
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
         if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             generate_module_decl(*modDecl);
         }
     }
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
+        if (decl->state != ResolvedState::FullyResolved) {
+            debug_msg(decl->symbolName << " is not fully resolved skiping");
+            continue;
+        }
         if (const auto *fn = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
             generate_function_decl(*fn);
         } else if (dynamic_cast<const ResolvedModuleDecl *>(decl.get()) ||
@@ -504,7 +540,10 @@ void Codegen::generate_in_module_decl(const std::vector<ptr<ResolvedDecl>> &decl
 void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &declarations) {
     debug_func("");
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
+        if (decl->state != ResolvedState::FullyResolved) {
+            debug_msg(decl->symbolName << " is not fully resolved skiping");
+            continue;
+        }
         if (dynamic_cast<const ResolvedDeclStmt *>(decl.get()) || dynamic_cast<const ResolvedFuncDecl *>(decl.get()) ||
             dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             continue;
@@ -518,14 +557,16 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
         }
     }
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
         if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
             generate_module_body(*modDecl);
         }
     }
     debug_msg("Finish structs bodys");
     for (auto &&decl : declarations) {
-        if (!decl->is_needed(m_noRemoveUnused)) continue;
+        if (decl->state != ResolvedState::FullyResolved) {
+            debug_msg(decl->symbolName << " is not fully resolved skiping");
+            continue;
+        }
         if (dynamic_cast<const ResolvedExternFunctionDecl *>(decl.get()) ||
             dynamic_cast<const ResolvedDeclStmt *>(decl.get()) ||
             dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
@@ -574,9 +615,11 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
                                                  initializer, stmt.name());
 
             m_declarations[&stmt] = globalVar;
+            m_declarations[stmt.varDecl.get()] = globalVar;
         } else {
             globalVar = ptr;
             m_declarations[&stmt] = globalVar;
+            m_declarations[stmt.varDecl.get()] = globalVar;
         }
     } else {
         llvm::Constant *initializer = nullptr;
@@ -588,6 +631,7 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
                                      llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.name());
         m_module->insertGlobalVariable(globalVar);
         m_declarations[&stmt] = globalVar;
+        m_declarations[stmt.varDecl.get()] = globalVar;
     }
 
     if (m_debugSymbols && globalVar) {
@@ -597,6 +641,29 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
                                                                       m_currentDebugFile, stmt.location.line,
                                                                       generate_debug_type(*stmt.type), isLocal);
         globalVar->addDebugInfo(gvDebug);
+    }
+}
+
+void Codegen::generate_pending_decls() {
+    debug_func("");
+    while (!m_pendingStructs.empty() || !m_pendingUnions.empty() || !m_pendingFunctions.empty()) {
+        auto structs = std::move(m_pendingStructs);
+        m_pendingStructs.clear();
+        for (auto *sd : structs) {
+            generate_struct_functions(*sd);
+        }
+
+        auto unions = std::move(m_pendingUnions);
+        m_pendingUnions.clear();
+        for (auto *ud : unions) {
+            generate_union_functions(*ud);
+        }
+
+        auto functions = std::move(m_pendingFunctions);
+        m_pendingFunctions.clear();
+        for (auto *fn : functions) {
+            generate_function_body(*fn);
+        }
     }
 }
 }  // namespace DMZ

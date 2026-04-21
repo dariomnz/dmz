@@ -31,6 +31,7 @@ struct CompilerOptions {
     bool printStats = false;
     bool quiet = false;
     bool lsp = false;
+    bool useTypes = false;
     int parallelJobs = 1;
 
     static CompilerOptions parse_arguments(int argc, char** argv);
@@ -42,9 +43,6 @@ class Driver {
     std::vector<ptr<llvm::Module>> modules;
     std::atomic_bool m_haveError = {false};
     std::atomic_bool m_haveNormalExit = {false};
-
-   public:
-    std::unordered_map<std::filesystem::path, ptr<ModuleDecl>> imported_modules;
 
    public:
     CompilerOptions m_options;
@@ -61,10 +59,6 @@ class Driver {
     ptr<ModuleDecl> parser_pass(ptr<Lexer> lexers);
 
     void fmt_pass(ptr<ModuleDecl> asts);
-    void import_pass(ptr<ModuleDecl>& asts);
-    std::pair<std::string, std::filesystem::path> register_import(SourceLocation location,
-                                                                  const std::filesystem::path& source,
-                                                                  std::string_view imported);
 
     std::vector<ptr<ResolvedModuleDecl>> semantic_pass(ptr<ModuleDecl> ast);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> codegen_pass(

@@ -501,26 +501,44 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     llvm::Value *val = nullptr;
     if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&dre.decl)) {
         return generate_function_decl(*fnDecl);
-    } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
-        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(declStmt->type.get())) {
+    } else if (dynamic_cast<const ResolvedDeclStmt *>(&dre.decl) ||
+               dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
+        const ResolvedVarDecl *varDecl = nullptr;
+        if (auto decl = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
+            varDecl = decl->varDecl.get();
+        } else {
+            varDecl = dynamic_cast<const ResolvedVarDecl *>(&dre.decl);
+        }
+
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(varDecl->type.get())) {
             if (fnType->fnDecl) {
                 return generate_function_decl(*fnType->fnDecl);
             } else {
                 dmz_unreachable(dre.location, "TODO");
             }
         } else {
-            auto ret = m_declarations[declStmt->varDecl.get()];
+            auto ret = m_declarations[varDecl];
             if (!ret) {
-                ret = m_declarations[declStmt];
+                ret = m_declarations[varDecl->parentDeclStmt];
+                if (!ret && varDecl->isGlobal && varDecl->parentDeclStmt) {
+                    generate_global_var_decl(*varDecl->parentDeclStmt);
+                    ret = m_declarations[varDecl];
+                    if (!ret) ret = m_declarations[varDecl->parentDeclStmt];
+                }
+
                 if (!ret) {
-                    declStmt->dump();
+                    if (varDecl->parentDeclStmt) varDecl->parentDeclStmt->dump();
+                    else varDecl->dump();
                     dmz_unreachable(dre.location, "TODO");
                 }
             }
-            return keepPointer ? ret : load_value(ret, *declStmt->type);
+            return keepPointer ? ret : load_value(ret, *varDecl->type);
         }
     } else {
         val = m_declarations[&dre.decl];
+        if (!val) {
+            dmz_unreachable(dre.decl.location, "not in declarations");
+        }
     }
 
     // keepPointer |= dynamic_cast<const ResolvedParamDecl *>(&dre.decl) && !dre.decl.isMutable;
@@ -560,26 +578,49 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
 
         return keepPointer ? field : load_value(field, *member->type);
     } else if (auto errDecl = dynamic_cast<const ResolvedErrorDecl *>(&memberExpr.member)) {
-        return m_declarations[errDecl];
+        auto ret = m_declarations[errDecl];
+        if (!ret) {
+            ret = generate_error_decl(*errDecl);
+            if (!ret) {
+                dmz_unreachable(errDecl->location, "TODO");
+            }
+        }
+        return ret;
     } else if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&memberExpr.member)) {
         return generate_function_decl(*fnDecl);
-    } else if (auto declStmt = dynamic_cast<const ResolvedDeclStmt *>(&memberExpr.member)) {
-        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(declStmt->type.get())) {
+    } else if (dynamic_cast<const ResolvedDeclStmt *>(&memberExpr.member) ||
+               dynamic_cast<const ResolvedVarDecl *>(&memberExpr.member)) {
+        const ResolvedVarDecl *varDecl = nullptr;
+        if (auto decl = dynamic_cast<const ResolvedDeclStmt *>(&memberExpr.member)) {
+            varDecl = decl->varDecl.get();
+        } else if (auto decl = dynamic_cast<const ResolvedVarDecl *>(&memberExpr.member)) {
+            varDecl = decl;
+        } else {
+            dmz_unreachable(memberExpr.member.location, "TODO");
+        }
+        if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(varDecl->type.get())) {
             if (fnType->fnDecl) {
                 return generate_function_decl(*fnType->fnDecl);
             } else {
                 dmz_unreachable(memberExpr.location, "TODO");
             }
         } else {
-            auto ret = m_declarations[declStmt->varDecl.get()];
+            auto ret = m_declarations[varDecl];
             if (!ret) {
-                ret = m_declarations[declStmt];
+                ret = m_declarations[varDecl->parentDeclStmt];
+                if (!ret && varDecl->isGlobal && varDecl->parentDeclStmt) {
+                    generate_global_var_decl(*varDecl->parentDeclStmt);
+                    ret = m_declarations[varDecl];
+                    if (!ret) ret = m_declarations[varDecl->parentDeclStmt];
+                }
+
                 if (!ret) {
-                    declStmt->dump();
+                    if (varDecl->parentDeclStmt) varDecl->parentDeclStmt->dump();
+                    else varDecl->dump();
                     dmz_unreachable(memberExpr.location, "TODO");
                 }
             }
-            return keepPointer ? ret : load_value(ret, *declStmt->type);
+            return keepPointer ? ret : load_value(ret, *varDecl->type);
         }
     } else {
         memberExpr.member.dump();
@@ -654,7 +695,7 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
         }
     }
 
-    std::map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
+    std::unordered_map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
     for (auto &&initStmt : sie.fieldInitializers) {
         if (initStmt->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
         initializerVals[&initStmt->field] = generate_expr(*initStmt->initializer);

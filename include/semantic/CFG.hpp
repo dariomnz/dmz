@@ -8,8 +8,13 @@
 namespace DMZ {
 
 struct BasicBlock {
-    std::set<std::pair<int, bool>> predecessors;
-    std::set<std::pair<int, bool>> successors;
+    struct pair_hash {
+        inline std::size_t operator()(const std::pair<int, bool> &v) const {
+            return std::hash<int>{}(v.first) ^ (std::hash<bool>{}(v.second) << 1);
+        }
+    };
+    std::unordered_set<std::pair<int, bool>, pair_hash> predecessors;
+    std::unordered_set<std::pair<int, bool>, pair_hash> successors;
     std::vector<const ResolvedStmt *> statements;
 };
 
@@ -21,7 +26,7 @@ struct CFG {
     int insert_new_block() {
         m_basicBlocks.emplace_back();
         return m_basicBlocks.size() - 1;
-    };
+    }
 
     int insert_new_block_before(int before, bool reachable) {
         int b = insert_new_block();
@@ -30,8 +35,8 @@ struct CFG {
     }
 
     void insert_edge(int from, int to, bool reachable) {
-        m_basicBlocks[from].successors.emplace(std::make_pair(to, reachable));
-        m_basicBlocks[to].predecessors.emplace(std::make_pair(from, reachable));
+        m_basicBlocks[from].successors.emplace(to, reachable);
+        m_basicBlocks[to].predecessors.emplace(from, reachable);
     }
 
     void insert_stmt(const ResolvedStmt *stmt, int block) { m_basicBlocks[block].statements.emplace_back(stmt); }

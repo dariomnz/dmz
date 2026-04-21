@@ -8,7 +8,7 @@ pub const Reader = struct {
 
     vtable_ptr: *void,
     // fn rebase(ptr: *@This, capacity: usize) -> !void
-    vtable_rebase: *fn(*void, *@This, usize)->!void = &std.io.Reader.defaultRebase,
+    vtable_rebase: *fn(*void, *@This, usize)->!void = &@This.defaultRebase,
     // fn refill(ptr: *@This, wanted: usize) -> !usize
     vtable_refill: *fn(*void, *@This, usize)->!usize,
 
@@ -46,7 +46,7 @@ pub const Reader = struct {
             buffer: buf,
             end: buf.len,
             vtable_ptr: null,
-            vtable_refill: &fixedRefill,
+            vtable_refill: &@This.fixedRefill,
         };
         ret.vtable_ptr = &ret;
         return ret;
@@ -74,7 +74,7 @@ pub const Reader = struct {
             // Buscamos el delimitador en la parte del buffer que ya tenemos cargada
             const current_data = r.buffer[r.seek..r.end];
 
-            const pos: isize = std.mem.indexOfScalar<u8>(current_data, '\n');
+            const pos: isize = std.mem.indexOf<u8>(current_data, '\n');
             // std.io.print("pos {}\n", .{pos});
             if (pos >= 0) {
                 // Calculamos el final de la línea (sin incluir el \n)

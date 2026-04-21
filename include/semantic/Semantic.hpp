@@ -17,10 +17,9 @@ class Sema {
    private:
     Driver &m_driver;
     ptr<ModuleDecl> m_ast;
-    std::unordered_map<std::string, ResolvedModuleDecl *> m_modules_for_import;
+    std::vector<ptr<ResolvedModuleDecl>> m_lazy_modules;
 
     void dump_scopes() const;
-    void dump_modules_for_import() const;
 
     ResolvedScope *m_currentScope = nullptr;
     ResolvedFuncDecl *m_currentFunction = nullptr;
@@ -31,14 +30,24 @@ class Sema {
     class ScopeRAII {
         Sema &m_sema;
         ResolvedScope *m_oldScope;
+        ResolvedModuleDecl *m_oldModule;
+        ResolvedFuncDecl *m_oldFunction;
+        ResolvedStructDecl *m_oldStruct;
         std::unique_ptr<ResolvedScope> m_ownedScope;
         ResolvedScope *m_currentScopePtr;
 
        public:
         explicit ScopeRAII(Sema &sema, ResolvedScope *scopeToUse = nullptr)
-            : m_sema(sema), m_oldScope(sema.m_currentScope) {
+            : m_sema(sema),
+              m_oldScope(sema.m_currentScope),
+              m_oldModule(sema.m_currentModule),
+              m_oldFunction(sema.m_currentFunction),
+              m_oldStruct(sema.m_currentStruct) {
             if (scopeToUse) {
                 m_currentScopePtr = scopeToUse;
+                m_sema.m_currentModule = scopeToUse->currentModule;
+                m_sema.m_currentFunction = scopeToUse->currentFunction;
+                m_sema.m_currentStruct = scopeToUse->currentStruct;
             } else {
                 m_ownedScope = makePtr<ResolvedScope>(m_oldScope);
                 m_currentScopePtr = m_ownedScope.get();
@@ -47,6 +56,9 @@ class Sema {
         }
         ~ScopeRAII() {
             m_sema.m_currentScope = m_oldScope;
+            m_sema.m_currentModule = m_oldModule;
+            m_sema.m_currentFunction = m_oldFunction;
+            m_sema.m_currentStruct = m_oldStruct;
             if (m_ownedScope) dmz_unreachable(SourceLocation{}, "ScopeRAII: Scope not taken");
         }
 
@@ -72,18 +84,14 @@ class Sema {
 
     std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
-    void fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls);
-    void fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls);
-    void mark_needed(std::vector<ptr<ResolvedModuleDecl>> &decls, bool buildTest);
 
    private:
     std::string resolve_decl_name(std::string_view identifier);
-    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps = true,
-                         ResolvedScope *scope = nullptr);
+    ResolvedDecl *lookup(const SourceLocation &loc, const std::string_view id, ResolvedScope *scope = nullptr);
     ResolvedDecl *lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
-                                   const std::string_view id, bool needAddDeps = true);
+                                   const std::string_view id);
     ResolvedDecl *lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
-                                   const std::string_view id, bool needAddDeps = true);
+                                   const std::string_view id);
 
     bool insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound = false);
     void remove_decl_to_current_scope(ResolvedDecl &decl);
@@ -156,14 +164,17 @@ class Sema {
     ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
 
-    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(const std::vector<ptr<ModuleDecl>> &modules,
+    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(std::vector<ptr<ModuleDecl>> &modules,
                                                                const std::filesystem::path &sourcePath);
-    ptr<ResolvedModuleDecl> resolve_module_decl(const ModuleDecl &moduleDecl);
+    ptr<ResolvedModuleDecl> resolve_module_decl(ptr<ModuleDecl> moduleDecl, std::string identifier,
+                                                std::filesystem::path module_path);
 
     // Lazy resolution: single discovery pass + on-demand resolution
     bool discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath);
 
     // Lazy ensure methods — resolve only when needed
+    bool ensure_module_parsed(ResolvedModuleDecl &mod);
+    bool ensure_module_discovered(ResolvedModuleDecl &mod);
     bool ensure_struct_members_resolved(ResolvedStructDecl &st);
     bool ensure_struct_funcs_resolved(ResolvedStructDecl &st);
     bool ensure_struct_bodies_resolved(ResolvedStructDecl &st);
@@ -175,7 +186,7 @@ class Sema {
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
     ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
-    void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
+    // void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
     ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const std::string &fnName);
     ptr<ResolvedTypeFunction> resolve_builtin_function_expr(ResolvedExpr &callee,
                                                             ResolvedBuiltinFunctionDecl &resolvedCallee,
@@ -184,9 +195,10 @@ class Sema {
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
-    void add_dependency(ResolvedDecl *decl);
     ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
     ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
+
+    bool already_import_types = false;
     ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
     ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
     ResolvedBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr, const ResolvedExpr &resolvedBase,

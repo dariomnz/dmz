@@ -219,178 +219,6 @@ void Driver::fmt_pass(ptr<ModuleDecl> ast) {
     m_haveNormalExit = true;
 }
 
-std::pair<std::string, std::filesystem::path> Driver::register_import(SourceLocation location,
-                                                                      const std::filesystem::path &source,
-                                                                      std::string_view imported) {
-    debug_func("source: '" << source << "' imported '" << imported << "'");
-    auto &d = *this;
-
-#ifdef DEBUG
-    debug_msg("Registed modules " << d.imported_modules.size());
-    for (auto &&[k, v] : d.imported_modules) {
-        debug_msg(k);
-    }
-#endif
-    std::string identifier = "";
-    std::filesystem::path module_path;
-    if (imported.ends_with(".dmz")) {
-        auto directory = source.parent_path();
-        module_path = directory.append(imported);
-
-        debug_msg("module_path " << module_path);
-        if (!std::filesystem::exists(module_path)) {
-            report(location, std::string("'") + module_path.string() + "' doesn't exits");
-            debug_msg("error: doesnt exists module_path " << module_path);
-            debug_msg("[Driver] Module not found: " << module_path << " (from imported=" << imported
-                                                    << " source=" << source << ")");
-            return {"", ""};
-        }
-        module_path = std::filesystem::canonical(module_path);
-        debug_msg("[Driver] Registered module: " << module_path << " with source=" << source);
-
-        std::filesystem::path parent_path = "";
-        std::string module_path_str = module_path.string();
-        // Find in imports the path to imported module
-        for (auto &&[k, v] : d.m_options.imports) {
-            auto imported_dir = v.parent_path();
-            imported_dir = std::filesystem::canonical(imported_dir);
-            if (module_path_str.find(imported_dir) != std::string::npos) {
-                parent_path = imported_dir;
-                identifier = k;
-                break;
-            }
-        }
-        if (parent_path.empty()) {
-            // if not in imports it need to be in the proyect dir
-            std::filesystem::path proyect_path = d.m_options.source.parent_path();
-            proyect_path = std::filesystem::canonical(proyect_path);
-            if (module_path_str.find(proyect_path.string()) != std::string::npos) {
-                parent_path = proyect_path;
-            }
-        }
-        std::string termination = ".dmz";
-        if (parent_path.empty()) {
-            debug_msg("parent_path empty");
-            std::string name = module_path.filename();
-            identifier = name.substr(0, name.size() - termination.size());
-        } else {
-            // Extract the diferente, in other words the relative path
-            std::string parent_path_str = parent_path.string();
-            auto diff = module_path_str.substr(parent_path_str.size());
-            if (diff.find_last_of(termination) != diff.size() - 1) {
-                dmz_unreachable(location,
-                                "unexpected diff " + std::to_string(diff.find_last_of(termination)) + " " + diff);
-            }
-
-            // convert the relative path to symbol name
-            int start_pos = (diff.size() > 0 && diff[0] == '/') ? 1 : 0;
-            diff = diff.substr(start_pos, diff.size() - (termination.size() + start_pos));
-            std::replace(diff.begin(), diff.end(), '/', '.');
-            // identifier empty if is not from imports
-            if (!identifier.empty() && !diff.empty()) {
-                identifier += ".";
-            }
-            identifier += diff;
-        }
-    } else {
-        auto it = d.m_options.imports.find(std::string(imported));
-        if (it == d.m_options.imports.end()) {
-            if (imported == "std") {
-                // Try relative to the source file directory (project root candidate)
-                std::filesystem::path stdPath = d.m_options.source.parent_path() / "std" / "std.dmz";
-                if (std::filesystem::exists(stdPath)) {
-                    module_path = std::filesystem::canonical(stdPath);
-                }
-
-                if (module_path.empty()) {
-                    // Fallback to current working directory
-                    stdPath = std::filesystem::absolute("std/std.dmz");
-                    if (std::filesystem::exists(stdPath)) {
-                        module_path = std::filesystem::canonical(stdPath);
-                    }
-                }
-
-                if (!module_path.empty()) {
-                    debug_msg("[Driver] Found std at: " << module_path);
-                    d.m_options.imports.emplace("std", module_path);
-                }
-            }
-
-            if (module_path.empty()) {
-                debug_msg("error: not in imports");
-                return {"", ""};
-            }
-            identifier = imported;
-        } else {
-            module_path = (*it).second;
-            // The identifier is simply the imported module
-            identifier = imported;
-        }
-    }
-
-    debug_msg("module_path " << module_path);
-    debug_msg("identifier " << identifier);
-
-    debug_msg("Search: " << module_path);
-    if (d.imported_modules.find(module_path) != d.imported_modules.end()) {
-        debug_msg("find not reimport: " << module_path);
-        return {identifier, module_path};
-    }
-
-    debug_msg("Register module: '" << module_path << "'");
-    d.imported_modules.emplace(module_path, nullptr);
-    return {identifier, module_path};
-}
-
-void Driver::import_pass(ptr<ModuleDecl> &ast) {
-    debug_func("");
-    auto all_imported = [&]() -> bool {
-        for (auto &&[k, v] : imported_modules) {
-            if (!v) return false;
-        }
-        return true;
-    };
-
-    while (!all_imported()) {
-        std::vector<std::filesystem::path> to_remove;
-        for (auto &&[k, v] : imported_modules) {
-            if (!v) {
-                if (!std::filesystem::exists(k)) {
-                    to_remove.emplace_back(k);
-                    continue;
-                }
-                Lexer l(k.string());
-                Parser p(*this, l);
-                auto [parse_ast, success] = p.parse_source_file();
-                if (!success) {
-                    // Even if parsing failed, we might have an incomplete AST that we want to keep
-                    if (!parse_ast) {
-                        to_remove.emplace_back(k);
-                        continue;
-                    }
-                }
-                v = std::move(parse_ast);
-            }
-        }
-        if (to_remove.size() != 0) {
-            m_haveError = true;
-            for (auto &&k : to_remove) {
-                imported_modules.erase(k);
-            }
-        }
-    }
-
-    if (m_options.importDump) {
-        ast->dump();
-        for (auto &&[k, v] : imported_modules) {
-            v->dump();
-        }
-
-        m_haveNormalExit = true;
-    }
-    return;
-}
-
 std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) {
     debug_func("");
     ScopedTimer(StatType::Semantic);
@@ -401,7 +229,6 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
     if (resolvedTree.empty()) m_haveError = true;
 
     if (!m_haveError && !sema.resolve_ast_body(resolvedTree)) m_haveError = true;
-    if (!m_haveError && !m_options.noRemoveUnused) sema.mark_needed(resolvedTree, m_options.test);
 
     if (m_options.depsDump || m_options.depsDotDump) {
         if (!m_haveError) {
@@ -624,9 +451,6 @@ int Driver::main() {
         fmt_pass(std::move(ast));
         if (need_exit()) return exit_code();
     }
-
-    import_pass(ast);
-    if (need_exit()) return exit_code();
 
     auto resolvedTrees = semantic_pass(std::move(ast));
     if (need_exit()) return exit_code();

@@ -14,9 +14,9 @@
 #include "semantic/SemanticSymbols.hpp"
 
 // #define DEBUG_SCOPES
-#ifdef DEBUG
-#define DEBUG_SCOPES
-#endif
+// #ifdef DEBUG
+// #define DEBUG_SCOPES
+// #endif
 
 namespace DMZ {
 
@@ -31,19 +31,13 @@ void Sema::dump_scopes() const {
         level++;
     }
 }
-void Sema::dump_modules_for_import() const {
-    println("Modules for import:");
-    for (auto &&[k, v] : m_modules_for_import) {
-        println(indent(2) << "Module: " << k);
-    }
-}
 
 bool Sema::insert_decl_to_current_scope(ResolvedDecl &decl, bool ignoreIfFound) {
     debug_func(decl.identifier << " " << decl.location);
 #ifdef DEBUG_SCOPES
     println("======================>>insert_decl_to_current_scope " << decl.identifier << " ======================");
 #endif
-    const auto foundDecl = lookup(decl.location, decl.identifier, false);
+    const auto foundDecl = lookup(decl.location, decl.identifier);
 
     if (foundDecl) {
         if (ignoreIfFound) return true;
@@ -89,17 +83,19 @@ std::string Sema::resolve_decl_name(std::string_view identifier) {
         ret = m_currentStruct->identifier;
         ret += ".";
         ret += identifier;
-    }
-    if (m_currentModule) {
+        debug_msg("With struct " << ret);
+    } else if (m_currentModule) {
         ret = m_currentModule->identifier;
         ret += ".";
         ret += identifier;
+        debug_msg("With module " << ret);
+    } else {
+        debug_msg("Without all " << ret);
     }
     return ret;
 }
 
-ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, bool needAddDeps,
-                           ResolvedScope *scopeToUse) {
+ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id, ResolvedScope *scopeToUse) {
     debug_func(loc << " " << id);
 #ifdef DEBUG_SCOPES
     println("---------------------->>lookup " << std::quoted(std::string(id)) << " ----------------------");
@@ -126,7 +122,6 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
                     if (!resolve_decl_stmt_initialize(*declStmt)) return debug_ret(nullptr);
                 }
             }
-            if (needAddDeps) add_dependency(declPtr);
             return debug_ret(it_decl->second);
         }
     }
@@ -135,9 +130,9 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
 }
 
 ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedModuleDecl &moduleDecl,
-                                     const std::string_view id, bool needAddDeps) {
+                                     const std::string_view id) {
     debug_func("Module: " << moduleDecl.identifier << " id: " << id);
-    if (needAddDeps) add_dependency(const_cast<ResolvedModuleDecl *>(&moduleDecl));
+    if (!ensure_module_discovered(const_cast<ResolvedModuleDecl &>(moduleDecl))) return nullptr;
     for (auto &&decl : moduleDecl.declarations) {
         auto declPtr = decl.get();
         if (auto ds = dynamic_cast<ResolvedDeclStmt *>(declPtr)) {
@@ -149,33 +144,30 @@ ResolvedDecl *Sema::lookup_in_module(const SourceLocation &loc, const ResolvedMo
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
         }
-        // Delayed initialization if it was not initialized
-        if (!declPtr->type || declPtr->state != ResolvedState::FullyResolved) {
-            if (!ensure_fully_resolved(*declPtr)) return nullptr;
-        }
-        if (needAddDeps) add_dependency(declPtr);
+        ScopeRAII moduleScope(*this, moduleDecl.scope.get());
+        if (!ensure_fully_resolved(*declPtr)) return nullptr;
         return declPtr;
     }
     return nullptr;
 }
 
 ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedStructDecl &structDecl,
-                                     const std::string_view id, bool needAddDeps) {
+                                     const std::string_view id) {
     debug_func("Struct " << structDecl.identifier << " " << id);
-    if (needAddDeps) add_dependency(const_cast<ResolvedStructDecl *>(&structDecl));
     // Lazy: ensure members and functions are resolved before searching
-    if (!ensure_struct_funcs_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return nullptr;
+    if (!ensure_struct_funcs_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return debug_ret(nullptr);
     for (auto &&decl : structDecl.functions) {
+        debug_msg("Search: " << decl->identifier << " in " << structDecl.identifier << " to find " << id);
         if (id != decl->identifier) continue;
         if (&structDecl != m_currentStruct && !decl->isPublic) {
             report(loc, "cannot access private member '" + std::string(id) + "'");
             return report(decl->location, "'" + std::string(id) + "' must be marked as pub");
         }
-        if (needAddDeps) add_dependency(decl.get());
         return decl.get();
     }
-    if (!ensure_struct_members_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return nullptr;
+    if (!ensure_struct_members_resolved(const_cast<ResolvedStructDecl &>(structDecl))) return debug_ret(nullptr);
     for (auto &&decl : structDecl.fields) {
+        debug_msg("Search: " << decl->identifier << " in " << structDecl.identifier << " to find " << id);
         if (id != decl->identifier) continue;
         return decl.get();
     }
@@ -184,7 +176,7 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
             return unionDecl->tag.get();
         }
     }
-    return nullptr;
+    return debug_ret(nullptr);
 }
 
 ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
@@ -314,11 +306,16 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                                   "could not resolve type for '" + declRefType->identifier + "'");
                 }
             }
-            if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
-            } else if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
+            if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl(),
                                                  declRefType->identifier == "@This");
+            } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl(),
+                                                 declRefType->identifier == "@This");
+            } else if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
+            } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
             } else {
                 ret = decl->type->clone();
             }
@@ -429,7 +426,8 @@ ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &g
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     ptr<ResolvedType> ret = nullptr;
     ResolvedType *retPtr = nullptr;
-    debug_func("'" << type.to_str() << "' -> '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
+    debug_func(type.className() << " '" << type.to_str() << "' -> " << (retPtr ? retPtr->className() : "nullptr")
+                                << " '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
         if (genType->decl && genType->decl->specializedType) {
             ret = re_resolve_type(*genType->decl->specializedType);
@@ -489,41 +487,48 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
     std::filesystem::path sourceAbsPath = std::filesystem::canonical(sourcePath);
     m_ast->module_path = sourceAbsPath;
 
-    auto &imported_modules = m_driver.imported_modules;
     std::vector<ptr<ModuleDecl>> modules;
-    std::vector<std::filesystem::path> modulesPaths;
 
     // Add main module
     modules.emplace_back(std::move(m_ast));
-    modulesPaths.emplace_back(sourceAbsPath);
-
-    // Add imported modules
-    for (auto &&[k, v] : imported_modules) {
-        std::filesystem::path k_path = std::filesystem::canonical(k);
-        if (k_path == sourceAbsPath) continue;
-        v->module_path = k_path;
-        modulesPaths.emplace_back(std::move(k_path));
-        modules.emplace_back(std::move(v));
-    }
-    imported_modules.clear();
 
     auto resolvedModules = resolve_modules_decls(modules, sourceAbsPath);
 
-    // Put things back
-    for (size_t i = 0; i < modules.size(); i++) {
-        if (modulesPaths[i] == sourceAbsPath) {
-            m_ast = std::move(modules[i]);
-        } else {
-            imported_modules.emplace(std::move(modulesPaths[i]), std::move(modules[i]));
+    // Put main module AST back
+    if (!modules.empty()) {
+        m_ast = std::move(modules[0]);
+    }
+
+    if (m_driver.m_options.test) {
+        ImportExpr stdImportExpr(SourceLocation::builtin(), "std");
+        auto std_import_expr = resolve_import_expr(stdImportExpr);
+        if (!std_import_expr) return {};
+        ImportExpr builtinImportExpr(SourceLocation::builtin(), "builtin");
+        auto builtin_import_expr = resolve_import_expr(builtinImportExpr);
+        if (!builtin_import_expr) return {};
+
+        for (auto &decl : builtin_import_expr->moduleDecl.declarations) {
+            if (decl->identifier == "__builtin_main_test") {
+                if (!ensure_fully_resolved(*decl)) return {};
+                break;
+            }
         }
     }
 
-    if (resolvedModules.size() != modules.size()) return {};
+    for (size_t i = 0; i < m_lazy_modules.size(); ++i) {
+        auto &mod = m_lazy_modules[i];
+        if (!ensure_module_discovered(*mod)) {
+            report(mod->location, "Failed to resolve lazy module " + mod->identifier);
+            return {};
+        }
+    }
 
     if (needMain) {
         bool haveMain = false;
+        ResolvedModuleDecl *mainMod = nullptr;
         for (auto &&mod : resolvedModules) {
             if (mod->module_path == sourceAbsPath) {
+                mainMod = mod.get();
                 for (auto &&decl : mod->declarations) {
                     if (decl->identifier == "main") {
                         haveMain = true;
@@ -534,7 +539,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
             }
         }
         if (!haveMain) {
-            report(m_ast->location, "main function not found in global module");
+            report(mainMod ? mainMod->location : SourceLocation{}, "main function not found in module");
             return {};
         }
     }
@@ -558,118 +563,11 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
             error = true;
         }
     }
-
-    if (!error) {
-        resolve_symbol_names(moduleDecls);
-        fill_depends(moduleDecls);
+    for (auto &lazy_mod : m_lazy_modules) {
+        moduleDecls.push_back(std::move(lazy_mod));
     }
+    m_lazy_modules.clear();
     return !error;
-}
-
-void Sema::fill_depends(std::vector<ptr<ResolvedModuleDecl>> &decls) {
-    debug_func("");
-    ScopedTimer(StatType::Semantic_Fill_deps);
-    for (auto &&decl : decls) {
-        debug_msg("ResolvedModuleDecl " << decl->name());
-        fill_depends(decl.get(), decl->declarations);
-    }
-}
-
-void Sema::fill_depends(ResolvedDependencies *parent, std::vector<ptr<ResolvedDecl>> &decls) {
-    debug_func("parent " << (parent ? parent->name() : "nullptr"));
-    for (auto &&decl : decls) {
-        if (!dynamic_cast<ResolvedDependencies *>(decl.get())) continue;
-        debug_msg(decl->name());
-
-        if (auto md = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
-            debug_msg("ResolvedModuleDecl " << md->name());
-            fill_depends(md, md->declarations);
-        }
-        if (auto sd = dynamic_cast<ResolvedStructDecl *>(decl.get())) {
-            debug_msg("ResolvedStructDecl " << sd->name());
-            if (auto gen = dynamic_cast<ResolvedGenericStructDecl *>(decl.get())) {
-                debug_msg("ResolvedGenericStructDecl " << gen->name());
-
-                auto aux_decls = move_vector_ptr<ResolvedSpecializedStructDecl, ResolvedDecl>(gen->specializations);
-                fill_depends(gen, aux_decls);
-                gen->specializations = move_vector_ptr<ResolvedDecl, ResolvedSpecializedStructDecl>(aux_decls);
-            } else {
-                auto aux_decls = move_vector_ptr<ResolvedMemberFunctionDecl, ResolvedDecl>(sd->functions);
-                fill_depends(sd, aux_decls);
-                sd->functions = move_vector_ptr<ResolvedDecl, ResolvedMemberFunctionDecl>(aux_decls);
-            }
-        }
-        if (auto gen = dynamic_cast<ResolvedGenericFunctionDecl *>(decl.get())) {
-            debug_msg("ResolvedGenericFunctionDecl " << gen->name());
-
-            auto aux_decls = move_vector_ptr<ResolvedSpecializedFunctionDecl, ResolvedDecl>(gen->specializations);
-            fill_depends(gen, aux_decls);
-            gen->specializations = move_vector_ptr<ResolvedDecl, ResolvedSpecializedFunctionDecl>(aux_decls);
-        }
-        if (dynamic_cast<ResolvedModuleDecl *>(parent)) {
-            if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
-                if (!declStmt->isMutable && (declStmt->type->kind == ResolvedTypeKind::StructDecl ||
-                                             declStmt->type->kind == ResolvedTypeKind::Function ||
-                                             declStmt->type->kind == ResolvedTypeKind::Module)) {
-                    continue;
-                }
-            }
-        }
-        if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
-            debug_msg("ResolvedDeclStmt " << declStmt->name());
-            std::vector<ptr<ResolvedDecl>> varDecl;
-            varDecl.reserve(1);
-            varDecl.emplace_back(std::move(declStmt->varDecl));
-            fill_depends(declStmt, varDecl);
-            declStmt->varDecl = ptr<ResolvedVarDecl>(static_cast<ResolvedVarDecl *>(varDecl[0].release()));
-        }
-        if (auto deps = dynamic_cast<ResolvedDependencies *>(decl.get())) {
-            debug_msg("ResolvedDependencies " << deps->name());
-            if (parent) {
-                parent->isUsedBy.emplace(deps);
-                deps->dependsOn.emplace(parent);
-            }
-            continue;
-        }
-    }
-}
-
-void Sema::mark_needed(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls, bool buildTest) {
-    debug_func("");
-    ScopedTimer(StatType::Semantic_Mark_deps);
-    std::queue<ResolvedDependencies *> worklist;
-    for (auto &&modDeps : moduleDecls) {
-        for (auto &&decl : modDeps->declarations) {
-            bool isRoot = false;
-            auto deps = dynamic_cast<ResolvedDependencies *>(decl.get());
-            if (!deps) continue;
-            if (deps->identifier == "main" || deps->identifier == "__builtin_main") {
-                isRoot = true;
-            } else if (buildTest && deps->identifier == "__builtin_main_test") {
-                isRoot = true;
-            }
-
-            if (isRoot) {
-                deps->isNeeded = true;
-                worklist.push(deps);
-            }
-        }
-    }
-
-    if (worklist.empty())
-        dmz_unreachable(SourceLocation{},
-                        "This should not happend. There are no main, __builtin_main or __builtin_main_test");
-
-    while (worklist.size() > 0) {
-        auto curr = worklist.front();
-        worklist.pop();
-        for (auto dep : curr->dependsOn) {
-            if (!dep->isNeeded) {
-                dep->isNeeded = true;
-                worklist.push(dep);
-            }
-        }
-    }
 }
 
 bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
@@ -702,7 +600,7 @@ bool Sema::check_return_on_all_paths(const ResolvedFuncDecl &fn, const CFG &cfg)
     int returnCount = 0;
     bool exitReached = false;
 
-    std::set<int> visited;
+    std::unordered_set<int> visited;
     std::vector<int> worklist;
     worklist.emplace_back(cfg.entry);
 
@@ -743,7 +641,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
         {State::Top, "Top"},
     };
 
-    using Lattice = std::map<const ResolvedDecl *, State>;
+    using Lattice = std::unordered_map<const ResolvedDecl *, State>;
 
     auto joinStates = [](State s1, State s2) {
         if (s1 == s2) return s1;
@@ -777,7 +675,8 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                 const ResolvedStmt *stmt = *it;
 
                 if (auto *decl = dynamic_cast<const ResolvedDeclStmt *>(stmt)) {
-                    tmp[decl->varDecl.get()] = decl->varDecl->initializer ? State::Assigned : State::Unassigned;
+                    tmp[decl->varDecl.get()] =
+                        (decl->varDecl->initializer || decl->initialized) ? State::Assigned : State::Unassigned;
                     continue;
                 }
 
@@ -806,13 +705,15 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
 
                 if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(stmt)) {
                     if (const auto *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl)) {
-                        if (var->initializer) {
-                            tmp[var] = State::Assigned;
-                        }
+                        if (!dynamic_cast<const ResolvedTypeStructDecl *>(var->type.get())) {
+                            if (var->initializer || var->isGlobal) {
+                                tmp[var] = State::Assigned;
+                            }
 
-                        if (tmp[var] != State::Assigned) {
-                            std::string msg = '\'' + var->identifier + "' is not initialized";
-                            pendingErrors.emplace_back(dre->location, std::move(msg));
+                            if (tmp[var] != State::Assigned) {
+                                std::string msg = '\'' + var->identifier + "' is not initialized";
+                                pendingErrors.emplace_back(dre->location, std::move(msg));
+                            }
                         }
                     }
 
@@ -834,159 +735,9 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
     return !pendingErrors.empty();
 }
 
-void Sema::resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations) {
-    debug_func("");
-    struct elem {
-        ResolvedDecl *decl;
-        int level;
-        std::string symbol;
-    };
-    std::stack<elem> stack;
-    for (auto &&decl : declarations) {
-        debug_msg(indent(0) << "Symbol name: " << decl->name());
-
-        if (auto *modDecl = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
-            debug_msg(indent(0) << "module path: " << modDecl->module_path);
-            modDecl->symbolName = modDecl->name();
-            for (auto &&decl : modDecl->declarations) {
-                stack.push(elem{decl.get(), 1, modDecl->symbolName + "."});
-            }
-        }
-        if (!dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
-            decl->dump();
-            dmz_unreachable(decl->location, "unexpected declaration");
-        }
-    }
-
-    while (!stack.empty()) {
-        elem e = stack.top();
-        stack.pop();
-
-        e.decl->symbolName = e.symbol + e.decl->identifier;
-
-        // if (const auto *func = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(e.decl)) {
-        //     e.decl->symbolName += func->specializedTypes->to_str();
-        // }
-        // if (const auto *struc = dynamic_cast<const ResolvedSpecializedStructDecl *>(e.decl)) {
-        //     e.decl->symbolName += struc->specializedTypes->to_str();
-        // }
-        if (const auto *func = dynamic_cast<const ResolvedGenericFunctionDecl *>(e.decl)) {
-            e.decl->symbolName += ResolvedGenericTypeDecl::generic_types_to_str(func->genericTypeDecls);
-        }
-        if (const auto *struc = dynamic_cast<const ResolvedGenericStructDecl *>(e.decl)) {
-            e.decl->symbolName += ResolvedGenericTypeDecl::generic_types_to_str(struc->genericTypeDecls);
-        }
-        debug_msg(indent(e.level) << "Symbol name: " << e.decl->symbolName);
-        // println(indent(e.level) << "Symbol identifier: " << e.decl->identifier);
-        // println(indent(e.level) << "e Symbol: " << e.symbol);
-        // println(indent(e.level) << "Symbol name: " << e.decl->symbolName);
-        // e.decl->dump();
-        // std::cout << indent(e.level) << e.decl->symbolName << std::endl;
-
-        std::string new_symbol_name = e.decl->name() + ".";
-        // if (e.decl->symbolName.find(".dmz") == std::string::npos) {
-        // new_symbol_name = e.decl->symbolName + ".";
-        // }
-
-        if (const auto *modDecl = dynamic_cast<const ResolvedModuleDecl *>(e.decl)) {
-            for (auto &&decl : modDecl->declarations) {
-                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
-            }
-        } else if (const auto *strDecl = dynamic_cast<const ResolvedStructDecl *>(e.decl)) {
-            for (auto &&decl : strDecl->functions) {
-                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
-            }
-            if (const auto *genStrDecl = dynamic_cast<const ResolvedGenericStructDecl *>(e.decl)) {
-                for (auto &&decl : genStrDecl->specializations) {
-                    stack.push(elem{decl.get(), e.level + 1, e.symbol});
-                }
-            }
-        } else if (const auto *unionDecl = dynamic_cast<const ResolvedUnionDecl *>(e.decl)) {
-            for (auto &&decl : unionDecl->functions) {
-                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
-            }
-        } else if (const auto *ErrorGroupExprDecl = dynamic_cast<const ResolvedErrorGroupExprDecl *>(e.decl)) {
-            for (auto &&decl : ErrorGroupExprDecl->errors) {
-                stack.push(elem{decl.get(), e.level + 1, new_symbol_name});
-            }
-        } else if (const auto *genDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(e.decl)) {
-            for (auto &&decl : genDecl->specializations) {
-                stack.push(elem{decl.get(), e.level + 1, e.symbol});
-            }
-        } else if (dynamic_cast<const ResolvedDeclStmt *>(e.decl) || dynamic_cast<const ResolvedFuncDecl *>(e.decl) ||
-                   dynamic_cast<const ResolvedErrorDecl *>(e.decl) || dynamic_cast<const ResolvedTestDecl *>(e.decl)) {
-        } else {
-            e.decl->dump(0, true);
-            dmz_unreachable(e.decl->location, "TODO: unexpected declaration");
-        }
-    }
-}
-
-void Sema::add_dependency(ResolvedDecl *decl) {
-    debug_func("Adding " << decl->identifier << " " << decl);
-    ResolvedDependencies *declDep = nullptr;
-    auto dep = dynamic_cast<ResolvedDependencies *>(decl);
-    if (!dep) return;
-
-    if (auto *varDecl = dynamic_cast<ResolvedVarDecl *>(decl)) {
-        if (!varDecl->isGlobal) return;
-    }
-
-    if (!decl->type) return;
-
-    if (!decl->isMutable &&
-        (decl->type->kind == ResolvedTypeKind::Module || decl->type->kind == ResolvedTypeKind::StructDecl ||
-         decl->type->kind == ResolvedTypeKind::Function || decl->type->kind == ResolvedTypeKind::ErrorGroup)) {
-        if (auto modType = dynamic_cast<ResolvedTypeModule *>(decl->type.get())) {
-            declDep = dynamic_cast<ResolvedDependencies *>(modType->moduleDecl);
-        } else if (auto strType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
-            declDep = dynamic_cast<ResolvedDependencies *>(strType->decl);
-        } else if (auto fnType = dynamic_cast<ResolvedTypeFunction *>(decl->type.get())) {
-            declDep = dynamic_cast<ResolvedDependencies *>(fnType->fnDecl);
-        } else if (auto egType = dynamic_cast<ResolvedTypeErrorGroup *>(decl->type.get())) {
-            declDep = dynamic_cast<ResolvedDependencies *>(egType->decl);
-        }
-    }
-
-    debug_msg("m_currentFunction " << m_currentFunction << " m_currentModule " << m_currentModule << " m_currentStruct "
-                                   << m_currentStruct);
-    if (m_currentFunction) {
-        debug_msg("Adding " << dep->name() << " to function " << m_currentFunction->name());
-        m_currentFunction->dependsOn.emplace(dep);
-        dep->isUsedBy.emplace(m_currentFunction);
-
-        if (declDep) {
-            debug_msg("Adding " << declDep->name() << " to function " << m_currentFunction->name());
-            m_currentFunction->dependsOn.emplace(declDep);
-            declDep->isUsedBy.emplace(m_currentFunction);
-        }
-    }
-    // if (m_currentModule) {
-    //     debug_msg("Adding " << dep->name() << " to module " << m_currentModule->name());
-    //     m_currentModule->dependsOn.emplace(dep);
-    //     dep->isUsedBy.emplace(m_currentModule);
-
-    //     if (declDep) {
-    //         debug_msg("Adding " << declDep->name() << " to module " << m_currentModule->name());
-    //         m_currentModule->dependsOn.emplace(declDep);
-    //         declDep->isUsedBy.emplace(m_currentModule);
-    //     }
-    // }
-    if (m_currentStruct) {
-        debug_msg("Adding " << decl->name() << " to struct " << m_currentStruct->name());
-        m_currentStruct->dependsOn.emplace(dep);
-        dep->isUsedBy.emplace(m_currentStruct);
-
-        if (declDep) {
-            debug_msg("Adding " << declDep->name() << " to struct " << m_currentStruct->name());
-            m_currentStruct->dependsOn.emplace(declDep);
-            declDep->isUsedBy.emplace(m_currentStruct);
-        }
-    }
-}
-
 void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType) {
-    debug_func(expr->location << " type " << expr->type->to_str() << " expectedType " << expectedType.to_str());
+    debug_func(expr->location << " type " << expr->type->className() << " " << expr->type->to_str() << " expectedType "
+                              << expectedType.className() << " " << expectedType.to_str());
     if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(expr.get())) {
         if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&expectedType)) {
             if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(sliceType->sliceType.get())) {
@@ -1089,7 +840,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
         auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
         auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(loc, "@call", std::move(fnType), std::move(params), true);
         auto ret = funcDecl.get();
-        add_dependency(ret);
         it->second = ret;
         m_currentModule->declarations.emplace_back(std::move(funcDecl));
         debug_msg("created @call");

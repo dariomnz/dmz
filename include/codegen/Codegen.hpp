@@ -30,6 +30,9 @@ class Codegen {
         llvm::BasicBlock *exitBB;
     };
     std::unordered_map<const ResolvedCatchErrorExpr *, CatchBreakTarget> m_catchBreakTargets;
+    std::unordered_set<const ResolvedStructDecl *> m_pendingStructs;
+    std::unordered_set<const ResolvedUnionDecl *> m_pendingUnions;
+    std::unordered_set<const ResolvedFuncDecl *> m_pendingFunctions;
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
@@ -72,7 +75,7 @@ class Codegen {
                                                                      const std::string &optimizationLevel);
     llvm::Type *generate_type(const ResolvedType &type, bool noOpaque = false);
     llvm::DIType *generate_debug_type(const ResolvedType &type);
-    llvm::DIFile *generate_debug_file(const SourceLocation &location);
+    llvm::DIFile *generate_debug_file(const std::string &location);
     void set_debug_location(const SourceLocation &location);
     void unset_debug_location();
 
@@ -128,6 +131,7 @@ class Codegen {
     void break_into_bb(llvm::BasicBlock *targetBB);
     void generate_error_no_err();
     void generate_error_group_expr_decl(const ResolvedErrorGroupExprDecl &ErrorGroupExprDecl);
+    llvm::Value *generate_error_decl(const ResolvedErrorDecl &errorDecl);
     llvm::Value *generate_error_in_place_expr(const ResolvedErrorInPlaceExpr &errorInPlaceExpr);
     llvm::Value *generate_catch_error_expr(const ResolvedCatchErrorExpr &catchErrorExpr, bool keepPointer);
     llvm::Value *generate_try_error_expr(const ResolvedTryErrorExpr &tryErrorExpr, bool keepPointer);
@@ -138,6 +142,7 @@ class Codegen {
     void generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &declarations);
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
+    void generate_pending_decls();
     llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);
     llvm::Value *generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr);
     llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);

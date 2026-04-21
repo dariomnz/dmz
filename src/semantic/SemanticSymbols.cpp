@@ -4,85 +4,32 @@
 
 namespace DMZ {
 
+std::ostream &operator<<(std::ostream &os, const ResolvedState &state) {
+    switch (state) {
+        case ResolvedState::Unresolved:
+            return os << "Unresolved";
+        case ResolvedState::InProgress:
+            return os << "InProgress";
+        case ResolvedState::DeclResolved:
+            return os << "DeclResolved";
+        case ResolvedState::FullyResolved:
+            return os << "FullyResolved";
+        case ResolvedState::Error:
+            return os << "Error";
+    }
+}
+
 void ResolvedExpr::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';
     }
 }
 
-bool ResolvedDecl::is_needed(bool noRemoveUnused) {
-    if (noRemoveUnused) return true;
-    if (auto *deps = dynamic_cast<const ResolvedDependencies *>(this)) {
-        return deps->isNeeded;
-    }
-    return true;
-}
-
-ResolvedDependencies::~ResolvedDependencies() { clean_dependencies(); }
-
-void ResolvedDependencies::clean_dependencies() {
-    debug_msg("Removing all " << dependsOn.size() << " dependsOn of " << name());
-    for (auto &&decl : dependsOn) {
-        if (!decl->isUsedBy.contains(this)) continue;
-        debug_msg("Removing " << name() << " from " << decl->name());
-        if (!decl->isUsedBy.erase(this)) {
-            debug_msg("Error erasing");
-        }
-    }
-    dependsOn.clear();
-
-    debug_msg("Removing all " << isUsedBy.size() << " isUsedBy of " << name());
-    for (auto &&decl : isUsedBy) {
-        if (!decl->dependsOn.contains(this)) continue;
-        debug_msg("Removing " << name() << " from " << decl->name());
-        if (!decl->dependsOn.erase(this)) {
-            debug_msg("Error erasing");
-        }
-    }
-    isUsedBy.clear();
-}
-
-void ResolvedDependencies::dump_dependencies(size_t level, bool dot_format) const {
-    // dump(level, true);
+void ResolvedDecl::dump_dependencies(size_t level, bool dot_format) const {
     if (!dot_format) {
-        std::cerr << indent_line(level, 0, true) << name() << (isNeeded ? "" : " (not needed)") << '\n';
-        if (!isNeeded || (dependsOn.empty() && isUsedBy.empty())) return;
-        std::cerr << indent_line(level + 1, 1, false) << "Depends on " << dependsOn.size() << ": [ ";
-        for (auto &&dep : dependsOn) {
-            if (dep->symbolName.empty()) {
-                std::cerr << "id'" << dep->identifier << "'" << typeid(*dep).name() << " ";
-            } else {
-                std::cerr << "'" << dep->name() << "' ";
-            }
-        }
-        std::cerr << "]\n";
-        std::cerr << indent_line(level + 1, 1, false) << "Is used by " << isUsedBy.size() << ": [ ";
-        for (auto &&dep : isUsedBy) {
-            if (dep->symbolName.empty()) {
-                std::cerr << "id'" << dep->identifier << "' ";
-            } else {
-                std::cerr << "'" << dep->name() << "' ";
-            }
-        }
-        std::cerr << "]\n";
+        std::cerr << indent_line(level, 0, true) << name() << " [" << state << "]\n";
     } else {
-        if (!isNeeded) return;
-        for (auto &&dep : isUsedBy) {
-            // std::cerr << '"' << name() << "\" -> \"";
-            // if (dep->symbolName.empty()) {
-            //     std::cerr << "id'" << dep->identifier << "'";
-            // } else {
-            //     std::cerr << dep->name();
-            // }
-            // std::cerr << "\"\n";
-            std::cerr << '"';
-            if (dep->symbolName.empty()) {
-                std::cerr << "id'" << dep->identifier << "'";
-            } else {
-                std::cerr << dep->name();
-            }
-            std::cerr << "\" -> \"" << name() << "\"\n";
-        }
+        dmz_unreachable(SourceLocation::builtin(), "TODO");
     }
 }
 
@@ -299,7 +246,7 @@ void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedGenericFunctionDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDependencies::dump_dependencies(level, dot_format);
+    ResolvedDecl::dump_dependencies(level, dot_format);
     for (auto &&function : specializations) function->dump_dependencies(level + 1, dot_format);
 }
 
@@ -485,7 +432,7 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedStructDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDependencies::dump_dependencies(level, dot_format);
+    ResolvedDecl::dump_dependencies(level, dot_format);
     for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
 }
 
@@ -498,7 +445,7 @@ void ResolvedUnionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedUnionDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDependencies::dump_dependencies(level, dot_format);
+    ResolvedDecl::dump_dependencies(level, dot_format);
     for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
 }
 
@@ -513,7 +460,7 @@ void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedGenericStructDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDependencies::dump_dependencies(level, dot_format);
+    ResolvedDecl::dump_dependencies(level, dot_format);
     for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
     for (auto &&spec : specializations) spec->dump_dependencies(level + 1, dot_format);
 }
@@ -656,7 +603,7 @@ void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedModuleDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDependencies::dump_dependencies(level, dot_format);
+    ResolvedDecl::dump_dependencies(level, dot_format);
     for (auto &&decl : declarations) decl->dump_dependencies(level + 1, dot_format);
 }
 
