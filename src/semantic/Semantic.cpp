@@ -675,38 +675,55 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                 const ResolvedStmt *stmt = *it;
 
                 if (auto *decl = dynamic_cast<const ResolvedDeclStmt *>(stmt)) {
-                    tmp[decl->varDecl.get()] =
-                        (decl->varDecl->initializer || decl->initialized) ? State::Assigned : State::Unassigned;
+                    tmp[decl->varDecl.get()] = (decl->varDecl->initializer) ? State::Assigned : State::Unassigned;
                     continue;
                 }
-
-                if (auto *assignment = dynamic_cast<const ResolvedAssignment *>(stmt)) {
-                    const ResolvedExpr *base = assignment->assignee.get();
-                    while (const auto *member = dynamic_cast<const ResolvedMemberExpr *>(base))
-                        base = member->base.get();
-
-                    const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(base);
-
-                    // The base of the expression is not a variable, but a temporary,
-                    // which can be mutated.
-                    if (!dre) continue;
-
-                    const auto *decl = dynamic_cast<const ResolvedDecl *>(&dre->decl);
-
-                    if (!decl->isMutable && decl->type->kind != ResolvedTypeKind::Pointer &&
-                        tmp[decl] != State::Unassigned) {
-                        std::string msg = '\'' + decl->identifier + "' cannot be mutated";
-                        pendingErrors.emplace_back(assignment->location, std::move(msg));
-                    }
-
+                if (auto *decl = dynamic_cast<const ResolvedParamDecl *>(stmt)) {
+                    tmp[decl] = State::Assigned;
+                    continue;
+                }
+                if (auto *decl = dynamic_cast<const ResolvedCaptureDecl *>(stmt)) {
                     tmp[decl] = State::Assigned;
                     continue;
                 }
 
+                if (const auto *assignment = dynamic_cast<const ResolvedAssignment *>(stmt)) {
+                    const ResolvedExpr *base = assignment->assignee.get();
+                    while (const auto *member = dynamic_cast<const ResolvedMemberExpr *>(base))
+                        base = member->base.get();
+
+                    if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(base)) {
+                        const ResolvedVarDecl *decl = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+                        if (!decl) {
+                            if (auto resDecl = dynamic_cast<const ResolvedDeclStmt *>(&dre->decl)) {
+                                decl = resDecl->varDecl.get();
+                            }
+                        }
+
+                        if (decl) {
+                            if (!decl->isMutable && decl->type->kind != ResolvedTypeKind::Pointer &&
+                                tmp[decl] != State::Unassigned) {
+                                std::string msg = '\'' + decl->identifier + "' cannot be mutated";
+                                pendingErrors.emplace_back(assignment->location, std::move(msg));
+                            }
+                            tmp[decl] = State::Assigned;
+                        }
+                    }
+                    continue;
+                }
+
                 if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(stmt)) {
-                    if (const auto *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl)) {
-                        if (!dynamic_cast<const ResolvedTypeStructDecl *>(var->type.get())) {
-                            if (var->initializer || var->isGlobal) {
+                    const ResolvedVarDecl *var = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
+                    if (!var) {
+                        if (auto resDecl = dynamic_cast<const ResolvedDeclStmt *>(&dre->decl)) {
+                            var = resDecl->varDecl.get();
+                        }
+                    }
+
+                    if (var) {
+                        if (var->type->kind != ResolvedTypeKind::StructDecl &&
+                            var->type->kind != ResolvedTypeKind::UnionDecl) {
+                            if (var->initializer) {
                                 tmp[var] = State::Assigned;
                             }
 
@@ -716,8 +733,6 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                             }
                         }
                     }
-
-                    continue;
                 }
             }
 
