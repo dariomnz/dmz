@@ -268,14 +268,16 @@ struct ResolvedVarDecl : public ResolvedDecl {
     bool isGlobal;
     struct ResolvedDeclStmt *parentDeclStmt = nullptr;
     bool nameResolved = false;
+    ptr<ResolvedScope> scope;
 
     ResolvedVarDecl(SourceLocation location, const VarDecl *varDecl, bool isPublic, std::string_view identifier,
-                    ptr<ResolvedType> type, bool isMutable, ptr<ResolvedExpr> initializer = nullptr,
-                    bool isGlobal = false)
+                    ptr<ResolvedType> type, bool isMutable, ptr<ResolvedScope> scope,
+                    ptr<ResolvedExpr> initializer = nullptr, bool isGlobal = false)
         : ResolvedDecl(location, std::move(identifier), std::move(type), isMutable, isPublic),
           varDecl(varDecl),
           initializer(std::move(initializer)),
-          isGlobal(isGlobal) {}
+          isGlobal(isGlobal),
+          scope(std::move(scope)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -341,13 +343,16 @@ struct ResolvedLambdaFunctionDecl : public ResolvedFunctionDecl {
 };
 
 struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
+    struct ResolvedGenericFunctionDecl *genFunc;
     ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
     ResolvedSpecializedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                     ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                     ptr<ResolvedScope> scope, const FunctionDecl *functionDecl,
+                                    struct ResolvedGenericFunctionDecl *genFunc,
                                     ptr<ResolvedTypeSpecialized> specializedTypes)
         : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params), std::move(scope),
                                functionDecl),
+          genFunc(genFunc),
           specializedTypes(std::move(specializedTypes)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -425,10 +430,11 @@ struct ResolvedMemberSpecializedFunctionDecl : public ResolvedSpecializedFunctio
     ResolvedMemberSpecializedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                                           ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                           ptr<ResolvedScope> scope, const FunctionDecl *functionDecl,
+                                          struct ResolvedGenericFunctionDecl *genFunc,
                                           ptr<ResolvedTypeSpecialized> specializedTypes,
                                           const ResolvedStructDecl *structDecl, bool isStatic)
         : ResolvedSpecializedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params),
-                                          std::move(scope), functionDecl, std::move(specializedTypes)),
+                                          std::move(scope), functionDecl, genFunc, std::move(specializedTypes)),
           structDecl(structDecl),
           isStatic(isStatic) {}
 
@@ -864,15 +870,12 @@ struct ResolvedDeclStmt : public ResolvedDecl, public ResolvedStmt {
     SourceLocation location;
     ptr<ResolvedVarDecl> varDecl;
     bool initialized = false;
-    ptr<ResolvedScope> scope;
 
-    ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl,
-                     ptr<ResolvedScope> scope)
+    ResolvedDeclStmt(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedVarDecl> varDecl)
         : ResolvedDecl(location, varDecl->identifier, std::move(type), varDecl->isMutable, varDecl->isPublic),
           ResolvedStmt(location),
           location(location),
-          varDecl(std::move(varDecl)),
-          scope(std::move(scope)) {}
+          varDecl(std::move(varDecl)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

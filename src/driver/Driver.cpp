@@ -174,6 +174,8 @@ void Driver::check_sources_pass(std::filesystem::path &source) {
         error("unexpected source file extension '" + source.extension().string() + "'");
         m_haveError = true;
     }
+
+    source = std::filesystem::canonical(source);
 }
 
 ptr<Lexer> Driver::lexer_pass(std::filesystem::path &source) {

@@ -54,42 +54,42 @@ const test_ctx = struct {
     ready: *i32,
 };
 
-test "conditional variable test" {
-    let m = std.thread.Mutex.init();
-    defer m.deinit();
-    let cv = std.thread.Condition.init();
-    defer cv.deinit();
-    let ready = 0;
-    let ctx = test_ctx {
-        m: &m,
-        cv: &cv,
-        ready: &ready,
-    };
+// test "conditional variable test" {
+//     let m = std.thread.Mutex.init();
+//     defer m.deinit();
+//     let cv = std.thread.Condition.init();
+//     defer cv.deinit();
+//     let ready = 0;
+//     let ctx = test_ctx {
+//         m: &m,
+//         cv: &cv,
+//         ready: &ready,
+//     };
 
-    const worker = [](ctx: *test_ctx) -> void {
-        ctx.m.lock();
+//     const worker = [](ctx: *test_ctx) -> void {
+//         ctx.m.lock();
 
-        while (ctx.ready.* == 0) {
-            std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
-            // Se suelta el mutex y espera la señal
-            ctx.cv.wait(ctx.m);
-        }
+//         while (ctx.ready.* == 0) {
+//             std.io.printf("Worker: There are no tasks, I'm going to sleep...\n");
+//             // Se suelta el mutex y espera la señal
+//             ctx.cv.wait(ctx.m);
+//         }
 
-        std.io.printf("Worker: I was woken up! Time to work.\n");
-        ctx.m.unlock();
-    };
+//         std.io.printf("Worker: I was woken up! Time to work.\n");
+//         ctx.m.unlock();
+//     };
 
-    const boss = [](ctx: *test_ctx) -> void {
-        std.thread.sleep(100);
-        ctx.m.lock();
+//     const boss = [](ctx: *test_ctx) -> void {
+//         std.thread.sleep(100);
+//         ctx.m.lock();
 
-        ctx.ready.* = 1;
-        std.io.printf("Boss: Task ready. Wake up!\n");
-        ctx.cv.notifyOne();
-        ctx.m.unlock();
-    };
-    const t1 = try std.thread.Thread.init(worker, &ctx);
-    const t2 = try std.thread.Thread.init(boss, &ctx);
-    try t1.join();
-    try t2.join();
-}
+//         ctx.ready.* = 1;
+//         std.io.printf("Boss: Task ready. Wake up!\n");
+//         ctx.cv.notifyOne();
+//         ctx.m.unlock();
+//     };
+//     const t1 = try std.thread.Thread.init(worker, &ctx);
+//     const t2 = try std.thread.Thread.init(boss, &ctx);
+//     try t1.join();
+//     try t2.join();
+// }

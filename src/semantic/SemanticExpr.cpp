@@ -102,7 +102,8 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         return report(declRefExpr.location, "expression symbol '" + declRefExpr.identifier + "' not found");
     }
 
-    if (!ensure_fully_resolved(*decl)) return nullptr;
+    if (!decl->type && !ensure_fully_resolved(*decl)) return nullptr;
+    m_pending_decls.emplace(decl);
     if (!decl->type) {
         decl->dump();
         return report(declRefExpr.location, "could not resolve type for '" + declRefExpr.identifier + "'");
@@ -670,8 +671,18 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             dmz_unreachable(memberExpr.location, "unexpected type");
         }
         if (!isThis && isDecl && baseType->is_generic()) {
-            return report(memberExpr.location,
-                          "cannot use generic struct '" + baseType->to_str() + "' without specialization");
+            bool skip = false;
+            if (m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
+                skip = true;
+            }
+            if (m_currentStruct && dynamic_cast<ResolvedGenericStructDecl *>(m_currentStruct)) {
+                skip = true;
+            }
+
+            if (!skip) {
+                return report(memberExpr.location,
+                              "cannot use generic struct '" + baseType->to_str() + "' without specialization");
+            }
         }
         decl = lookup_in_struct(memberExpr.location, *struTypeDecl, memberExpr.field);
         if (!decl) {
@@ -1288,8 +1299,13 @@ ptr<ResolvedCatchErrorExpr> Sema::resolve_catch_error_expr(const CatchErrorExpr 
         captureScope.emplace(*this);
         auto errorType = makePtr<ResolvedTypeError>(catchErrorExpr.location);
         errorVar = makePtr<ResolvedVarDecl>(catchErrorExpr.location, nullptr, true, catchErrorExpr.captureIdentifier,
-                                            std::move(errorType), false);
-        insert_decl_to_current_scope(*errorVar);
+                                            std::move(errorType), false, nullptr);
+        if (!insert_decl_to_current_scope(*errorVar)) {
+            return report(catchErrorExpr.location, "capture identifier '" + catchErrorExpr.captureIdentifier +
+                                                       "' is already defined in the current scope");
+        }
+        ScopeRAII varDeclScope(*this);
+        errorVar->scope = varDeclScope.takeScope();
     }
 
     auto resolvedCatch = makePtr<ResolvedCatchErrorExpr>(
@@ -1421,34 +1437,21 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
     } else {
         auto it = m_driver.m_options.imports.find(imported);
         if (it == m_driver.m_options.imports.end()) {
-            if (imported == "std") {
-                std::filesystem::path stdPath = m_driver.m_options.source.parent_path() / "std" / "std.dmz";
+            if (imported == "std" || imported == "builtin" || imported == "types") {
+                std::string module_name_str(imported);
+                module_name_str += ".dmz";
+                std::filesystem::path stdPath = m_driver.m_options.source.parent_path() / "std" / module_name_str;
                 if (std::filesystem::exists(stdPath)) {
                     module_path = std::filesystem::canonical(stdPath);
                 }
                 if (module_path.empty()) {
-                    stdPath = std::filesystem::absolute("std/std.dmz");
+                    stdPath = std::filesystem::absolute("std/" + module_name_str);
                     if (std::filesystem::exists(stdPath)) {
                         module_path = std::filesystem::canonical(stdPath);
                     }
                 }
-                if (!module_path.empty()) {
-                    m_driver.m_options.imports.emplace("std", module_path);
-                }
-            }
-            if (imported == "builtin") {
-                std::filesystem::path builtinPath = m_driver.m_options.source.parent_path() / "std" / "builtin.dmz";
-                if (std::filesystem::exists(builtinPath)) {
-                    module_path = std::filesystem::canonical(builtinPath);
-                }
-                if (module_path.empty()) {
-                    builtinPath = std::filesystem::absolute("std/builtin.dmz");
-                    if (std::filesystem::exists(builtinPath)) {
-                        module_path = std::filesystem::canonical(builtinPath);
-                    }
-                }
-                if (!module_path.empty()) {
-                    m_driver.m_options.imports.emplace("builtin", module_path);
+                if (!module_path.empty() && imported == "std") {
+                    m_driver.m_options.imports.emplace(imported, module_path);
                 }
             }
             if (module_path.empty()) {
@@ -1457,7 +1460,12 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
                                                 "path is included using the '-I' flag during compilation.");
                 return nullptr;
             }
-            identifier = imported;
+            
+            if (imported == "builtin" || imported == "types") {
+                identifier = "std." + imported;
+            } else {
+                identifier = imported;
+            }
         } else {
             module_path = (*it).second;
             identifier = imported;
@@ -1527,6 +1535,7 @@ ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typein
             for (auto &decl : mod->declarations) {
                 debug_msg("Target " << targetUnionName << " search " << decl->identifier);
                 if (decl->identifier == targetUnionName) {
+                    if (!ensure_fully_resolved(*decl)) return {};
                     if (auto unionDeclRef = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
                         typeInfoDecl = unionDeclRef;
                         break;
@@ -1559,6 +1568,8 @@ ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &ha
         structToSearch = struDeclType->decl;
     } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(baseType)) {
         structToSearch = struType->decl;
+    } else if (dynamic_cast<ResolvedTypeGeneric *>(baseType)) {
+        hasMethod = false;
     } else {
         return report(hasMethodExpr.location,
                       "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
@@ -1574,9 +1585,6 @@ ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &ha
                 break;
             }
         }
-    } else {
-        return report(hasMethodExpr.location,
-                      "expected struct decl for @hasMethod, actual '" + baseType->to_str() + "'");
     }
 
     auto resolved =

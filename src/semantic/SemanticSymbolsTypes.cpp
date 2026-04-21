@@ -346,6 +346,8 @@ std::string ResolvedTypeUnion::to_str() const {
 bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&other)) {
+        debug_msg("decl " << decl << " vs " << genType->decl << " location " << location << " " << genType->location);
+        debug_msg("location generic decls " << decl->location << " " << genType->decl->location);
         return debug_ret(decl == genType->decl);
     } else {
         return debug_ret(false);
@@ -683,6 +685,8 @@ bool ResolvedTypeArray::is_generic() const { return debug_ret(arrayType->is_gene
 bool ResolvedTypeSimd::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
     if (auto vecType = dynamic_cast<const ResolvedTypeSimd *>(&other)) {
+        debug_msg("simdSize: " << simdSize << " " << vecType->simdSize);
+        debug_msg("simdType: " << simdType->to_str() << " " << vecType->simdType->to_str());
         return debug_ret(simdSize == vecType->simdSize && simdType->equal(*vecType->simdType));
     } else {
         return debug_ret(false);

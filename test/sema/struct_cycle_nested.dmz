@@ -4,6 +4,7 @@ const S1 = struct {
 };
 
 const S2 = struct {
+    // CHECK: [[# @LINE - 1 ]]:12: error: struct 'struct_cycle_nested.S2' contains itself
     nested: S3,
 };
 
@@ -12,7 +13,6 @@ const S3 = struct {
 };
 
 const S4 = struct {
-    // CHECK: [[# @LINE - 1 ]]:12: error: struct 'struct_cycle_nested.S4' contains itself
     nested: S2,
 };
 

@@ -242,11 +242,13 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         if (forStmt.conditions.size() != 1 || forStmt.captures.size() != 1)
             return report(forStmt.location, "inline for expects exactly 1 condition and 1 capture");
         ScopeRAII forScope(*this);
+        auto takenForScope = forScope.takeScope();
         varOrReturn(condTypeCheck, resolve_expr(*forStmt.conditions[0]));
         auto structType = dynamic_cast<const ResolvedTypeStruct *>(condTypeCheck->type.get());
         if (!structType) {
             if (condTypeCheck->type->kind == ResolvedTypeKind::Generic) {
                 ScopeRAII iterationScope(*this);
+                auto takenIterationScope = iterationScope.takeScope();
                 auto captureType = condTypeCheck->type->clone();
                 auto resolvedCapture = makePtr<ResolvedCaptureDecl>(
                     forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
@@ -260,7 +262,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 captures.emplace_back(std::move(resolvedCapture));
 
                 return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
-                                                std::move(resolvedBody), iterationScope.takeScope(), true);
+                                                std::move(resolvedBody), std::move(takenIterationScope), true);
             }
             return report(condTypeCheck->location,
                           "inline for requires a tuple or struct iteration, but got: " + condTypeCheck->type->to_str());
@@ -279,14 +281,14 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             auto fieldType = stDecl->fields[i]->type->clone();
             auto fieldAccess = makePtr<ResolvedMemberExpr>(iterCond->location, std::move(iterCond), *stDecl->fields[i]);
 
-            auto varDecl =
-                makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false, forStmt.captures[0]->identifier,
-                                         fieldType->clone(), false, std::move(fieldAccess));
+            auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false,
+                                                    forStmt.captures[0]->identifier, fieldType->clone(), false,
+                                                    std::move(takenIterationScope), std::move(fieldAccess));
             if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
 
             varDecl->state = ResolvedState::FullyResolved;
-            auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(),
-                                                              std::move(varDecl), std::move(takenIterationScope));
+            auto resolvedDeclStmt =
+                makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(), std::move(varDecl));
             resolvedDeclStmt->initialized = true;
             resolvedDeclStmt->state = ResolvedState::FullyResolved;
             varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
@@ -307,7 +309,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         captures.emplace_back(std::move(resolvedCapture));
 
         return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
-                                        std::move(resolvedBody), forScope.takeScope(), true);
+                                        std::move(resolvedBody), std::move(takenForScope), true);
     }
 
     ScopeRAII forCapturesScope(*this);
@@ -352,6 +354,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
 
         auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[i]->location,
                                                             forStmt.captures[i]->identifier, std::move(captureType));
+        resolvedCapture->state = ResolvedState::FullyResolved;
 
         if (!insert_decl_to_current_scope(*resolvedCapture)) {
             error = true;
@@ -378,7 +381,6 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    ScopeRAII scope(*this);
     if (declStmt.varDecl->initializer) {
         if (dynamic_cast<const StructDecl *>(declStmt.varDecl->initializer.get()) ||
             dynamic_cast<const UnionDecl *>(declStmt.varDecl->initializer.get())) {
@@ -398,7 +400,7 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
             }
         }
     }
-    auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl), scope.takeScope());
+    auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl));
     ret->varDecl->parentDeclStmt = ret.get();
     ret->symbolName = resolve_decl_name(ret->identifier);
     ret->varDecl->symbolName = resolve_decl_name(ret->varDecl->identifier);
@@ -412,8 +414,6 @@ bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
     if (declStmt.state == ResolvedState::InProgress && declStmt.initialized) return debug_ret(true);  // Cycle detected
 
     declStmt.state = ResolvedState::InProgress;
-
-    ScopeRAII scope(*this, declStmt.scope.get());
 
     if (!resolve_var_decl_initialize(*declStmt.varDecl)) {
         remove_decl_to_current_scope(*declStmt.varDecl);

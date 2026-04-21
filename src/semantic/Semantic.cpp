@@ -69,7 +69,7 @@ bool Sema::insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDec
         auto it = std::find_if(moduleDecl.declarations.begin(), moduleDecl.declarations.end(),
                                [&](const ptr<ResolvedDecl> &d) { return declPtr->identifier == d->identifier; });
         if (it != moduleDecl.declarations.end()) {
-            report(declPtr->location, "redeclaration of '" + declPtr->identifier + '\'');
+            report(declPtr->location, "redeclaration in module of '" + declPtr->identifier + '\'');
             return false;
         }
     }
@@ -378,7 +378,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         }
         retTypeStruct->ownedDecl = std::move(ownedStructDecl);
         if (retTypeStruct->ownedDecl) {
-            m_pending_decls.emplace_back(retTypeStruct->ownedDecl.get());
+            m_pending_decls.emplace(retTypeStruct->ownedDecl.get());
         }
         ret = std::move(retTypeStruct);
         retPtr = ret.get();
@@ -492,7 +492,10 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
     // Add main module
     modules.emplace_back(std::move(m_ast));
 
-    auto resolvedModules = resolve_modules_decls(modules, sourceAbsPath);
+    auto resolvedModules = resolve_modules_decls(modules);
+    for (auto &mod : resolvedModules) {
+        m_lazy_modules.push_back(std::move(mod));
+    }
 
     // Put main module AST back
     if (!modules.empty()) {
@@ -526,7 +529,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
     if (needMain) {
         bool haveMain = false;
         ResolvedModuleDecl *mainMod = nullptr;
-        for (auto &&mod : resolvedModules) {
+        for (auto &&mod : m_lazy_modules) {
             if (mod->module_path == sourceAbsPath) {
                 mainMod = mod.get();
                 for (auto &&decl : mod->declarations) {
@@ -544,6 +547,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
         }
     }
 
+    resolvedModules.swap(m_lazy_modules);
     return resolvedModules;
 }
 
@@ -552,7 +556,9 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
     debug_func((error ? "error" : "no error"));
     {
         ScopedTimer(StatType::Semantic_Body);
-        for (auto &&module : moduleDecls) {
+        m_lazy_modules.swap(moduleDecls);
+        for (size_t i = 0; i < m_lazy_modules.size(); i++) {
+            auto &&module = m_lazy_modules[i];
             ScopedTimerName(StatType::Semantic_Body, module->name());
             if (!resolve_module_body(*module)) {
                 error = true;
@@ -563,10 +569,8 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
             error = true;
         }
     }
-    for (auto &lazy_mod : m_lazy_modules) {
-        moduleDecls.push_back(std::move(lazy_mod));
-    }
-    m_lazy_modules.clear();
+
+    moduleDecls.swap(m_lazy_modules);
     return !error;
 }
 
@@ -693,11 +697,9 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                         base = member->base.get();
 
                     if (const auto *dre = dynamic_cast<const ResolvedDeclRefExpr *>(base)) {
-                        const ResolvedVarDecl *decl = dynamic_cast<const ResolvedVarDecl *>(&dre->decl);
-                        if (!decl) {
-                            if (auto resDecl = dynamic_cast<const ResolvedDeclStmt *>(&dre->decl)) {
-                                decl = resDecl->varDecl.get();
-                            }
+                        const ResolvedDecl *decl = &dre->decl;
+                        if (auto resDecl = dynamic_cast<const ResolvedDeclStmt *>(decl)) {
+                            decl = resDecl->varDecl.get();
                         }
 
                         if (decl) {

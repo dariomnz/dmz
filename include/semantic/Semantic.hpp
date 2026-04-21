@@ -69,7 +69,7 @@ class Sema {
 
     std::vector<ResolvedTestDecl *> m_tests;
 
-    std::vector<ResolvedDecl *> m_pending_decls;
+    std::unordered_set<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
     std::unordered_map<const StructDecl *, ResolvedStructDecl *> m_resolvedStructs;
@@ -164,13 +164,12 @@ class Sema {
     ptr<ResolvedTryErrorExpr> resolve_try_error_expr(const TryErrorExpr &tryErrorExpr);
     ptr<ResolvedOrElseErrorExpr> resolve_orelse_error_expr(const OrElseErrorExpr &orelseExpr);
 
-    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(std::vector<ptr<ModuleDecl>> &modules,
-                                                               const std::filesystem::path &sourcePath);
+    std::vector<ptr<ResolvedModuleDecl>> resolve_modules_decls(std::vector<ptr<ModuleDecl>> &modules);
     ptr<ResolvedModuleDecl> resolve_module_decl(ptr<ModuleDecl> moduleDecl, std::string identifier,
                                                 std::filesystem::path module_path);
 
     // Lazy resolution: single discovery pass + on-demand resolution
-    bool discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl, const std::filesystem::path &sourcePath);
+    bool discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl);
 
     // Lazy ensure methods — resolve only when needed
     bool ensure_module_parsed(ResolvedModuleDecl &mod);
