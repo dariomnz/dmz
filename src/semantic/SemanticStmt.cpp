@@ -284,10 +284,11 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                                          fieldType->clone(), false, std::move(fieldAccess));
             if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
 
+            varDecl->state = ResolvedState::FullyResolved;
             auto resolvedDeclStmt = makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, fieldType->clone(),
                                                               std::move(varDecl), std::move(takenIterationScope));
             resolvedDeclStmt->initialized = true;
-
+            resolvedDeclStmt->state = ResolvedState::FullyResolved;
             varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
             resolvedIteration->statements.insert(resolvedIteration->statements.begin(), std::move(resolvedDeclStmt));
             unrolledBody.emplace_back(std::move(resolvedIteration));
