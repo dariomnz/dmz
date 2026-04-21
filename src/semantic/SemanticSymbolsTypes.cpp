@@ -639,7 +639,8 @@ bool ResolvedTypeArray::equal(const ResolvedType &other) const {
 bool ResolvedTypeArray::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -670,7 +671,8 @@ bool ResolvedTypeSimd::equal(const ResolvedType &other) const {
 bool ResolvedTypeSimd::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     return debug_ret(false);
 }
 
