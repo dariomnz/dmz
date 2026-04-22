@@ -11,7 +11,7 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-union Token {
+const Token = union {
     int_val: i32,
     str_val: *u8,
 
@@ -22,7 +22,7 @@ union Token {
             else => printf("unknown\n");
         }
     }
-}
+};
 
 fn main() -> void {
     let t = Token{int_val: 5};

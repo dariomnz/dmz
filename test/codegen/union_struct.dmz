@@ -10,12 +10,12 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-struct MyStruct {
+const MyStruct = struct {
     a: i32,
     b: i32,
-}
+};
 
-union Token {
+const Token = union {
     int_val: i32,
     str_val: *u8,
     struct_val: MyStruct,
@@ -28,7 +28,7 @@ union Token {
             else => printf("unknown\n");
         }
     }
-}
+};
 
 fn main() -> void {
     let t = Token{int_val: 5};

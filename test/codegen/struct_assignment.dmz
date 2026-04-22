@@ -1,11 +1,11 @@
 // RUN:dmz %s -run 2>&1 | filecheck %s
 // CHECK: OK
-struct Point {
+const Point = struct {
     x: i32,
-}
-struct Point2 {
+};
+const Point2 = struct {
     p: Point,
-}
+};
 
 extern fn printf(fmt: *u8, ...) -> i32;
 

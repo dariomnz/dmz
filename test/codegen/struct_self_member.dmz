@@ -1,7 +1,25 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'Point 2 2\n')
 
-struct Point {
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let p = Point{x:1,y:1};
+    p.addOne();
+
+    printf("Point %d %d\n", p.x, p.y);
+}
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %p = alloca %struct_self_member.Point, align 8
+// CHECK-NEXT:   %tmp.struct.struct_self_member.Point = alloca %struct_self_member.Point, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.struct_self_member.Point, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store %struct_self_member.Point { i32 1, i32 1 }, ptr %tmp.struct.struct_self_member.Point, align 4
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %tmp.struct.struct_self_member.Point, i64 8, i1 false)
+// CHECK-NEXT:   call void @struct_self_member.Point.addOne(ptr byref(%struct_self_member.Point) %p)
+
+const Point = struct {
     x: i32,
     y: i32,
 
@@ -30,22 +48,4 @@ struct Point {
 // CHECK-NEXT:   store i32 %10, ptr %12, align 4
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-}
-
-extern fn printf(fmt:*u8, ...) -> i32;
-
-fn main() -> void {
-    let p = Point{x:1,y:1};
-    p.addOne();
-
-    printf("Point %d %d\n", p.x, p.y);
-}
-// CHECK: define void @__builtin_main() {
-// CHECK-NEXT: entry:
-// CHECK-NEXT:   %p = alloca %struct_self_member.Point, align 8
-// CHECK-NEXT:   %tmp.struct.struct_self_member.Point = alloca %struct_self_member.Point, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %p, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.struct_self_member.Point, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   store %struct_self_member.Point { i32 1, i32 1 }, ptr %tmp.struct.struct_self_member.Point, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %p, ptr align 4 %tmp.struct.struct_self_member.Point, i64 8, i1 false)
-// CHECK-NEXT:   call void @struct_self_member.Point.addOne(ptr byref(%struct_self_member.Point) %p)
+};

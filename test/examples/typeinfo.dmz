@@ -3,7 +3,7 @@
 const types = import("../../std/types.dmz");
 
 extern fn printf(fmt: *u8, ...) -> i32;
-struct MyStruct {
+const MyStruct = struct {
     a: i32,
     b: bool,
 
@@ -11,7 +11,7 @@ struct MyStruct {
     }
     pub fn bar() -> void {
     }
-}
+};
 
 fn print<T>() -> void {
     const info = @typeinfo(T);

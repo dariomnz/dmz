@@ -3,15 +3,15 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-packed struct packed_point {
+const packed_point = packed struct {
     x: i8,
     y: i32,
-}
+};
 
-struct point {
+const point = struct {
     x: i8,
     y: i32,
-}
+};
 
 fn main() -> void {
     let size_u1 = @sizeof(u1);

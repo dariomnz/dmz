@@ -1,11 +1,11 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '10\n10\n20\n20\nColor{1,1,1}\nColor{10,10,10}\n')
 
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
-}
+};
 
 fn bar(c: *Color) -> void {
     c.r = 10;

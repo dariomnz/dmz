@@ -9,10 +9,10 @@
 
 const std = import("std");
 
-union Token {
+const Token = union {
     int_val: i32,
     str_val: *u8,
-}
+};
 
 test "union instantiation and access" {
     let t = Token { int_val: 5 };
@@ -26,10 +26,10 @@ test "union instantiation and access" {
     try std.testing.expect(t2.str_val[4] == 'o');
 }
 
-union Mix {
+const Mix = union {
     a: i32,
     b: i32,
-}
+};
 
 test "union memory sharing" {
     let m = Mix { a: 10 };

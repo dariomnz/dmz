@@ -1,15 +1,16 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '3\n3\n1\n2\n3\n')
-struct S {
+const S = struct {
   x: i32,
   s2: S2,
-}
+};
 
-struct S2 {
+const S2 = struct {
   x: i32,
   y: i32,
   z: i32,
-}
+};
+
 extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
 
 fn foo() -> void {

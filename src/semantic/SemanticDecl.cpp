@@ -179,7 +179,6 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             auto ret =
                 makePtr<ResolvedTestDecl>(function.location, function.identifier, functionDecl, std::move(takenScope));
             ret->getFnType()->fnDecl = ret.get();
-            ret->symbolName = resolve_decl_name(function.identifier);
             if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         }

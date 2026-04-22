@@ -68,7 +68,7 @@ fn bang2() -> !void {
 // CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:14:5: in function 'error_trace.c'
 // CHECK-NEXT:  14 |     try b();
 // CHECK-NEXT:           ^
-// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:18:5: in function 'error_trace.error trace'
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:18:5: in function 'error trace'
 // CHECK-NEXT:  18 |     try c();
 // CHECK-NEXT:           ^
 // CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'
@@ -93,7 +93,7 @@ fn bang2() -> !void {
 // CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:28:9: in function 'error_trace.foo'
 // CHECK-NEXT:  28 |         try bar();
 // CHECK-NEXT:               ^
-// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:22:5: in function 'error_trace.error trace 2'
+// CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:22:5: in function 'error trace 2'
 // CHECK-NEXT:  22 |     try foo(12);
 // CHECK-NEXT:           ^
 // CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'

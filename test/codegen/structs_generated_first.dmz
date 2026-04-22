@@ -34,5 +34,5 @@ fn main() -> void {
   println(foo(x).y);
 }
 
-struct S { x: i32, y:i32 }
-struct S2 { x: i32, y:i32 }
+const S = struct { x: i32, y:i32 };
+const S2 = struct { x: i32, y:i32 };

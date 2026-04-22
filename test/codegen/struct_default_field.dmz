@@ -8,11 +8,11 @@ fn one() -> i32 {
     return 1;
 }
 
-struct StructWithDefault {
+const StructWithDefault = struct {
     r: i32,
     g: i32 = 0,
     b: i32 = one(),
-}
+};
 
 fn main() -> void {
     printf("Start main\n");
