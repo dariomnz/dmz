@@ -16,6 +16,10 @@ fn checkSorted(slice: []i32, cmp: *fn(i32, i32)->bool) -> !void {
 fn main() -> void {
     let libc_alloc = std.mem.libc_allocator.init();
     let allocator = libc_alloc.Allocator();
+    const lambda = struct {
+        pub fn comp(a: i32, b: i32) -> bool { return a <= b; }
+    };
+    const comp = &lambda.comp;
 
     const iters = 1000;
     {
@@ -33,7 +37,6 @@ fn main() -> void {
         // CHECK: Allocated in vector = 8160
         {
             const start_sort = std.time.get();
-            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
             std.algorithm.bubbleSort<i32>(v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Vector = {}\n", v.slice()[0..100]);
@@ -43,7 +46,6 @@ fn main() -> void {
         }
         {
             const start_sort = std.time.get();
-            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
             std.algorithm.bubbleSort<i32>(v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Time taken in sort vector {}: {} ms\n", .{v.size(), (end_sort - start_sort) * 1000.0});
@@ -65,7 +67,6 @@ fn main() -> void {
         // CHECK: Allocated in vector = 8160
         {
             const start_sort = std.time.get();
-            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
             std.algorithm.quickSort<i32>(v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Vector = {}\n", v.slice()[0..100]);
@@ -75,7 +76,6 @@ fn main() -> void {
         }
         {
             const start_sort = std.time.get();
-            const comp = [](a: i32, b: i32) -> bool { return a <= b; };
             std.algorithm.quickSort<i32>(v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Time taken in sort vector {}: {} ms\n", .{v.size(), (end_sort - start_sort) * 1000.0});

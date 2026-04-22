@@ -487,6 +487,7 @@ std::vector<ptr<ResolvedDeferRefStmt>> Sema::resolve_defer_ref_stmt(bool isScope
             defers.emplace_back(makePtr<ResolvedDeferRefStmt>(deferStmt->location, *deferStmt));
         }
         if (isScope) break;
+        if (scope->parent && scope->parent->currentFunction != scope->currentFunction) break;
     }
     return defers;
 }

@@ -1007,6 +1007,7 @@ ptr<ResolvedLambdaExpr> Sema::resolve_lambda_expr(const LambdaExpr &expr) {
 
     auto prevFunc = m_currentFunction;
     m_currentFunction = lambdaFunc.get();
+    m_currentScope->currentFunction = lambdaFunc.get();
 
     auto resolvedBody = resolve_block(*expr.body);
     m_currentFunction = prevFunc;

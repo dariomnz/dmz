@@ -145,10 +145,8 @@ void Codegen::generate_body(const ResolvedDecl &decl) {
 
     if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
         generate_struct_fields(*sd);
-        generate_struct_functions(*sd);
     } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&decl)) {
         generate_union_fields(*ud);
-        generate_union_functions(*ud);
     } else if (auto fd = dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
         generate_function_body(*fd);
     }
