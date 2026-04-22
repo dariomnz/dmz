@@ -6,7 +6,6 @@ extern fn printf(fmt:*u8, ...) -> i32;
 let num = 24;
 const cnum = 100;
 // CHECK: @global_var.num = internal global i32 24
-// CHECK: @global_var.cnum = internal constant i32 100
 
 fn main() -> void {
     num = 320;

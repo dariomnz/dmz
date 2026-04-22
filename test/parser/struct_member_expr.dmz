@@ -1,9 +1,9 @@
 // RUN: dmz %s -ast-dump 2>&1 | filecheck %s
-struct Color {
+const Color = struct {
     r: i32,
     g: i32,
     b: i32,
-}
+};
 
 fn main() -> void {
     let s = Color {r: 0, g: 1, b: 2};

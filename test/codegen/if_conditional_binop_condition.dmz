@@ -38,4 +38,6 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn main() -> void {}
+fn main() -> void {
+    foo(1);
+}

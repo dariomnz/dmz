@@ -11,9 +11,10 @@
 
 namespace DMZ {
 Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
-                 bool noRemoveUnused)
+                 bool noRemoveUnused, bool isModule)
     : m_resolvedTree(move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(resolvedTree)),
       m_noRemoveUnused(noRemoveUnused),
+      m_isModule(isModule),
       m_context(makePtr<llvm::LLVMContext>()),
       m_builder(*m_context),
       m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)),
@@ -36,8 +37,38 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
         m_module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", llvm::dwarf::DWARF_VERSION);
     }
 
-    generate_in_module_decl(m_resolvedTree);
-    generate_in_module_body(m_resolvedTree);
+    generate_error_no_err();
+
+    std::string mainToCall = runTest ? "__builtin_main_test" : "main";
+
+    std::function<void(const std::vector<ptr<ResolvedDecl>> &)> findAndGenMain =
+        [&](const std::vector<ptr<ResolvedDecl>> &decls) {
+            for (auto &&decl : decls) {
+                if (auto fd = dynamic_cast<const ResolvedFuncDecl *>(decl.get())) {
+                    if (fd->identifier == mainToCall) {
+                        generate_decl(*fd);
+                    }
+                } else if (auto md = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+                    findAndGenMain(md->declarations);
+                }
+            }
+        };
+
+    findAndGenMain(m_resolvedTree);
+
+    if (m_isModule) {
+        // Generate all declarations in the source file
+        for (auto &&decl : m_resolvedTree) {
+            if (auto md = dynamic_cast<const ResolvedModuleDecl *>(decl.get())) {
+                if (md->module_path == m_module->getSourceFileName()) {
+                    for (auto &&d : md->declarations) {
+                        generate_decl(*d);
+                    }
+                }
+            }
+        }
+    }
+
     generate_pending_decls();
 
     generate_main_wrapper(runTest);
@@ -79,6 +110,48 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Codegen::generate_ir(bool r
     }
 
     return {std::move(m_context), std::move(m_module)};
+}
+
+void Codegen::generate_decl(const ResolvedDecl &decl) {
+    if (m_resolvedDecls.contains(&decl)) return;
+    m_resolvedDecls.insert(&decl);
+
+    if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
+        if (dynamic_cast<const ResolvedGenericStructDecl *>(&decl)) return;
+        generate_struct_decl(*sd);
+        m_pendingDecls.insert(&decl);
+    } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&decl)) {
+        generate_union_decl(*ud);
+        m_pendingDecls.insert(&decl);
+    } else if (auto fd = dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
+        if (dynamic_cast<const ResolvedGenericFunctionDecl *>(&decl)) return;
+        if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&decl)) return;
+        generate_function_decl(*fd);
+        if (!dynamic_cast<const ResolvedExternFunctionDecl *>(&decl)) {
+            m_pendingDecls.insert(&decl);
+        }
+    } else if (auto ds = dynamic_cast<const ResolvedDeclStmt *>(&decl)) {
+        generate_global_var_decl(*ds);
+    }
+}
+
+void Codegen::generate_body(const ResolvedDecl &decl) {
+    debug_func(decl.name());
+    ptr<DebugScopeRAII> debugScope = nullptr;
+    if (m_debugSymbols) {
+        m_currentDebugFile = generate_debug_file(decl.location.file_name);
+        debugScope = makePtr<DebugScopeRAII>(*this, m_currentDebugFile);
+    }
+
+    if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
+        generate_struct_fields(*sd);
+        generate_struct_functions(*sd);
+    } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&decl)) {
+        generate_union_fields(*ud);
+        generate_union_functions(*ud);
+    } else if (auto fd = dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
+        generate_function_body(*fd);
+    }
 }
 
 llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {

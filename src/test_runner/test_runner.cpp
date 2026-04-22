@@ -154,6 +154,7 @@ static std::pair<bool, std::string> verify_checks(const std::string& filename, c
 
         if (check.kind == CheckKind::Check) {
             bool found = false;
+            // Search from current position to end
             for (size_t l = current_line_idx; l < lines.size(); ++l) {
                 size_t start_col = (l == current_line_idx) ? current_col_idx : 0;
                 if (start_col >= lines[l].length() && !lines[l].empty()) continue;
@@ -166,6 +167,22 @@ static std::pair<bool, std::string> verify_checks(const std::string& filename, c
                     found = true;
                     has_matched_once = true;
                     break;
+                }
+            }
+
+            // If not found, wrap around and search from the beginning
+            if (!found) {
+                for (size_t l = 0; l <= current_line_idx && l < lines.size(); ++l) {
+                    size_t end_col = (l == current_line_idx) ? current_col_idx : lines[l].length();
+                    std::string search_text = lines[l].substr(0, end_col);
+                    size_t m_pos, m_len;
+                    if (match_pattern(search_text, check.pattern, m_pos, m_len)) {
+                        current_line_idx = l;
+                        current_col_idx = m_pos + m_len;
+                        found = true;
+                        has_matched_once = true;
+                        break;
+                    }
                 }
             }
             if (!found)

@@ -1,4 +1,4 @@
-// RUN: dmz %s -llvm-dump -no-remove-unused 2>&1 | filecheck %s
+// RUN: dmz %s -llvm-dump -module -no-remove-unused 2>&1 | filecheck %s
 // RUN: dmz %s -run | ( ! grep ^ )
 fn main() -> void {}
 

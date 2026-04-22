@@ -9,6 +9,7 @@ namespace DMZ {
 class Codegen {
     std::vector<ptr<ResolvedDecl>> m_resolvedTree;
     bool m_noRemoveUnused;
+    bool m_isModule;
 
     ptr<llvm::LLVMContext> m_context;
     llvm::IRBuilder<> m_builder;
@@ -30,9 +31,11 @@ class Codegen {
         llvm::BasicBlock *exitBB;
     };
     std::unordered_map<const ResolvedCatchErrorExpr *, CatchBreakTarget> m_catchBreakTargets;
-    std::unordered_set<const ResolvedStructDecl *> m_pendingStructs;
-    std::unordered_set<const ResolvedUnionDecl *> m_pendingUnions;
-    std::unordered_set<const ResolvedFuncDecl *> m_pendingFunctions;
+    std::unordered_set<const ResolvedDecl *> m_resolvedDecls;
+    std::unordered_set<const ResolvedDecl *> m_pendingDecls;
+
+    void generate_decl(const ResolvedDecl &decl);
+    void generate_body(const ResolvedDecl &decl);
 
     llvm::Value *retVal = nullptr;
     llvm::BasicBlock *retBB = nullptr;
@@ -69,7 +72,7 @@ class Codegen {
 
    public:
     Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
-            bool noRemoveUnused);
+            bool noRemoveUnused, bool isModule);
 
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest,
                                                                      const std::string &optimizationLevel);

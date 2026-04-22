@@ -29,7 +29,7 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push:                                 ; preds = %if.true
 // CHECK-NEXT:   %5 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %3
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 6, i32 9, %slice.struct { ptr @global.str.trace.data.1, i64 24 } }, ptr %5, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 6, i32 9, %slice.struct { ptr @global.str.trace.data.2, i64 24 } }, ptr %5, align 8
 // CHECK-NEXT:   %6 = add i32 %3, 1
 // CHECK-NEXT:   store i32 %6, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge
@@ -51,7 +51,7 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push2:                                ; preds = %if.true1
 // CHECK-NEXT:   %12 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %10
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 9, i32 13, %slice.struct { ptr @global.str.trace.data.1, i64 24 } }, ptr %12, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data, i64 57 }, i32 9, i32 13, %slice.struct { ptr @global.str.trace.data.2, i64 24 } }, ptr %12, align 8
 // CHECK-NEXT:   %13 = add i32 %10, 1
 // CHECK-NEXT:   store i32 %13, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge3
@@ -71,6 +71,7 @@ fn foo(x: i32) -> !i32 {
 // CHECK-NEXT: return:                                           ; preds = %if.exit4, %error_trace.merge3, %error_trace.merge
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
+// CHECK-NEXT: 
 
 extern fn printf(fmt: *u8, ...) -> i32;
 

@@ -69,21 +69,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&functionDecl)) {
         return nullptr;
     }
-    if (auto resolvedFunctionDecl = dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
-        for (auto &&func : resolvedFunctionDecl->specializations) {
-            debug_msg("Function specialization decl: " << func->name());
-            auto cast_func = dynamic_cast<ResolvedFuncDecl *>(func.get());
-            if (!cast_func) {
-                func->dump();
-                dmz_unreachable(functionDecl.location, "internal error: unexpected declaration in specializations");
-            }
-            if (func->state != ResolvedState::FullyResolved) {
-                debug_msg(func->symbolName << " is not fully resolved skiping");
-                continue;
-            }
-            if (func->specializedTypes->is_generic()) continue;
-            generate_function_decl(*cast_func);
-        }
+    if (dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         return nullptr;
     }
 
@@ -97,7 +83,7 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));
 
-    m_pendingFunctions.insert(&functionDecl);
+    generate_decl(functionDecl);
 
     return fn;
 }
@@ -297,24 +283,14 @@ llvm::StructType *Codegen::get_struct_decl(const ResolvedStructDecl &structDecl)
     auto name = generate_decl_name(structDecl);
     auto structType = llvm::StructType::getTypeByName(*m_context, name);
     if (structType) return structType;
-    m_pendingStructs.insert(&structDecl);
 
-    auto ret = generate_struct_decl(structDecl);
-    generate_struct_fields(structDecl);
-    return ret;
+    generate_decl(structDecl);
+    return llvm::StructType::getTypeByName(*m_context, name);
 }
 
 llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        for (auto &&espec : genStruct->specializations) {
-            if (espec->state != ResolvedState::FullyResolved) {
-                debug_msg(espec->symbolName << " is not fully resolved skiping");
-                continue;
-            }
-            if (espec->specializedTypes->is_generic()) continue;
-            generate_struct_decl(*espec);
-        }
+    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         return nullptr;
     }
     auto structType = llvm::StructType::create(*m_context, generate_decl_name(structDecl));
@@ -329,15 +305,7 @@ llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &struct
 
 void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        for (auto &&espec : genStruct->specializations) {
-            if (espec->state != ResolvedState::FullyResolved) {
-                debug_msg(espec->symbolName << " is not fully resolved skiping");
-                continue;
-            }
-            if (espec->specializedTypes->is_generic()) continue;
-            generate_struct_fields(*espec);
-        }
+    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         return;
     }
     auto *type = static_cast<llvm::StructType *>(generate_type(*structDecl.type));
@@ -358,15 +326,7 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 
 void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (auto genStruct = dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        for (auto &&espec : genStruct->specializations) {
-            if (espec->state != ResolvedState::FullyResolved) {
-                debug_msg(espec->symbolName << " is not fully resolved skiping");
-                continue;
-            }
-            if (espec->specializedTypes->is_generic()) continue;
-            generate_struct_functions(*espec);
-        }
+    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
         return;
     }
     for (auto &&func : structDecl.functions) {
@@ -378,11 +338,9 @@ llvm::StructType *Codegen::get_union_decl(const ResolvedUnionDecl &unionDecl) {
     auto name = generate_decl_name(unionDecl);
     auto unionType = llvm::StructType::getTypeByName(*m_context, name);
     if (unionType) return unionType;
-    m_pendingUnions.insert(&unionDecl);
 
-    auto ret = generate_union_decl(unionDecl);
-    generate_union_fields(unionDecl);
-    return ret;
+    generate_decl(unionDecl);
+    return llvm::StructType::getTypeByName(*m_context, name);
 }
 
 llvm::StructType *Codegen::generate_union_decl(const ResolvedUnionDecl &unionDecl) {
@@ -646,23 +604,11 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
 
 void Codegen::generate_pending_decls() {
     debug_func("");
-    while (!m_pendingStructs.empty() || !m_pendingUnions.empty() || !m_pendingFunctions.empty()) {
-        auto structs = std::move(m_pendingStructs);
-        m_pendingStructs.clear();
-        for (auto *sd : structs) {
-            generate_struct_functions(*sd);
-        }
-
-        auto unions = std::move(m_pendingUnions);
-        m_pendingUnions.clear();
-        for (auto *ud : unions) {
-            generate_union_functions(*ud);
-        }
-
-        auto functions = std::move(m_pendingFunctions);
-        m_pendingFunctions.clear();
-        for (auto *fn : functions) {
-            generate_function_body(*fn);
+    while (!m_pendingDecls.empty()) {
+        auto pending = std::move(m_pendingDecls);
+        m_pendingDecls.clear();
+        for (auto *decl : pending) {
+            generate_body(*decl);
         }
     }
 }

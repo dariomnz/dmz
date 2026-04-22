@@ -28,7 +28,7 @@ int CodegenUtils::typeBitSize(const ResolvedType &type) {
     }
     llvm::LLVMContext context;
     llvm::Module module("tmp", context);
-    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true).generate_type(type);
+    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true, false).generate_type(type);
     return module.getDataLayout().getTypeSizeInBits(llvmType);
 }
 
