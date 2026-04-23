@@ -3,25 +3,36 @@
 fn main() -> void {
     const x = 10;
     const y = 20;
-
-    let f = [](a: i32) -> i32 {
-        return x + y + a;
+    
+    const f = struct {
+        pub fn call(a: i32) -> i32 {
+            return x + y + a;
+        }
     };
+    
+    const res = f.call(10);
 }
-// CHECK: ResolvedDeclStmt *fn(i32)->i32
-// CHECK-NEXT:         ResolvedVarDecl:*fn(i32)->i32 f
-// CHECK-NEXT:           ResolvedLambdaExpr:*fn(i32)->i32
-// CHECK-NEXT:             ResolvedLambdaFunctionDecl lambda_7_12 fn(i32)->i32
-// CHECK-NEXT:               Lambda captures
-// CHECK-NEXT:               Lambda params
-// CHECK-NEXT:                 ResolvedParamDecl:i32 a
-// CHECK-NEXT:               Lambda body
-// CHECK-NEXT:                 ResolvedBlock
-// CHECK-NEXT:                   ResolvedReturnStmt
-// CHECK-NEXT:                     ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:                       ResolvedBinaryOperator:i32 '+'
-// CHECK-NEXT:                         ResolvedDeclRefExpr:i32 x
-// CHECK-NEXT:                         | value: 10
-// CHECK-NEXT:                         ResolvedDeclRefExpr:i32 y
-// CHECK-NEXT:                         | value: 20
-// CHECK-NEXT:                       ResolvedDeclRefExpr:i32 a
+// CHECK: ResolvedDeclStmt lambda.structL7C14.f
+// CHECK-NEXT: ResolvedVarDecl:const lambda.structL7C14.f f
+// CHECK-NEXT:   ResolvedTypeExpr:lambda.structL7C14.f
+// CHECK-NEXT:     ResolvedTypeStructDecl lambda.structL7C14.f
+// CHECK-NEXT:   ResolvedTypeStructDecl lambda.structL7C14.f
+// CHECK-NEXT:     ResolvedStructDecl lambda.structL7C14.f
+// CHECK-NEXT:       ResolvedStaticMemberFunctionDecl call fn(i32)->i32
+// CHECK-NEXT:         ResolvedParamDecl:i32 a
+// CHECK-NEXT:         ResolvedBlock
+// CHECK-NEXT:           ResolvedReturnStmt
+// CHECK-NEXT:             ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:               ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:                 | value: 10
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:                 | value: 20
+// CHECK-NEXT:               ResolvedDeclRefExpr:i32 a
+
+// CHECK: ResolvedVarDecl:const i32 res
+// CHECK-NEXT:   ResolvedCallExpr:i32
+// CHECK-NEXT:     ResolvedMemberExpr:fn(i32)->i32 call
+// CHECK-NEXT:       ResolvedDeclRefExpr:lambda.structL7C14.f f
+// CHECK-NEXT:     ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:     | value: 10

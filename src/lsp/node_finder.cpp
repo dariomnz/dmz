@@ -90,8 +90,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
 void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     if (found_decl) return;
 
-    if (!dynamic_cast<const ResolvedLambdaFunctionDecl*>(&decl) &&
-        is_at_location(decl.location, decl.identifier.length())) {
+    if (is_at_location(decl.location, decl.identifier.length())) {
         found_decl = &decl;
         return;
     }
@@ -332,12 +331,6 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {
             found_decl = &importExpr->moduleDecl;
         }
-    } else if (auto* lambdaExpr = dynamic_cast<const ResolvedLambdaExpr*>(&expr)) {
-        for (const auto& init : lambdaExpr->captureInitializers) {
-            find_in_expr(*init);
-            if (found_decl) return;
-        }
-        find_in_decl(*lambdaExpr->lambdaFunc);
     } else if (auto* atomicLoad = dynamic_cast<const ResolvedAtomicLoadExpr*>(&expr)) {
         find_in_expr(*atomicLoad->ptrExpr);
     } else if (auto* atomicStore = dynamic_cast<const ResolvedAtomicStoreExpr*>(&expr)) {

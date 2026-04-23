@@ -26,14 +26,6 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
             name = decl.identifier;
             return name;
         }
-        if (dynamic_cast<const ResolvedLambdaFunctionDecl *>(&decl)) {
-            if (m_currentModule) {
-                name = m_currentModule->identifier + "." + decl.identifier;
-            } else {
-                name = decl.identifier;
-            }
-            return name;
-        }
     }
     name = decl.name();
     return name;
@@ -171,27 +163,6 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     llvm::Value *undef = llvm::UndefValue::get(m_builder.getInt32Ty());
     m_allocaInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
     m_memsetInsertPoint = new llvm::BitCastInst(undef, undef->getType(), "memset.placeholder", entryBB);
-
-    if (auto lambdaFunc = dynamic_cast<const ResolvedLambdaFunctionDecl *>(&functionDecl)) {
-        if (!lambdaFunc->captures.empty()) {
-            auto globalCaptureBuffer = lambdaFunc->globalCaptureBuffer;
-            if (globalCaptureBuffer) {
-                auto captureStructType = llvm::cast<llvm::StructType>(globalCaptureBuffer->getValueType());
-                for (size_t i = 0; i < lambdaFunc->captures.size(); i++) {
-                    auto cap = lambdaFunc->captures[i].get();
-                    auto localAlloca = allocate_stack_variable(cap->location, cap->identifier, *cap->type);
-                    m_declarations[cap] = localAlloca;
-
-                    auto gep = m_builder.CreateStructGEP(captureStructType, globalCaptureBuffer, i);
-                    auto val = m_builder.CreateLoad(captureStructType->getElementType(i), gep);
-                    m_builder.CreateStore(val, localAlloca);
-                }
-            } else {
-                lambdaFunc->dump();
-                dmz_unreachable(lambdaFunc->location, "unreachable");
-            }
-        }
-    }
 
     bool returnsVoid = fnType->returnType->generate_struct() || fnType->returnType->kind == ResolvedTypeKind::Void;
 

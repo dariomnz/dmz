@@ -95,7 +95,6 @@ class Codegen {
     llvm::Value *generate_continue_stmt(const ResolvedContinueStmt &stmt);
     llvm::Value *generate_expr(const ResolvedExpr &expr, bool keepPointer = false);
     llvm::Value *generate_call_expr(const ResolvedCallExpr &call);
-    llvm::Value *generate_lambda_expr(const ResolvedLambdaExpr &expr);
     void generate_main_wrapper(bool runTest);
     llvm::AttributeList construct_attr_list(const ResolvedTypeFunction &fnType);
     llvm::Value *generate_unary_operator(const ResolvedUnaryOperator &unop);

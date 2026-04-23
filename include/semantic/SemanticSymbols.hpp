@@ -326,22 +326,6 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedLambdaFunctionDecl : public ResolvedFunctionDecl {
-    std::vector<ptr<ResolvedDecl>> captures;
-
-    llvm::GlobalVariable *globalCaptureBuffer = nullptr;
-
-    ResolvedLambdaFunctionDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type,
-                               std::vector<ptr<ResolvedParamDecl>> params, ptr<ResolvedScope> scope,
-                               std::vector<ptr<ResolvedDecl>> captures)
-        : ResolvedFunctionDecl(location, false, identifier, std::move(type), std::move(params), std::move(scope),
-                               nullptr),
-          captures(std::move(captures)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-};
-
 struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
     struct ResolvedGenericFunctionDecl *genFunc;
     ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
@@ -750,21 +734,6 @@ struct ResolvedCallExpr : public ResolvedExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedLambdaExpr : public ResolvedExpr {
-    ptr<ResolvedLambdaFunctionDecl> lambdaFunc;
-    std::vector<ptr<ResolvedExpr>> captureInitializers;
-    ptr<ResolvedScope> scope;
-
-    ResolvedLambdaExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedLambdaFunctionDecl> lambdaFunc,
-                       std::vector<ptr<ResolvedExpr>> captureInitializers, ptr<ResolvedScope> scope)
-        : ResolvedExpr(location, std::move(type)),
-          lambdaFunc(std::move(lambdaFunc)),
-          captureInitializers(std::move(captureInitializers)),
-          scope(std::move(scope)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-};
 
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &decl;

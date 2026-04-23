@@ -25,12 +25,12 @@
 - [x] jit stack trace on segfault
 - [x] stabilize lsp
 - [x] @call
-- [ ] all stmt are expr (struct and union for the moment)
-- [ ] new semantic system with lazy resolution
-- [ ] new scopes system tied to each declaration
+- [x] all stmt are expr (struct and union for the moment)
+- [x] new semantic system with lazy resolution
+- [x] new scopes system tied to each declaration
 - [ ] lsp completion with new scope system
 - [ ] permit types top be expr at compile time const t = i32;
-- [ ] struct to replace lambdas
+- [x] struct to replace lambdas
 - [ ] enums with .name with auto resolve
 - [ ] remove builtin functions from lexer and be normal functions
 - [ ] change @atomicRmw to use enum in op

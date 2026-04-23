@@ -2,21 +2,25 @@
 
 fn main() -> void {
     let x = 1;
-    let f = [x](a: i32) -> i32 {
-        return x + a;
+    
+    const f = struct {
+        x: i32,
+        pub fn call(self: *@This, a: i32) -> i32 {
+            return self.x + a;
+        }
     };
+
+    const res = f{x: x}.call(10);
 }
-// CHECK:         VarDecl: f
-// CHECK-NEXT:           LambdaExpr
-// CHECK-NEXT:             Lambda captures
-// CHECK-NEXT:               DeclRefExpr x
-// CHECK-NEXT:             Lambda params
-// CHECK-NEXT:               ParamDecl:i32 a
-// CHECK-NEXT:             Lambda returnType
-// CHECK-NEXT:               TypeNumber i32
-// CHECK-NEXT:             Lambda body
-// CHECK-NEXT:               Block
-// CHECK-NEXT:                 ReturnStmt
-// CHECK-NEXT:                   BinaryOperator '+'
-// CHECK-NEXT:                     DeclRefExpr x
-// CHECK-NEXT:                     DeclRefExpr a
+// CHECK: VarDecl:const  f
+// CHECK-NEXT: StructDecl structL6C14
+// CHECK-NEXT:   FieldDecl:i32 x
+// CHECK-NEXT:   MemberFunctionDecl call -> i32
+// CHECK-NEXT:     ParamDecl:*@This self
+// CHECK-NEXT:     ParamDecl:i32 a
+// CHECK-NEXT:     Block
+// CHECK-NEXT:       ReturnStmt
+// CHECK-NEXT:         BinaryOperator '+'
+// CHECK-NEXT:           MemberExpr .x
+// CHECK-NEXT:             DeclRefExpr self
+// CHECK-NEXT:           DeclRefExpr a

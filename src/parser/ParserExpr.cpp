@@ -130,36 +130,6 @@ ptr<Expr> Parser::parse_primary() {
 
             return makePtr<ArrayInstantiationExpr>(location, std::move(*initList), haveTrailingComma);
         }
-        if (m_nextToken.type == TokenType::bracket_l) {
-            bool haveTrailingComma;
-            std::vector<ptr<Expr>> captures;
-            if (peek_token().type == TokenType::bracket_r) {
-                eat_next_token();  // eat [
-                eat_next_token();  // eat ]
-            } else {
-                varOrReturn(capturesPtr, parse_list_with_trailing_comma<Expr>(
-                                             {TokenType::bracket_l, "expected '['"}, [this]() { return parse_expr(); },
-                                             {TokenType::bracket_r, "expected ']'"}, haveTrailingComma));
-                captures = std::move(*capturesPtr);
-            }
-
-            if (m_nextToken.type != TokenType::par_l) {
-                return report(m_nextToken.loc, "expected '(' after lambda captures");
-            }
-            varOrReturn(paramsList, parse_list_with_trailing_comma<ParamDecl>(
-                                        {TokenType::par_l, "expected '('"}, [this]() { return parse_param_decl(); },
-                                        {TokenType::par_r, "expected ')'"}, haveTrailingComma));
-
-            matchOrReturn(TokenType::return_arrow, "expected '->'");
-            eat_next_token();  // eat '->'
-
-            varOrReturn(returnType, parse_type());
-
-            varOrReturn(body, parse_block());
-
-            return makePtr<LambdaExpr>(location, std::move(captures), std::move(*paramsList), std::move(returnType),
-                                       std::move(body));
-        }
         if (m_nextToken.type == TokenType::kw_try) {
             return parse_try_error_expr();
         }

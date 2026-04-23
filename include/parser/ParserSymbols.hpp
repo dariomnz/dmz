@@ -847,23 +847,6 @@ struct TestDecl : public FunctionDecl {
     std::string to_str() const override;
 };
 
-struct LambdaExpr : public Expr {
-    std::vector<ptr<Expr>> captures;
-    std::vector<ptr<ParamDecl>> params;
-    ptr<Expr> returnType;
-    ptr<Block> body;
-
-    LambdaExpr(SourceLocation location, std::vector<ptr<Expr>> captures, std::vector<ptr<ParamDecl>> params,
-               ptr<Expr> returnType, ptr<Block> body)
-        : Expr(location),
-          captures(std::move(captures)),
-          params(std::move(params)),
-          returnType(std::move(returnType)),
-          body(std::move(body)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-};
 struct AtomicLoadExpr : public Expr {
     ptr<Expr> ptr_expr;
     AtomicLoadExpr(SourceLocation location, ptr<Expr> ptr_expr) : Expr(location), ptr_expr(std::move(ptr_expr)) {}
