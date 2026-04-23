@@ -8,6 +8,10 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
     ptr<Node> node = nullptr;
     if (auto cast_expr = dynamic_cast<const Decoration*>(&expr)) {
         node = fmt_decoration(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const UnionDecl*>(&expr)) {
+        node = fmt_union_decl(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const StructDecl*>(&expr)) {
+        node = fmt_struct_decl(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const Type*>(&expr)) {
         node = makePtr<Text>(cast_expr->to_str());
     } else if (auto cast_expr = dynamic_cast<const IntLiteral*>(&expr)) {

@@ -12,10 +12,10 @@ ptr<Node> Formatter::fmt_decl(const Decl& decl) {
         return fmt_decoration(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const FuncDecl*>(&decl)) {
         return fmt_func_decl(*cast_decl);
-    } else if (auto cast_decl = dynamic_cast<const StructDecl*>(&decl)) {
-        return fmt_struct_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const UnionDecl*>(&decl)) {
         return fmt_union_decl(*cast_decl);
+    } else if (auto cast_decl = dynamic_cast<const StructDecl*>(&decl)) {
+        return fmt_struct_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const FieldDecl*>(&decl)) {
         return fmt_field_decl(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const ParamDecl*>(&decl)) {
@@ -120,8 +120,6 @@ ptr<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
         ret->nodes.emplace_back(makePtr<Space>());
     }
     ret->nodes.emplace_back(makePtr<Text>("struct"));
-    ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
     if (auto generic = dynamic_cast<const GenericStructDecl*>(&decl)) {
         vec<ptr<Node>> gens;
         for (auto&& gen : generic->genericTypes) {
@@ -156,8 +154,6 @@ ptr<Node> Formatter::fmt_union_decl(const UnionDecl& decl) {
         ret->nodes.emplace_back(makePtr<Space>());
     }
     ret->nodes.emplace_back(makePtr<Text>("union"));
-    ret->nodes.emplace_back(makePtr<Space>());
-    ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
 
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("{"));

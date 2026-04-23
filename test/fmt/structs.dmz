@@ -1,0 +1,63 @@
+// RUN: dmz -fmt %s 2>&1 | filecheck %s --match-full-lines --strict-whitespace
+
+pub const S = struct {
+    a: i32,
+    b: f32,
+};
+
+const Nested = struct {
+    inner: struct {
+        x: i32,
+    },
+};
+
+const PackedS = packed struct {
+    a: i8,
+};
+
+const UnionT = union {
+    a: i32,
+    b: f32,
+};
+
+const GenericS = struct<T> {
+    val: T,
+};
+
+const WithMethod = struct {
+    a: i32,
+    pub fn get_a(self: *WithMethod) -> i32 {
+        return self.a;
+    }
+};
+
+// CHECK:pub const S = struct {
+// CHECK-NEXT:    a: i32,
+// CHECK-NEXT:    b: f32,
+// CHECK-NEXT:};
+
+// CHECK:const Nested = struct {
+// CHECK-NEXT:    inner: struct {
+// CHECK-NEXT:        x: i32,
+// CHECK-NEXT:    },
+// CHECK-NEXT:};
+
+// CHECK:const PackedS = packed struct {
+// CHECK-NEXT:    a: i8,
+// CHECK-NEXT:};
+
+// CHECK:const UnionT = union {
+// CHECK-NEXT:    a: i32,
+// CHECK-NEXT:    b: f32,
+// CHECK-NEXT:};
+
+// CHECK:const GenericS = struct<T> {
+// CHECK-NEXT:    val: T,
+// CHECK-NEXT:};
+
+// CHECK:const WithMethod = struct {
+// CHECK-NEXT:    a: i32,
+// CHECK-NEXT:    pub fn get_a(self: *WithMethod) -> i32 {
+// CHECK-NEXT:        return self.a;
+// CHECK-NEXT:    }
+// CHECK-NEXT:};

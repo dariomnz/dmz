@@ -61,6 +61,14 @@ ptr<Expr> Parser::parse_primary() {
 
         return makePtr<DeclRefExpr>(location, std::move(identifier));
     }
+    if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_union ||
+        m_nextToken.type == TokenType::kw_packed) {
+        if (m_nextToken.type == TokenType::kw_union) {
+            return parse_union_decl();
+        } else {
+            return parse_struct_decl();
+        }
+    }
     if (!(restrictions & OnlyTypeExpr)) {
         if (m_nextToken.type == TokenType::dot && peek_token().type == TokenType::block_l) {
             SourceLocation location = m_nextToken.loc;
@@ -132,14 +140,6 @@ ptr<Expr> Parser::parse_primary() {
         }
         if (m_nextToken.type == TokenType::kw_try) {
             return parse_try_error_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_union ||
-            m_nextToken.type == TokenType::kw_packed) {
-            if (m_nextToken.type == TokenType::kw_union) {
-                return parse_union_decl();
-            } else {
-                return parse_struct_decl();
-            }
         }
         if (m_nextToken.type == TokenType::kw_import) {
             return parse_import_expr();
