@@ -21,7 +21,7 @@ fn main() -> void {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %tmp.struct.hello_world.Point = alloca %hello_world.Point, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.hello_world.Point, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal), !dbg !8
+// CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.3E8D476A), !dbg !8
 // CHECK-NEXT:     #dbg_declare(ptr %tmp.struct.hello_world.Point, !9, !DIExpression(), !15)
 // CHECK-NEXT:   store %hello_world.Point { i32 1, i32 2 }, ptr %tmp.struct.hello_world.Point, align 4, !dbg !15
 // CHECK-NEXT:   call void @hello_world.foo(ptr readonly %tmp.struct.hello_world.Point, i32 1, i32 2, i32 3), !dbg !16

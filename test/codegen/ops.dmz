@@ -23,36 +23,36 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %a, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 12, ptr %a, align 4
 // CHECK-NEXT:   %0 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %0)
+// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.7BB452B4, i32 %0)
 // CHECK-NEXT:   %2 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %3 = add i32 %2, 1
 // CHECK-NEXT:   store i32 %3, ptr %a, align 4
 // CHECK-NEXT:   %4 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1, i32 %4)
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.C2FF8C03, i32 %4)
 // CHECK-NEXT:   %6 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %7 = sub i32 %6, 1
 // CHECK-NEXT:   store i32 %7, ptr %a, align 4
 // CHECK-NEXT:   %8 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %9 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.2, i32 %8)
+// CHECK-NEXT:   %9 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.28F92A61, i32 %8)
 // CHECK-NEXT:   %10 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %11 = add i32 %10, 3
 // CHECK-NEXT:   store i32 %11, ptr %a, align 4
 // CHECK-NEXT:   %12 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %13 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.3, i32 %12)
+// CHECK-NEXT:   %13 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.159C6470, i32 %12)
 // CHECK-NEXT:   %14 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %15 = sub i32 %14, 4
 // CHECK-NEXT:   store i32 %15, ptr %a, align 4
 // CHECK-NEXT:   %16 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %17 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.4, i32 %16)
+// CHECK-NEXT:   %17 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.BA69F4DA, i32 %16)
 // CHECK-NEXT:   %18 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %19 = mul i32 %18, 2
 // CHECK-NEXT:   store i32 %19, ptr %a, align 4
 // CHECK-NEXT:   %20 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %21 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5, i32 %20)
+// CHECK-NEXT:   %21 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.9F15C105, i32 %20)
 // CHECK-NEXT:   %22 = load i32, ptr %a, align 4
 // CHECK-NEXT:   %23 = sdiv i32 %22, 2
 // CHECK-NEXT:   store i32 %23, ptr %a, align 4
 // CHECK-NEXT:   %24 = load i32, ptr %a, align 4
-// CHECK-NEXT:   %25 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.6, i32 %24)
+// CHECK-NEXT:   %25 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.2E65242B, i32 %24)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

@@ -62,7 +62,7 @@ test "add test 3" {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push:                                 ; preds = %if.true.try
 // CHECK-NEXT:   %7 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %5
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data.24, i64 7 }, i32 0, i32 1, %slice.struct { ptr @global.str.trace.data.25, i64 29 } }, ptr %7, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.file.6234390D, i64 7 }, i32 0, i32 1, %slice.struct { ptr @global.str.trace.function.79812EE3, i64 29 } }, ptr %7, align 8
 // CHECK-NEXT:   %8 = add i32 %5, 1
 // CHECK-NEXT:   store i32 %8, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge
@@ -92,7 +92,7 @@ test "add test 3" {
 // CHECK-NEXT: 
 // CHECK-NEXT: error_trace.push6:                                ; preds = %if.true.try5
 // CHECK-NEXT:   %15 = getelementptr [20 x %ErrorTraceEntry], ptr getelementptr inbounds nuw (%ErrorTrace, ptr @dmz_error_trace, i32 0, i32 1), i32 0, i32 %13
-// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.data.24, i64 7 }, i32 0, i32 1, %slice.struct { ptr @global.str.trace.data.25, i64 29 } }, ptr %15, align 8
+// CHECK-NEXT:   store %ErrorTraceEntry { %slice.struct { ptr @global.str.trace.file.6234390D, i64 7 }, i32 0, i32 1, %slice.struct { ptr @global.str.trace.function.79812EE3, i64 29 } }, ptr %15, align 8
 // CHECK-NEXT:   %16 = add i32 %13, 1
 // CHECK-NEXT:   store i32 %16, ptr @dmz_error_trace, align 4
 // CHECK-NEXT:   br label %error_trace.merge7
@@ -130,15 +130,15 @@ test "add test 3" {
 // CHECK-NEXT:   ]
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case:                                      ; preds = %entry
-// CHECK-NEXT:   store ptr @global.str.trace.data.2, ptr %retval, align 8
+// CHECK-NEXT:   store ptr @global.str.trace.function.FF100A5A, ptr %retval, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.case1:                                     ; preds = %entry
-// CHECK-NEXT:   store ptr @global.str.trace.data.1, ptr %retval, align 8
+// CHECK-NEXT:   store ptr @global.str.trace.function.829DF4DF, ptr %retval, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.else:                                      ; preds = %entry
-// CHECK-NEXT:   store ptr @string.literal.22, ptr %retval, align 8
+// CHECK-NEXT:   store ptr @string.literal.68AAC339, ptr %retval, align 8
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: switch.exit:                                      ; No predecessors!
@@ -297,27 +297,27 @@ test "add test 3" {
 // CHECK-NEXT:   br i1 %17, label %if.true44, label %if.false
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true:                                          ; preds = %for.body
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice, align 8
 // CHECK-NEXT:   %18 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u8", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %18, ptr align 8 @std.terminal.COLORGREEN, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp, ptr byval(%slice.struct) %string.literal.slice, ptr readonly %"tmp.struct.tuple.[]u8")
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.true, %for.body
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.3, i64 9 }, ptr %string.literal.slice3, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.A53FC016, i64 9 }, ptr %string.literal.slice3, align 8
 // CHECK-NEXT:   call void @"std.io.io.print<tuple{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp2, ptr byval(%slice.struct) %string.literal.slice3, ptr readonly %tmp.struct.tuple)
 // CHECK-NEXT:   %19 = load i1, ptr %isTerminal, align 1
 // CHECK-NEXT:   br i1 %19, label %if.true4, label %if.exit8
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true4:                                         ; preds = %if.exit
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice6, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice6, align 8
 // CHECK-NEXT:   %20 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u87", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %20, ptr align 8 @std.terminal.COLORRESET, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp5, ptr byval(%slice.struct) %string.literal.slice6, ptr readonly %"tmp.struct.tuple.[]u87")
 // CHECK-NEXT:   br label %if.exit8
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit8:                                         ; preds = %if.true4, %if.exit
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.4, i64 17 }, ptr %string.literal.slice10, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.E77E8388, i64 17 }, ptr %string.literal.slice10, align 8
 // CHECK-NEXT:   %21 = load i64, ptr %for.capture.i, align 4
 // CHECK-NEXT:   %22 = add i64 %21, 1
 // CHECK-NEXT:   %23 = load i32, ptr %num_test, align 4
@@ -353,27 +353,27 @@ test "add test 3" {
 // CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true13:                                        ; preds = %catch.has_error
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice15, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice15, align 8
 // CHECK-NEXT:   %35 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u816", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %35, ptr align 8 @std.terminal.COLORRED, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp14, ptr byval(%slice.struct) %string.literal.slice15, ptr readonly %"tmp.struct.tuple.[]u816")
 // CHECK-NEXT:   br label %if.exit17
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit17:                                        ; preds = %if.true13, %catch.has_error
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.5, i64 10 }, ptr %string.literal.slice19, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.B4099FFD, i64 10 }, ptr %string.literal.slice19, align 8
 // CHECK-NEXT:   call void @"std.io.io.print<tuple{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp18, ptr byval(%slice.struct) %string.literal.slice19, ptr readonly %tmp.struct.tuple20)
 // CHECK-NEXT:   %36 = load i1, ptr %isTerminal, align 1
 // CHECK-NEXT:   br i1 %36, label %if.true21, label %if.exit25
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true21:                                        ; preds = %if.exit17
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice23, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice23, align 8
 // CHECK-NEXT:   %37 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u824", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %37, ptr align 8 @std.terminal.COLORRESET, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp22, ptr byval(%slice.struct) %string.literal.slice23, ptr readonly %"tmp.struct.tuple.[]u824")
 // CHECK-NEXT:   br label %if.exit25
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit25:                                        ; preds = %if.true21, %if.exit17
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.6, i64 21 }, ptr %string.literal.slice27, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.5591058A, i64 21 }, ptr %string.literal.slice27, align 8
 // CHECK-NEXT:   %38 = load i64, ptr %for.capture.i, align 4
 // CHECK-NEXT:   %39 = add i64 %38, 1
 // CHECK-NEXT:   %40 = load i32, ptr %num_test, align 4
@@ -389,27 +389,27 @@ test "add test 3" {
 // CHECK-NEXT:   br i1 %45, label %if.true29, label %if.exit33
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true29:                                        ; preds = %if.exit25
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice31, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice31, align 8
 // CHECK-NEXT:   %46 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u832", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %46, ptr align 8 @std.terminal.COLORRED, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp30, ptr byval(%slice.struct) %string.literal.slice31, ptr readonly %"tmp.struct.tuple.[]u832")
 // CHECK-NEXT:   br label %if.exit33
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit33:                                        ; preds = %if.true29, %if.exit25
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.7, i64 6 }, ptr %string.literal.slice35, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.897F9BC8, i64 6 }, ptr %string.literal.slice35, align 8
 // CHECK-NEXT:   call void @"std.io.io.print<tuple{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp34, ptr byval(%slice.struct) %string.literal.slice35, ptr readonly %tmp.struct.tuple36)
 // CHECK-NEXT:   %47 = load i1, ptr %isTerminal, align 1
 // CHECK-NEXT:   br i1 %47, label %if.true37, label %if.exit41
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true37:                                        ; preds = %if.exit33
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal, i64 3 }, ptr %string.literal.slice39, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.851DE953, i64 3 }, ptr %string.literal.slice39, align 8
 // CHECK-NEXT:   %48 = getelementptr inbounds nuw %"tuple.[]u8", ptr %"tmp.struct.tuple.[]u840", i32 0, i32 0
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %48, ptr align 8 @std.terminal.COLORRESET, i64 16, i1 false)
 // CHECK-NEXT:   call void @"std.io.io.print<tuple.[]u8{}>"(ptr sret(%error.struct.usize) %struct.ret.tmp38, ptr byval(%slice.struct) %string.literal.slice39, ptr readonly %"tmp.struct.tuple.[]u840")
 // CHECK-NEXT:   br label %if.exit41
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit41:                                        ; preds = %if.true37, %if.exit33
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.8, i64 7 }, ptr %string.literal.slice43, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.83C04290, i64 7 }, ptr %string.literal.slice43, align 8
 // CHECK-NEXT:   %49 = load ptr, ptr %er, align 8
 // CHECK-NEXT:   %50 = getelementptr inbounds nuw %tuple.err, ptr %tmp.struct.tuple.err, i32 0, i32 0
 // CHECK-NEXT:   store ptr %49, ptr %50, align 8
@@ -420,7 +420,7 @@ test "add test 3" {
 // CHECK-NEXT:   br label %catch.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.true44:                                        ; preds = %for.exit
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.9, i64 22 }, ptr %string.literal.slice46, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.B8E67F6E, i64 22 }, ptr %string.literal.slice46, align 8
 // CHECK-NEXT:   %53 = load i32, ptr %num_test, align 4
 // CHECK-NEXT:   %54 = getelementptr inbounds nuw %tuple.i32, ptr %tmp.struct.tuple.i32, i32 0, i32 0
 // CHECK-NEXT:   store i32 %53, ptr %54, align 4
@@ -428,7 +428,7 @@ test "add test 3" {
 // CHECK-NEXT:   br label %if.exit49
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %for.exit
-// CHECK-NEXT:   store %slice.struct { ptr @string.literal.10, i64 24 }, ptr %string.literal.slice48, align 8
+// CHECK-NEXT:   store %slice.struct { ptr @string.literal.D7742EE3, i64 24 }, ptr %string.literal.slice48, align 8
 // CHECK-NEXT:   %55 = load i32, ptr %result, align 4
 // CHECK-NEXT:   %56 = load i32, ptr %num_test, align 4
 // CHECK-NEXT:   %57 = load i32, ptr %result, align 4

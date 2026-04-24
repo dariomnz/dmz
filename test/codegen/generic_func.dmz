@@ -13,7 +13,7 @@ fn print<T>(param:T) -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %0, ptr %param, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %param, align 4
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1, i32 %1)
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.C6C9447B, i32 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 // CHECK-NEXT: 
@@ -23,7 +23,7 @@ fn print<T>(param:T) -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   store i64 %0, ptr %param, align 4
 // CHECK-NEXT:   %1 = load i64, ptr %param, align 4
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1, i64 %1)
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.C6C9447B, i64 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -45,7 +45,7 @@ fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
 // CHECK-NEXT:   %3 = load i16, ptr %param1, align 2
 // CHECK-NEXT:   %4 = load i32, ptr %param2, align 4
 // CHECK-NEXT:   %5 = load i64, ptr %param3, align 4
-// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i16 %3, i32 %4, i64 %5)
+// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.935BB568, i16 %3, i32 %4, i64 %5)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

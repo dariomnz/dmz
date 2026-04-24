@@ -71,6 +71,6 @@ fn println(n:i32) -> void {printf("%d\n", n);}
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %n, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store i32 %0, ptr %n, align 4
 // CHECK-NEXT:   %1 = load i32, ptr %n, align 4
-// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %1)
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.B7D454E6, i32 %1)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

@@ -16,13 +16,13 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %fd, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   %0 = call i32 @putchar(i32 97)
 // CHECK-NEXT:   %1 = call i32 @putchar(i32 10)
-// CHECK-NEXT:   store ptr @string.literal, ptr %fmt, align 8
+// CHECK-NEXT:   store ptr  @string.literal.8BF63BD8, ptr %fmt, align 8
 // CHECK-NEXT:   store i32 1, ptr %fd, align 4
 // CHECK-NEXT:   %2 = load i32, ptr %fd, align 4
 // CHECK-NEXT:   %3 = load ptr, ptr %fmt, align 8
 // CHECK-NEXT:   %4 = call i32 (i32, ptr, ...) @dprintf(i32 %2, ptr byref(i8) %3, i32 10)
 // CHECK-NEXT:   %5 = load i32, ptr %fd, align 4
-// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 %5, ptr byref(i8) @string.literal.1)
+// CHECK-NEXT:   %6 = call i32 (i32, ptr, ...) @dprintf(i32 %5, ptr byref(i8) @string.literal.9AF713FA)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

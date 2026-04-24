@@ -39,6 +39,6 @@ fn main() -> void {
 // CHECK-NEXT:   %3 = load i32, ptr %2, align 4
 // CHECK-NEXT:   %4 = getelementptr inbounds nuw %"generic_struct.Point<i32>", ptr %p, i32 0, i32 1
 // CHECK-NEXT:   %5 = load i32, ptr %4, align 4
-// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %3, i32 %5)
+// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.8B0291C3, i32 %3, i32 %5)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

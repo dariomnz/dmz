@@ -21,11 +21,11 @@ fn foo(n:*i32) -> void {
 // CHECK-NEXT: if.true:                                          ; preds = %entry
 // CHECK-NEXT:   %3 = load ptr, ptr %n, align 8
 // CHECK-NEXT:   %4 = load i32, ptr %3, align 4
-// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal, i32 %4)
+// CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.F9024A42, i32 %4)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.false:                                         ; preds = %entry
-// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1)
+// CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.1A791B3E)
 // CHECK-NEXT:   br label %if.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: if.exit:                                          ; preds = %if.false, %if.true
