@@ -3,7 +3,7 @@
 #define DEBUG
 #endif
 #endif
-#include "DMZPCH.hpp"
+
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
 

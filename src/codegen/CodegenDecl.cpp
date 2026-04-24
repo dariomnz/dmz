@@ -4,6 +4,11 @@
 #endif
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/Module.h>
+#pragma GCC diagnostic pop
+
 #include "Debug.hpp"
 #include "codegen/Codegen.hpp"
 

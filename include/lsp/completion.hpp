@@ -1,9 +1,5 @@
 #pragma once
 
-#include "DMZPCH.hpp"
-#include "Utils.hpp"
-#include "semantic/Semantic.hpp"
-
 namespace DMZ::lsp {
 
 enum class CompletionItemKind {

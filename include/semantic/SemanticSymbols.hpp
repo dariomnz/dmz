@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DMZPCH.hpp"
 #include "SemanticSymbolsTypes.hpp"
 #include "UtilsPtr.hpp"
 #include "lexer/Lexer.hpp"

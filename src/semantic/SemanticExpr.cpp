@@ -3,7 +3,9 @@
 #define DEBUG
 #endif
 #endif
-#include "DMZPCH.hpp"
+
+#include <algorithm>
+
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/CodegenUtils.hpp"

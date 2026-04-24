@@ -89,7 +89,6 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
     } else if (auto cast_expr = dynamic_cast<const AtomicRmwExpr*>(&expr)) {
         node = fmt_atomic_rmw_expr(*cast_expr);
     } else {
-        println(expr.location.to_string());
         expr.dump();
         dmz_unreachable(expr.location, "TODO");
     }
@@ -361,7 +360,6 @@ ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
     ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
     return ret;
 }
-
 
 ptr<Node> Formatter::fmt_atomic_load_expr(const AtomicLoadExpr& expr) {
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});

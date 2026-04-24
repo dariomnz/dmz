@@ -1,7 +1,5 @@
 #pragma once
 
-#include "DMZPCH.hpp"
-
 namespace DMZ {
 
 struct profiler_data {

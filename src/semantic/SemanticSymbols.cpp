@@ -1,6 +1,6 @@
 #include "semantic/SemanticSymbols.hpp"
 
-#include "Debug.hpp"
+#include <iostream>
 
 namespace DMZ {
 
@@ -166,7 +166,6 @@ void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);
 }
 
-
 void ResolvedBlock::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedBlock\n";
 
@@ -212,7 +211,6 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
 
     if (body) body->dump(level + 1, onlySelf);
 }
-
 
 void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericFunctionDecl " << identifier << " " << type->to_str() << '\n';

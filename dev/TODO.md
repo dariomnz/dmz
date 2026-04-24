@@ -29,6 +29,7 @@
 - [x] new semantic system with lazy resolution
 - [x] new scopes system tied to each declaration
 - [x] lsp completion with new scope system
+- [ ] sopport lsp semantic range
 - [ ] permit types top be expr at compile time const t = i32;
 - [x] struct to replace lambdas
 - [ ] enums with .name with auto resolve

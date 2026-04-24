@@ -1,6 +1,8 @@
 // #define DEBUG
 #include "lsp/semantic_tokens.hpp"
 
+#include <algorithm>
+
 #include "Debug.hpp"
 
 namespace DMZ::lsp {

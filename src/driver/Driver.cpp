@@ -1,9 +1,17 @@
 // #define DEBUG
 #include "driver/Driver.hpp"
 
+#include "codegen/Codegen.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/Module.h>
+#pragma GCC diagnostic pop
+
+#include <sys/wait.h>
+
 #include "Debug.hpp"
 #include "Stats.hpp"
-#include "codegen/Codegen.hpp"
 #include "fmt/Formatter.hpp"
 #include "lsp/server.hpp"
 #include "parser/Parser.hpp"
@@ -279,8 +287,8 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
 std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
-    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols,
-                    m_options.noRemoveUnused, m_options.isModule);
+    Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols, m_options.noRemoveUnused,
+                    m_options.isModule);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module =
         codegen.generate_ir(m_options.test, m_options.optimizationLevel);
 
@@ -420,9 +428,7 @@ int Driver::asm_pass(ptr<llvm::Module> &module) {
 }
 
 int Driver::main() {
-    dmz_profile_begin_session("dmz_profiler.json");
     defer([&] {
-        dmz_profile_end_session();
         if (m_options.printStats) Stats::instance().dump();
     });
     ScopedTimer(StatType::Total);

@@ -1,8 +1,13 @@
 #pragma once
 
-#include "DMZPCH.hpp"
+#include "UtilsPtr.hpp"
 #include "lexer/Lexer.hpp"
 #include "semantic/SemanticSymbols.hpp"
+
+namespace llvm {
+class Module;
+class LLVMContext;
+}  // namespace llvm
 
 namespace DMZ {
 struct CompilerOptions {
@@ -39,11 +44,9 @@ struct CompilerOptions {
 };
 
 class Driver {
-    ThreadPool m_workers;
-    std::mutex m_modulesMutex;
-    std::vector<ptr<llvm::Module>> modules;
-    std::atomic_bool m_haveError = {false};
-    std::atomic_bool m_haveNormalExit = {false};
+    vec<ptr<llvm::Module>> modules;
+    bool m_haveError = {false};
+    bool m_haveNormalExit = {false};
 
    public:
     CompilerOptions m_options;

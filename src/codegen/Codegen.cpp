@@ -3,10 +3,24 @@
 #define DEBUG
 #endif
 #endif
-#include "codegen/Codegen.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/PassInstrumentation.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/StandardInstrumentations.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Scalar/Reassociate.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#pragma GCC diagnostic pop
 
 #include "Debug.hpp"
 #include "Stats.hpp"
+#include "codegen/Codegen.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {

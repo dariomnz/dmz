@@ -3,7 +3,10 @@
 #define DEBUG
 #endif
 #endif
+
 #include "parser/ParserSymbols.hpp"
+
+#include <iostream>
 
 namespace DMZ {
 
@@ -555,7 +558,6 @@ std::string ImportExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 void TestDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
 std::string TestDecl::to_str() const { dmz_unreachable(location, "TODO"); }
-
 
 void AtomicLoadExpr::dump(size_t level) const {
     std::cerr << indent(level) << "AtomicLoadExpr\n";

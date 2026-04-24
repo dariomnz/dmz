@@ -1,8 +1,8 @@
 #pragma once
 
-#include "DMZPCH.hpp"
+#include <filesystem>
+
 #include "Utils.hpp"
-#include "UtilsPtr.hpp"
 
 namespace DMZ {
 
@@ -114,7 +114,7 @@ enum class TokenType {
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
 
-[[maybe_unused]] static inline std::string get_op_str(TokenType op) {
+static inline std::string get_op_str(TokenType op) {
     if (op == TokenType::op_plus) return "+";
     if (op == TokenType::op_plusplus) return "++";
     if (op == TokenType::op_plus_equal) return "+=";

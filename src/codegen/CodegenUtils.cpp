@@ -1,12 +1,24 @@
+
 #ifdef DEBUG_CODEGEN
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
-#include "codegen/CodegenUtils.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/IR/Module.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/TargetParser/Host.h>
+#pragma GCC diagnostic pop
 
 #include "Debug.hpp"
 #include "codegen/Codegen.hpp"
+#include "codegen/CodegenUtils.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {

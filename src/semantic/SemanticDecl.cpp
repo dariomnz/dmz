@@ -3,6 +3,9 @@
 #define DEBUG
 #endif
 #endif
+
+#include <algorithm>
+
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "driver/Driver.hpp"

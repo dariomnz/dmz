@@ -1,6 +1,9 @@
 #include "fmt/FormatterSymbols.hpp"
 
+#include <iostream>
+
 #include "Debug.hpp"
+#include "Utils.hpp"
 
 namespace DMZ {
 namespace fmt {

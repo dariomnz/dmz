@@ -1,7 +1,8 @@
 // #define DEBUG
 #include "semantic/SemanticSymbolsTypes.hpp"
 
-#include "DMZPCH.hpp"
+#include <iostream>
+
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/CodegenUtils.hpp"

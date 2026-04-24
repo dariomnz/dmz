@@ -1,7 +1,16 @@
 #pragma once
 
-#include "DMZPCHLLVM.hpp"
-#include "DMZPCHSymbols.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/IRBuilder.h>
+#include <llvm-20/llvm/IR/DIBuilder.h>
+#pragma GCC diagnostic pop
+#include <unordered_map>
+#include <unordered_set>
+#include <stack>
+
+#include "UtilsPtr.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {

@@ -4,7 +4,11 @@
 #endif
 #endif
 
-#include "DMZPCH.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/Module.h>
+#pragma GCC diagnostic pop
+
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/Codegen.hpp"
@@ -354,7 +358,6 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
         }
         if (!typeNum) {
             binop.lhs->type->dump();
-            println(binop.location);
             dmz_unreachable(binop.location, "not expected type in binop");
         }
     }
@@ -498,8 +501,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     llvm::Value *val = nullptr;
     if (auto fnDecl = dynamic_cast<const ResolvedFuncDecl *>(&dre.decl)) {
         return generate_function_decl(*fnDecl);
-    } else if (dynamic_cast<const ResolvedDeclStmt *>(&dre.decl) ||
-               dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
+    } else if (dynamic_cast<const ResolvedDeclStmt *>(&dre.decl) || dynamic_cast<const ResolvedVarDecl *>(&dre.decl)) {
         const ResolvedVarDecl *varDecl = nullptr;
         if (auto decl = dynamic_cast<const ResolvedDeclStmt *>(&dre.decl)) {
             varDecl = decl->varDecl.get();
@@ -524,8 +526,10 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
                 }
 
                 if (!ret) {
-                    if (varDecl->parentDeclStmt) varDecl->parentDeclStmt->dump();
-                    else varDecl->dump();
+                    if (varDecl->parentDeclStmt)
+                        varDecl->parentDeclStmt->dump();
+                    else
+                        varDecl->dump();
                     dmz_unreachable(dre.location, "TODO");
                 }
             }
@@ -612,8 +616,10 @@ llvm::Value *Codegen::generate_member_expr(const ResolvedMemberExpr &memberExpr,
                 }
 
                 if (!ret) {
-                    if (varDecl->parentDeclStmt) varDecl->parentDeclStmt->dump();
-                    else varDecl->dump();
+                    if (varDecl->parentDeclStmt)
+                        varDecl->parentDeclStmt->dump();
+                    else
+                        varDecl->dump();
                     dmz_unreachable(memberExpr.location, "TODO");
                 }
             }
@@ -1252,7 +1258,6 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
     dmz_unreachable(call.location, "unknown simd builtin");
     return nullptr;
 }
-
 
 llvm::Value *Codegen::generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr) {
     debug_func("");

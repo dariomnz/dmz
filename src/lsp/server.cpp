@@ -1,6 +1,8 @@
 #include "lsp/server.hpp"
 
-#include "DMZPCH.hpp"
+#include <fstream>
+#include <iostream>
+
 #include "driver/Driver.hpp"
 #include "lexer/Lexer.hpp"
 #include "lsp/node_finder.hpp"
