@@ -30,7 +30,7 @@ class LSPServer {
     void collect_member_completions(const ResolvedStructDecl* decl, std::stringstream& items, bool& has_items);
     void collect_module_completions(const ResolvedModuleDecl* decl, std::stringstream& items, bool& has_items);
     void collect_completions_from_type(const ResolvedType* type, std::stringstream& items, bool& has_items);
-    const ResolvedType* find_incomplete_member_base_type(const std::vector<ptr<ResolvedModuleDecl>>& ast,
+    const ResolvedType* find_incomplete_member_base_type(const ResolvedModuleDecl* mainModule,
                                                          const std::string& file, size_t line);
 
     void publish_diagnostics(const std::string& filename, const std::vector<SourceLocation>& errors,
@@ -40,7 +40,8 @@ class LSPServer {
     struct Document {
         std::string source;
         ptr<Sema> sema;
-        std::vector<ptr<ResolvedModuleDecl>> resolvedAST;
+        ptr<ResolvedModuleDecl> module;
+        std::filesystem::file_time_type last_write_time;
     };
 
     std::unordered_map<std::string, Document> m_documents;

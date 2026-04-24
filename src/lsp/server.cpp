@@ -170,7 +170,7 @@ void LSPServer::on_definition(const std::string& id, const std::string& params) 
     }
 
     auto& doc = m_documents[uri];
-    if (doc.resolvedAST.empty()) {
+    if (!doc.module) {
         send_response(id, "null");
         return;
     }
@@ -179,9 +179,8 @@ void LSPServer::on_definition(const std::string& id, const std::string& params) 
     size_t col = std::stoul(char_str);
 
     NodeFinder finder(uri, line, col);
-    for (const auto& mod : doc.resolvedAST) {
-        finder.find_in_module(*mod);
-        if (finder.found_decl) break;
+    if (doc.module) {
+        finder.find_in_module(*doc.module);
     }
 
     if (finder.found_decl) {
@@ -218,9 +217,8 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
     size_t col = std::stoul(char_str);
 
     NodeFinder finder(uri, line, col);
-    for (const auto& mod : doc.resolvedAST) {
-        finder.find_in_module(*mod);
-        if (finder.found_decl) break;
+    if (doc.module) {
+        finder.find_in_module(*doc.module);
     }
 
     if (finder.found_decl) {
@@ -253,13 +251,13 @@ void LSPServer::on_semantic_tokens(const std::string& id, const std::string& par
     }
 
     auto& doc = m_documents[uri];
-    if (doc.resolvedAST.empty()) {
+    if (!doc.module) {
         send_response(id, "{\"data\":[]}");
         return;
     }
 
     SemanticTokensCollector collector(uri, doc.source);
-    std::vector<SemanticToken> tokens = collector.collect(doc.resolvedAST);
+    std::vector<SemanticToken> tokens = collector.collect(doc.module.get());
 
     std::stringstream ss;
     ss << "{\"data\":[";
@@ -339,7 +337,7 @@ void LSPServer::collect_completions_from_type(const ResolvedType* type, std::str
 
 // Walk the resolved AST to find ResolvedMemberExpr with empty member identifier on the target line.
 // Returns the resolved type of the base expression, or nullptr if not found.
-const ResolvedType* LSPServer::find_incomplete_member_base_type(const std::vector<ptr<ResolvedModuleDecl>>& ast,
+const ResolvedType* LSPServer::find_incomplete_member_base_type(const ResolvedModuleDecl* mainModule,
                                                                 const std::string& file, size_t line) {
     // Walk all expressions recursively looking for an incomplete MemberExpr on the target line
     struct IncompleteMemberFinder {
@@ -430,11 +428,10 @@ const ResolvedType* LSPServer::find_incomplete_member_base_type(const std::vecto
     };
 
     IncompleteMemberFinder finder{file, line};
-    for (const auto& mod : ast) {
-        finder.visit_module(*mod);
-        if (finder.result) return finder.result;
+    if (mainModule) {
+        finder.visit_module(*mainModule);
     }
-    return nullptr;
+    return finder.result;
 }
 
 void LSPServer::on_completion(const std::string& id, const std::string& params) {
@@ -487,7 +484,7 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
 
     if (is_member_completion) {
         // First, try to find the base type via the resolved AST (incomplete MemberExpr approach)
-        const ResolvedType* baseType = find_incomplete_member_base_type(doc.resolvedAST, uri, line);
+        const ResolvedType* baseType = find_incomplete_member_base_type(doc.module.get(), uri, line);
         if (baseType) {
             std::cerr << "[LSP] Found base type from incomplete MemberExpr: " << baseType->to_str() << std::endl;
             collect_completions_from_type(baseType, items, has_items);
@@ -502,9 +499,8 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
             if (base_col < 0) base_col = 0;
 
             NodeFinder base_finder(uri, line, base_col);
-            for (const auto& mod : doc.resolvedAST) {
-                base_finder.find_in_module(*mod);
-                if (base_finder.found_decl) break;
+            if (doc.module) {
+                base_finder.find_in_module(*doc.module);
             }
             if (base_finder.found_decl && base_finder.found_decl->type) {
                 std::cerr << "[LSP] Found base decl via NodeFinder: " << base_finder.found_decl->identifier
@@ -517,9 +513,8 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
     } else {
         // Non-member completion: try NodeFinder at current position (for direct type member access if any)
         NodeFinder base_finder(uri, line, col);
-        for (const auto& mod : doc.resolvedAST) {
-            base_finder.find_in_module(*mod);
-            if (base_finder.found_decl) break;
+        if (doc.module) {
+            base_finder.find_in_module(*doc.module);
         }
         if (base_finder.found_decl && base_finder.found_decl->type) {
             std::cerr << "[LSP] Found non-member decl via NodeFinder: " << base_finder.found_decl->identifier
@@ -556,17 +551,19 @@ void LSPServer::publish_diagnostics(const std::string& filename, const std::vect
 }
 
 void LSPServer::process_file(const std::string& filename, const std::string& source) {
+    if (m_documents.count(filename) && m_documents[filename].source == source && m_documents[filename].sema) {
+        return;
+    }
+
     std::cerr << "[LSP] Processing file: " << filename << std::endl;
     CompilerOptions options;
     options.source = filename;
+    options.isModule = true;
     Driver driver(options);
-    if (m_documents.find(filename) == m_documents.end()) {
-        m_documents[filename] = {source, nullptr, {}};
-    } else {
-        m_documents[filename].source = source;
-        m_documents[filename].resolvedAST.clear();
-        m_documents[filename].sema = nullptr;
-    }
+
+    m_documents[filename].source = source;
+    m_documents[filename].module = nullptr;
+    m_documents[filename].sema = nullptr;
 
     std::vector<SourceLocation> errors;
     std::vector<std::string> messages;
@@ -576,25 +573,50 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
     auto old_cerr = std::cerr.rdbuf(err_ss.rdbuf());
 
     try {
-        // (Re)initialize Driver instance with correct options BEFORE parsing
-        CompilerOptions opts;
-        opts.source = filename;
-        if (!m_std_path.empty()) {
-            opts.imports["std"] = m_std_path;
-        }
-
         Lexer lexer(filename, source);
         Parser parser(driver, lexer);
         auto [ast, success] = parser.parse_source_file();
 
         if (ast) {
             auto sema = makePtr<Sema>(driver, std::move(ast));
+
+            // Populate sema with all cached modules from m_documents
+            for (auto it = m_documents.begin(); it != m_documents.end();) {
+                if (!it->second.module) {
+                    ++it;
+                    continue;
+                }
+                const std::string& path = it->first;
+                if (!std::filesystem::exists(path)) {
+                    it = m_documents.erase(it);
+                    continue;
+                }
+                auto current_time = std::filesystem::last_write_time(path);
+                if (current_time > it->second.last_write_time) {
+                    // File changed on disk, invalidate cache for this module
+                    it->second.module = nullptr;
+                    it->second.sema = nullptr;
+                    ++it;
+                } else {
+                    sema->add_pre_resolved_module(it->second.module.get());
+                    ++it;
+                }
+            }
+
             auto resolvedTree = sema->resolve_ast_decl(filename, false);
             if (!resolvedTree.empty()) {
                 bool bodySuccess = sema->resolve_ast_body(resolvedTree);
                 std::cerr << "[LSP] resolve_ast_body success=" << bodySuccess << " size=" << resolvedTree.size()
                           << std::endl;
-                m_documents[filename].resolvedAST = std::move(resolvedTree);
+
+                // Update documents cache with newly resolved modules
+                for (auto&& mod : resolvedTree) {
+                    if (mod) {
+                        std::string path = mod->module_path.string();
+                        m_documents[path].module = std::move(mod);
+                        m_documents[path].last_write_time = std::filesystem::last_write_time(path);
+                    }
+                }
             } else {
                 std::cerr << "[LSP] resolve_ast_decl returned empty tree" << std::endl;
             }

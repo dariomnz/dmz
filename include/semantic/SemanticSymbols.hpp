@@ -734,7 +734,6 @@ struct ResolvedCallExpr : public ResolvedExpr {
     DMZ_TYPE_NAME();
 };
 
-
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     const ResolvedDecl &decl;
 
@@ -890,13 +889,15 @@ struct ResolvedStructInstantiationExpr : public ResolvedExpr {
     ResolvedStructDecl &structDecl;
     std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers;
     bool isTuple;
+    ptr<ResolvedExpr> base;
 
-    ResolvedStructInstantiationExpr(SourceLocation location, ResolvedStructDecl &structDecl,
+    ResolvedStructInstantiationExpr(SourceLocation location, ptr<ResolvedExpr> base, ResolvedStructDecl &structDecl,
                                     std::vector<ptr<ResolvedFieldInitStmt>> fieldInitializers, bool isTuple)
         : ResolvedExpr(location, makePtr<ResolvedTypeStruct>(structDecl.type->location, &structDecl)),
           structDecl(structDecl),
           fieldInitializers(std::move(fieldInitializers)),
-          isTuple(isTuple) {}
+          isTuple(isTuple),
+          base(std::move(base)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

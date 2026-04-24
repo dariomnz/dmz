@@ -45,10 +45,10 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl, bool* is_this = n
     return type;
 }
 
-std::vector<SemanticToken> SemanticTokensCollector::collect(const std::vector<ptr<ResolvedModuleDecl>>& resolvedAST) {
+std::vector<SemanticToken> SemanticTokensCollector::collect(const ResolvedModuleDecl* mainModule) {
     m_tokens.clear();
-    for (const auto& mod : resolvedAST) {
-        traverse_module(*mod);
+    if (mainModule) {
+        traverse_module(*mainModule);
     }
 
     // Sort tokens by line then by column
@@ -72,8 +72,13 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
     if (decl.location.file_name == m_target_file) {
         if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
             if (structDecl->isTuple) return;
-            add_token(structDecl->location, structDecl->identifier, SemanticTokenType::Type,
-                      (uint32_t)SemanticTokenModifier::Declaration);
+            // std::string_view identifier = structDecl->identifier;
+            // if (identifier.find("structL") == 0)
+            //     identifier = "struct";
+            // else if (identifier.find("unionL") == 0)
+            //     identifier = "union";
+            // add_token(structDecl->location, identifier, SemanticTokenType::Type,
+            //           (uint32_t)SemanticTokenModifier::Declaration);
             if (auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(structDecl)) {
                 for (const auto& gt : genStru->genericTypeDecls) {
                     traverse_decl(*gt);
@@ -86,8 +91,13 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                 traverse_decl(*func);
             }
         } else if (auto* unionDecl = dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
-            add_token(unionDecl->location, unionDecl->identifier, SemanticTokenType::Type,
-                      (uint32_t)SemanticTokenModifier::Declaration);
+            // std::string_view identifier = unionDecl->identifier;
+            // if (identifier.find("structL") == 0)
+            //     identifier = "struct";
+            // else if (identifier.find("unionL") == 0)
+            //     identifier = "union";
+            // add_token(unionDecl->location, identifier, SemanticTokenType::Type,
+            //           (uint32_t)SemanticTokenModifier::Declaration);
             for (const auto& field : unionDecl->fields) {
                 traverse_decl(*field);
             }
@@ -133,6 +143,13 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                 traverse_type(*varDecl->type);
             if (varDecl->initializer) {
                 traverse_expr(*varDecl->initializer);
+            }
+            if (varDecl->type) {
+                if (auto* type = dynamic_cast<const ResolvedTypeStructDecl*>(varDecl->type.get())) {
+                    if (type->ownedDecl) {
+                        traverse_decl(*type->ownedDecl);
+                    }
+                }
             }
         } else if (auto* fieldDecl = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
             add_token(fieldDecl->location, fieldDecl->identifier, SemanticTokenType::Property,
@@ -229,16 +246,17 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedStructInstantiationExpr");
             if (!instantiation->isTuple) {
-                bool is_this = false;
-                if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(instantiation->type.get())) {
-                    is_this = structDeclType->is_this;
-                }
-                if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(instantiation->type.get())) {
-                    is_this = structType->is_this;
-                }
-
-                add_token(instantiation->location, is_this ? "@This" : instantiation->structDecl.identifier,
-                          SemanticTokenType::Type);
+                traverse_expr(*instantiation->base);
+                // bool is_this = false;
+                // if (auto* structDeclType = dynamic_cast<const ResolvedTypeStructDecl*>(instantiation->type.get())) {
+                //     is_this = structDeclType->is_this;
+                // }
+                // if (auto* structType = dynamic_cast<const ResolvedTypeStruct*>(instantiation->type.get())) {
+                //     is_this = structType->is_this;
+                // }
+                // std::cerr << (is_this ? "@This" : instantiation->structDecl.identifier) << std::endl;
+                // add_token(instantiation->location, is_this ? "@This" : instantiation->structDecl.identifier,
+                //           SemanticTokenType::Type);
             }
             for (const auto& init : instantiation->fieldInitializers) {
                 if (!instantiation->isTuple) {
@@ -378,29 +396,61 @@ void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
     debug_msg(type.location << " " << type.to_str());
     if (auto* structTy = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         if (structTy->location.file_name == m_target_file) {
-            add_token(structTy->location, structTy->is_this ? "@This" : structTy->decl->identifier,
-                      SemanticTokenType::Type);
+            std::string_view identifier;
+            if (structTy->is_this)
+                identifier = "@This";
+            else
+                identifier = structTy->decl->identifier;
+            if (identifier.find("structL") == 0)
+                identifier = "struct";
+            else if (identifier.find("unionL") == 0)
+                identifier = "union";
+            add_token(structTy->location, identifier, SemanticTokenType::Type);
         }
         if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(structTy->decl)) {
             if (specStru->specializedTypes) traverse_type(*specStru->specializedTypes);
         }
     } else if (auto* structDecl = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
         if (structDecl->location.file_name == m_target_file) {
-            add_token(structDecl->location, structDecl->is_this ? "@This" : structDecl->decl->identifier,
-                      SemanticTokenType::Type);
+            std::string_view identifier;
+            if (structDecl->is_this)
+                identifier = "@This";
+            else
+                identifier = structDecl->decl->identifier;
+            if (identifier.find("structL") == 0)
+                identifier = "struct";
+            else if (identifier.find("unionL") == 0)
+                identifier = "union";
+            add_token(structDecl->location, identifier, SemanticTokenType::Type);
         }
         if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(structDecl->decl)) {
             if (specStru->specializedTypes) traverse_type(*specStru->specializedTypes);
         }
     } else if (auto* unionTy = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
         if (unionTy->location.file_name == m_target_file) {
-            add_token(unionTy->location, unionTy->is_this ? "@This" : unionTy->decl->identifier,
-                      SemanticTokenType::Type);
+            std::string_view identifier;
+            if (unionTy->is_this)
+                identifier = "@This";
+            else
+                identifier = unionTy->decl->identifier;
+            if (identifier.find("structL") == 0)
+                identifier = "struct";
+            else if (identifier.find("unionL") == 0)
+                identifier = "union";
+            add_token(unionTy->location, identifier, SemanticTokenType::Type);
         }
     } else if (auto* unionDecl = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
         if (unionDecl->location.file_name == m_target_file) {
-            add_token(unionDecl->location, unionDecl->is_this ? "@This" : unionDecl->decl->identifier,
-                      SemanticTokenType::Type);
+            std::string_view identifier;
+            if (unionDecl->is_this)
+                identifier = "@This";
+            else
+                identifier = unionDecl->decl->identifier;
+            if (identifier.find("structL") == 0)
+                identifier = "struct";
+            else if (identifier.find("unionL") == 0)
+                identifier = "union";
+            add_token(unionDecl->location, identifier, SemanticTokenType::Type);
         }
     } else if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
                dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type) ||

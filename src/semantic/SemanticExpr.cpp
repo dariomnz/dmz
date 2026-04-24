@@ -946,7 +946,6 @@ ptr<ResolvedAssignableExpr> Sema::resolve_array_at_expr(const ArrayAtExpr &array
                                         std::move(index));
 }
 
-
 ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationExpr &structInstantiation) {
     debug_func(structInstantiation.location);
 
@@ -1121,7 +1120,7 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
     if (error) return nullptr;
 
-    auto res = makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, *st,
+    auto res = makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, std::move(resolvedBase), *st,
                                                         std::move(resolvedFieldInits), false);
     if (auxstruType->is_this) {
         if (auto *resStruType = dynamic_cast<ResolvedTypeStruct *>(res->type.get())) {
@@ -1172,7 +1171,7 @@ ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr
             resolvedElements[i]->location, *structDeclPtr->fields[i], std::move(resolvedElements[i])));
     }
 
-    return makePtr<ResolvedStructInstantiationExpr>(tupleInstantiation.location, *structDeclPtr,
+    return makePtr<ResolvedStructInstantiationExpr>(tupleInstantiation.location, nullptr, *structDeclPtr,
                                                     std::move(resolvedFieldInits), true);
 }
 
@@ -1402,10 +1401,17 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
     }
 
     ResolvedModuleDecl *im = nullptr;
-    for (auto &lazy_mod : m_lazy_modules) {
-        if (lazy_mod->module_path == module_path) {
-            im = lazy_mod.get();
-            break;
+    auto it_pre = m_pre_resolved_modules.find(module_path.string());
+    if (it_pre != m_pre_resolved_modules.end()) {
+        im = it_pre->second;
+    }
+
+    if (!im) {
+        for (auto &lazy_mod : m_lazy_modules) {
+            if (lazy_mod->module_path == module_path) {
+                im = lazy_mod.get();
+                break;
+            }
         }
     }
 

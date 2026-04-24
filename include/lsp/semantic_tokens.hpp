@@ -52,7 +52,7 @@ struct SemanticToken {
 class SemanticTokensCollector {
    public:
     SemanticTokensCollector(const std::string& target_file, const std::string& source = "");
-    std::vector<SemanticToken> collect(const std::vector<ptr<ResolvedModuleDecl>>& resolvedAST);
+    std::vector<SemanticToken> collect(const ResolvedModuleDecl* mainModule);
 
    private:
     void traverse_module(const ResolvedModuleDecl& module);

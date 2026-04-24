@@ -27,17 +27,38 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
     if (found_decl) return;
 
     if (const auto* std = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
-        if (std->decl &&
-            is_at_location(std->location, (std->is_this ? std::string("@This") : std->decl->identifier).length())) {
+        size_t len = 0;
+        if (std->is_this)
+            len = 5;  // "@This"
+        else if (std->decl->identifier.find("structL") == 0)
+            len = 6;  // "struct"
+        else if (std->decl->identifier.find("unionL") == 0)
+            len = 5;  // "union"
+        else
+            len = std->decl->identifier.length();
+
+        if (std->decl && is_at_location(std->location, len)) {
             found_decl = std->decl;
             return;
         }
         if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(std->decl)) {
             if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
         }
+        if (std->ownedDecl) {
+            find_in_decl(*std->ownedDecl);
+        }
     } else if (const auto* st = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
-        if (st->decl &&
-            is_at_location(st->location, (st->is_this ? std::string("@This") : st->decl->identifier).length())) {
+        size_t len = 0;
+        if (st->is_this)
+            len = 5;  // "@This"
+        else if (st->decl->identifier.find("structL") == 0)
+            len = 6;  // "struct"
+        else if (st->decl->identifier.find("unionL") == 0)
+            len = 5;  // "union"
+        else
+            len = st->decl->identifier.length();
+
+        if (st->decl && is_at_location(st->location, len)) {
             found_decl = st->decl;
             return;
         }
@@ -45,14 +66,32 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
             if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
         }
     } else if (const auto* ut = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
-        if (ut->decl &&
-            is_at_location(ut->location, (ut->is_this ? std::string("@This") : ut->decl->identifier).length())) {
+        size_t len = 0;
+        if (ut->is_this)
+            len = 5;  // "@This"
+        else if (ut->decl->identifier.find("structL") == 0)
+            len = 6;  // "struct"
+        else if (ut->decl->identifier.find("unionL") == 0)
+            len = 5;  // "union"
+        else
+            len = ut->decl->identifier.length();
+
+        if (ut->decl && is_at_location(ut->location, len)) {
             found_decl = ut->decl;
             return;
         }
     } else if (const auto* ud = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
-        if (ud->decl &&
-            is_at_location(ud->location, (ud->is_this ? std::string("@This") : ud->decl->identifier).length())) {
+        size_t len = 0;
+        if (ud->is_this)
+            len = 5;  // "@This"
+        else if (ud->decl->identifier.find("structL") == 0)
+            len = 6;  // "struct"
+        else if (ud->decl->identifier.find("unionL") == 0)
+            len = 5;  // "union"
+        else
+            len = ud->decl->identifier.length();
+
+        if (ud->decl && is_at_location(ud->location, len)) {
             found_decl = ud->decl;
             return;
         }
@@ -90,7 +129,13 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
 void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     if (found_decl) return;
 
-    if (is_at_location(decl.location, decl.identifier.length())) {
+    size_t len = decl.identifier.length();
+    if (decl.identifier.find("structL") == 0)
+        len = 6;
+    else if (decl.identifier.find("unionL") == 0)
+        len = 5;
+
+    if (is_at_location(decl.location, len)) {
         found_decl = &decl;
         return;
     }
@@ -226,9 +271,9 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         }
         find_in_expr(*me->base);
     } else if (const auto* sie = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
-        if (!sie->isTuple && is_at_location(sie->location, sie->structDecl.identifier.length())) {
-            found_decl = &sie->structDecl;
-            return;
+        if (!sie->isTuple) {
+            find_in_expr(*sie->base);
+            if (found_decl) return;
         }
         for (const auto& init : sie->fieldInitializers) {
             if (!sie->isTuple && is_at_location(init->location, init->field.identifier.length())) {
