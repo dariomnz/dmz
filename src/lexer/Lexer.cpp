@@ -112,6 +112,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_atomicRmw);
         CASE_TYPE(caret);
         CASE_TYPE(unknown);
+        CASE_TYPE(kw_this);
         CASE_TYPE(eof);
     }
     return os;

@@ -104,9 +104,8 @@ struct ResolvedUnionDecl;   // Forward declaration
 struct ResolvedTypeStructDecl : public ResolvedType {
     ptr<ResolvedStructDecl> ownedDecl;
     ResolvedStructDecl *decl;
-    bool is_this = false;
-    ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl, bool is_this = false)
-        : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl), is_this(is_this) {}
+    ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl)
+        : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -119,9 +118,8 @@ struct ResolvedTypeStructDecl : public ResolvedType {
 
 struct ResolvedTypeStruct : public ResolvedType {
     ResolvedStructDecl *decl;
-    bool is_this = false;
-    ResolvedTypeStruct(SourceLocation location, ResolvedStructDecl *decl, bool is_this = false)
-        : ResolvedType(ResolvedTypeKind::Struct, std::move(location)), decl(decl), is_this(is_this) {}
+    ResolvedTypeStruct(SourceLocation location, ResolvedStructDecl *decl)
+        : ResolvedType(ResolvedTypeKind::Struct, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -134,7 +132,7 @@ struct ResolvedTypeStruct : public ResolvedType {
 
 struct ResolvedTypeUnionDecl : public ResolvedTypeStructDecl {
     // Implementation in cpp
-    ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false);
+    ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl);
 
     ResolvedUnionDecl *unionDecl() const;
 
@@ -148,7 +146,7 @@ struct ResolvedTypeUnionDecl : public ResolvedTypeStructDecl {
 
 struct ResolvedTypeUnion : public ResolvedTypeStruct {
     // Implementation in cpp
-    ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this = false);
+    ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl);
 
     ResolvedUnionDecl *unionDecl() const;
 
@@ -304,12 +302,16 @@ struct ResolvedTypeArray : public ResolvedType {
     bool is_generic() const override;
 };
 
+struct ResolvedExpr;  // Forward declaration
 struct ResolvedTypeSimd : public ResolvedType {
     ptr<ResolvedType> simdType;
+    ptr<ResolvedExpr> simdSizeExpr;
     int simdSize;
-    ResolvedTypeSimd(SourceLocation location, ptr<ResolvedType> vectorType, int vectorSize)
+    ResolvedTypeSimd(SourceLocation location, ptr<ResolvedType> vectorType, ptr<ResolvedExpr> simdSizeExpr,
+                     int vectorSize)
         : ResolvedType(ResolvedTypeKind::Simd, std::move(location)),
           simdType(std::move(vectorType)),
+          simdSizeExpr(std::move(simdSizeExpr)),
           simdSize(vectorSize) {}
 
     bool equal(const ResolvedType &other) const override;

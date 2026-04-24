@@ -310,15 +310,13 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                 }
             }
             if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl(),
-                                                 declRefType->identifier == "@This");
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl());
             } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl(),
-                                                 declRefType->identifier == "@This");
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl());
             } else if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
+                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
             } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(decl->type.get())) {
-                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl, declRefType->identifier == "@This");
+                ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
             } else {
                 ret = decl->type->clone();
             }
@@ -381,7 +379,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         }
         retTypeStruct->ownedDecl = std::move(ownedStructDecl);
         if (retTypeStruct->ownedDecl) {
-            if (m_currentModule && m_currentModule->module_path == m_driver.m_options.source){
+            if (m_currentModule && m_currentModule->module_path == m_driver.m_options.source) {
                 debug_msg("Adding struct " << retTypeStruct->ownedDecl->name() << " to pending decls");
                 m_pending_decls.emplace(retTypeStruct->ownedDecl.get());
             }
@@ -414,7 +412,7 @@ ptr<ResolvedType> Sema::resolve_simd_type(const TypeSimd &simdType) {
         return report(simdType.location, "vector size must be greater than 0");
     }
 
-    return makePtr<ResolvedTypeSimd>(simdType.location, std::move(resType), vectorSize);
+    return makePtr<ResolvedTypeSimd>(simdType.location, std::move(resType), std::move(sizeExpr), vectorSize);
 }
 
 ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {
@@ -466,8 +464,9 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         return ret;
     }
     if (auto vectorType = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
-        ret = makePtr<ResolvedTypeSimd>(vectorType->location, re_resolve_type(*vectorType->simdType),
-                                        vectorType->simdSize);
+        auto cloned = castPtr<ResolvedTypeSimd>(vectorType->clone());
+        cloned->simdType = re_resolve_type(*vectorType->simdType);
+        ret = std::move(cloned);
         retPtr = ret.get();
         return ret;
     }

@@ -224,7 +224,7 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
     if (finder.found_decl) {
         std::stringstream ss;
         ss << "{\"contents\":{\"kind\":\"markdown\",\"value\":\"```dmz\\n"
-           << escape_json(finder.found_decl->identifier) << ": ";
+           << escape_json(finder.found_decl->name()) << ": ";
         if (auto funcType = dynamic_cast<ResolvedTypeFunction*>(finder.found_decl->type.get())) {
             ss << escape_json(funcType->to_str_with_params());
         } else {

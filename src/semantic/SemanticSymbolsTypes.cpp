@@ -168,7 +168,7 @@ bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeStructDecl::clone() const {
     debug_func("ResolvedTypeStructDecl " << location);
-    return makePtr<ResolvedTypeStructDecl>(location, decl, is_this);
+    return makePtr<ResolvedTypeStructDecl>(location, decl);
 }
 
 void ResolvedTypeStructDecl::dump(size_t level) const {
@@ -219,7 +219,7 @@ bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeStruct::clone() const {
     debug_func("ResolvedTypeStruct " << location);
-    return makePtr<ResolvedTypeStruct>(location, decl, is_this);
+    return makePtr<ResolvedTypeStruct>(location, decl);
 }
 
 void ResolvedTypeStruct::dump(size_t level) const {
@@ -244,8 +244,8 @@ bool ResolvedTypeStruct::is_generic() const {
     return debug_ret(false);
 }
 
-ResolvedTypeUnionDecl::ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl, bool is_this)
-    : ResolvedTypeStructDecl(std::move(location), decl, is_this) {
+ResolvedTypeUnionDecl::ResolvedTypeUnionDecl(SourceLocation location, ResolvedUnionDecl *decl)
+    : ResolvedTypeStructDecl(std::move(location), decl) {
     kind = ResolvedTypeKind::UnionDecl;
 }
 
@@ -269,7 +269,7 @@ bool ResolvedTypeUnionDecl::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeUnionDecl::clone() const {
     debug_func("ResolvedTypeUnionDecl " << location);
-    return makePtr<ResolvedTypeUnionDecl>(location, unionDecl(), is_this);
+    return makePtr<ResolvedTypeUnionDecl>(location, unionDecl());
 }
 
 void ResolvedTypeUnionDecl::dump(size_t level) const {
@@ -280,8 +280,8 @@ void ResolvedTypeUnionDecl::dump(size_t level) const {
 
 std::string ResolvedTypeUnionDecl::to_str() const { return decl->name(); }
 
-ResolvedTypeUnion::ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl, bool is_this)
-    : ResolvedTypeStruct(std::move(location), decl, is_this) {
+ResolvedTypeUnion::ResolvedTypeUnion(SourceLocation location, ResolvedUnionDecl *decl)
+    : ResolvedTypeStruct(std::move(location), decl) {
     kind = ResolvedTypeKind::Union;
 }
 
@@ -305,7 +305,7 @@ bool ResolvedTypeUnion::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeUnion::clone() const {
     debug_func("ResolvedTypeUnion " << location);
-    return makePtr<ResolvedTypeUnion>(location, unionDecl(), is_this);
+    return makePtr<ResolvedTypeUnion>(location, unionDecl());
 }
 
 void ResolvedTypeUnion::dump(size_t level) const {
@@ -678,7 +678,19 @@ bool ResolvedTypeSimd::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeSimd::clone() const {
     debug_func("ResolvedTypeSimd " << location);
-    return makePtr<ResolvedTypeSimd>(location, simdType->clone(), simdSize);
+    if (!simdSizeExpr) {
+        return makePtr<ResolvedTypeSimd>(location, simdType->clone(), nullptr, simdSize);
+    } else if (auto sizeExpr = dynamic_cast<const ResolvedDeclRefExpr *>(simdSizeExpr.get())) {
+        return makePtr<ResolvedTypeSimd>(location, simdType->clone(),
+                                         makePtr<ResolvedDeclRefExpr>(sizeExpr->location, sizeExpr->identifier,
+                                                                      sizeExpr->decl, sizeExpr->type->clone()),
+                                         simdSize);
+    } else if (auto sizeExpr = dynamic_cast<const ResolvedIntLiteral *>(simdSizeExpr.get())) {
+        return makePtr<ResolvedTypeSimd>(location, simdType->clone(),
+                                         makePtr<ResolvedIntLiteral>(sizeExpr->location, sizeExpr->value), simdSize);
+    } else {
+        dmz_unreachable(location, "TODO");
+    }
 }
 
 void ResolvedTypeSimd::dump(size_t level) const {

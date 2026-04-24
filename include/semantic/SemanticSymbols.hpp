@@ -586,10 +586,12 @@ struct ResolvedNullLiteral : public ResolvedExpr {
 
 struct ResolvedSizeofExpr : public ResolvedExpr {
     ptr<ResolvedType> sizeofType;
+    ptr<ResolvedExpr> sizeofExpr;
 
-    ResolvedSizeofExpr(SourceLocation location, ptr<ResolvedType> sizeofType)
+    ResolvedSizeofExpr(SourceLocation location, ptr<ResolvedType> sizeofType, ptr<ResolvedExpr> sizeofExpr)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 64, true)),
-          sizeofType(std::move(sizeofType)) {}
+          sizeofType(std::move(sizeofType)),
+          sizeofExpr(std::move(sizeofExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -735,10 +737,12 @@ struct ResolvedCallExpr : public ResolvedExpr {
 };
 
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
+    std::string identifier;
     const ResolvedDecl &decl;
 
-    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl, ptr<ResolvedType> type)
-        : ResolvedAssignableExpr(location, std::move(type)), decl(decl) {}
+    ResolvedDeclRefExpr(SourceLocation location, std::string identifier, const ResolvedDecl &decl,
+                        ptr<ResolvedType> type)
+        : ResolvedAssignableExpr(location, std::move(type)), identifier(std::move(identifier)), decl(decl) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

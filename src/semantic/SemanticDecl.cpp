@@ -1183,7 +1183,8 @@ void Sema::resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl) {
 void Sema::resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl) {
     // Begin Body
     SourceLocation loc{.file_name = "builtin"};
-    auto cond = makePtr<ResolvedDeclRefExpr>(loc, *fnDecl.params[0], fnDecl.params[0]->type->clone());
+    auto cond = makePtr<ResolvedDeclRefExpr>(loc, fnDecl.params[0]->identifier, *fnDecl.params[0],
+                                             fnDecl.params[0]->type->clone());
 
     auto elseName = makePtr<ResolvedStringLiteral>(loc, "Error in builtin_test_name");
     auto retStmt = makePtr<ResolvedReturnStmt>(loc, std::move(elseName), std::vector<ptr<ResolvedDeferRefStmt>>{});
@@ -1222,7 +1223,8 @@ void Sema::resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl) {
 void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
     // Begin Body
     SourceLocation loc{.file_name = "builtin"};
-    auto cond = makePtr<ResolvedDeclRefExpr>(loc, *fnDecl.params[0], fnDecl.params[0]->type->clone());
+    auto cond = makePtr<ResolvedDeclRefExpr>(loc, fnDecl.params[0]->identifier, *fnDecl.params[0],
+                                             fnDecl.params[0]->type->clone());
 
     auto elseBlock =
         makePtr<ResolvedBlock>(loc, std::vector<ptr<ResolvedStmt>>{}, std::vector<ptr<ResolvedDeferRefStmt>>{},
@@ -1230,7 +1232,7 @@ void Sema::resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl) {
     std::vector<ptr<ResolvedCaseStmt>> cases;
     for (size_t i = 0; i < m_tests.size(); i++) {
         auto testType = m_tests[i]->getFnType();
-        auto test_ref = makePtr<ResolvedDeclRefExpr>(loc, *m_tests[i], testType->clone());
+        auto test_ref = makePtr<ResolvedDeclRefExpr>(loc, m_tests[i]->identifier, *m_tests[i], testType->clone());
         auto test_call = makePtr<ResolvedCallExpr>(loc, testType->returnType->clone(), std::move(test_ref),
                                                    std::vector<ptr<ResolvedExpr>>{});
         auto returnOptType = dynamic_cast<const ResolvedTypeOptional *>(testType->returnType.get());

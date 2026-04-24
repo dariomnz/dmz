@@ -61,6 +61,10 @@ ptr<Expr> Parser::parse_primary() {
 
         return makePtr<DeclRefExpr>(location, std::move(identifier));
     }
+    if (m_nextToken.type == TokenType::kw_this) {
+        eat_next_token();  // eat @This
+        return makePtr<DeclRefExpr>(location, "@This");
+    }
     if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_union ||
         m_nextToken.type == TokenType::kw_packed) {
         if (m_nextToken.type == TokenType::kw_union) {

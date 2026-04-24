@@ -28,9 +28,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
 
     if (const auto* std = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
         size_t len = 0;
-        if (std->is_this)
-            len = 5;  // "@This"
-        else if (std->decl->identifier.find("structL") == 0)
+        if (std->decl->identifier.find("structL") == 0)
             len = 6;  // "struct"
         else if (std->decl->identifier.find("unionL") == 0)
             len = 5;  // "union"
@@ -49,9 +47,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         }
     } else if (const auto* st = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
         size_t len = 0;
-        if (st->is_this)
-            len = 5;  // "@This"
-        else if (st->decl->identifier.find("structL") == 0)
+        if (st->decl->identifier.find("structL") == 0)
             len = 6;  // "struct"
         else if (st->decl->identifier.find("unionL") == 0)
             len = 5;  // "union"
@@ -67,9 +63,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         }
     } else if (const auto* ut = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
         size_t len = 0;
-        if (ut->is_this)
-            len = 5;  // "@This"
-        else if (ut->decl->identifier.find("structL") == 0)
+        if (ut->decl->identifier.find("structL") == 0)
             len = 6;  // "struct"
         else if (ut->decl->identifier.find("unionL") == 0)
             len = 5;  // "union"
@@ -82,9 +76,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         }
     } else if (const auto* ud = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
         size_t len = 0;
-        if (ud->is_this)
-            len = 5;  // "@This"
-        else if (ud->decl->identifier.find("structL") == 0)
+        if (ud->decl->identifier.find("structL") == 0)
             len = 6;  // "struct"
         else if (ud->decl->identifier.find("unionL") == 0)
             len = 5;  // "union"
@@ -113,6 +105,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
         find_in_type(*opt->optionalType);
     } else if (const auto* simdTy = dynamic_cast<const ResolvedTypeSimd*>(&type)) {
         find_in_type(*simdTy->simdType);
+        if (simdTy->simdSizeExpr) find_in_expr(*simdTy->simdSizeExpr);
     } else if (const auto* errg = dynamic_cast<const ResolvedTypeErrorGroup*>(&type)) {
         if (errg->decl && is_at_location(errg->location, errg->decl->identifier.length())) {
             found_decl = errg->decl;
@@ -251,7 +244,7 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
     if (found_decl) return;
 
     if (const auto* dr = dynamic_cast<const ResolvedDeclRefExpr*>(&expr)) {
-        if (is_at_location(dr->location, dr->decl.identifier.length())) {
+        if (is_at_location(dr->location, dr->identifier.length())) {
             found_decl = &dr->decl;
             return;
         }
@@ -350,7 +343,9 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         if (found_decl) return;
         find_in_expr(*orelseErr->orElseExpr);
     } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
-        find_in_type(*sizeofExpr->type);
+        find_in_expr(*sizeofExpr->sizeofExpr);
+        if (found_decl) return;
+        find_in_type(*sizeofExpr->sizeofType);
     } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
         find_in_expr(*typeidExpr->typeidExpr);
     } else if (auto* typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr*>(&expr)) {

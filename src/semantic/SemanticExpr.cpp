@@ -119,18 +119,8 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
         decl->dump();
         dmz_unreachable(declRefExpr.location, "unreachable");
     }
-    if (declRefExpr.identifier == "@This") {
-        if (auto *st = dynamic_cast<ResolvedTypeStruct *>(type.get())) {
-            st->is_this = true;
-        } else if (auto *std = dynamic_cast<ResolvedTypeStructDecl *>(type.get())) {
-            std->is_this = true;
-        } else if (auto *ut = dynamic_cast<ResolvedTypeUnion *>(type.get())) {
-            ut->is_this = true;
-        } else if (auto *ud = dynamic_cast<ResolvedTypeUnionDecl *>(type.get())) {
-            ud->is_this = true;
-        }
-    }
-    auto resolvedDeclRefExpr = makePtr<ResolvedDeclRefExpr>(declRefExpr.location, *decl, std::move(type));
+    auto resolvedDeclRefExpr =
+        makePtr<ResolvedDeclRefExpr>(declRefExpr.location, declRefExpr.identifier, *decl, std::move(type));
 
     resolvedDeclRefExpr->set_constant_value(cee.evaluate(*resolvedDeclRefExpr, false));
 
@@ -299,8 +289,9 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 
             // Re-resolve callee to point to the specialized function
             if (auto *resolvedDeclRefExpr = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallee.get())) {
-                resolvedCallee = makePtr<ResolvedDeclRefExpr>(resolvedDeclRefExpr->location, *specializedFunc,
-                                                              specializedFunc->type->clone());
+                resolvedCallee =
+                    makePtr<ResolvedDeclRefExpr>(resolvedDeclRefExpr->location, resolvedDeclRefExpr->identifier,
+                                                 *specializedFunc, specializedFunc->type->clone());
             } else if (auto *resolvedMemberExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedCallee.get())) {
                 resolvedCallee = makePtr<ResolvedMemberExpr>(resolvedMemberExpr->location,
                                                              std::move(resolvedMemberExpr->base), *specializedFunc);
@@ -647,29 +638,24 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         ResolvedStructDecl *struTypeDecl = nullptr;
         bool isDecl = false;
         bool isUnion = false;
-        bool isThis = false;
         if (auto st = dynamic_cast<const ResolvedTypeUnion *>(baseType)) {
             struTypeDecl = st->decl;
             isUnion = true;
             isDecl = false;
-            isThis = st->is_this;
         } else if (auto st = dynamic_cast<const ResolvedTypeUnionDecl *>(baseType)) {
             struTypeDecl = st->decl;
             isDecl = true;
             isUnion = true;
-            isThis = st->is_this;
         } else if (auto st = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
             struTypeDecl = st->decl;
             isDecl = false;
-            isThis = st->is_this;
         } else if (auto st = dynamic_cast<const ResolvedTypeStructDecl *>(baseType)) {
             struTypeDecl = st->decl;
             isDecl = true;
-            isThis = st->is_this;
         } else {
             dmz_unreachable(memberExpr.location, "unexpected type");
         }
-        if (!isThis && isDecl && baseType->is_generic()) {
+        if (isDecl && baseType->is_generic()) {
             bool skip = false;
             if (m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
                 skip = true;
@@ -821,8 +807,9 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_simd_buildin(const MemberExpr &member
         if (m_vectorBuiltins.find(key) == m_vectorBuiltins.end()) {
             std::vector<ptr<ResolvedParamDecl>> params;
             auto selfType = makePtr<ResolvedTypePointer>(SourceLocation::builtin(), vecType.clone());
-            auto maskType = makePtr<ResolvedTypeSimd>(
-                SourceLocation::builtin(), makePtr<ResolvedTypeBool>(SourceLocation::builtin()), vecType.simdSize);
+            auto maskType = makePtr<ResolvedTypeSimd>(SourceLocation::builtin(),
+                                                      makePtr<ResolvedTypeBool>(SourceLocation::builtin()), nullptr,
+                                                      vecType.simdSize);
             params.emplace_back(
                 makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "self", selfType->clone(), false));
             params.emplace_back(makePtr<ResolvedParamDecl>(SourceLocation::builtin(), "b", vecType.clone(), false));
@@ -1015,15 +1002,9 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
     // Lazy: ensure struct members are resolved before accessing fields
     if (!ensure_struct_members_resolved(*st)) return nullptr;
 
-    bool is_this = false;
-    if (auto declRefExpr = dynamic_cast<const DeclRefExpr *>(structInstantiation.base.get())) {
-        if (declRefExpr->identifier == "@This") {
-            is_this = true;
-        }
-    }
-    if (is_this == false && !dynamic_cast<const GenericExpr *>(structInstantiation.base.get()) &&
-        dynamic_cast<ResolvedGenericStructDecl *>(st)) {
-        return report(structInstantiation.location, "'" + st->identifier + "' is a generic and need specialization");
+    if (!dynamic_cast<const GenericExpr *>(structInstantiation.base.get()) &&
+        dynamic_cast<ResolvedGenericStructDecl *>(st) && !dynamic_cast<ResolvedGenericStructDecl *>(m_currentStruct)) {
+        return report(structInstantiation.location, "'" + st->name() + "' is a generic and need specialization");
     }
 
     std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
@@ -1120,14 +1101,8 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
     if (error) return nullptr;
 
-    auto res = makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, std::move(resolvedBase), *st,
-                                                        std::move(resolvedFieldInits), false);
-    if (auxstruType->is_this) {
-        if (auto *resStruType = dynamic_cast<ResolvedTypeStruct *>(res->type.get())) {
-            resStruType->is_this = true;
-        }
-    }
-    return res;
+    return makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, std::move(resolvedBase), *st,
+                                                    std::move(resolvedFieldInits), false);
 }
 
 ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation) {
@@ -1437,7 +1412,9 @@ ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) 
     if (!type)
         return report(sizeofExpr.sizeofType->location, "cannot resolve type '" + sizeofExpr.sizeofType->to_str() + "'");
 
-    return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type));
+    varOrReturn(expr, resolve_expr(*sizeofExpr.sizeofType));
+
+    return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(type), std::move(expr));
 }
 
 ptr<ResolvedTypeidExpr> Sema::resolve_typeid_expr(const TypeidExpr &typeidExpr) {
@@ -1567,7 +1544,7 @@ ptr<ResolvedSimdSplatExpr> Sema::resolve_simdsplat_expr(const SimdSplatExpr &sim
     debug_func(simdSplatExpr.location);
     varOrReturn(value, resolve_expr(*simdSplatExpr.value));
     // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
-    auto dummyType = makePtr<ResolvedTypeSimd>(simdSplatExpr.location, value->type->clone(), 0);
+    auto dummyType = makePtr<ResolvedTypeSimd>(simdSplatExpr.location, value->type->clone(), nullptr, 0);
     return makePtr<ResolvedSimdSplatExpr>(simdSplatExpr.location, std::move(value), std::move(dummyType));
 }
 
@@ -1575,7 +1552,7 @@ ptr<ResolvedSimdIotaExpr> Sema::resolve_simdiota_expr(const SimdIotaExpr &simdio
     debug_func(simdiotaExpr.location);
     // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
     auto dummyType =
-        makePtr<ResolvedTypeSimd>(simdiotaExpr.location, ResolvedTypeNumber::usize(simdiotaExpr.location), 0);
+        makePtr<ResolvedTypeSimd>(simdiotaExpr.location, ResolvedTypeNumber::usize(simdiotaExpr.location), nullptr, 0);
     return makePtr<ResolvedSimdIotaExpr>(simdiotaExpr.location, std::move(dummyType));
 }
 

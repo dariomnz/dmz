@@ -109,6 +109,7 @@ enum class TokenType {
     kw_atomicCmpExW,
     kw_atomicCmpExS,
     kw_atomicRmw,
+    kw_this,
     eof,
 };
 std::ostream& operator<<(std::ostream& os, const TokenType& t);
@@ -197,6 +198,7 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"true", TokenType::kw_true},
     {"false", TokenType::kw_false},
     {"null", TokenType::kw_null},
+    {"@This", TokenType::kw_this},
 };
 
 struct Token {
