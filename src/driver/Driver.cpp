@@ -41,6 +41,7 @@ void Driver::display_help() {
     println("  -test-compiler [dir] runs the compiler tests in [dir] (default: ./test)");
     println("  -fmt                 format the dmz source file");
     println("  -quiet               suppress output for successful tests");
+    println("  -fail-fast, -ff      terminate tests on first failure");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -125,6 +126,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.lsp = true;
             } else if (arg == "-quiet") {
                 options.quiet = true;
+            } else if (arg == "-fail-fast" || arg == "-ff") {
+                options.failFast = true;
             } else {
                 error("unexpected option '" + std::string(arg) + '\'');
             }
@@ -442,6 +445,7 @@ int Driver::main() {
         TestOptions testOpts;
         testOpts.parallel_jobs = m_options.parallelJobs;
         testOpts.quiet = m_options.quiet;
+        testOpts.fail_fast = m_options.failFast;
         return run_tests(m_options.source.string(), testOpts);
     }
 

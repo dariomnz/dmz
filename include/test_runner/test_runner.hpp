@@ -7,6 +7,7 @@ namespace DMZ {
 struct TestOptions {
     int parallel_jobs = 1;
     bool quiet = false;
+    bool fail_fast = false;
     std::string binary_path;
 };
 

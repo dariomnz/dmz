@@ -32,6 +32,7 @@ struct CompilerOptions {
     bool quiet = false;
     bool lsp = false;
     bool useTypes = false;
+    bool failFast = false;
     int parallelJobs = 1;
 
     static CompilerOptions parse_arguments(int argc, char** argv);

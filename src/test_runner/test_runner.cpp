@@ -430,12 +430,14 @@ int run_tests(std::string_view test_path, const TestOptions& options) {
     for (size_t i = 0; i < tests.size(); ++i) test_queue.push(i);
 
     std::atomic<int> passed(0);
+    std::atomic<bool> failed(false);
     int num_workers = options.parallel_jobs;
     if (num_workers <= 0) num_workers = std::thread::hardware_concurrency();
     if (num_workers <= 0) num_workers = 1;
 
     auto worker_task = [&] {
         while (true) {
+            if (options.fail_fast && failed) return;
             size_t test_idx;
             {
                 std::lock_guard<std::mutex> lock(queue_mutex);
@@ -453,6 +455,11 @@ int run_tests(std::string_view test_path, const TestOptions& options) {
                                   << COLORRESET << " in " << std::fixed << std::setprecision(3) << result.elapsed
                                   << " seconds" << std::endl;
                 } else {
+                    failed = true;
+                    if (options.fail_fast) {
+                        std::lock_guard<std::mutex> lock(queue_mutex);
+                        while (!test_queue.empty()) test_queue.pop();
+                    }
                     std::cout << "Running test: " << result.test_name << "... " << COLORRED << "FAILED" << COLORRESET
                               << " in " << std::fixed << std::setprecision(3) << result.elapsed << " seconds"
                               << std::endl;
