@@ -1,3 +1,3 @@
 #!/bin/bash
-ulimit -v 4194304
+ulimit -v 6291456
 /usr/bin/clangd "$@"

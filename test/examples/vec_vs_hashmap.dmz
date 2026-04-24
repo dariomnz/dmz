@@ -1,4 +1,4 @@
-// RUN: dmz %s -I std %S/../../std/std.dmz -run | filecheck %s
+// RUN: dmz %s -run | filecheck %s
 
 // CHECK: Allocated in vector = 1048544
 // CHECK: Time taken in vector 100000:

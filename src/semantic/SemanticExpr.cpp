@@ -1511,6 +1511,7 @@ ptr<ResolvedSimdSizeExpr> Sema::resolve_simd_size_expr(const SimdSizeExpr &simdS
 
     int bit_simd_size = CodegenUtils::target_simd_size();
 
+    if (!typeExpr->type) dmz_unreachable(typeExpr->location, "Expr without type");
     int bit_type_size = CodegenUtils::typeBitSize(*typeExpr->type);
     debug_msg("bit_simd_size: " << bit_simd_size << " bit_type_size: " << bit_type_size
                                 << " type: " << typeExpr->type->to_str());
