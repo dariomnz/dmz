@@ -279,161 +279,6 @@ void LSPServer::on_semantic_tokens(const std::string& id, const std::string& par
     send_response(id, ss.str());
 }
 
-void LSPServer::collect_member_completions(const ResolvedStructDecl* decl, std::stringstream& items, bool& has_items) {
-    if (!decl) return;
-    for (const auto& field : decl->fields) {
-        if (has_items) items << ",";
-        items << "{\"label\":\"" << escape_json(field->identifier) << "\",\"kind\":5,\"detail\":\""
-              << escape_json(field->type->to_str()) << "\"}";
-        has_items = true;
-    }
-    for (const auto& method : decl->functions) {
-        if (has_items) items << ",";
-        items << "{\"label\":\"" << escape_json(method->identifier) << "\",\"kind\":2,\"detail\":\""
-              << escape_json(method->type->to_str()) << "\"}";
-        has_items = true;
-    }
-}
-
-void LSPServer::collect_module_completions(const ResolvedModuleDecl* decl, std::stringstream& items, bool& has_items) {
-    if (!decl) return;
-    for (const auto& d : decl->declarations) {
-        if (!d->isPublic) continue;
-        if (dynamic_cast<const ResolvedTestDecl*>(d.get())) continue;
-        if (has_items) items << ",";
-        int kind = 1;   // Default
-        if (dynamic_cast<const ResolvedFunctionDecl*>(d.get()))
-            kind = 3;   // Function
-        else if (dynamic_cast<const ResolvedStructDecl*>(d.get()) ||
-                 dynamic_cast<const ResolvedTypeStructDecl*>(d->type.get()))
-            kind = 22;  // Struct
-        else if (dynamic_cast<const ResolvedModuleDecl*>(d.get()) ||
-                 dynamic_cast<const ResolvedTypeModule*>(d->type.get()))
-            kind = 9;   // Module
-        else if (dynamic_cast<const ResolvedDeclStmt*>(d.get()) || dynamic_cast<const ResolvedVarDecl*>(d.get()))
-            kind = 6;   // Variable
-        else if (dynamic_cast<const ResolvedGenericTypeDecl*>(d.get()))
-            kind = 25;  // TypeParameter
-
-        items << "{\"label\":\"" << escape_json(d->identifier) << "\",\"kind\":" << kind << ",\"detail\":\""
-              << escape_json(d->type->to_str()) << "\"}";
-        has_items = true;
-    }
-}
-
-void LSPServer::collect_completions_from_type(const ResolvedType* type, std::stringstream& items, bool& has_items) {
-    if (!type) return;
-    while (auto pt = dynamic_cast<const ResolvedTypePointer*>(type)) {
-        type = pt->pointerType.get();
-    }
-    if (auto st = dynamic_cast<const ResolvedTypeStruct*>(type)) {
-        collect_member_completions(st->decl, items, has_items);
-    } else if (auto st_decl = dynamic_cast<const ResolvedTypeStructDecl*>(type)) {
-        collect_member_completions(st_decl->decl, items, has_items);
-    } else if (auto mt = dynamic_cast<const ResolvedTypeModule*>(type)) {
-        collect_module_completions(mt->moduleDecl, items, has_items);
-    }
-}
-
-// Walk the resolved AST to find ResolvedMemberExpr with empty member identifier on the target line.
-// Returns the resolved type of the base expression, or nullptr if not found.
-const ResolvedType* LSPServer::find_incomplete_member_base_type(const ResolvedModuleDecl* mainModule,
-                                                                const std::string& file, size_t line) {
-    // Walk all expressions recursively looking for an incomplete MemberExpr on the target line
-    struct IncompleteMemberFinder {
-        const std::string& target_file;
-        size_t target_line;
-        const ResolvedType* result = nullptr;
-
-        void visit_module(const ResolvedModuleDecl& mod) {
-            for (const auto& decl : mod.declarations) visit_decl(*decl);
-        }
-
-        void visit_decl(const ResolvedDecl& decl) {
-            if (result) return;
-            if (const auto* fd = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
-                for (const auto& param : fd->params) visit_decl(*param);
-                if (fd->body) visit_stmt(*fd->body);
-            } else if (const auto* sd = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
-                for (const auto& method : sd->functions) visit_decl(*method);
-            } else if (const auto* vd = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
-                if (vd->initializer) visit_expr(*vd->initializer);
-            }
-        }
-
-        void visit_stmt(const ResolvedStmt& stmt) {
-            if (result) return;
-            if (const auto* block = dynamic_cast<const ResolvedBlock*>(&stmt)) {
-                for (const auto& s : block->statements) visit_stmt(*s);
-            } else if (const auto* ds = dynamic_cast<const ResolvedDeclStmt*>(&stmt)) {
-                if (ds->varDecl) visit_decl(*ds->varDecl);
-            } else if (const auto* rs = dynamic_cast<const ResolvedReturnStmt*>(&stmt)) {
-                if (rs->expr) visit_expr(*rs->expr);
-            } else if (const auto* is = dynamic_cast<const ResolvedIfStmt*>(&stmt)) {
-                visit_expr(*is->condition);
-                visit_stmt(*is->trueBlock);
-                if (is->falseBlock) visit_stmt(*is->falseBlock);
-            } else if (const auto* ws = dynamic_cast<const ResolvedWhileStmt*>(&stmt)) {
-                visit_expr(*ws->condition);
-                visit_stmt(*ws->body);
-            } else if (const auto* fs = dynamic_cast<const ResolvedForStmt*>(&stmt)) {
-                for (const auto& cond : fs->conditions) visit_expr(*cond);
-                visit_stmt(*fs->body);
-            } else if (const auto* as = dynamic_cast<const ResolvedAssignment*>(&stmt)) {
-                visit_expr(*as->assignee);
-                visit_expr(*as->expr);
-            } else if (const auto* def = dynamic_cast<const ResolvedDeferStmt*>(&stmt)) {
-                visit_stmt(*def->block);
-            } else if (const auto* switchStmt = dynamic_cast<const ResolvedSwitchStmt*>(&stmt)) {
-                visit_expr(*switchStmt->condition);
-                for (const auto& caseStmt : switchStmt->cases) {
-                    visit_stmt(*caseStmt);
-                }
-                if (switchStmt->elseBlock) visit_stmt(*switchStmt->elseBlock);
-            } else if (const auto* caseStmt = dynamic_cast<const ResolvedCaseStmt*>(&stmt)) {
-                for (const auto& cond : caseStmt->conditions) {
-                    visit_expr(*cond);
-                    if (result) return;
-                }
-                visit_stmt(*caseStmt->block);
-            } else if (const auto* expr = dynamic_cast<const ResolvedExpr*>(&stmt)) {
-                visit_expr(*expr);
-            }
-        }
-
-        void visit_expr(const ResolvedExpr& expr) {
-            if (result) return;
-            if (const auto* me = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
-                if (me->member.identifier.empty() && me->location.file_name == target_file &&
-                    me->location.line == target_line) {
-                    result = me->base->type.get();
-                    return;
-                }
-                visit_expr(*me->base);
-            } else if (const auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
-                visit_expr(*call->callee);
-                for (const auto& arg : call->arguments) visit_expr(*arg);
-            } else if (const auto* bin = dynamic_cast<const ResolvedBinaryOperator*>(&expr)) {
-                visit_expr(*bin->lhs);
-                visit_expr(*bin->rhs);
-            } else if (const auto* un = dynamic_cast<const ResolvedUnaryOperator*>(&expr)) {
-                visit_expr(*un->operand);
-            } else if (const auto* grp = dynamic_cast<const ResolvedGroupingExpr*>(&expr)) {
-                visit_expr(*grp->expr);
-            } else if (const auto* at = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
-                visit_expr(*at->array);
-                visit_expr(*at->index);
-            }
-        }
-    };
-
-    IncompleteMemberFinder finder{file, line};
-    if (mainModule) {
-        finder.visit_module(*mainModule);
-    }
-    return finder.result;
-}
-
 void LSPServer::on_completion(const std::string& id, const std::string& params) {
     std::string uri = get_json_value(params, "uri");
     if (uri.starts_with("file://")) uri = uri.substr(7);
@@ -524,6 +369,20 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
     }
 
     std::cerr << "[LSP] Completion has_items=" << has_items << std::endl;
+
+    // If no member completions found, fall back to scope-based completions
+    if (!has_items) {
+        const ResolvedScope* scope = find_scope_at_position(doc.module.get(), uri, line, col);
+        std::cerr << "[LSP] Scope-based completion, scope=" << (scope ? "found" : "null") << std::endl;
+        if (scope) {
+            collect_scope_completions(scope, line, items, has_items);
+        } else if (doc.module && doc.module->scope) {
+            // Top-level: use module scope (no line filter needed at module level)
+            collect_scope_completions(doc.module->scope.get(), line, items, has_items);
+        }
+    }
+
+    std::cerr << "[LSP] Final has_items=" << has_items << std::endl;
 
     std::stringstream ss;
     ss << "{\"isIncomplete\":false,\"items\":[" << items.str() << "]}";

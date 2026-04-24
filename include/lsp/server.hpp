@@ -30,8 +30,12 @@ class LSPServer {
     void collect_member_completions(const ResolvedStructDecl* decl, std::stringstream& items, bool& has_items);
     void collect_module_completions(const ResolvedModuleDecl* decl, std::stringstream& items, bool& has_items);
     void collect_completions_from_type(const ResolvedType* type, std::stringstream& items, bool& has_items);
-    const ResolvedType* find_incomplete_member_base_type(const ResolvedModuleDecl* mainModule,
-                                                         const std::string& file, size_t line);
+    const ResolvedType* find_incomplete_member_base_type(const ResolvedModuleDecl* mainModule, const std::string& file,
+                                                         size_t line);
+    const ResolvedScope* find_scope_at_position(const ResolvedModuleDecl* mainModule, const std::string& file,
+                                                size_t line, size_t col);
+    void collect_scope_completions(const ResolvedScope* scope, size_t cursor_line, std::stringstream& items,
+                                   bool& has_items);
 
     void publish_diagnostics(const std::string& filename, const std::vector<SourceLocation>& errors,
                              const std::vector<std::string>& messages);

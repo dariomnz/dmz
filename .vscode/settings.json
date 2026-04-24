@@ -84,5 +84,6 @@
         "--background-index-priority=low",
         "--malloc-trim",
         "--pch-storage=disk"
-    ]
+    ],
+    "clangd.path": "/home/dario/git/dmz/.vscode/limited_clangd.sh"
 }

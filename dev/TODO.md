@@ -28,7 +28,7 @@
 - [x] all stmt are expr (struct and union for the moment)
 - [x] new semantic system with lazy resolution
 - [x] new scopes system tied to each declaration
-- [ ] lsp completion with new scope system
+- [x] lsp completion with new scope system
 - [ ] permit types top be expr at compile time const t = i32;
 - [x] struct to replace lambdas
 - [ ] enums with .name with auto resolve
