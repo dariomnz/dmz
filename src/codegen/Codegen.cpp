@@ -555,8 +555,8 @@ void Codegen::generate_error_trace_push(const SourceLocation &location) {
 
     llvm::Value *entry_value = llvm::UndefValue::get(m_errorTraceEntryType);
 
-    auto storeSlice = [&](const std::string &str, int idx) {
-        auto strVal = create_global_string(str, "global.str.trace.data");
+    auto storeSlice = [&](const std::string name, const std::string &str, int idx) {
+        auto strVal = create_global_string(str, name);
 
         llvm::Value *slice_value = llvm::UndefValue::get(sliceLLVMType);
         slice_value = m_builder.CreateInsertValue(slice_value, strVal, 0);
@@ -568,10 +568,10 @@ void Codegen::generate_error_trace_push(const SourceLocation &location) {
     if (std::filesystem::exists(file_name)) {
         file_name = std::filesystem::canonical(file_name);
     }
-    storeSlice(file_name, 0);
+    storeSlice("global.str.trace.file", file_name, 0);
     entry_value = m_builder.CreateInsertValue(entry_value, m_builder.getInt32(location.line), 1);
     entry_value = m_builder.CreateInsertValue(entry_value, m_builder.getInt32(location.col + 1), 2);
-    storeSlice(m_currentFunction ? m_currentFunction->name() : "unknown", 3);
+    storeSlice("global.str.trace.function", m_currentFunction ? m_currentFunction->name() : "unknown", 3);
 
     m_builder.CreateStore(entry_value, entryPtr);
 
@@ -842,7 +842,14 @@ llvm::GlobalVariable *Codegen::create_global_string(const std::string &str, cons
     if (m_globalStrings.contains(str)) {
         return m_globalStrings[str];
     }
-    auto strVal = m_builder.CreateGlobalString(str, name, 0, m_module.get());
+
+    size_t hashVal = std::hash<std::string>{}(str);
+
+    std::stringstream ss;
+    ss << name << "." << std::uppercase << std::hex << (hashVal & 0xFFFFFFFF);
+    std::string uniqueName = ss.str();
+
+    auto strVal = m_builder.CreateGlobalString(str, uniqueName, 0, m_module.get());
     m_globalStrings[str] = strVal;
     return strVal;
 }
