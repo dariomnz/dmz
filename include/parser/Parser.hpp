@@ -147,7 +147,8 @@ class Parser {
     ptr<Assignment> parse_assignment_rhs(ptr<AssignableExpr> lhs);
     ptr<StructDecl> parse_struct_decl();
     ptr<UnionDecl> parse_union_decl();
-    ptr<FieldDecl> parse_field_decl();
+    ptr<EnumDecl> parse_enum_decl();
+    ptr<FieldDecl> parse_field_decl(bool withType = true);
     ptr<FieldInitStmt> parse_field_init_stmt();
     ptr<DeferStmt> parse_defer_stmt();
     ptr<ErrorGroupExprDecl> parse_error_group_expr_decl();

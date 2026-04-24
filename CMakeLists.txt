@@ -22,7 +22,6 @@ endif()
 find_package(LLVM REQUIRED CONFIG)
 include_directories(include "${LLVM_INCLUDE_DIR}")
 
-add_compile_options("-DDMZ_SINGLE_THREADED")
 # add_compile_options("-DDEBUG")
 # add_compile_options("-DDEBUG_PARSER")
 # add_compile_options("-DDEBUG_SEMANTIC")

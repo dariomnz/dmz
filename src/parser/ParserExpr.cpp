@@ -65,9 +65,11 @@ ptr<Expr> Parser::parse_primary() {
         return makePtr<DeclRefExpr>(location, "@This");
     }
     if (m_nextToken.type == TokenType::kw_struct || m_nextToken.type == TokenType::kw_union ||
-        m_nextToken.type == TokenType::kw_packed) {
+        m_nextToken.type == TokenType::kw_enum || m_nextToken.type == TokenType::kw_packed) {
         if (m_nextToken.type == TokenType::kw_union) {
             return parse_union_decl();
+        } else if (m_nextToken.type == TokenType::kw_enum) {
+            return parse_enum_decl();
         } else {
             return parse_struct_decl();
         }

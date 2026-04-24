@@ -237,10 +237,6 @@ ptr<UnionDecl> Parser::parse_union_decl() {
     eat_next_token();  // eat union
 
     std::string unionIdentifier = "unionL" + std::to_string(location.line) + "C" + std::to_string(location.col);
-    auto genericTypes = parse_generic_types_decl();
-    if (!genericTypes.empty()) {
-        return report(m_nextToken.loc, "unions cannot be generic");
-    }
 
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat openingToken
@@ -287,9 +283,72 @@ ptr<UnionDecl> Parser::parse_union_decl() {
     return unionDecl;
 }
 
+ptr<EnumDecl> Parser::parse_enum_decl() {
+    debug_func("");
+    SourceLocation location = m_nextToken.loc;
+    bool isPublic = false;
+    if (m_nextToken.type == TokenType::kw_pub) {
+        eat_next_token();  // eat pub
+        isPublic = true;
+    }
+
+    matchOrReturn(TokenType::kw_enum, "expected 'enum'");
+    eat_next_token();  // eat enum
+
+    std::string enumIdentifier = "enumL" + std::to_string(location.line) + "C" + std::to_string(location.col);
+    auto genericTypes = parse_generic_types_decl();
+    if (!genericTypes.empty()) {
+        return report(m_nextToken.loc, "unions cannot be generic");
+    }
+
+    matchOrReturn(TokenType::block_l, "expected '{'");
+    eat_next_token();  // eat openingToken
+
+    std::vector<ptr<Decl>> declList;
+    ptr<EnumDecl> enumDecl;
+    enumDecl = makePtr<EnumDecl>(location, isPublic, enumIdentifier, std::move(declList));
+
+    while (true) {
+        if (m_nextToken.type == TokenType::block_r) break;
+
+        if (m_nextToken.type == TokenType::comment) {
+            varOrReturn(comment, parse_comment());
+            declList.emplace_back(std::move(comment));
+        } else if (m_nextToken.type == TokenType::empty_line) {
+            varOrReturn(empty_line, parse_empty_line());
+            declList.emplace_back(std::move(empty_line));
+        } else if (m_nextToken.type == TokenType::id) {
+            varOrReturn(init, parse_field_decl(false));
+            declList.emplace_back(std::move(init));
+            if (m_nextToken.type != TokenType::comma) break;
+            eat_next_token();  // eat ','
+        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
+            bool isPublic = m_nextToken.type == TokenType::kw_pub;
+            if (isPublic) {
+                eat_next_token();  // eat pub
+            }
+            varOrReturn(init, parse_function_decl());
+            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
+            auto memberFunc =
+                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
+                                            std::move(func->params), std::move(func->body), enumDecl.get());
+            declList.emplace_back(std::move(memberFunc));
+        } else {
+            return report(m_nextToken.loc, "expected identifier or fn in union");
+        }
+    }
+
+    matchOrReturn(TokenType::block_r, "expected '}'");
+    eat_next_token();  // eat closingToken
+
+    enumDecl->decls = std::move(declList);
+
+    return enumDecl;
+}
+
 // <fieldDecl>
 //  ::= <identifier> ':' <type>
-ptr<FieldDecl> Parser::parse_field_decl() {
+ptr<FieldDecl> Parser::parse_field_decl(bool withType) {
     debug_func("");
 
     SourceLocation location = m_nextToken.loc;
@@ -299,10 +358,14 @@ ptr<FieldDecl> Parser::parse_field_decl() {
     auto identifier = m_nextToken.str;
     eat_next_token();  // eat identifier
 
-    matchOrReturn(TokenType::colon, "expected ':'");
-    eat_next_token();  // eat :
+    ptr<Expr> type = nullptr;
+    if (withType) {
+        matchOrReturn(TokenType::colon, "expected ':'");
+        eat_next_token();  // eat :
 
-    varOrReturn(type, parse_type());
+        type = parse_type();
+        if (!type) return nullptr;
+    }
 
     ptr<Expr> defaultInitializer = nullptr;
     if (m_nextToken.type == TokenType::op_assign) {

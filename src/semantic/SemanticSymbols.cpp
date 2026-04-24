@@ -437,6 +437,14 @@ void ResolvedUnionDecl::dump_dependencies(size_t level, bool dot_format) const {
     for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
 }
 
+void ResolvedEnumDecl::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedEnumDecl " << type->to_str() << '\n';
+
+    if (onlySelf) return;
+    for (auto &&field : fields) field->dump(level + 1, onlySelf);
+    for (auto &&function : functions) function->dump(level + 1, onlySelf);
+}
+
 void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedGenericStructDecl " << (isPacked ? "packed " : "") << type->to_str() << '\n';
     for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);

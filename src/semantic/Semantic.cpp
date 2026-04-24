@@ -107,7 +107,7 @@ ResolvedDecl *Sema::lookup(const SourceLocation &loc, const std::string_view id,
         if (m_currentStruct) {
             return m_currentStruct;
         } else {
-            return report(loc, "unexpected use of @This outside a struct or union");
+            return report(loc, "unexpected use of @This outside a struct");
         }
     }
 
@@ -313,6 +313,10 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                 ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl());
             } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl());
+            } else if (auto enumType = dynamic_cast<ResolvedTypeEnumDecl *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeEnum>(type.location, enumType->enumDecl());
+            } else if (auto enumType = dynamic_cast<ResolvedTypeEnum *>(decl->type.get())) {
+                ret = makePtr<ResolvedTypeEnum>(type.location, enumType->enumDecl());
             } else if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
             } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(decl->type.get())) {
@@ -374,6 +378,8 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         ptr<ResolvedTypeStructDecl> retTypeStruct;
         if (auto unionDecl = dynamic_cast<ResolvedUnionDecl *>(res)) {
             retTypeStruct = makePtr<ResolvedTypeUnionDecl>(type.location, unionDecl);
+        } else if (auto enumDecl = dynamic_cast<ResolvedEnumDecl *>(res)) {
+            retTypeStruct = makePtr<ResolvedTypeEnumDecl>(type.location, enumDecl);
         } else {
             retTypeStruct = makePtr<ResolvedTypeStructDecl>(type.location, res);
         }
@@ -473,7 +479,8 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
         type.kind == ResolvedTypeKind::Bool || type.kind == ResolvedTypeKind::StructDecl ||
         type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::UnionDecl ||
-        type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::ErrorGroup ||
+        type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::EnumDecl ||
+        type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::ErrorGroup ||
         type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function ||
         type.kind == ResolvedTypeKind::Module) {
         ret = type.clone();
@@ -730,7 +737,8 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
 
                     if (var) {
                         if (var->type->kind != ResolvedTypeKind::StructDecl &&
-                            var->type->kind != ResolvedTypeKind::UnionDecl) {
+                            var->type->kind != ResolvedTypeKind::UnionDecl &&
+                            var->type->kind != ResolvedTypeKind::EnumDecl) {
                             if (var->initializer) {
                                 tmp[var] = State::Assigned;
                             }

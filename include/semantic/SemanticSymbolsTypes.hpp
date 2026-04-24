@@ -16,6 +16,8 @@ enum class ResolvedTypeKind {
     Struct,
     UnionDecl,
     Union,
+    EnumDecl,
+    Enum,
     Generic,
     Specialized,
     Error,
@@ -99,6 +101,7 @@ struct ResolvedTypeBool : public ResolvedTypeNumber {
 
 struct ResolvedStructDecl;  // Forward declaration
 struct ResolvedUnionDecl;   // Forward declaration
+struct ResolvedEnumDecl;    // Forward declaration
 
 struct ResolvedTypeStructDecl : public ResolvedType {
     ptr<ResolvedStructDecl> ownedDecl;
@@ -140,6 +143,7 @@ struct ResolvedTypeUnionDecl : public ResolvedTypeStructDecl {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override { return false; }
     DMZ_TYPE_NAME();
 };
 
@@ -154,6 +158,37 @@ struct ResolvedTypeUnion : public ResolvedTypeStruct {
     ptr<ResolvedType> clone() const override;
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    bool is_generic() const override { return false; }
+    DMZ_TYPE_NAME();
+};
+
+struct ResolvedTypeEnumDecl : public ResolvedTypeStructDecl {
+    // Implementation in cpp
+    ResolvedTypeEnumDecl(SourceLocation location, ResolvedEnumDecl *decl);
+
+    ResolvedEnumDecl *enumDecl() const;
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    bool is_generic() const override { return false; }
+    DMZ_TYPE_NAME();
+};
+
+struct ResolvedTypeEnum : public ResolvedTypeStruct {
+    // Implementation in cpp
+    ResolvedTypeEnum(SourceLocation location, ResolvedEnumDecl *decl);
+
+    ResolvedEnumDecl *enumDecl() const;
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    bool is_generic() const override { return false; }
     DMZ_TYPE_NAME();
 };
 

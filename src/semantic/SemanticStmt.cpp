@@ -388,7 +388,8 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
             // give it the name of the variable if it's currently anonymous.
             if (auto *structType = dynamic_cast<ResolvedTypeStructDecl *>(resolvedVarDecl->type.get())) {
                 if (structType->decl->identifier.find("structL") != std::string::npos ||
-                    structType->decl->identifier.find("unionL") != std::string::npos) {
+                    structType->decl->identifier.find("unionL") != std::string::npos ||
+                    structType->decl->identifier.find("enumL") != std::string::npos) {
                     if (m_currentFunction == nullptr) {
                         structType->decl->identifier = resolve_decl_name(resolvedVarDecl->identifier);
                     } else {

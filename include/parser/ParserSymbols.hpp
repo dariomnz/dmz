@@ -701,6 +701,15 @@ struct UnionDecl : public StructDecl {
     std::string to_str() const override;
 };
 
+struct EnumDecl : public StructDecl {
+    EnumDecl(SourceLocation location, bool isPublic, std::string_view identifier,
+              std::vector<ptr<Decl>> decls)
+        : StructDecl(location, isPublic, identifier, false, std::move(decls)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct DeclStmt : public Decl, public Stmt {
     SourceLocation location;
     ptr<VarDecl> varDecl;

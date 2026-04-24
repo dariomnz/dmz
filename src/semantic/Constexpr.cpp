@@ -1,5 +1,8 @@
 #include "semantic/Constexpr.hpp"
 
+#include <iostream>
+
+#include "Debug.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
@@ -201,6 +204,8 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_decl(const ResolvedDecl
     } else if (const auto *rds = dynamic_cast<const ResolvedDeclStmt *>(&decl)) {
         if (!rds->varDecl || rds->isMutable || !rds->varDecl->initializer) return std::nullopt;
         return evaluate(*rds->varDecl->initializer, allowSideEffects);
+    } else if (const auto *field = dynamic_cast<const ResolvedFieldDecl *>(&decl)) {
+        return field->get_constant_value();
     }
 
     return std::nullopt;

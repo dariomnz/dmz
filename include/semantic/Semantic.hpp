@@ -159,6 +159,7 @@ class Sema {
     bool resolve_struct_members(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_struct_body_funcs(ResolvedStructDecl &resolvedStructDecl);
     bool resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl);
+    bool resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl);
     ptr<ResolvedDeferStmt> resolve_defer_stmt(const DeferStmt &deferStmt);
     std::vector<ptr<ResolvedDeferRefStmt>> resolve_defer_ref_stmt(bool isScope, bool isError);
     ptr<ResolvedErrorGroupExprDecl> resolve_error_group_expr_decl(const ErrorGroupExprDecl &ErrorGroupExprDecl);

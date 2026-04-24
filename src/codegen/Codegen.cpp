@@ -243,6 +243,8 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             ret = llvm::StructType::getTypeByName(*m_context, name);
             if (!ret) dmz_unreachable(type.location, "unexpected error generating union decl");
         }
+    } else if (type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::EnumDecl) {
+        ret = generate_type(ResolvedTypeNumber{SourceLocation::builtin(), ResolvedNumberKind::UInt, 32});
     } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
         ret = generate_type(*typeArray->arrayType, true);
         ret = llvm::ArrayType::get(ret, typeArray->arraySize);
@@ -720,69 +722,86 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
     // v->dump();
     if (from.equal(to)) return v;
 
-    if (from.kind == ResolvedTypeKind::Pointer) {
-        if (to.kind == ResolvedTypeKind::Pointer) {
+    const ResolvedType *fromPtr = &from;
+    const ResolvedType *toPtr = &to;
+
+    std::optional<ResolvedTypeNumber> fromTmp;
+    std::optional<ResolvedTypeNumber> toTmp;
+    if (fromPtr->kind == ResolvedTypeKind::Enum) {
+        fromTmp.emplace(fromPtr->location, ResolvedNumberKind::UInt, 32);
+        fromPtr = &fromTmp.value();
+    }
+
+    if (toPtr->kind == ResolvedTypeKind::Enum) {
+        toTmp.emplace(toPtr->location, ResolvedNumberKind::UInt, 32);
+        toPtr = &toTmp.value();
+    }
+
+    if (fromPtr->kind == ResolvedTypeKind::Pointer) {
+        if (toPtr->kind == ResolvedTypeKind::Pointer) {
             return v;
-        } else if (to.kind == ResolvedTypeKind::Number) {
-            return m_builder.CreatePtrToInt(v, generate_type(to), "ptr.to.int");
+        } else if (toPtr->kind == ResolvedTypeKind::Number) {
+            return m_builder.CreatePtrToInt(v, generate_type(*toPtr), "ptr.to.int");
         } else {
-            dmz_unreachable(from.location,
-                            "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from ptr");
+            dmz_unreachable(fromPtr->location,
+                            "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() + " unsuported type from ptr");
         }
-    } else if (auto fromNum = dynamic_cast<const ResolvedTypeNumber *>(&from)) {
-        if (auto toNum = dynamic_cast<const ResolvedTypeNumber *>(&to)) {
+    } else if (auto fromNum = dynamic_cast<const ResolvedTypeNumber *>(fromPtr)) {
+        if (auto toNum = dynamic_cast<const ResolvedTypeNumber *>(toPtr)) {
             if (fromNum->numberKind == ResolvedNumberKind::Int) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
-                    if (fromNum->bitSize == 1) return m_builder.CreateZExtOrTrunc(v, generate_type(to), "bool.to.int");
-                    return m_builder.CreateSExtOrTrunc(v, generate_type(to), "int.to.int");
+                    if (fromNum->bitSize == 1)
+                        return m_builder.CreateZExtOrTrunc(v, generate_type(*toPtr), "bool.to.int");
+                    return m_builder.CreateSExtOrTrunc(v, generate_type(*toPtr), "int.to.int");
                 } else if (toNum->numberKind == ResolvedNumberKind::UInt) {
-                    return m_builder.CreateSExtOrTrunc(v, generate_type(to), "int.to.uint");
+                    return m_builder.CreateSExtOrTrunc(v, generate_type(*toPtr), "int.to.uint");
                 } else if (toNum->numberKind == ResolvedNumberKind::Float) {
-                    return m_builder.CreateSIToFP(v, generate_type(to), "int.to.float");
+                    return m_builder.CreateSIToFP(v, generate_type(*toPtr), "int.to.float");
                 } else {
-                    dmz_unreachable(from.location,
-                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from Int");
+                    dmz_unreachable(fromPtr->location, "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() +
+                                                           " unsuported type from Int");
                 }
             } else if (fromNum->numberKind == ResolvedNumberKind::UInt) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
-                    return m_builder.CreateZExtOrTrunc(v, generate_type(to), "uint.to.int");
+                    return m_builder.CreateZExtOrTrunc(v, generate_type(*toPtr), "uint.to.int");
                 } else if (toNum->numberKind == ResolvedNumberKind::UInt) {
-                    return m_builder.CreateZExtOrTrunc(v, generate_type(to), "uint.to.uint");
+                    return m_builder.CreateZExtOrTrunc(v, generate_type(*toPtr), "uint.to.uint");
                 } else if (toNum->numberKind == ResolvedNumberKind::Float) {
-                    return m_builder.CreateUIToFP(v, generate_type(to));
+                    return m_builder.CreateUIToFP(v, generate_type(*toPtr));
                 } else {
-                    dmz_unreachable(from.location,
-                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from UInt");
+                    dmz_unreachable(fromPtr->location, "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() +
+                                                           " unsuported type from UInt");
                 }
             } else if (fromNum->numberKind == ResolvedNumberKind::Float) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
-                    return m_builder.CreateFPToSI(v, generate_type(to), "uint.to.int");
+                    return m_builder.CreateFPToSI(v, generate_type(*toPtr), "uint.to.int");
                 } else if (toNum->numberKind == ResolvedNumberKind::UInt) {
-                    return m_builder.CreateFPToUI(v, generate_type(to), "uint.to.uint");
+                    return m_builder.CreateFPToUI(v, generate_type(*toPtr), "uint.to.uint");
                 } else if (toNum->numberKind == ResolvedNumberKind::Float) {
                     if (fromNum->bitSize > toNum->bitSize) {
-                        return m_builder.CreateFPTrunc(v, generate_type(to));
+                        return m_builder.CreateFPTrunc(v, generate_type(*toPtr));
                     } else if (fromNum->bitSize < toNum->bitSize) {
-                        return m_builder.CreateFPExt(v, generate_type(to));
+                        return m_builder.CreateFPExt(v, generate_type(*toPtr));
                     } else {
                         return v;
                     }
                 } else {
-                    dmz_unreachable(from.location,
-                                    "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from UInt");
+                    dmz_unreachable(fromPtr->location, "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() +
+                                                           " unsuported type from UInt");
                 }
             }
         }
-    } else if (from.kind == ResolvedTypeKind::Error) {
-        if (to.kind == ResolvedTypeKind::Error || to.kind == ResolvedTypeKind::Pointer) {
+    } else if (fromPtr->kind == ResolvedTypeKind::Error) {
+        if (toPtr->kind == ResolvedTypeKind::Error || toPtr->kind == ResolvedTypeKind::Pointer) {
             return v;
         } else {
-            dmz_unreachable(from.location,
-                            "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type from Err");
+            dmz_unreachable(fromPtr->location,
+                            "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() + " unsuported type from Err");
         }
     }
 
-    dmz_unreachable(from.location, "From: " + from.to_str() + " to: " + to.to_str() + " unsuported type in cast_to");
+    dmz_unreachable(fromPtr->location,
+                    "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() + " unsuported type in cast_to");
 }
 
 llvm::Function *Codegen::get_current_function() { return m_builder.GetInsertBlock()->getParent(); };

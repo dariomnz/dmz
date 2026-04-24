@@ -62,7 +62,7 @@ bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
         return debug_ret(true);
     }
     if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Bool ||
-        other.kind == ResolvedTypeKind::Generic) {
+        other.kind == ResolvedTypeKind::Enum || other.kind == ResolvedTypeKind::Generic) {
         // TODO think if is ok to ignore size
         // return debug_ret(numberKind == numType->numberKind);
         return debug_ret(true);
@@ -314,6 +314,81 @@ void ResolvedTypeUnion::dump(size_t level) const {
 }
 
 std::string ResolvedTypeUnion::to_str() const {
+    if (!decl) return "unknown{}";
+    return decl->name() + "{}";
+}
+
+ResolvedTypeEnumDecl::ResolvedTypeEnumDecl(SourceLocation location, ResolvedEnumDecl *decl)
+    : ResolvedTypeStructDecl(std::move(location), decl) {
+    kind = ResolvedTypeKind::EnumDecl;
+}
+
+ResolvedEnumDecl *ResolvedTypeEnumDecl::enumDecl() const { return static_cast<ResolvedEnumDecl *>(decl); }
+
+bool ResolvedTypeEnumDecl::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeEnumDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (auto strType = dynamic_cast<const ResolvedTypeEnumDecl *>(&other)) {
+        return debug_ret(decl == strType->decl);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeEnumDecl::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeEnumDecl " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeEnumDecl::clone() const {
+    debug_func("ResolvedTypeEnumDecl " << location);
+    return makePtr<ResolvedTypeEnumDecl>(location, enumDecl());
+}
+
+void ResolvedTypeEnumDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeEnumDecl " << to_str() << "\n";
+
+    if (ownedDecl) ownedDecl->dump(level + 1);
+}
+
+std::string ResolvedTypeEnumDecl::to_str() const { return decl->name(); }
+
+ResolvedTypeEnum::ResolvedTypeEnum(SourceLocation location, ResolvedEnumDecl *decl)
+    : ResolvedTypeStruct(std::move(location), decl) {
+    kind = ResolvedTypeKind::Enum;
+}
+
+ResolvedEnumDecl *ResolvedTypeEnum::enumDecl() const { return static_cast<ResolvedEnumDecl *>(decl); }
+
+bool ResolvedTypeEnum::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeEnum " << to_str() << " " << other.to_str() << " " << location);
+    if (auto strType = dynamic_cast<const ResolvedTypeEnum *>(&other)) {
+        return debug_ret(decl == strType->decl);
+    } else {
+        return debug_ret(false);
+    }
+}
+
+bool ResolvedTypeEnum::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeEnum " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic ||
+        other.kind == ResolvedTypeKind::Number)
+        return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeEnum::clone() const {
+    debug_func("ResolvedTypeEnum " << location);
+    return makePtr<ResolvedTypeEnum>(location, enumDecl());
+}
+
+void ResolvedTypeEnum::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeEnum " << to_str() << "\n";
+}
+
+std::string ResolvedTypeEnum::to_str() const {
     if (!decl) return "unknown{}";
     return decl->name() + "{}";
 }

@@ -496,6 +496,21 @@ struct ResolvedUnionDecl : public ResolvedStructDecl {
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
+struct ResolvedEnumDecl : public ResolvedStructDecl {
+    ResolvedEnumDecl(SourceLocation location, bool isPublic, std::string_view identifier, const EnumDecl *enumDecl,
+                     bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
+                     std::vector<ptr<ResolvedMemberFunctionDecl>> functions, ptr<ResolvedScope> scope)
+        : ResolvedStructDecl(location, isPublic, identifier, enumDecl, isPacked, std::move(fields),
+                             std::move(functions), std::move(scope)) {
+        this->type = makePtr<ResolvedTypeEnumDecl>(location, this);
+    }
+
+    const EnumDecl *enumDecl() const { return static_cast<const EnumDecl *>(structDecl); }
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+    DMZ_TYPE_NAME();
+};
+
 struct ResolvedGenericStructDecl : public ResolvedStructDecl {
     std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};       // The types used for lookup
     std::vector<ptr<ResolvedSpecializedStructDecl>> specializations = {};  // List of specializations

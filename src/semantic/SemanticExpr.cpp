@@ -251,11 +251,13 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     if (isMemberCall && resolvedBase) {
         ptr<ResolvedExpr> argsToAdd = nullptr;
         if (resolvedBase->type->kind == ResolvedTypeKind::Struct ||
-            resolvedBase->type->kind == ResolvedTypeKind::Union || resolvedBase->type->kind == ResolvedTypeKind::Simd) {
+            resolvedBase->type->kind == ResolvedTypeKind::Union || resolvedBase->type->kind == ResolvedTypeKind::Enum ||
+            resolvedBase->type->kind == ResolvedTypeKind::Simd) {
             argsToAdd = makePtr<ResolvedRefPtrExpr>(resolvedBase->location, std::move(resolvedBase));
         } else if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(resolvedBase->type.get())) {
             if (ptrType->pointerType->kind == ResolvedTypeKind::Struct ||
                 ptrType->pointerType->kind == ResolvedTypeKind::Union ||
+                ptrType->pointerType->kind == ResolvedTypeKind::Enum ||
                 ptrType->pointerType->kind == ResolvedTypeKind::Simd) {
                 argsToAdd = std::move(resolvedBase);
             }
@@ -640,6 +642,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         ResolvedStructDecl *struTypeDecl = nullptr;
         bool isDecl = false;
         bool isUnion = false;
+        bool isEnum = false;
         if (auto st = dynamic_cast<const ResolvedTypeUnion *>(baseType)) {
             struTypeDecl = st->decl;
             isUnion = true;
@@ -648,6 +651,14 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             struTypeDecl = st->decl;
             isDecl = true;
             isUnion = true;
+        } else if (auto st = dynamic_cast<const ResolvedTypeEnumDecl *>(baseType)) {
+            struTypeDecl = st->decl;
+            isDecl = true;
+            isEnum = true;
+        } else if (auto st = dynamic_cast<const ResolvedTypeEnum *>(baseType)) {
+            struTypeDecl = st->decl;
+            isDecl = false;
+            isEnum = true;
         } else if (auto st = dynamic_cast<const ResolvedTypeStruct *>(baseType)) {
             struTypeDecl = st->decl;
             isDecl = false;
@@ -683,7 +694,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
                                                        resolvedBase->type->to_str() + "'");
             }
         } else if (dynamic_cast<const ResolvedFieldDecl *>(decl)) {
-            if (isDecl && !isUnion) {
+            if (isDecl && !isUnion && !isEnum) {
                 return report(memberExpr.location,
                               "cannot access non-static field '" + memberExpr.field + "' without an instance");
             }

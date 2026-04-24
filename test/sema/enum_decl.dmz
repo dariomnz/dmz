@@ -1,0 +1,39 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+const Token = enum {
+    val1,
+    val2,
+    val3 = 3,
+    val4,
+};
+
+fn main() -> void {
+    let t2: Token = Token.val2;
+    let t3 = Token.val3;
+    let t4: Token = Token.val4;
+
+}
+// CHECK: ResolvedVarDecl:const enum_decl.Token Token
+// CHECK-NEXT:   ResolvedTypeExpr:enum_decl.Token
+// CHECK-NEXT:     ResolvedTypeEnumDecl enum_decl.Token
+// CHECK-NEXT:   ResolvedTypeEnumDecl enum_decl.Token
+// CHECK-NEXT:     ResolvedEnumDecl enum_decl.Token
+// CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val1
+// CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val2
+// CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val3
+// CHECK-NEXT:         ResolvedIntLiteral:i32 '3'
+// CHECK-NEXT:         | value: 3
+// CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val4
+// CHECK: ResolvedDeclStmt enum_decl.Token{}
+// CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t2
+// CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val2
+// CHECK-NEXT:    | value: 1
+// CHECK-NEXT:      ResolvedDeclRefExpr:enum_decl.Token Token
+// CHECK-NEXT:ResolvedDeclStmt enum_decl.Token{}
+// CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t3
+// CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val3
+// CHECK-NEXT:    | value: 3
+// CHECK-NEXT:      ResolvedDeclRefExpr:enum_decl.Token Token
+// CHECK-NEXT:ResolvedDeclStmt enum_decl.Token{}
+// CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t4
+// CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val4
+// CHECK-NEXT:    | value: 4

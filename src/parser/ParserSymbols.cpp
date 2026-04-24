@@ -374,7 +374,7 @@ void AssignmentOperator::dump(size_t level) const {
 std::string AssignmentOperator::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void FieldDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "FieldDecl:" << type->to_str() << " " << identifier << '\n';
+    std::cerr << indent(level) << "FieldDecl:" << (type ? type->to_str() : "") << " " << identifier << '\n';
     if (default_initializer) default_initializer->dump(level + 1);
 }
 
@@ -413,6 +413,14 @@ void UnionDecl::dump(size_t level) const {
 }
 
 std::string UnionDecl::to_str() const { return (isPacked ? "packed " : "") + identifier; }
+
+void EnumDecl::dump(size_t level) const {
+    std::cerr << indent(level) << "EnumDecl " << identifier << '\n';
+
+    for (auto &&decl : decls) decl->dump(level + 1);
+}
+
+std::string EnumDecl::to_str() const { return identifier; }
 
 void MemberExpr::dump(size_t level) const {
     std::cerr << indent(level) << "MemberExpr ." << field << '\n';

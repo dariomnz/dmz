@@ -1,0 +1,24 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+const Token = enum {
+    val1,
+    val2,
+    val3 = 3,
+    val4,
+};
+
+fn main() -> void {
+    let t2: Token = Token.val2;
+    let t3 = Token.val3;
+    let t4: Token = Token.val4;
+
+    let val: i32 = t4;
+    let val2: Token = val;
+}
+
+// CHECK: store i32 1, ptr %t2, align 4
+// CHECK-NEXT: store i32 3, ptr %t3, align 4
+// CHECK-NEXT: store i32 4, ptr %t4, align 4
+// CHECK-NEXT: %0 = load i32, ptr %t4, align 4
+// CHECK-NEXT: store i32 %0, ptr %val, align 4
+// CHECK-NEXT: %1 = load i32, ptr %val, align 4
+// CHECK-NEXT: store i32 %1, ptr %val2, align 4
