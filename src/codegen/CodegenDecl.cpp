@@ -558,7 +558,7 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     } else {
         llvm::Constant *initializer = nullptr;
         if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
-            initializer = m_builder.getInt32(*constVal);
+            initializer = llvm::ConstantInt::get(generate_type(*stmt.type), *constVal);
         }
         globalVar =
             new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
