@@ -38,10 +38,10 @@ int CodegenUtils::typeBitSize(const ResolvedType &type) {
     if (type.is_generic()) {
         return ptrBitSize();
     }
-    llvm::LLVMContext context;
-    llvm::Module module("tmp", context);
-    llvm::Type *llvmType = Codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true, false).generate_type(type);
-    return module.getDataLayout().getTypeSizeInBits(llvmType);
+    Codegen codegen(std::vector<ptr<ResolvedModuleDecl>>{}, "", false, true, false);
+    llvm::Type *llvmType = codegen.generate_type(type, true);
+    if (!llvmType) dmz_unreachable(type.location, "type is null");
+    return codegen.m_module->getDataLayout().getTypeSizeInBits(llvmType);
 }
 
 int CodegenUtils::target_simd_size() {
