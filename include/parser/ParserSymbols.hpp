@@ -31,6 +31,7 @@ struct Decl {
 
     virtual void dump(size_t level = 0) const = 0;
     virtual std::string to_str() const = 0;
+    virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
 struct GenericTypeDecl : public Decl {
@@ -38,6 +39,7 @@ struct GenericTypeDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct Stmt {
@@ -48,10 +50,12 @@ struct Stmt {
 
     virtual void dump(size_t level = 0) const = 0;
     virtual std::string to_str() const = 0;
+    virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
 struct Expr : public Stmt {
     Expr(SourceLocation location) : Stmt(location) {}
+    DMZ_TYPE_NAME();
 };
 
 struct Decoration : public Expr, public Decl {
@@ -60,23 +64,28 @@ struct Decoration : public Expr, public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct Comment : Decoration {
     std::string comment;
     Comment(SourceLocation location, std::string_view comment) : Decoration(location), comment(comment) {}
+    DMZ_TYPE_NAME();
 };
 
 struct EmptyLine : Decoration {
     EmptyLine(SourceLocation location) : Decoration(location) {}
+    DMZ_TYPE_NAME();
 };
 
 struct Comma : Decoration {
     Comma(SourceLocation location) : Decoration(location) {}
+    DMZ_TYPE_NAME();
 };
 
 struct Type : public Expr {
     Type(SourceLocation location) : Expr(location) {}
+    DMZ_TYPE_NAME();
 };
 
 struct TypeVoid : public Type {
@@ -84,6 +93,7 @@ struct TypeVoid : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeNumber : public Type {
@@ -92,6 +102,7 @@ struct TypeNumber : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeBool : public Type {
@@ -99,6 +110,7 @@ struct TypeBool : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeError : public Type {
@@ -106,6 +118,7 @@ struct TypeError : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeSlice : public Type {
@@ -114,6 +127,7 @@ struct TypeSlice : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeSimd : public Type {
@@ -124,6 +138,7 @@ struct TypeSimd : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeFunction : public Type {
@@ -134,6 +149,7 @@ struct TypeFunction : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypePointer : public Type {
@@ -142,6 +158,7 @@ struct TypePointer : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct Block : public Stmt {
@@ -153,6 +170,7 @@ struct Block : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct IfStmt : public Stmt {
@@ -171,6 +189,7 @@ struct IfStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct WhileStmt : public Stmt {
@@ -182,6 +201,7 @@ struct WhileStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct CaptureDecl : public Decl {
@@ -189,6 +209,7 @@ struct CaptureDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ForStmt : public Stmt {
@@ -207,6 +228,7 @@ struct ForStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct CaseStmt : public Stmt {
@@ -218,6 +240,7 @@ struct CaseStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct SwitchStmt : public Stmt {
@@ -236,6 +259,7 @@ struct SwitchStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ReturnStmt : public Stmt {
@@ -245,6 +269,7 @@ struct ReturnStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct BreakStmt : public Stmt {
@@ -253,6 +278,7 @@ struct BreakStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ContinueStmt : public Stmt {
@@ -260,6 +286,7 @@ struct ContinueStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct FieldInitStmt : public Stmt {
@@ -271,6 +298,7 @@ struct FieldInitStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct StructInstantiationExpr : public Expr {
@@ -287,6 +315,7 @@ struct StructInstantiationExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TupleInstantiationExpr : public Expr {
@@ -298,6 +327,7 @@ struct TupleInstantiationExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ArrayInstantiationExpr : public Expr {
@@ -309,6 +339,7 @@ struct ArrayInstantiationExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct IntLiteral : public Expr {
@@ -318,6 +349,7 @@ struct IntLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct FloatLiteral : public Expr {
@@ -327,6 +359,7 @@ struct FloatLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct CharLiteral : public Expr {
@@ -336,6 +369,7 @@ struct CharLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct BoolLiteral : public Expr {
@@ -345,6 +379,7 @@ struct BoolLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct StringLiteral : public Expr {
@@ -354,6 +389,7 @@ struct StringLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct NullLiteral : public Expr {
@@ -361,6 +397,7 @@ struct NullLiteral : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct RangeExpr : public Expr {
@@ -371,6 +408,7 @@ struct RangeExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct SizeofExpr : public Expr {
@@ -379,6 +417,7 @@ struct SizeofExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeidExpr : public Expr {
@@ -387,6 +426,7 @@ struct TypeidExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TypeinfoExpr : public Expr {
@@ -396,6 +436,7 @@ struct TypeinfoExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct HasMethodExpr : public Expr {
@@ -406,6 +447,7 @@ struct HasMethodExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct SimdSizeExpr : public Expr {
@@ -414,6 +456,7 @@ struct SimdSizeExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct SimdSplatExpr : public Expr {
@@ -422,6 +465,7 @@ struct SimdSplatExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct SimdIotaExpr : public Expr {
@@ -429,6 +473,7 @@ struct SimdIotaExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct CallExpr : public Expr {
@@ -444,10 +489,12 @@ struct CallExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct AssignableExpr : public Expr {
     AssignableExpr(SourceLocation location) : Expr(location) {}
+    DMZ_TYPE_NAME();
 };
 
 struct DeclRefExpr : public AssignableExpr {
@@ -458,6 +505,7 @@ struct DeclRefExpr : public AssignableExpr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct MemberExpr : public AssignableExpr {
@@ -469,6 +517,7 @@ struct MemberExpr : public AssignableExpr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct AutoMemberExpr : public Expr {
@@ -478,6 +527,7 @@ struct AutoMemberExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct GenericExpr : public Expr {
@@ -489,6 +539,7 @@ struct GenericExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ArrayAtExpr : public AssignableExpr {
@@ -500,6 +551,7 @@ struct ArrayAtExpr : public AssignableExpr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct GroupingExpr : public Expr {
@@ -509,6 +561,7 @@ struct GroupingExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct BinaryOperator : public Expr {
@@ -521,6 +574,7 @@ struct BinaryOperator : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct UnaryOperator : public Expr {
@@ -532,6 +586,7 @@ struct UnaryOperator : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct RefPtrExpr : public Expr {
@@ -541,6 +596,7 @@ struct RefPtrExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct DerefPtrExpr : public AssignableExpr {
@@ -550,6 +606,7 @@ struct DerefPtrExpr : public AssignableExpr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ParamDecl : public Decl {
@@ -566,6 +623,7 @@ struct ParamDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct VarDecl : public Decl {
@@ -584,6 +642,7 @@ struct VarDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct FuncDecl : public Decl {
@@ -593,6 +652,7 @@ struct FuncDecl : public Decl {
     FuncDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
              std::vector<ptr<ParamDecl>> params)
         : Decl(location, isPublic, std::move(identifier)), type(std::move(type)), params(std::move(params)) {}
+    DMZ_TYPE_NAME();
 };
 
 struct ExternFunctionDecl : public FuncDecl {
@@ -602,6 +662,7 @@ struct ExternFunctionDecl : public FuncDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct FunctionDecl : public FuncDecl {
@@ -614,6 +675,7 @@ struct FunctionDecl : public FuncDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct GenericFunctionDecl : public FunctionDecl {
@@ -627,6 +689,7 @@ struct GenericFunctionDecl : public FunctionDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 // Forware declaration
@@ -641,6 +704,7 @@ struct MemberFunctionDecl : public FunctionDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct MemberGenericFunctionDecl : public GenericFunctionDecl {
@@ -655,6 +719,7 @@ struct MemberGenericFunctionDecl : public GenericFunctionDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct FieldDecl : public Decl {
@@ -668,6 +733,7 @@ struct FieldDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct StructDecl : public Type {
@@ -688,6 +754,7 @@ struct StructDecl : public Type {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct GenericStructDecl : public StructDecl {
@@ -700,6 +767,7 @@ struct GenericStructDecl : public StructDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct UnionDecl : public StructDecl {
@@ -709,6 +777,7 @@ struct UnionDecl : public StructDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct EnumDecl : public StructDecl {
@@ -717,6 +786,7 @@ struct EnumDecl : public StructDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct DeclStmt : public Decl, public Stmt {
@@ -731,6 +801,7 @@ struct DeclStmt : public Decl, public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct Assignment : public Stmt {
@@ -742,6 +813,7 @@ struct Assignment : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct AssignmentOperator : public Assignment {
@@ -752,6 +824,7 @@ struct AssignmentOperator : public Assignment {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct DeferStmt : public Stmt {
@@ -763,6 +836,7 @@ struct DeferStmt : public Stmt {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ErrorDecl : public Decl {
@@ -770,6 +844,7 @@ struct ErrorDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ErrorInPlaceExpr : public Expr {
@@ -778,6 +853,7 @@ struct ErrorInPlaceExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ErrorGroupExprDecl : public Expr, public Decl {
@@ -794,6 +870,7 @@ struct ErrorGroupExprDecl : public Expr, public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct CatchErrorExpr : public Expr {
@@ -809,6 +886,7 @@ struct CatchErrorExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TryErrorExpr : public Expr {
@@ -818,6 +896,7 @@ struct TryErrorExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct OrElseErrorExpr : public Expr {
@@ -829,6 +908,7 @@ struct OrElseErrorExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ModuleDecl : public Decl {
@@ -843,6 +923,7 @@ struct ModuleDecl : public Decl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct ImportExpr : public Expr {
@@ -851,6 +932,7 @@ struct ImportExpr : public Expr {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 
 struct TestDecl : public FunctionDecl {
@@ -861,5 +943,6 @@ struct TestDecl : public FunctionDecl {
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
+    DMZ_TYPE_NAME();
 };
 }  // namespace DMZ

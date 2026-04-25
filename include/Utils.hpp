@@ -7,6 +7,9 @@
 
 #include "UtilsPtr.hpp"
 
+#define DMZ_TYPE_NAME() \
+    std::string_view className() const override { return type_name<std::remove_cvref_t<decltype(*this)>>(); }
+
 template <typename T>
 constexpr auto type_name() {
     std::string_view name, prefix, suffix;

@@ -28,6 +28,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = makePtr<Text>(cast_expr->value);
     } else if (dynamic_cast<const NullLiteral*>(&expr)) {
         node = makePtr<Text>("null");
+    } else if (auto cast_expr = dynamic_cast<const AutoMemberExpr*>(&expr)) {
+        node = makePtr<Text>("." + cast_expr->field);
     } else if (auto cast_expr = dynamic_cast<const DeclRefExpr*>(&expr)) {
         node = fmt_decl_ref_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const CallExpr*>(&expr)) {
@@ -84,7 +86,7 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_tuple_instantiation_expr(*cast_expr);
     } else {
         expr.dump();
-        dmz_unreachable(expr.location, "TODO");
+        dmz_unreachable(expr.location, "TODO: " + std::string(expr.className()));
     }
     return node;
 }

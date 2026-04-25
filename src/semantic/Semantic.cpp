@@ -739,7 +739,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
                         if (var->type->kind != ResolvedTypeKind::StructDecl &&
                             var->type->kind != ResolvedTypeKind::UnionDecl &&
                             var->type->kind != ResolvedTypeKind::EnumDecl) {
-                            if (var->initializer) {
+                            if (var->initializer || var->isGlobal) {
                                 tmp[var] = State::Assigned;
                             }
 
@@ -1115,7 +1115,6 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
 
         auto atomicOpDecl = lookup_in_module(call.location, atomic_import_expr->moduleDecl, "AtomicOp");
         if (atomicOpDecl) {
-            println("AtomicOp found " << atomicOpDecl->type->className());
             if (auto enumDecl = dynamic_cast<ResolvedTypeEnumDecl *>(atomicOpDecl->type.get())) {
                 if (!perform_implicit_cast(opParam, *makePtr<ResolvedTypeEnum>(call.location, enumDecl->enumDecl()))) {
                     return nullptr;
