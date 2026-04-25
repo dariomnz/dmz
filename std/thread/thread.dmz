@@ -24,16 +24,17 @@ pub const Thread = struct {
     }
 };
 
-// test "thread test" {
-//     const func = [](arg: *void) -> void {
-//         const real_arg: *i32 = arg;
-//         std.io.printf("Thread %d\n", real_arg.*);
-//         pthread_exit(null);
-//     };
-//     let arg1: i32 = 1;
-//     let arg2: i32 = 2;
-//     const t1 = try Thread.init(func, &arg1);
-//     const t2 = try Thread.init(func, &arg2);
-//     t1.join();
-//     t2.join();
-// }
+test "thread test" {
+
+    const worker = struct {
+        id: i32,
+        pub fn call(arg: *@This) -> void {
+            std.io.printf("Thread %d\n", arg.id);
+            pthread_exit(null);
+        }
+    };
+    const t1 = try Thread.init(&worker.call, &worker{id: 1});
+    const t2 = try Thread.init(&worker.call, &worker{id: 2});
+    t1.join();
+    t2.join();
+}

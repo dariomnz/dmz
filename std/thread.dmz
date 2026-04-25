@@ -16,51 +16,65 @@ pub fn sleep(ms: u32) -> !void {
 
 const std = import("std");
 
-// test "thread mutex" {
-//     let contador = 0;
-//     let contador_ptr = &contador;
-//     const INCREMENTOS = 100000;
-//     let cont_mutex = Mutex.init();
-//     defer try cont_mutex.deinit();
-//     let cont_mutex_ptr = &cont_mutex;
-//     const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
-//         try cont_mutex_ptr.lock();
-//         contador_ptr.*++;
-//         try cont_mutex_ptr.unlock();
-//     } };
+test "thread mutex" {
+    let contador = 0;
+    let contador_ptr = &contador;
+    const INCREMENTOS = 100000;
+    let cont_mutex = Mutex.init();
+    defer try cont_mutex.deinit();
+    let cont_mutex_ptr = &cont_mutex;
+    
+    const incrementar_contador = struct {
+        contador_ptr: *i32,
+        cont_mutex_ptr: *Mutex,
+        pub fn call(arg: *@This) -> void {
+            for (0..INCREMENTOS) |i| {
+                try arg.cont_mutex_ptr.lock();
+                arg.contador_ptr.*++;
+                try arg.cont_mutex_ptr.unlock();
+            }
+        }
+    };
+    const c = incrementar_contador{contador_ptr: contador_ptr, cont_mutex_ptr: cont_mutex_ptr};
 
-//     const NUM_HILOS = 5;
-//     let threads: Thread[NUM_HILOS] = {};
+    const NUM_HILOS = 5;
+    let threads: Thread[NUM_HILOS] = {};
 
-//     for (0..NUM_HILOS) |i| {
-//         threads[i] = try Thread.init(incrementar_contador, null);
-//     }
+    for (0..NUM_HILOS) |i| {
+        threads[i] = try Thread.init(&incrementar_contador.call, &c);
+    }
 
-//     for (0..NUM_HILOS) |i| {
-//         try threads[i].join();
-//     }
+    for (0..NUM_HILOS) |i| {
+        try threads[i].join();
+    }
 
-//     try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
-// }
+    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+}
 
-// test "thread atomic" {
-//     let contador = 0;
-//     let contador_ptr = &contador;
-//     const INCREMENTOS = 100000;
-//     const incrementar_contador = [contador_ptr, INCREMENTOS](arg: *void) -> void { for (0..INCREMENTOS) |i| {
-//         @atomicRmw(contador_ptr, +, 1);
-//     } };
+test "thread atomic" {
+    let contador = 0;
+    let contador_ptr = &contador;
+    const INCREMENTOS = 100000;
+    const incrementar_contador = struct {
+        contador_ptr: *i32,
+        pub fn call(arg: *@This) -> void {
+            for (0..INCREMENTOS) |i| {
+                @atomicRmw(arg.contador_ptr, .Add, 1);
+            }
+        }
+    };
+    const c = incrementar_contador{contador_ptr: contador_ptr};
 
-//     const NUM_HILOS = 5;
-//     let threads: Thread[NUM_HILOS] = {};
+    const NUM_HILOS = 5;
+    let threads: Thread[NUM_HILOS] = {};
 
-//     for (0..NUM_HILOS) |i| {
-//         threads[i] = try Thread.init(incrementar_contador, null);
-//     }
+    for (0..NUM_HILOS) |i| {
+        threads[i] = try Thread.init(&incrementar_contador.call, &c);
+    }
 
-//     for (0..NUM_HILOS) |i| {
-//         try threads[i].join();
-//     }
+    for (0..NUM_HILOS) |i| {
+        try threads[i].join();
+    }
 
-//     try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
-// }
+    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+}

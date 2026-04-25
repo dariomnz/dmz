@@ -38,14 +38,18 @@ test "barrier test" {
     const num_threads = 10;
     const barrier = FutexBarrier.init(num_threads);
     const barrier_ptr = &barrier;
-    const worker = [barrier_ptr](arg: *void) -> void {
-        std.io.printf("Worker: Before barrier.\n");
-        barrier_ptr.wait();
-        std.io.printf("Worker: After barrier.\n");
+    const worker = struct {
+        barrier_ptr: *FutexBarrier,
+        pub fn run(arg: *@This) -> void {
+            std.io.printf("Worker: Before barrier.\n");
+            try arg.barrier_ptr.wait();
+            std.io.printf("Worker: After barrier.\n");
+        }
     };
     let threads: std.thread.Thread[num_threads] = {};
+    const c = worker{barrier_ptr: &barrier};
     for (0..num_threads) |i| {
-        threads[i] = try std.thread.Thread.init(worker, null);
+        threads[i] = try std.thread.Thread.init(&worker.run, &c);
     }
     for (0..num_threads) |i| {
         try threads[i].join();

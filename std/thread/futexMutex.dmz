@@ -34,7 +34,7 @@ pub const FutexMutex = struct {
         }
 
         // If it failed, there is contention
-        while (@atomicRmw(&self.state, =, 2) != 0) {
+        while (@atomicRmw(&self.state, .Xchg, 2) != 0) {
             // Sleep if the value is still 2
             futex(&self.state, FUTEX_WAIT, 2);
         }
@@ -42,7 +42,7 @@ pub const FutexMutex = struct {
 
     pub fn unlock(self: *@This) -> !void {
         // If the value was 1, no one was waiting
-        if (@atomicRmw(&self.state, -, 1) != 1) {
+        if (@atomicRmw(&self.state, .Sub, 1) != 1) {
             // There was contention, set to 0 and wake one
             @atomicStore(&self.state, 0);
             futex(&self.state, FUTEX_WAKE, 1);
@@ -50,28 +50,36 @@ pub const FutexMutex = struct {
     }
 };
 
-// test "thread futex mutex" {
-//     let contador = 0;
-//     let contador_ptr = &contador;
-//     const INCREMENTOS = 100000;
-//     let cont_mutex = FutexMutex{};
-//     let cont_mutex_ptr = &cont_mutex;
-//     const incrementar_contador = [contador_ptr, INCREMENTOS, cont_mutex_ptr](arg: *void) -> void { for (0..INCREMENTOS) |i| {
-//         try cont_mutex_ptr.lock();
-//         contador_ptr.*++;
-//         try cont_mutex_ptr.unlock();
-//     } };
+test "thread futex mutex" {
+    let contador = 0;
+    let contador_ptr = &contador;
+    const INCREMENTOS = 100000;
+    let cont_mutex = FutexMutex{};
+    let cont_mutex_ptr = &cont_mutex;
 
-//     const NUM_HILOS = 5;
-//     let threads: std.thread.Thread[NUM_HILOS] = {};
+    const incrementar_contador = struct {
+        contador_ptr: *i32,
+        cont_mutex_ptr: *FutexMutex,
+        pub fn call(arg: *@This) -> void {
+            for (0..INCREMENTOS) |i| {
+                try arg.cont_mutex_ptr.lock();
+                arg.contador_ptr.*++;
+                try arg.cont_mutex_ptr.unlock();
+            }
+        }
+    };
+    const c = incrementar_contador{contador_ptr: contador_ptr, cont_mutex_ptr: cont_mutex_ptr};
 
-//     for (0..NUM_HILOS) |i| {
-//         threads[i] = try std.thread.Thread.init(incrementar_contador, null);
-//     }
+    const NUM_HILOS = 5;
+    let threads: std.thread.Thread[NUM_HILOS] = {};
 
-//     for (0..NUM_HILOS) |i| {
-//         try threads[i].join();
-//     }
+    for (0..NUM_HILOS) |i| {
+        threads[i] = try std.thread.Thread.init(&incrementar_contador.call, &c);
+    }
 
-//     try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
-// }
+    for (0..NUM_HILOS) |i| {
+        try threads[i].join();
+    }
+
+    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+}
