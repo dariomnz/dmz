@@ -28,9 +28,6 @@
 		},
 		{
 			"include": "#chars"
-		},
-		{
-			"include": "#members"
 		}
 	],
 	"repository": {
@@ -51,7 +48,7 @@
 				},
 				{
 					"name": "keyword.other.dmz",
-					"match": "\\b(const|let|struct|union|import|packed)\\b"
+					"match": "\\b(const|let|struct|union|enum|import|packed)\\b"
 				}
 			]
 		},
@@ -118,18 +115,6 @@
 				{
 					"name": "constant.character.escape.dmz",
 					"match": "\\\\."
-				}
-			]
-		},
-		"members": {
-			"patterns": [
-				{
-					"match": "(?<![a-zA-Z0-9_>])\\.([a-zA-Z_][a-zA-Z0-9_]*)",
-					"captures": {
-						"1": {
-							"name": "variable.other.member.dmz"
-						}
-					}
 				}
 			]
 		},

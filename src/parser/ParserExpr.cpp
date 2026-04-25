@@ -90,6 +90,13 @@ ptr<Expr> Parser::parse_primary() {
 
             return makePtr<TupleInstantiationExpr>(location, std::move(*elements), haveTrailingComma);
         }
+        if (m_nextToken.type == TokenType::dot && peek_token().type == TokenType::id) {
+            SourceLocation location = m_nextToken.loc;
+            eat_next_token();  // eat '.'
+            auto identifier = m_nextToken.str;
+            eat_next_token();  // eat identifier
+            return makePtr<AutoMemberExpr>(location, std::move(identifier));
+        }
         if (m_nextToken.type == TokenType::par_l) {
             eat_next_token();  // eat '('
 

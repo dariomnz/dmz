@@ -430,6 +430,10 @@ void MemberExpr::dump(size_t level) const {
 
 std::string MemberExpr::to_str() const { return base->to_str() + "." + field; }
 
+void AutoMemberExpr::dump(size_t level) const { std::cerr << indent(level) << "AutoMemberExpr ." << field << '\n'; }
+
+std::string AutoMemberExpr::to_str() const { return "." + field; }
+
 void GenericExpr::dump(size_t level) const {
     std::cerr << indent(level) << "GenericExpr " << to_str() << '\n';
 

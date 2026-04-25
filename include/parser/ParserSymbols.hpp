@@ -17,6 +17,7 @@ class ConstantValueContainer {
    public:
     void set_constant_value(std::optional<Ty> val) { value = std::move(val); }
     std::optional<Ty> get_constant_value() const { return value; }
+    void dump_constant_value(size_t level) const;
 };
 
 struct Decl {
@@ -470,6 +471,15 @@ struct MemberExpr : public AssignableExpr {
     std::string to_str() const override;
 };
 
+struct AutoMemberExpr : public Expr {
+    std::string field;
+
+    AutoMemberExpr(SourceLocation location, std::string_view field) : Expr(location), field(std::move(field)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+};
+
 struct GenericExpr : public Expr {
     ptr<Expr> base;
     std::vector<ptr<Expr>> types;
@@ -702,8 +712,7 @@ struct UnionDecl : public StructDecl {
 };
 
 struct EnumDecl : public StructDecl {
-    EnumDecl(SourceLocation location, bool isPublic, std::string_view identifier,
-              std::vector<ptr<Decl>> decls)
+    EnumDecl(SourceLocation location, bool isPublic, std::string_view identifier, std::vector<ptr<Decl>> decls)
         : StructDecl(location, isPublic, identifier, false, std::move(decls)) {}
 
     void dump(size_t level = 0) const override;
@@ -838,8 +847,7 @@ struct ModuleDecl : public Decl {
 
 struct ImportExpr : public Expr {
     std::string identifier;
-    ImportExpr(SourceLocation location, std::string_view identifier)
-        : Expr(location), identifier(identifier) {}
+    ImportExpr(SourceLocation location, std::string_view identifier) : Expr(location), identifier(identifier) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

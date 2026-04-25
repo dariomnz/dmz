@@ -766,7 +766,7 @@ bool Sema::check_variable_initialization(const CFG &cfg) {
     return !pendingErrors.empty();
 }
 
-void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType) {
+bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType) {
     debug_func(expr->location << " type " << expr->type->className() << " " << expr->type->to_str() << " expectedType "
                               << expectedType.className() << " " << expectedType.to_str());
     if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(expr.get())) {
@@ -797,12 +797,13 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
 
     if (auto splatExpr = dynamic_cast<ResolvedSimdSplatExpr *>(expr.get())) {
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
-            perform_implicit_cast(splatExpr->value, *simdType->simdType);
+            if (!perform_implicit_cast(splatExpr->value, *simdType->simdType)) return false;
             if (simdType->simdType->compare(*splatExpr->value->type)) {
                 splatExpr->type = simdType->clone();
             } else {
                 report(splatExpr->location,
                        "cannot splat '" + splatExpr->value->type->to_str() + "' into '" + expectedType.to_str() + "'");
+                return false;
             }
         }
     }
@@ -817,8 +818,8 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
             if (binOp->type->kind == ResolvedTypeKind::Simd &&
                 dynamic_cast<const ResolvedTypeSimd *>(binOp->type.get())->simdSize == 0) {
-                perform_implicit_cast(binOp->lhs, *simdType);
-                perform_implicit_cast(binOp->rhs, *simdType);
+                if (!perform_implicit_cast(binOp->lhs, *simdType)) return false;
+                if (!perform_implicit_cast(binOp->rhs, *simdType)) return false;
                 if (binOp->lhs->type->compare(*simdType) && binOp->rhs->type->compare(*simdType)) {
                     binOp->type = simdType->clone();
                 }
@@ -830,7 +831,7 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
             if (grouping->type->kind == ResolvedTypeKind::Simd &&
                 dynamic_cast<const ResolvedTypeSimd *>(grouping->type.get())->simdSize == 0) {
-                perform_implicit_cast(grouping->expr, *simdType);
+                if (!perform_implicit_cast(grouping->expr, *simdType)) return false;
                 if (grouping->expr->type->compare(*simdType)) {
                     grouping->type = simdType->clone();
                 }
@@ -841,7 +842,7 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
     if (auto arrayInstantiation = dynamic_cast<ResolvedArrayInstantiationExpr *>(expr.get())) {
         if (auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&expectedType)) {
             for (auto &elem : arrayInstantiation->initializers) {
-                perform_implicit_cast(elem, *arrayType->arrayType);
+                if (!perform_implicit_cast(elem, *arrayType->arrayType)) return false;
             }
             if (!arrayInstantiation->initializers.empty() &&
                 arrayInstantiation->initializers[0]->type->compare(*arrayType->arrayType)) {
@@ -849,6 +850,21 @@ void Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
             }
         }
     }
+
+    if (auto autoMember = dynamic_cast<ResolvedAutoMemberExpr *>(expr.get())) {
+        if (auto enumType = dynamic_cast<const ResolvedTypeEnum *>(&expectedType)) {
+            if (!ensure_struct_members_resolved(*enumType->decl)) return false;
+            auto member = lookup_in_struct(autoMember->location, *enumType->decl, autoMember->field);
+            if (!member) {
+                report(autoMember->location,
+                       "enum '" + enumType->decl->identifier + "' has no member '" + autoMember->field + "'");
+                return false;
+            }
+            expr->type = enumType->clone();
+            expr->set_constant_value(member->get_constant_value());
+        }
+    }
+    return true;
 }
 
 ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::string &fnName) {
@@ -907,8 +923,9 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
                     if (tupleType->decl->fields.size() == fnType->paramsTypes.size()) {
                         if (auto *struInit = dynamic_cast<ResolvedStructInstantiationExpr *>(argsParam.get())) {
                             for (size_t i = 0; i < struInit->fieldInitializers.size(); i++) {
-                                perform_implicit_cast(struInit->fieldInitializers[i]->initializer,
-                                                      *fnType->paramsTypes[i]);
+                                if (!perform_implicit_cast(struInit->fieldInitializers[i]->initializer,
+                                                           *fnType->paramsTypes[i]))
+                                    return nullptr;
                             }
                         }
                         argsTupleType = castPtr<ResolvedTypeStruct>(tupleType->clone());

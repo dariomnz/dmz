@@ -39,7 +39,6 @@ struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
 
     virtual ~ResolvedExpr() = default;
 
-    void dump_constant_value(size_t level) const;
     virtual bool isLiteral() const { return false; }
     DMZ_TYPE_NAME();
 };
@@ -594,6 +593,16 @@ struct ResolvedNullLiteral : public ResolvedExpr {
         : ResolvedExpr(location, makePtr<ResolvedTypePointer>(location, makePtr<ResolvedTypeVoid>(location))) {}
 
     bool isLiteral() const override { return true; }
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+    DMZ_TYPE_NAME();
+};
+
+struct ResolvedAutoMemberExpr : public ResolvedExpr {
+    std::string field;
+
+    ResolvedAutoMemberExpr(SourceLocation location, std::string_view field)
+        : ResolvedExpr(location, makePtr<ResolvedTypeGeneric>(location, nullptr)), field(field) {}
+
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
 };

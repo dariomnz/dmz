@@ -18,11 +18,15 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedTypeEnumDecl enum_decl.Token
 // CHECK-NEXT:     ResolvedEnumDecl enum_decl.Token
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val1
+// CHECK-NEXT:       | value: 0
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val2
+// CHECK-NEXT:       | value: 1
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val3
+// CHECK-NEXT:       | value: 3
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '3'
 // CHECK-NEXT:         | value: 3
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val4
+// CHECK-NEXT:       | value: 4
 // CHECK: ResolvedDeclStmt enum_decl.Token{}
 // CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t2
 // CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val2

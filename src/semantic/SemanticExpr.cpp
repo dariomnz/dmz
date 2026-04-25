@@ -344,7 +344,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     for (size_t i = 0; i < call_args_num; ++i) {
         if (i < funcDeclArgs) {
             size_t paramIdx = isMemberCall ? i + 1 : i;
-            perform_implicit_cast(resolvedArguments[paramIdx], *fnType->paramsTypes[paramIdx]);
+            if (!perform_implicit_cast(resolvedArguments[paramIdx], *fnType->paramsTypes[paramIdx])) return nullptr;
             if (!fnType->paramsTypes[paramIdx]->compare(*resolvedArguments[paramIdx]->type)) {
                 return report(resolvedArguments[paramIdx]->location,
                               "unexpected type of argument '" + resolvedArguments[paramIdx]->type->to_str() +
@@ -495,6 +495,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr) {
     }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
+    }
+    if (const auto *autoMember = dynamic_cast<const AutoMemberExpr *>(&expr)) {
+        return makePtr<ResolvedAutoMemberExpr>(autoMember->location, autoMember->field);
     }
     expr.dump();
     dmz_unreachable(expr.location, "unexpected expression");
@@ -987,7 +990,7 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
         varOrReturn(resolvedInitExpr, resolve_expr(*initStmt->initializer));
 
-        perform_implicit_cast(resolvedInitExpr, *fieldDecl->type);
+        if (!perform_implicit_cast(resolvedInitExpr, *fieldDecl->type)) return nullptr;
         if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
             return report(resolvedInitExpr->location, "'" + resolvedInitExpr->type->to_str() +
                                                           "' cannot be used to initialize a field of type '" +
@@ -1059,7 +1062,7 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
                          }
                      }));
 
-        perform_implicit_cast(resolvedInitExpr, *fieldDecl->type);
+        if (!perform_implicit_cast(resolvedInitExpr, *fieldDecl->type)) return nullptr;
         if (!fieldDecl->type->compare(*resolvedInitExpr->type)) {
             report(resolvedInitExpr->location, "'" + resolvedInitExpr->type->to_str() +
                                                    "' cannot be used to initialize a field of type '" +
@@ -1174,7 +1177,7 @@ ptr<ResolvedExpr> Sema::resolve_array_instantiation(const ArrayInstantiationExpr
         varOrReturn(resolvedExpr, resolve_expr(*initializer));
 
         if (!only_first) {
-            perform_implicit_cast(resolvedExpr, *type);
+            if (!perform_implicit_cast(resolvedExpr, *type)) return nullptr;
         }
 
         auto *resolved = resolvedinitializers.emplace_back(std::move(resolvedExpr)).get();

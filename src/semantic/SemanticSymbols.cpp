@@ -19,7 +19,7 @@ std::ostream &operator<<(std::ostream &os, const ResolvedState &state) {
     }
 }
 
-void ResolvedExpr::dump_constant_value(size_t level) const {
+template<> void ConstantValueContainer<int>::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';
     }
@@ -408,6 +408,7 @@ void ResolvedAssignment::dump(size_t level, bool onlySelf) const {
 void ResolvedFieldDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedFieldDecl:" << type->to_str() << " " << identifier << '\n';
     if (onlySelf) return;
+    dump_constant_value(level);
     if (default_initializer) default_initializer->dump(level + 1, onlySelf);
 }
 
@@ -672,6 +673,12 @@ void ResolvedAtomicRmwExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     ptrExpr->dump(level + 1, onlySelf);
     valExpr->dump(level + 1, onlySelf);
+}
+
+void ResolvedAutoMemberExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedAutoMemberExpr ." << field << " " << type->to_str() << '\n';
+    if (onlySelf) return;
+    dump_constant_value(level);
 }
 
 }  // namespace DMZ

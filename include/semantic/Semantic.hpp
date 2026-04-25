@@ -213,6 +213,6 @@ class Sema {
     ptr<ResolvedAtomicStoreExpr> resolve_atomic_store_expr(const AtomicStoreExpr &expr);
     ptr<ResolvedAtomicCmpExExpr> resolve_atomic_cmpex_expr(const AtomicCmpExExpr &expr);
     ptr<ResolvedAtomicRmwExpr> resolve_atomic_rmw_expr(const AtomicRmwExpr &expr);
-    void perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
+    bool perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };
 }  // namespace DMZ

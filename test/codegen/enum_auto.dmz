@@ -1,0 +1,29 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+const Token = enum {
+    val1,
+    val2,
+    val3 = 3,
+    val4,
+};
+
+fn foo(val: Token) -> i32 {
+    return printf("Token: %d\n", val);
+}
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+fn main() -> void {
+    let t2: Token = Token.val2;
+    let t3 = Token.val3;
+    let t4: Token = .val4;
+    printf("t4 %d\n", t4);
+    foo(.val1);
+    foo(.val2);
+    foo(.val3);
+    foo(.val4);
+}
+// CHECK: t4 4
+// CHECK-NEXT: Token: 0
+// CHECK-NEXT: Token: 1
+// CHECK-NEXT: Token: 3
+// CHECK-NEXT: Token: 4
