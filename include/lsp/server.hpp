@@ -24,6 +24,7 @@ class LSPServer {
     void on_definition(const std::string& id, const std::string& params);
     void on_hover(const std::string& id, const std::string& params);
     void on_semantic_tokens(const std::string& id, const std::string& params);
+    void on_semantic_tokens_range(const std::string& id, const std::string& params);
     void on_completion(const std::string& id, const std::string& params);
 
     void collect_member_completions(const ResolvedStructDecl* decl, std::stringstream& items, bool& has_items);

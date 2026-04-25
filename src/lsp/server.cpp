@@ -56,6 +56,8 @@ void LSPServer::handle_message(const std::string& message) {
         on_hover(id, message);
     } else if (method == "textDocument/semanticTokens/full") {
         on_semantic_tokens(id, message);
+    } else if (method == "textDocument/semanticTokens/range") {
+        on_semantic_tokens_range(id, message);
     } else if (method == "textDocument/completion") {
         on_completion(id, message);
     }
@@ -111,7 +113,8 @@ void LSPServer::on_initialize(const std::string& id, const std::string& params) 
         "\"tokenTypes\":[\"type\",\"function\",\"parameter\",\"variable\",\"property\",\"namespace\",\"number\"],"
         "\"tokenModifiers\":[\"declaration\"]"
         "},"
-        "\"full\":true"
+        "\"full\":true,"
+        "\"range\":true"
         "},"
         "\"completionProvider\":{"
         "\"resolveProvider\":false,"
@@ -260,6 +263,69 @@ void LSPServer::on_semantic_tokens(const std::string& id, const std::string& par
 
     SemanticTokensCollector collector(uri, doc.source);
     std::vector<SemanticToken> tokens = collector.collect(doc.module.get());
+
+    std::stringstream ss;
+    ss << "{\"data\":[";
+    size_t lastLine = 0;
+    size_t lastChar = 0;
+
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        const auto& t = tokens[i];
+        size_t deltaLine = t.line - lastLine;
+        size_t deltaChar = (deltaLine == 0) ? (t.col - lastChar) : t.col;
+
+        ss << deltaLine << "," << deltaChar << "," << t.length << "," << (int)t.type << "," << (int)t.modifiers;
+        if (i < tokens.size() - 1) ss << ",";
+
+        lastLine = t.line;
+        lastChar = t.col;
+    }
+    ss << "]}";
+    send_response(id, ss.str());
+}
+
+void LSPServer::on_semantic_tokens_range(const std::string& id, const std::string& params) {
+    std::string uri = get_json_value(params, "uri");
+    if (uri.starts_with("file://")) uri = uri.substr(7);
+
+    if (m_documents.find(uri) == m_documents.end()) {
+        send_response(id, "{\"data\":[]}");
+        return;
+    }
+
+    auto& doc = m_documents[uri];
+    if (!doc.module) {
+        send_response(id, "{\"data\":[]}");
+        return;
+    }
+
+    // Very basic parsing of range from JSON
+    size_t startLine = 0;
+    size_t endLine = 0;
+
+    size_t rangePos = params.find("\"range\"");
+    if (rangePos != std::string::npos) {
+        size_t startPos = params.find("\"start\"", rangePos);
+        if (startPos != std::string::npos) {
+            std::string lineVal = get_json_value(params.substr(startPos), "line");
+            if (!lineVal.empty()) startLine = std::stoul(lineVal);
+        }
+        size_t endPos = params.find("\"end\"", rangePos);
+        if (endPos != std::string::npos) {
+            std::string lineVal = get_json_value(params.substr(endPos), "line");
+            if (!lineVal.empty()) endLine = std::stoul(lineVal);
+        }
+    }
+
+    SemanticTokensCollector collector(uri, doc.source);
+    std::vector<SemanticToken> all_tokens = collector.collect(doc.module.get());
+
+    std::vector<SemanticToken> tokens;
+    for (const auto& t : all_tokens) {
+        if (t.line >= startLine && t.line <= endLine) {
+            tokens.push_back(t);
+        }
+    }
 
     std::stringstream ss;
     ss << "{\"data\":[";

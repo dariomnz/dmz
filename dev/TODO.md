@@ -32,7 +32,7 @@
 - [ ] sopport lsp semantic range
 - [ ] permit types top be expr at compile time const t = i32;
 - [x] struct to replace lambdas
-- [ ] enums with .name with auto resolve
+- [x] enums with .name with auto resolve
 - [ ] remove builtin functions from lexer and be normal functions
-- [ ] change @atomicRmw to use enum in op
+- [x] change @atomicRmw to use enum in op
 - [ ] @compileError
