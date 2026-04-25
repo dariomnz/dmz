@@ -16,28 +16,32 @@ fn main() -> void {
 }
 
 // CHECK: ResolvedFunctionDecl main fn()->void
-// CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:usize size_bool
+
+// CHECK:         ResolvedVarDecl:usize size_bool
 // CHECK-NEXT:           ResolvedSizeofExpr:usize
-// CHECK-NEXT:             bool
-// CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:usize size_i32
+// CHECK-NEXT:             ResolvedTypeExpr:bool
+// CHECK-NEXT:               ResolvedTypeBool bool
+
+// CHECK:         ResolvedVarDecl:usize size_i32
 // CHECK-NEXT:           ResolvedSizeofExpr:usize
-// CHECK-NEXT:             i32
-// CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:usize size_i64
+// CHECK-NEXT:             ResolvedTypeExpr:i32
+// CHECK-NEXT:               ResolvedTypeNumber i32
+
+// CHECK:         ResolvedVarDecl:usize size_i64
 // CHECK-NEXT:           ResolvedSizeofExpr:usize
-// CHECK-NEXT:             i64
-// CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:usize size_f16
+// CHECK-NEXT:             ResolvedTypeExpr:i64
+// CHECK-NEXT:               ResolvedTypeNumber i64
+
+// CHECK:         ResolvedVarDecl:usize size_f16
 // CHECK-NEXT:           ResolvedSizeofExpr:usize
-// CHECK-NEXT:             f16
-// CHECK-NEXT:       ResolvedDeclStmt
-// CHECK-NEXT:         ResolvedVarDecl:usize size_void_ptr
+// CHECK-NEXT:             ResolvedTypeExpr:f16
+// CHECK-NEXT:               ResolvedTypeNumber f16
+
+// CHECK:         ResolvedVarDecl:usize size_void_ptr
 // CHECK-NEXT:           ResolvedSizeofExpr:usize
-// CHECK-NEXT:             *void
-// CHECK-NEXT:       ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedTypeExpr:*void
+// CHECK-NEXT:               ResolvedTypePointer *void
+// CHECK:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'Sizeof bool %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:usize size_bool

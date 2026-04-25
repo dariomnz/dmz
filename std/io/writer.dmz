@@ -51,7 +51,7 @@ pub const Writer = struct {
             w.end += 1;
             return 1;
         }
-        const aux_slice: u8[1] = {c};
+        const aux_slice: [1]u8 = {c};
         return w.vtable_flush(w.vtable_ptr, w, aux_slice[0..1], 1);
     }
 
@@ -72,7 +72,7 @@ pub const Writer = struct {
 };
 
 test "Writer init" {
-    let array: u8[1024] = {};
+    let array: [1024]u8 = {};
 
     let w = Writer.fixed(array[0..1024]);
 

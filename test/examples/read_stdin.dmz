@@ -2,7 +2,7 @@
 const std = import("std");
 
 fn main() -> void {
-    let buf: u8[10] = {};
+    let buf: [10]u8 = {};
     let in = std.io.stdin.reader(buf[0..10]);
 
     for (0..100) |i| {

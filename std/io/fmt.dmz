@@ -342,13 +342,13 @@ test "print integers" {
     let a = 6;
     let b = 10;
     const buf_len = 128;
-    let buf: u8[buf_len] = {};
+    let buf: [buf_len]u8 = {};
     let w = std.io.Writer.fixed(buf[0..buf_len]);
     let ret = try fmt(w, "Value a {} value b {}\n", .{a + 1, b});
     let expected = "Value a 7 value b 10\n";
     try std.testing.expect(std.mem.memcmp(&buf[0], expected, std.mem.strlen(expected)) == 0);
 
-    let buf2: u8[buf_len] = {};
+    let buf2: [buf_len]u8 = {};
     let w2 = std.io.stdout.writer(buf2[0..buf_len]);
     let big: i128 = 123456789;
     big *= 1000000000;
@@ -356,7 +356,7 @@ test "print integers" {
     big += 123456789;
 
     const test_struct: Test_struct2 = {};
-    const aux_arr: i32[4] = {1, 2, 3, 4};
+    const aux_arr: [4]i32 = {1, 2, 3, 4};
     const simd = @simd<i32, 4>.load(&aux_arr[0]);
     const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError, simd};
     let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}' simd '{}'\n", tuple);
@@ -365,7 +365,7 @@ test "print integers" {
 
 test "format specifiers" {
     const buf_len = 256;
-    let buf: u8[buf_len] = {};
+    let buf: [buf_len]u8 = {};
     let w = std.io.stdout.writer(buf[0..buf_len]);
     defer try w.flush();
 

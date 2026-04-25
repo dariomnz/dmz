@@ -6,7 +6,7 @@ extern fn pthread_barrier_wait(barrier: *void) -> i32;
 extern fn pthread_barrier_destroy(barrier: *void) -> i32;
 
 pub const Barrier = struct {
-    opaque_data: u8[32] = {},
+    opaque_data: [32]u8 = {},
 
     pub fn init(count: u32) -> Barrier {
         const this = @This{};
@@ -42,7 +42,7 @@ test "barrier test" {
         barrier_ptr.wait();
         std.io.printf("Worker: After barrier.\n");
     };
-    let threads: std.thread.Thread[num_threads] = {};
+    let threads: [num_threads]std.thread.Thread = {};
     for (0..num_threads) |i| {
         threads[i] = try std.thread.Thread.init(worker, null);
     }

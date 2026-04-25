@@ -33,45 +33,6 @@ inline size_t identifier_len(std::string_view name) {
     return ret;
 };
 
-void NodeFinder::find_in_type(const ResolvedType& type) {
-    if (found_decl) return;
-
-    if (const auto* std = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
-        if (std->ownedDecl) {
-            find_in_decl(*std->ownedDecl);
-        }
-    } else if (const auto* mdt = dynamic_cast<const ResolvedTypeModule*>(&type)) {
-        if (mdt->moduleDecl && is_at_location(mdt->location, mdt->moduleDecl->identifier.length())) {
-            found_decl = mdt->moduleDecl;
-            return;
-        }
-    } else if (const auto* ft = dynamic_cast<const ResolvedTypeFunction*>(&type)) {
-        for (const auto& pt : ft->paramsTypes) find_in_type(*pt);
-        if (ft->returnType) find_in_type(*ft->returnType);
-    } else if (const auto* pt = dynamic_cast<const ResolvedTypePointer*>(&type)) {
-        find_in_type(*pt->pointerType);
-    } else if (const auto* slt = dynamic_cast<const ResolvedTypeSlice*>(&type)) {
-        find_in_type(*slt->sliceType);
-    } else if (const auto* art = dynamic_cast<const ResolvedTypeArray*>(&type)) {
-        find_in_type(*art->arrayType);
-    } else if (const auto* opt = dynamic_cast<const ResolvedTypeOptional*>(&type)) {
-        find_in_type(*opt->optionalType);
-    } else if (const auto* simdTy = dynamic_cast<const ResolvedTypeSimd*>(&type)) {
-        find_in_type(*simdTy->simdType);
-        if (simdTy->simdSizeExpr) find_in_expr(*simdTy->simdSizeExpr);
-    } else if (const auto* errg = dynamic_cast<const ResolvedTypeErrorGroup*>(&type)) {
-        if (errg->decl && is_at_location(errg->location, errg->decl->identifier.length())) {
-            found_decl = errg->decl;
-            return;
-        }
-    } else if (const auto* spect = dynamic_cast<const ResolvedTypeSpecialized*>(&type)) {
-        for (const auto& ty : spect->specializedTypes) {
-            find_in_type(*ty);
-            if (found_decl) return;
-        }
-    }
-}
-
 void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     if (found_decl) return;
 
@@ -90,14 +51,10 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
         } else if (const auto* field = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
             if (field->resolvedTypeExpr) find_in_expr(*field->resolvedTypeExpr);
         }
-
-        if (found_decl) return;
-
-        find_in_type(*decl.type);
         if (found_decl) return;
     }
 
-    if (const auto* fd = dynamic_cast<const ResolvedFunctionDecl*>(&decl)) {
+    if (const auto* fd = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
         if (const auto* genFn = dynamic_cast<const ResolvedGenericFunctionDecl*>(fd)) {
             for (const auto& gt : genFn->genericTypeDecls) {
                 find_in_decl(*gt);
@@ -108,7 +65,12 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
             find_in_decl(*param);
             if (found_decl) return;
         }
-        if (fd->body) find_in_stmt(*fd->body);
+        if (fd->resolvedReturnTypeExpr) find_in_expr(*fd->resolvedReturnTypeExpr);
+        if (found_decl) return;
+
+        if (const auto* functionDecl = dynamic_cast<const ResolvedFunctionDecl*>(fd)) {
+            if (functionDecl->body) find_in_stmt(*functionDecl->body);
+        }
     } else if (const auto* sd = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
         if (sd->isTuple) return;
         if (const auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(sd)) {
@@ -136,11 +98,21 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
         }
     } else if (const auto* ds = dynamic_cast<const ResolvedDeclStmt*>(&decl)) {
         if (ds->varDecl) find_in_decl(*ds->varDecl);
-    } else if (const auto* var = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
-        if (var->initializer) find_in_expr(*var->initializer);
-        if (var->type) find_in_type(*var->type);
+    } else if (const auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
+        if (varDecl->initializer) find_in_expr(*varDecl->initializer);
+        if (varDecl->resolvedTypeExpr) find_in_expr(*varDecl->resolvedTypeExpr);
+        if (varDecl->type) {
+            if (auto* type = dynamic_cast<const ResolvedTypeStructDecl*>(varDecl->type.get())) {
+                if (type->ownedDecl) {
+                    find_in_decl(*type->ownedDecl);
+                }
+            }
+        }
+    } else if (const auto* field = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
+        if (field->default_initializer) find_in_expr(*field->default_initializer);
+        if (field->resolvedTypeExpr) find_in_expr(*field->resolvedTypeExpr);
     } else if (const auto* param = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
-        if (param->type) find_in_type(*param->type);
+        if (param->resolvedTypeExpr) find_in_expr(*param->resolvedTypeExpr);
     }
 }
 
@@ -198,13 +170,12 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             return;
         }
     } else if (const auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
-        if (ge->specializedTypes) {
-            for (const auto& ty : ge->specializedTypes->specializedTypes) {
-                find_in_type(*ty);
-                if (found_decl) return;
-            }
-        }
         find_in_expr(*ge->base);
+        if (found_decl) return;
+        for (const auto& tyExpr : ge->specializedTypesExpr) {
+            find_in_expr(*tyExpr);
+            if (found_decl) return;
+        }
     } else if (const auto* me = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
         // me->location is the dot. Its length is 1 + identifier length.
         if (is_at_location(me->location, 1 + me->member.identifier.length())) {
@@ -246,7 +217,7 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             if (found_decl) return;
         }
     } else if (const auto* te = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
-        find_in_type(*te->resolvedType);
+        if (te->typeExpr) find_in_expr(*te->typeExpr);
     } else if (const auto* pe = dynamic_cast<const ResolvedTypePointerExpr*>(&expr)) {
         find_in_expr(*pe->pointerType);
     } else if (const auto* se = dynamic_cast<const ResolvedTypeSliceExpr*>(&expr)) {
@@ -257,6 +228,17 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*ae->arrayType);
         if (found_decl) return;
         find_in_expr(*ae->sizeExpr);
+    } else if (const auto* se = dynamic_cast<const ResolvedTypeSimdExpr*>(&expr)) {
+        find_in_expr(*se->simdType);
+        if (found_decl) return;
+        find_in_expr(*se->sizeExpr);
+    } else if (auto* fnSig = dynamic_cast<const ResolvedTypeFunctionExpr*>(&expr)) {
+        find_in_expr(*fnSig->resolvedReturnTypeExpr);
+        if (found_decl) return;
+        for (auto&& param : fnSig->params) {
+            find_in_expr(*param);
+            if (found_decl) return;
+        }
     } else if (const auto* call = dynamic_cast<const ResolvedCallExpr*>(&expr)) {
         find_in_expr(*call->callee);
         if (found_decl) return;
@@ -297,9 +279,7 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         if (found_decl) return;
         find_in_expr(*orelseErr->orElseExpr);
     } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
-        find_in_expr(*sizeofExpr->sizeofExpr);
-        if (found_decl) return;
-        find_in_type(*sizeofExpr->sizeofType);
+        if (sizeofExpr->sizeofExpr) find_in_expr(*sizeofExpr->sizeofExpr);
     } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
         find_in_expr(*typeidExpr->typeidExpr);
     } else if (auto* typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr*>(&expr)) {
@@ -313,13 +293,6 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*simdSizeExpr->typeExpr);
     } else if (auto* simdSplatExpr = dynamic_cast<const ResolvedSimdSplatExpr*>(&expr)) {
         find_in_expr(*simdSplatExpr->value);
-    } else if (auto* genericExpr = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
-        find_in_expr(*genericExpr->base);
-        if (found_decl) return;
-        for (const auto& gt : genericExpr->specializedTypes->specializedTypes) {
-            find_in_type(*gt);
-            if (found_decl) return;
-        }
     } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         // 'import("' is 8 characters. We estimate the length to cover the string.
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {

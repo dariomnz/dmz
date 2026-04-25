@@ -8,7 +8,7 @@ extern fn pthread_cond_wait(cond: *void, mutex: *void) -> i32;
 extern fn pthread_cond_destroy(cond: *void) -> i32;
 
 pub const Condition = struct {
-    opaque_data: u8[48] = {},
+    opaque_data: [48]u8 = {},
 
     pub fn init() -> Condition {
         const this = @This{};

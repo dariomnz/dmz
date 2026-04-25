@@ -36,9 +36,17 @@ void TypeError::dump(size_t level) const { std::cerr << indent(level) << "TypeEr
 
 std::string TypeError::to_str() const { return "err"; }
 
+void TypeOptional::dump(size_t level) const { std::cerr << indent(level) << "TypeOptional " << to_str() << '\n'; }
+
+std::string TypeOptional::to_str() const { return "!" + optionalType->to_str(); }
+
 void TypeSlice::dump(size_t level) const { std::cerr << indent(level) << "TypeSlice " << to_str() << '\n'; }
 
 std::string TypeSlice::to_str() const { return "[]" + sliceType->to_str(); }
+
+void TypeArray::dump(size_t level) const { std::cerr << indent(level) << "TypeArray " << to_str() << '\n'; }
+
+std::string TypeArray::to_str() const { return "[" + arraySize->to_str() + "]" + arrayType->to_str(); }
 
 void TypeSimd::dump(size_t level) const { std::cerr << indent(level) << "TypeSimd " << to_str() << '\n'; }
 

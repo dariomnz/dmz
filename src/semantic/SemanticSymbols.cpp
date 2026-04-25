@@ -98,9 +98,9 @@ void ResolvedNullLiteral::dump(size_t level, bool onlySelf) const {
 
 void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSizeofExpr:" << type->to_str() << "\n";
-    std::cerr << indent(level + 1) << sizeofType->to_str() << "\n";
     if (onlySelf) return;
     dump_constant_value(level);
+    if (sizeofExpr) sizeofExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedTypeidExpr::dump(size_t level, bool onlySelf) const {
@@ -149,6 +149,7 @@ void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     dump_constant_value(level);
     resolvedType->dump(level + 1);
+    if (typeExpr) typeExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedDeclRefExpr::dump(size_t level, bool onlySelf) const {
@@ -185,6 +186,13 @@ void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << " " << identifier << '\n';
 
     if (onlySelf) return;
+}
+
+void ResolvedTypeFunctionExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedFunctionSignature:\n";
+    if (onlySelf) return;
+    for (auto &&param : params) param->dump(level + 1, onlySelf);
+    if (resolvedReturnTypeExpr) resolvedReturnTypeExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
@@ -376,6 +384,7 @@ void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ")
               << (type ? type->to_str() : "nullptr") << " " << identifier << '\n';
     if (onlySelf) return;
+    // if (resolvedTypeExpr) resolvedTypeExpr->dump(level + 1, onlySelf);
     if (initializer) initializer->dump(level + 1, onlySelf);
     if (type) {
         if (auto strType = dynamic_cast<ResolvedTypeStructDecl *>(type.get())) {

@@ -33,7 +33,7 @@ fn main() -> void {
         io.printf("-");
     }
 
-    let buffer: i4[512] = {};
+    let buffer:[512]i4 = {};
     let i = 0;
 
     while (num > 0) {

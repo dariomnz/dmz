@@ -78,12 +78,8 @@ class Sema {
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_vectorBuiltins;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
-        {"@call", nullptr},
-        {"@atomicLoad", nullptr},
-        {"@atomicStore", nullptr},
-        {"@atomicCmpExW", nullptr},
-        {"@atomicCmpExS", nullptr},
-        {"@atomicRmw", nullptr},
+        {"@call", nullptr},         {"@atomicLoad", nullptr},   {"@atomicStore", nullptr},
+        {"@atomicCmpExW", nullptr}, {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},
     };
 
    public:
@@ -131,11 +127,12 @@ class Sema {
     ptr<ResolvedBlock> resolve_block(const Block &block);
     ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);
     ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
-    ptr<ResolvedExpr> resolve_expr(const Expr &expr);
+    ptr<ResolvedExpr> resolve_expr(const Expr &expr, bool isType = false);
+    ptr<ResolvedTypeExpr> resolve_type_expr(const Expr &expr);
     ptr<ResolvedGenericExpr> resolve_generic_expr(const GenericExpr &genericExpr);
     ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
-    ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary);
+    ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary, bool isType);
     ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);
     ptr<ResolvedDerefPtrExpr> resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr);
     ptr<ResolvedBinaryOperator> resolve_binary_operator(const BinaryOperator &binop);
@@ -153,9 +150,9 @@ class Sema {
     bool resolve_var_decl_initialize(ResolvedVarDecl &varDecl);
     ptr<ResolvedAssignment> resolve_assignment(const Assignment &assignment);
     bool check_variable_initialization(const CFG &cfg);
-    ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr);
+    ptr<ResolvedAssignableExpr> resolve_assignable_expr(const AssignableExpr &assignableExpr, bool isType);
     ptr<ResolvedMemberExpr> resolve_member_expr(const MemberExpr &memberExpr);
-    ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr);
+    ptr<ResolvedAssignableExpr> resolve_array_at_expr(const ArrayAtExpr &arrayAtExpr, bool isType);
     ptr<ResolvedExpr> resolve_struct_instantiation(const StructInstantiationExpr &structInstantiation);
     ptr<ResolvedExpr> resolve_tuple_instantiation(const TupleInstantiationExpr &tupleInstantiation);
     ptr<ResolvedExpr> resolve_array_instantiation(const ArrayInstantiationExpr &arrayInstantiation);

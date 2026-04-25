@@ -122,9 +122,6 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
         return generate_sizeof_expr(*sizeofExpr);
     }
-    if (dynamic_cast<const ResolvedTypeSimdExpr *>(&expr)) {
-        return nullptr;  // Type expressions don't have values
-    }
     if (auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
         return generate_typeid_expr(*typeidExpr);
     }
@@ -979,7 +976,7 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
 }
 
 llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr) {
-    auto type = generate_type(*sizeofExpr.sizeofType);
+    auto type = generate_type(*sizeofExpr.sizeofExpr->resolvedType);
     auto size = llvm::ConstantExpr::getSizeOf(type);
     return size;
 }

@@ -279,9 +279,10 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
 
             auto fieldType = stDecl->fields[i]->type->clone();
             auto fieldAccess = makePtr<ResolvedMemberExpr>(iterCond->location, std::move(iterCond), *stDecl->fields[i]);
+            auto fieldTypeExpr = makePtr<ResolvedTypeExpr>(forStmt.captures[0]->location, fieldType->clone());
 
             auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false,
-                                                    forStmt.captures[0]->identifier, fieldType->clone(), false,
+                                                    forStmt.captures[0]->identifier, std::move(fieldTypeExpr), false,
                                                     std::move(takenIterationScope), std::move(fieldAccess));
             if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
 
@@ -431,7 +432,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
     varOrReturn(resolvedRHS, resolve_expr(*assignment.expr));
     debug_msg("resolvedRHS: " << resolvedRHS->className() << " " << resolvedRHS->type->className() << " '"
                               << resolvedRHS->type->to_str() << "'");
-    varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee));
+    varOrReturn(resolvedLHS, resolve_assignable_expr(*assignment.assignee, false));
     debug_msg("resolvedLHS: " << resolvedLHS->className() << " " << resolvedLHS->type->className() << " '"
                               << resolvedLHS->type->to_str() << "'");
 
@@ -461,7 +462,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
             return report(resolvedLHS->location, "cannot use operator '" + get_op_str(assigmentOperator->op) +
                                                      "' in type '" + resolvedLHS->type->to_str() + "'");
         }
-        varOrReturn(resolvedLHS2, resolve_assignable_expr(*assignment.assignee));
+        varOrReturn(resolvedLHS2, resolve_assignable_expr(*assignment.assignee, false));
         resolvedRHS = makePtr<ResolvedBinaryOperator>(assignment.location, assigmentOperator->op,
                                                       std::move(resolvedLHS2), std::move(resolvedRHS));
     }

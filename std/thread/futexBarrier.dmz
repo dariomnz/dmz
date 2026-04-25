@@ -46,7 +46,7 @@ test "barrier test" {
             std.io.printf("Worker: After barrier.\n");
         }
     };
-    let threads: std.thread.Thread[num_threads] = {};
+    let threads: [num_threads]std.thread.Thread = {};
     const c = worker{barrier_ptr: &barrier};
     for (0..num_threads) |i| {
         threads[i] = try std.thread.Thread.init(&worker.run, &c);

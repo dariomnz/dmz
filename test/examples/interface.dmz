@@ -59,7 +59,7 @@ fn main() -> void {
 
     sh2.draw();
 
-    let s_array: Shape[2] = {sh, sh2};
+    let s_array:[2]Shape = {sh, sh2};
 
     s_array[0].draw();
     s_array[1].draw();

@@ -16,7 +16,6 @@ class NodeFinder {
     void find_in_expr(const ResolvedExpr& expr);
 
    private:
-    void find_in_type(const ResolvedType& type);
     bool is_at_location(const SourceLocation& loc, size_t length = 0) const;
     std::string m_target_file;
     size_t m_line, m_col;

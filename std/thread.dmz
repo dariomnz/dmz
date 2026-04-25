@@ -38,7 +38,7 @@ test "thread mutex" {
     const c = incrementar_contador{contador_ptr: contador_ptr, cont_mutex_ptr: cont_mutex_ptr};
 
     const NUM_HILOS = 5;
-    let threads: Thread[NUM_HILOS] = {};
+    let threads: [NUM_HILOS]Thread = {};
 
     for (0..NUM_HILOS) |i| {
         threads[i] = try Thread.init(&incrementar_contador.call, &c);
@@ -66,7 +66,7 @@ test "thread atomic" {
     const c = incrementar_contador{contador_ptr: contador_ptr};
 
     const NUM_HILOS = 5;
-    let threads: Thread[NUM_HILOS] = {};
+    let threads: [NUM_HILOS]Thread = {};
 
     for (0..NUM_HILOS) |i| {
         threads[i] = try Thread.init(&incrementar_contador.call, &c);

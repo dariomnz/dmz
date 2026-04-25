@@ -52,6 +52,5 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedVarDecl:usize size_void_ptr
 // CHECK-NEXT:         ResolvedSimdSizeExpr:usize
 // CHECK-NEXT:         | value: 4
-// CHECK-NEXT:           ResolvedTypePointerExpr:*void
-// CHECK-NEXT:             ResolvedTypeExpr:void
-// CHECK-NEXT:               ResolvedTypeVoid void
+// CHECK-NEXT:           ResolvedTypeExpr:*void
+// CHECK-NEXT:             ResolvedTypePointer *void

@@ -17,23 +17,21 @@ namespace DMZ {
 
 ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     debug_func(param.location);
-    ptr<ResolvedType> type = nullptr;
+    ptr<ResolvedTypeExpr> typeExpr = nullptr;
     if (!param.isVararg) {
-        type = resolve_type(*param.type);
+        typeExpr = resolve_type_expr(*param.type);
     } else {
-        type = makePtr<ResolvedTypeVarArg>(param.location);
+        typeExpr = makePtr<ResolvedTypeExpr>(param.location, makePtr<ResolvedTypeVarArg>(param.location));
     }
 
-    if (!param.isVararg)
-        if (!type || type->kind == ResolvedTypeKind::Void)
+    if (!param.isVararg) {
+        if (!typeExpr || typeExpr->type->kind == ResolvedTypeKind::Void) {
             return report(param.location,
                           "parameter '" + param.identifier + "' has invalid '" + param.type->to_str() + "' type");
-    auto ret =
-        makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(type), param.isMutable, param.isVararg);
-    if (!param.isVararg) {
-        ret->resolvedTypeExpr = resolve_expr(*param.type);
+        }
     }
-    return ret;
+    return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(typeExpr), param.isMutable,
+                                      param.isVararg);
 }
 
 ptr<ResolvedGenericTypeDecl> Sema::resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl) {
@@ -103,7 +101,8 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
         ret = makePtr<ResolvedMemberFunctionDecl>(
             resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
             std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
-            std::move(resolvedFunctionDecl->scope), resolvedFunctionDecl->functionDecl, &parentDecl, isStatic);
+            std::move(resolvedFunctionDecl->resolvedReturnTypeExpr), std::move(resolvedFunctionDecl->scope),
+            resolvedFunctionDecl->functionDecl, &parentDecl, isStatic);
     }
 
     auto fnType = ret->getFnType();
@@ -136,6 +135,11 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     auto returnType = resolve_type(*function.type);
 
     if (!returnType)
+        return report(function.location, "function '" + function.identifier + "' has invalid '" +
+                                             function.type->to_str() + "' return type");
+
+    auto resolvedReturnTypeExpr = resolve_expr(*function.type, true);
+    if (!resolvedReturnTypeExpr)
         return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                              function.type->to_str() + "' return type");
 
@@ -173,9 +177,9 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
                                                 std::move(returnType));
 
     if (dynamic_cast<const ExternFunctionDecl *>(&function)) {
-        auto ret =
-            makePtr<ResolvedExternFunctionDecl>(function.location, function.isPublic, function.identifier,
-                                                std::move(fnType), std::move(resolvedParams), std::move(takenScope));
+        auto ret = makePtr<ResolvedExternFunctionDecl>(function.location, function.isPublic, function.identifier,
+                                                       std::move(fnType), std::move(resolvedParams),
+                                                       std::move(resolvedReturnTypeExpr), std::move(takenScope));
         ret->getFnType()->fnDecl = ret.get();
         if (ret->scope) ret->scope->currentFunction = ret.get();
         return ret;
@@ -191,16 +195,17 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         if (resolvedGenericTypeDecl.size() != 0) {
             auto ret = makePtr<ResolvedGenericFunctionDecl>(
                 function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
-                std::move(takenScope), std::move(takenGenericScope), functionDecl, std::move(resolvedGenericTypeDecl));
+                std::move(resolvedReturnTypeExpr), std::move(takenScope), std::move(takenGenericScope), functionDecl,
+                std::move(resolvedGenericTypeDecl));
             ret->getFnType()->fnDecl = ret.get();
             ret->symbolName = resolve_decl_name(function.identifier);
             if (ret->genericScope) ret->genericScope->currentFunction = ret.get();
             if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         } else {
-            auto ret = makePtr<ResolvedFunctionDecl>(function.location, function.isPublic, function.identifier,
-                                                     std::move(fnType), std::move(resolvedParams),
-                                                     std::move(takenScope), functionDecl);
+            auto ret = makePtr<ResolvedFunctionDecl>(
+                function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
+                std::move(resolvedReturnTypeExpr), std::move(takenScope), functionDecl);
             ret->getFnType()->fnDecl = ret.get();
             ret->symbolName = resolve_decl_name(function.identifier);
             if (ret->scope) ret->scope->currentFunction = ret.get();
@@ -289,7 +294,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
 
     auto resolvedFunc = makePtr<ResolvedSpecializedFunctionDecl>(
         funcDecl.location, funcDecl.isPublic, funcDecl.identifier, std::move(fnType), std::move(resolvedParams),
-        std::move(takenScope), funcDecl.functionDecl, &funcDecl,
+        std::move(funcDecl.resolvedReturnTypeExpr), std::move(takenScope), funcDecl.functionDecl, &funcDecl,
         castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
     resolvedFunc->getFnType()->fnDecl = resolvedFunc.get();
     resolvedFunc->symbolName = funcDecl.symbolName;
@@ -379,27 +384,23 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
     ScopeRAII scope(*this);
     auto takenScope = scope.takeScope();
 
-    ptr<ResolvedType> resolvedvarType = nullptr;
+    ptr<ResolvedTypeExpr> resolvedvarType = nullptr;
     if (varDecl.type) {
-        resolvedvarType = resolve_type(*varDecl.type);
+        resolvedvarType = resolve_type_expr(*varDecl.type);
         if (!resolvedvarType) {
             return report(varDecl.location,
                           "variable '" + varDecl.identifier + "' has invalid '" + varDecl.type->to_str() + "' type");
         }
     }
-    if (resolvedvarType && resolvedvarType->kind == ResolvedTypeKind::Void) {
-        return report(varDecl.location,
-                      "variable '" + varDecl.identifier + "' has invalid '" + resolvedvarType->to_str() + "' type");
+    if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::Void) {
+        return report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +
+                                            resolvedvarType->resolvedType->to_str() + "' type");
     }
 
-    ptr<ResolvedType> type = resolvedvarType ? std::move(resolvedvarType) : nullptr;
-    auto ret =
-        makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier, std::move(type),
-                                 varDecl.isMutable, std::move(takenScope), nullptr, varDecl.isGlobal);
+    auto ret = makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier,
+                                        std::move(resolvedvarType), varDecl.isMutable, std::move(takenScope), nullptr,
+                                        varDecl.isGlobal);
     ret->symbolName = resolve_decl_name(varDecl.identifier);
-    if (varDecl.type) {
-        ret->resolvedTypeExpr = resolve_expr(*varDecl.type);
-    }
     return ret;
 }
 
@@ -422,7 +423,8 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
 
     ptr<ResolvedExpr> resolvedInitializer = nullptr;
     if (varDecl.varDecl && varDecl.varDecl->initializer) {
-        resolvedInitializer = resolve_expr(*varDecl.varDecl->initializer);
+        resolvedInitializer =
+            resolve_expr(*varDecl.varDecl->initializer, dynamic_cast<StructDecl *>(varDecl.varDecl->initializer.get()));
         if (!resolvedInitializer) {
             varDecl.state = ResolvedState::Error;
             return debug_ret(false);
@@ -499,8 +501,8 @@ bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
     for (auto &&decl : resolvedUnionDecl.unionDecl()->decls) {
         auto field = dynamic_cast<const FieldDecl *>(decl.get());
         if (!field) continue;
-        auto type = resolve_type(*field->type);
-        if (!type) {
+        auto typeExpr = resolve_type_expr(*field->type);
+        if (!typeExpr) {
             report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
             return false;
         }
@@ -510,9 +512,8 @@ bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
             if (!default_initializer) return false;
         }
 
-        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++,
+        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr), idx++,
                                                    std::move(default_initializer));
-        retField->resolvedTypeExpr = resolve_expr(*field->type);
         resolvedFields.emplace_back(std::move(retField));
         resolvedFields_strs.emplace_back(field->identifier);
     }
@@ -555,7 +556,8 @@ bool Sema::resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl) {
             }
         }
 
-        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++,
+        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier,
+                                                   makePtr<ResolvedTypeExpr>(field->location, std::move(type)), idx++,
                                                    std::move(default_initializer));
         if (retField->default_initializer) {
             idx = retField->default_initializer->get_constant_value().value();
@@ -682,8 +684,8 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         for (auto &&decl : resolvedStructDecl.structDecl->decls) {
             auto field = dynamic_cast<const FieldDecl *>(decl.get());
             if (!field) continue;
-            auto type = resolve_type(*field->type);
-            if (!type) {
+            auto typeExpr = resolve_type_expr(*field->type);
+            if (!typeExpr) {
                 report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
                 return false;
             }
@@ -693,9 +695,8 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
                 if (!default_initizlizer) return false;
             }
 
-            auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(type), idx++,
+            auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr), idx++,
                                                        std::move(default_initizlizer));
-            retField->resolvedTypeExpr = resolve_expr(*field->type);
             resolvedFields.emplace_back(std::move(retField));
             resolvedFields_strs.emplace_back(field->identifier);
         }

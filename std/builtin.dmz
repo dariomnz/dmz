@@ -23,7 +23,7 @@ const ErrorTraceEntry = struct {
 
 const ErrorTrace = struct {
     size: i32,
-    entries: ErrorTraceEntry[20],
+    entries: [20]ErrorTraceEntry,
 };
 
 fn @getErrorTrace() -> ErrorTrace {
@@ -37,7 +37,7 @@ fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
     defer std.io.file.close(file);
 
     const reader = std.io.file.reader.init(file);
-    let buffer: u8[1024] = {};
+    let buffer: [1024]u8 = {};
     const r = reader.reader(buffer[0..1024]);
 
     let current_line = 1;

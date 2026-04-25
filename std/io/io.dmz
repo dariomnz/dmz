@@ -6,7 +6,7 @@ pub const Reader = import("reader.dmz").Reader;
 const std = import("std");
 
 pub fn print<T>(fmt: []u8, args: T) -> !usize {
-    let buf: u8[1024] = {};
+    let buf: [1024]u8 = {};
     const w = stdout.writer(buf[0..1024]);
     defer try w.flush();
     return std.fmt.fmt<T>(w, fmt, args);
@@ -54,7 +54,7 @@ pub const stdin = struct {
 };
 
 test "stdout splat" {
-    let buf: u8[24] = {};
+    let buf: [24]u8 = {};
     let out = stdout.writer(buf[0..24]);
     defer out.flush();
 

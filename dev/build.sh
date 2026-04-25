@@ -21,7 +21,7 @@ cmake --build ${build_dir} -j $(nproc) --target dmz ${FLAGS}
 
 for arg in "$@"; do
     if [ "$arg" == "test" ]; then
-        ./build/bin/dmz -test-compiler ./test/ -j 0
+        ./build/bin/dmz -test-compiler ./test/ -j 0 -quiet
         break
     fi
 done

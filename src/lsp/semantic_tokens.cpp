@@ -78,8 +78,8 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             if (!dynamic_cast<const ResolvedTestDecl*>(funcDecl)) {
                 add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,
                           (uint32_t)SemanticTokenModifier::Declaration);
-                if (auto fnType = funcDecl->getFnType()) {
-                    if (fnType->returnType) traverse_type(*fnType->returnType);
+                if (funcDecl->resolvedReturnTypeExpr) {
+                    traverse_expr(*funcDecl->resolvedReturnTypeExpr);
                 }
                 for (const auto& param : funcDecl->params) {
                     traverse_decl(*param);
@@ -100,8 +100,7 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                       (uint32_t)SemanticTokenModifier::Declaration);
             if (paramDecl->resolvedTypeExpr) {
                 traverse_expr(*paramDecl->resolvedTypeExpr);
-            } else if (paramDecl->type)
-                traverse_type(*paramDecl->type);
+            }
         } else if (auto* declStmt = dynamic_cast<const ResolvedDeclStmt*>(&decl)) {
             traverse_decl(*declStmt->varDecl);
         } else if (auto* varDecl = dynamic_cast<const ResolvedVarDecl*>(&decl)) {
@@ -109,8 +108,6 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             add_token(varDecl->location, varDecl->identifier, type, (uint32_t)SemanticTokenModifier::Declaration);
             if (varDecl->varDecl && varDecl->varDecl->type && varDecl->resolvedTypeExpr)
                 traverse_expr(*varDecl->resolvedTypeExpr);
-            else if (varDecl->varDecl && varDecl->varDecl->type)
-                traverse_type(*varDecl->type);
             if (varDecl->initializer) {
                 traverse_expr(*varDecl->initializer);
             }
@@ -124,10 +121,7 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
         } else if (auto* fieldDecl = dynamic_cast<const ResolvedFieldDecl*>(&decl)) {
             add_token(fieldDecl->location, fieldDecl->identifier, SemanticTokenType::Property,
                       (uint32_t)SemanticTokenModifier::Declaration);
-            if (fieldDecl->resolvedTypeExpr)
-                traverse_expr(*fieldDecl->resolvedTypeExpr);
-            else if (fieldDecl->type)
-                traverse_type(*fieldDecl->type);
+            if (fieldDecl->resolvedTypeExpr) traverse_expr(*fieldDecl->resolvedTypeExpr);
             if (fieldDecl->default_initializer) {
                 traverse_expr(*fieldDecl->default_initializer);
             }
@@ -198,10 +192,8 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
             debug_msg("ResolvedGenericExpr");
             traverse_expr(*ge->base);
-            if (ge->specializedTypes) {
-                for (const auto& ty : ge->specializedTypes->specializedTypes) {
-                    traverse_type(*ty);
-                }
+            for (const auto& tyExpr : ge->specializedTypesExpr) {
+                traverse_expr(*tyExpr);
             }
         } else if (auto* memberExpr = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
             debug_msg("ResolvedMemberExpr");
@@ -261,7 +253,12 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_expr(*arrayAt->index);
         } else if (auto* typeExpr = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
             debug_msg("ResolvedTypeExpr");
-            traverse_type(*typeExpr->resolvedType);
+            if (typeExpr->typeExpr) {
+                traverse_expr(*typeExpr->typeExpr);
+            }
+            //  else if (typeExpr->location.file_name == m_target_file) {
+            //     add_token(typeExpr->location, typeExpr->resolvedType->to_str(), SemanticTokenType::Type);
+            // }
         } else if (auto* pe = dynamic_cast<const ResolvedTypePointerExpr*>(&expr)) {
             debug_msg("ResolvedTypePointerExpr");
             traverse_expr(*pe->pointerType);
@@ -275,6 +272,16 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             debug_msg("ResolvedTypeArrayExpr");
             traverse_expr(*ae->arrayType);
             traverse_expr(*ae->sizeExpr);
+        } else if (auto* se = dynamic_cast<const ResolvedTypeSimdExpr*>(&expr)) {
+            debug_msg("ResolvedTypeSimdExpr");
+            traverse_expr(*se->simdType);
+            traverse_expr(*se->sizeExpr);
+        } else if (auto* fnSig = dynamic_cast<const ResolvedTypeFunctionExpr*>(&expr)) {
+            debug_msg("ResolvedFuncSigType");
+            traverse_expr(*fnSig->resolvedReturnTypeExpr);
+            for (auto&& param : fnSig->params) {
+                traverse_expr(*param);
+            }
         } else if (auto* ptrExpr = dynamic_cast<const ResolvedRefPtrExpr*>(&expr)) {
             debug_msg("ResolvedRefPtrExpr");
             traverse_expr(*ptrExpr->expr);
@@ -297,8 +304,7 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_expr(*orelseErr->orElseExpr);
         } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
             debug_msg("ResolvedSizeofExpr");
-            traverse_expr(*sizeofExpr->sizeofExpr);
-            traverse_type(*sizeofExpr->sizeofType);
+            if (sizeofExpr->sizeofExpr) traverse_expr(*sizeofExpr->sizeofExpr);
         } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
             debug_msg("ResolvedTypeidExpr");
             traverse_expr(*typeidExpr->typeidExpr);
@@ -327,33 +333,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             debug_msg("ResolvedErrorInPlaceExpr");
             add_token(errorInplace->location, errorInplace->identifier, SemanticTokenType::Variable);
         }
-    }
-}
-
-void SemanticTokensCollector::traverse_type(const ResolvedType& type) {
-    debug_msg(type.location << " " << type.to_str());
-    if (dynamic_cast<const ResolvedTypeNumber*>(&type) || dynamic_cast<const ResolvedTypeVoid*>(&type) ||
-        dynamic_cast<const ResolvedTypeGeneric*>(&type) || dynamic_cast<const ResolvedTypeBool*>(&type) ||
-        dynamic_cast<const ResolvedTypeError*>(&type)) {
-        if (type.location.file_name == m_target_file) {
-            add_token(type.location, type.to_str(), SemanticTokenType::Type);
-        }
-    } else if (auto* ptrTy = dynamic_cast<const ResolvedTypePointer*>(&type)) {
-        traverse_type(*ptrTy->pointerType);
-    } else if (auto* sliceTy = dynamic_cast<const ResolvedTypeSlice*>(&type)) {
-        traverse_type(*sliceTy->sliceType);
-    } else if (auto* arrayTy = dynamic_cast<const ResolvedTypeArray*>(&type)) {
-        traverse_type(*arrayTy->arrayType);
-    } else if (auto* optTy = dynamic_cast<const ResolvedTypeOptional*>(&type)) {
-        traverse_type(*optTy->optionalType);
-    } else if (auto* simdTy = dynamic_cast<const ResolvedTypeSimd*>(&type)) {
-        traverse_type(*simdTy->simdType);
-        if (simdTy->simdSizeExpr) traverse_expr(*simdTy->simdSizeExpr);
-    } else if (auto* specTy = dynamic_cast<const ResolvedTypeSpecialized*>(&type)) {
-        for (const auto& spec : specTy->specializedTypes) traverse_type(*spec);
-    } else if (auto* funcTy = dynamic_cast<const ResolvedTypeFunction*>(&type)) {
-        for (const auto& param : funcTy->paramsTypes) traverse_type(*param);
-        traverse_type(*funcTy->returnType);
     }
 }
 

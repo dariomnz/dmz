@@ -3,7 +3,7 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 fn main() -> void {
-    let data: i32[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    let data: [10]i32 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     let slice1: []i32 = data[0..3];
     let slice2: []i32 = data[5..7];
     for (slice1) |val1| {
@@ -16,7 +16,7 @@ fn main() -> void {
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %data = alloca [10 x i32], align 4
-// CHECK-NEXT:   %"array.i32[10].tmp" = alloca [10 x i32], align 4
+// CHECK-NEXT:   %"array.[10]i32.tmp" = alloca [10 x i32], align 4
 // CHECK-NEXT:   %slice1 = alloca %slice.struct, align 8
 // CHECK-NEXT:   %tmp.slice = alloca %slice.struct, align 8
 // CHECK-NEXT:   %slice2 = alloca %slice.struct, align 8
@@ -26,7 +26,7 @@ fn main() -> void {
 // CHECK-NEXT:   %for.counter4 = alloca i64, align 8
 // CHECK-NEXT:   %for.capture.val2 = alloca ptr, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %data, i8 0, i64 40, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.i32[10].tmp", i8 0, i64 40, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %"array.[10]i32.tmp", i8 0, i64 40, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice1, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.slice, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %slice2, i8 0, i64 16, i1 false)
@@ -35,27 +35,27 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.val1, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter4, i8 0, i64 8, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.val2, i8 0, i64 8, i1 false)
-// CHECK-NEXT:   %0 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 0
+// CHECK-NEXT:   %0 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 0
 // CHECK-NEXT:   store i32 0, ptr %0, align 4
-// CHECK-NEXT:   %1 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 1
+// CHECK-NEXT:   %1 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 1
 // CHECK-NEXT:   store i32 1, ptr %1, align 4
-// CHECK-NEXT:   %2 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 2
+// CHECK-NEXT:   %2 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 2
 // CHECK-NEXT:   store i32 2, ptr %2, align 4
-// CHECK-NEXT:   %3 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 3
+// CHECK-NEXT:   %3 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 3
 // CHECK-NEXT:   store i32 3, ptr %3, align 4
-// CHECK-NEXT:   %4 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 4
+// CHECK-NEXT:   %4 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 4
 // CHECK-NEXT:   store i32 4, ptr %4, align 4
-// CHECK-NEXT:   %5 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 5
+// CHECK-NEXT:   %5 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 5
 // CHECK-NEXT:   store i32 5, ptr %5, align 4
-// CHECK-NEXT:   %6 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 6
+// CHECK-NEXT:   %6 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 6
 // CHECK-NEXT:   store i32 6, ptr %6, align 4
-// CHECK-NEXT:   %7 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 7
+// CHECK-NEXT:   %7 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 7
 // CHECK-NEXT:   store i32 7, ptr %7, align 4
-// CHECK-NEXT:   %8 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 8
+// CHECK-NEXT:   %8 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 8
 // CHECK-NEXT:   store i32 8, ptr %8, align 4
-// CHECK-NEXT:   %9 = getelementptr [10 x i32], ptr %"array.i32[10].tmp", i32 0, i32 9
+// CHECK-NEXT:   %9 = getelementptr [10 x i32], ptr %"array.[10]i32.tmp", i32 0, i32 9
 // CHECK-NEXT:   store i32 9, ptr %9, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %data, ptr align 4 %"array.i32[10].tmp", i64 40, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %data, ptr align 4 %"array.[10]i32.tmp", i64 40, i1 false)
 // CHECK-NEXT:   %10 = getelementptr i32, ptr %data, i32 0
 // CHECK-NEXT:   %11 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 0
 // CHECK-NEXT:   %12 = getelementptr inbounds nuw %slice.struct, ptr %tmp.slice, i32 0, i32 1

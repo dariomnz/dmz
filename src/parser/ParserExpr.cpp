@@ -208,7 +208,7 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         matchOrReturn(TokenType::bracket_l, "expected '['");
         eat_next_token();  // eat '['
 
-        varOrReturn(index, with_no_restrictions<ptr<Expr>>([&]() { return parse_expr(); }));
+        varOrReturn(index, parse_expr());
 
         matchOrReturn(TokenType::bracket_r, "expected ']'");
         eat_next_token();  // eat ']'
@@ -302,16 +302,26 @@ ptr<Expr> Parser::parse_prefix_expr() {
     debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'" << m_nextToken.type);
     Token tok = m_nextToken;
 
-    if (tok.type == TokenType::bracket_l && peek_token().type == TokenType::bracket_r &&
-        peek_token(1).type != TokenType::par_l) {
+    if (tok.type == TokenType::bracket_l) {
         SourceLocation loc = m_nextToken.loc;
-        eat_next_token();  // eat [
-        eat_next_token();  // eat ]
-        varOrReturn(rhs, parse_prefix_expr());
-        if (restrictions & OnlyTypeExpr) {
-            return makePtr<TypeSlice>(loc, std::move(rhs));
+        eat_next_token();      // eat [
+        if (m_nextToken.type == TokenType::bracket_r) {
+            eat_next_token();  // eat ]
+            varOrReturn(rhs, parse_prefix_expr());
+            if (restrictions & OnlyTypeExpr) {
+                return makePtr<TypeSlice>(loc, std::move(rhs));
+            }
+            return report(loc, "unexpected '[]' in expression");
+        } else {
+            varOrReturn(size, with_no_restrictions<ptr<Expr>>([&]() { return parse_expr(); }));
+            matchOrReturn(TokenType::bracket_r, "expected ']'");
+            eat_next_token();  // eat ]
+            varOrReturn(rhs, parse_prefix_expr());
+            if (restrictions & OnlyTypeExpr) {
+                return makePtr<TypeArray>(loc, std::move(rhs), std::move(size));
+            }
+            return report(loc, "unexpected '[size]' in expression");
         }
-        return report(loc, "unexpected '[]' in expression");
     }
 
     std::unordered_set<TokenType> unaryOps = {
@@ -339,6 +349,12 @@ ptr<Expr> Parser::parse_prefix_expr() {
             return makePtr<RefPtrExpr>(tok.loc, std::move(rhs));
         case TokenType::op_excla_mark:
         case TokenType::op_minus:
+            if (restrictions & OnlyTypeExpr) {
+                if (tok.type == TokenType::op_excla_mark) {
+                    return makePtr<TypeOptional>(tok.loc, std::move(rhs));
+                }
+            }
+
             return makePtr<UnaryOperator>(tok.loc, std::move(rhs), tok.type);
         default:
             return report(tok.loc, "unexpected unary operator");

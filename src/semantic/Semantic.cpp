@@ -263,19 +263,17 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return debug_ret(ret);
     }
-    if (auto optType = dynamic_cast<const UnaryOperator *>(&type)) {
-        if (optType->op != TokenType::op_excla_mark)
-            return report(type.location, "unexpected op in unary operator of a type");
-        varOrReturn(optionalType, resolve_type(*optType->operand));
+    if (auto optType = dynamic_cast<const TypeOptional *>(&type)) {
+        varOrReturn(optionalType, resolve_type(*optType->optionalType));
 
         ret = makePtr<ResolvedTypeOptional>(type.location, std::move(optionalType));
         retPtr = ret.get();
         return debug_ret(ret);
     }
-    if (auto arrType = dynamic_cast<const ArrayAtExpr *>(&type)) {
-        varOrReturn(arrayType, resolve_type(*arrType->array));
+    if (auto arrType = dynamic_cast<const TypeArray *>(&type)) {
+        varOrReturn(arrayType, resolve_type(*arrType->arrayType));
 
-        varOrReturn(arraySizeExpr, resolve_expr(*arrType->index));
+        varOrReturn(arraySizeExpr, resolve_expr(*arrType->arraySize));
         int arraySize = 0;
         if (auto as = arraySizeExpr->get_constant_value()) {
             arraySize = as.value();
@@ -554,7 +552,8 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
             }
         }
         if (!haveMain) {
-            report(mainMod ? mainMod->location : SourceLocation{}, "main function not found in module");
+            report(mainMod ? mainMod->location : SourceLocation{.file_name = sourceAbsPath},
+                   "main function not found in module");
             return {};
         }
     }
@@ -881,11 +880,15 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
     }
 
     SourceLocation loc = SourceLocation::builtin();
+    auto genericTypeExpr = [&]() {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        return makePtr<ResolvedTypeExpr>(loc, genericType->clone());
+    };
     if (fnName == "@call") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "fn", genericType->clone(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "args", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "fn", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "args", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());
@@ -897,7 +900,7 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
     } else if (fnName == "@atomicLoad") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
@@ -908,8 +911,8 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
     } else if (fnName == "@atomicStore") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());
@@ -921,9 +924,9 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
     } else if (fnName == "@atomicCmpExS" || fnName == "@atomicCmpExW") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "expected", genericType->clone(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "desired", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "expected", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "desired", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());
@@ -942,9 +945,10 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
     } else if (fnName == "@atomicRmw") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atom", genericType->clone(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "op", makePtr<ResolvedTypeEnum>(loc, nullptr), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atom", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "op", makePtr<ResolvedTypeExpr>(loc, makePtr<ResolvedTypeEnum>(loc, nullptr)), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());

@@ -71,7 +71,7 @@ test "thread futex mutex" {
     const c = incrementar_contador{contador_ptr: contador_ptr, cont_mutex_ptr: cont_mutex_ptr};
 
     const NUM_HILOS = 5;
-    let threads: std.thread.Thread[NUM_HILOS] = {};
+    let threads: [NUM_HILOS]std.thread.Thread = {};
 
     for (0..NUM_HILOS) |i| {
         threads[i] = try std.thread.Thread.init(&incrementar_contador.call, &c);

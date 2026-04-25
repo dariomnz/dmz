@@ -121,9 +121,29 @@ struct TypeError : public Type {
     DMZ_TYPE_NAME();
 };
 
+struct TypeOptional : public Type {
+    ptr<Expr> optionalType;
+    TypeOptional(SourceLocation location, ptr<Expr> optionalType) : Type(location), optionalType(std::move(optionalType)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
 struct TypeSlice : public Type {
     ptr<Expr> sliceType;
     TypeSlice(SourceLocation location, ptr<Expr> sliceType) : Type(location), sliceType(std::move(sliceType)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
+struct TypeArray : public Type {
+    ptr<Expr> arrayType;
+    ptr<Expr> arraySize;
+    TypeArray(SourceLocation location, ptr<Expr> arrayType, ptr<Expr> arraySize)
+        : Type(location), arrayType(std::move(arrayType)), arraySize(std::move(arraySize)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -938,7 +958,7 @@ struct ImportExpr : public Expr {
 struct TestDecl : public FunctionDecl {
     TestDecl(SourceLocation location, std::string_view identifier, ptr<Block> body)
         : FunctionDecl(location, true, identifier,
-                       makePtr<UnaryOperator>(location, makePtr<TypeVoid>(location), TokenType::op_excla_mark), {},
+                       makePtr<TypeOptional>(location, makePtr<TypeVoid>(location)), {},
                        std::move(body)) {}
 
     void dump(size_t level = 0) const override;

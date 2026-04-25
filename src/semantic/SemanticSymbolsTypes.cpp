@@ -8,6 +8,7 @@
 #include "codegen/CodegenUtils.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
+struct ResolvedExpr;
 namespace DMZ {
 
 bool ResolvedType::is_generic() const { return false; }
@@ -729,7 +730,7 @@ void ResolvedTypeArray::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeArray " << to_str() << "\n";
 }
 
-std::string ResolvedTypeArray::to_str() const { return arrayType->to_str() + "[" + std::to_string(arraySize) + "]"; }
+std::string ResolvedTypeArray::to_str() const { return "[" + std::to_string(arraySize) + "]" + arrayType->to_str(); }
 
 bool ResolvedTypeArray::is_generic() const { return debug_ret(arrayType->is_generic()); }
 
