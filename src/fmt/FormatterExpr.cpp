@@ -10,6 +10,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_decoration(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const UnionDecl*>(&expr)) {
         node = fmt_union_decl(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const EnumDecl*>(&expr)) {
+        node = fmt_enum_decl(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const StructDecl*>(&expr)) {
         node = fmt_struct_decl(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const Type*>(&expr)) {
