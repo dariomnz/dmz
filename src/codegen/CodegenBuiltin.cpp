@@ -32,7 +32,7 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
 }
 
 llvm::Value *Codegen::generate_builtin_call(const ResolvedCallExpr &call) {
-    debug_func("" << builtin.identifier);
+    debug_func(call.location);
     llvm::Value *callee = generate_expr(*call.arguments[0]);
     llvm::Value *tuplePtr = generate_expr(*call.arguments[1], true);
 
@@ -76,6 +76,7 @@ llvm::Value *Codegen::generate_builtin_call(const ResolvedCallExpr &call) {
 }
 
 llvm::Value *Codegen::generate_builtin_atomicLoad(const ResolvedCallExpr &call) {
+    debug_func(call.location);
     llvm::Value *ptr = generate_expr(*call.arguments[0]);
     auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(call.arguments[0]->type.get());
     llvm::Type *llvmType = generate_type(*ptrType->pointerType);
@@ -86,6 +87,7 @@ llvm::Value *Codegen::generate_builtin_atomicLoad(const ResolvedCallExpr &call) 
 }
 
 llvm::Value *Codegen::generate_builtin_atomicStore(const ResolvedCallExpr &call) {
+    debug_func(call.location);
     llvm::Value *ptr = generate_expr(*call.arguments[0]);
     llvm::Value *val = generate_expr(*call.arguments[1]);
     auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(call.arguments[0]->type.get());
@@ -96,6 +98,7 @@ llvm::Value *Codegen::generate_builtin_atomicStore(const ResolvedCallExpr &call)
 }
 
 llvm::Value *Codegen::generate_builtin_atomicCmpEx(const ResolvedCallExpr &call, bool isWeak) {
+    debug_func(call.location);
     llvm::Value *ptr = generate_expr(*call.arguments[0]);
     llvm::Value *expected = generate_expr(*call.arguments[1]);
     llvm::Value *desired = generate_expr(*call.arguments[2]);
@@ -113,6 +116,7 @@ llvm::Value *Codegen::generate_builtin_atomicCmpEx(const ResolvedCallExpr &call,
 }
 
 llvm::Value *Codegen::generate_builtin_atomicRmw(const ResolvedCallExpr &call) {
+    debug_func(call.location);
     llvm::Value *ptr = generate_expr(*call.arguments[0]);
     int opVal = call.arguments[1]->get_constant_value().value_or(-1);
     if (opVal < 0) {

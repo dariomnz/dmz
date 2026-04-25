@@ -2,6 +2,12 @@
 
 #include <iosfwd>
 
+#ifdef DEBUG
+#include <iostream>
+
+#include "Utils.hpp"
+#endif
+
 namespace DMZ {
 
 constexpr const char *get_file_name(const char *path) {

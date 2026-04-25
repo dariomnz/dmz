@@ -1,6 +1,7 @@
 // RUN: dmz %s -run | filecheck %s
 
 // CHECK: Hello world!
+// CHECK-NOT: {{.*}}
 const std = import("std");
 
 fn main() -> void {

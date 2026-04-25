@@ -19,6 +19,7 @@ enum class StatType : int {
     CFG,
     Codegen,
     Compile,
+    Verify,
     Run,
     Total,
     size,
@@ -32,7 +33,8 @@ static std::unordered_map<StatType, std::string> StatType_to_str = {
     {StatType::Semantic_Mark_deps, "Mark deps"},
     {StatType::CFG, "CFG"},
     {StatType::Codegen, "Codegen"},
-    {StatType::Compile, "Compile"},
+    {StatType::Compile, "LLVM Compile"},
+    {StatType::Verify, "Verify"},
     {StatType::Run, "Run"},
     {StatType::Total, "Total"},
 };
@@ -93,6 +95,7 @@ class Stats {
         Stat{.type = StatType::CFG},
         Stat{.type = StatType::Codegen},
         Stat{.type = StatType::Compile},
+        Stat{.type = StatType::Verify},
         Stat{.type = StatType::Run},
     };
     std::array<double, static_cast<size_t>(StatType::size)> stat_array = {};
