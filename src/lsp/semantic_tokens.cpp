@@ -326,22 +326,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
         } else if (auto errorInplace = dynamic_cast<const ResolvedErrorInPlaceExpr*>(&expr)) {
             debug_msg("ResolvedErrorInPlaceExpr");
             add_token(errorInplace->location, errorInplace->identifier, SemanticTokenType::Variable);
-        } else if (auto atomicLoad = dynamic_cast<const ResolvedAtomicLoadExpr*>(&expr)) {
-            debug_msg("ResolvedAtomicLoadExpr");
-            traverse_expr(*atomicLoad->ptrExpr);
-        } else if (auto atomicStore = dynamic_cast<const ResolvedAtomicStoreExpr*>(&expr)) {
-            debug_msg("ResolvedAtomicStoreExpr");
-            traverse_expr(*atomicStore->ptrExpr);
-            traverse_expr(*atomicStore->valExpr);
-        } else if (auto atomicCmpEx = dynamic_cast<const ResolvedAtomicCmpExExpr*>(&expr)) {
-            debug_msg("ResolvedAtomicCmpExExpr");
-            traverse_expr(*atomicCmpEx->ptrExpr);
-            traverse_expr(*atomicCmpEx->expected);
-            traverse_expr(*atomicCmpEx->replacement);
-        } else if (auto atomicRmw = dynamic_cast<const ResolvedAtomicRmwExpr*>(&expr)) {
-            debug_msg("ResolvedAtomicRmwExpr");
-            traverse_expr(*atomicRmw->ptrExpr);
-            traverse_expr(*atomicRmw->valExpr);
         }
     }
 }

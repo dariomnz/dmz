@@ -19,7 +19,8 @@ std::ostream &operator<<(std::ostream &os, const ResolvedState &state) {
     }
 }
 
-template<> void ConstantValueContainer<int>::dump_constant_value(size_t level) const {
+template <>
+void ConstantValueContainer<int>::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';
     }
@@ -194,7 +195,9 @@ void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
-    if (auto member = dynamic_cast<const ResolvedMemberFunctionDecl *>(this)) {
+    if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(this)) {
+        std::cerr << indent(level) << "ResolvedBuiltinFunctionDecl ";
+    } else if (auto member = dynamic_cast<const ResolvedMemberFunctionDecl *>(this)) {
         if (member->isStatic) {
             std::cerr << indent(level) << "ResolvedStaticMemberFunctionDecl ";
         } else {
@@ -644,35 +647,6 @@ void ResolvedTypeSimdExpr::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     simdType->dump(level + 1, onlySelf);
     sizeExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedAtomicLoadExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedAtomicLoadExpr:" << type->to_str() << '\n';
-    if (onlySelf) return;
-    ptrExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedAtomicStoreExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedAtomicStoreExpr\n";
-    if (onlySelf) return;
-    ptrExpr->dump(level + 1, onlySelf);
-    valExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedAtomicCmpExExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << (isWeak ? "ResolvedAtomicCmpExWeakExpr:" : "ResolvedAtomicCmpExStrongExpr:")
-              << type->to_str() << "\n";
-    if (onlySelf) return;
-    ptrExpr->dump(level + 1, onlySelf);
-    expected->dump(level + 1, onlySelf);
-    replacement->dump(level + 1, onlySelf);
-}
-
-void ResolvedAtomicRmwExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedAtomicRmwExpr(" << get_op_str(op) << "):" << type->to_str() << '\n';
-    if (onlySelf) return;
-    ptrExpr->dump(level + 1, onlySelf);
-    valExpr->dump(level + 1, onlySelf);
 }
 
 void ResolvedAutoMemberExpr::dump(size_t level, bool onlySelf) const {

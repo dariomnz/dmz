@@ -7,34 +7,68 @@ fn main() -> void {
     // Load
     let val = @atomicLoad(ptr);
     // CHECK: ResolvedVarDecl:i32 val
-    // CHECK-NEXT:   ResolvedAtomicLoadExpr:i32
+    // CHECK-NEXT:  ResolvedCallExpr:i32
+    // CHECK-NEXT:    ResolvedDeclRefExpr:i32 @atomicLoad
+    // CHECK-NEXT:    ResolvedDeclRefExpr:*i32 ptr
 
     // Store
     @atomicStore(ptr, 10);
-    // CHECK: ResolvedAtomicStoreExpr
+    // CHECK: ResolvedCallExpr:void
+    // CHECK-NEXT:   ResolvedDeclRefExpr:void @atomicStore
+    // CHECK-NEXT:   ResolvedDeclRefExpr:*i32 ptr
+    // CHECK-NEXT:   ResolvedIntLiteral:i32 '10'
 
     // CAS
     let success = @atomicCmpExS(ptr, 10, 20);
     // CHECK: ResolvedVarDecl:bool success
-    // CHECK-NEXT:   ResolvedAtomicCmpExStrongExpr:bool
+    // CHECK-NEXT:           ResolvedCallExpr:bool
+    // CHECK-NEXT:             ResolvedDeclRefExpr:bool @atomicCmpExS
+    // CHECK-NEXT:             ResolvedDeclRefExpr:*i32 ptr
+    // CHECK-NEXT:             ResolvedIntLiteral:i32 '10'
+    // CHECK-NEXT:             | value: 10
+    // CHECK-NEXT:             ResolvedIntLiteral:i32 '20'
+    // CHECK-NEXT:             | value: 20
 
     let successW = @atomicCmpExW(ptr, 20, 30);
     // CHECK: ResolvedVarDecl:bool successW
-    // CHECK-NEXT:   ResolvedAtomicCmpExWeakExpr:bool
+    // CHECK-NEXT:   ResolvedCallExpr:bool
+    // CHECK-NEXT:     ResolvedDeclRefExpr:bool @atomicCmpExW
+    // CHECK-NEXT:     ResolvedDeclRefExpr:*i32 ptr
+    // CHECK-NEXT:     ResolvedIntLiteral:i32 '20'
+    // CHECK-NEXT:     | value: 20
+    // CHECK-NEXT:     ResolvedIntLiteral:i32 '30'
+    // CHECK-NEXT:     | value: 30
 
     // RMW
-    let old = @atomicRmw(ptr, +, 5);
-    // CHECK: ResolvedVarDecl:i32 old
-    // CHECK-NEXT:   ResolvedAtomicRmwExpr(+):i32
+    let old = @atomicRmw(ptr, .Add, 5);
+    // CHECK:   ResolvedVarDecl:i32 old
+    // CHECK-NEXT:     ResolvedCallExpr:i32
+    // CHECK-NEXT:       ResolvedDeclRefExpr:i32 @atomicRmw
+    // CHECK-NEXT:       ResolvedDeclRefExpr:*i32 ptr
+    // CHECK-NEXT:       ResolvedAutoMemberExpr .Add std.atomic.AtomicOp{}
+    // CHECK-NEXT:       | value: 0
+    // CHECK-NEXT:       ResolvedIntLiteral:i32 '5'
+    // CHECK-NEXT:       | value: 5
 
-    let old2 = @atomicRmw(ptr, =, 100);
-    // CHECK: ResolvedVarDecl:i32 old2
-    // CHECK-NEXT:   ResolvedAtomicRmwExpr(=):i32
+    let old2 = @atomicRmw(ptr, .Xchg, 100);
+    // CHECK:   ResolvedVarDecl:i32 old2
+    // CHECK-NEXT:     ResolvedCallExpr:i32
+    // CHECK-NEXT:       ResolvedDeclRefExpr:i32 @atomicRmw
+    // CHECK-NEXT:       ResolvedDeclRefExpr:*i32 ptr
+    // CHECK-NEXT:       ResolvedAutoMemberExpr .Xchg std.atomic.AtomicOp{}
+    // CHECK-NEXT:       | value: 8
+    // CHECK-NEXT:       ResolvedIntLiteral:i32 '100'
+    // CHECK-NEXT:       | value: 100
 
     // RMW with pointers (Exchange)
     let p: *i32 = &i;
     let p_ptr: **i32 = &p;
-    let old_p = @atomicRmw(p_ptr, =, ptr);
+    let old_p = @atomicRmw(p_ptr, .Xchg, ptr);
     // CHECK: ResolvedVarDecl:*i32 old_p
-    // CHECK-NEXT:   ResolvedAtomicRmwExpr(=):*i32
+    // CHECK-NEXT:  ResolvedCallExpr:*i32
+    // CHECK-NEXT:    ResolvedDeclRefExpr:*i32 @atomicRmw
+    // CHECK-NEXT:    ResolvedDeclRefExpr:**i32 p_ptr
+    // CHECK-NEXT:    ResolvedAutoMemberExpr .Xchg std.atomic.AtomicOp{}
+    // CHECK-NEXT:    | value: 8
+    // CHECK-NEXT:    ResolvedDeclRefExpr:*i32 ptr
 }

@@ -1,5 +1,10 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
 fn main() -> void {
     let i: i32 = 42;
     let ptr: *i32 = &i;
@@ -8,7 +13,8 @@ fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:17: error: expected pointer type for @atomicLoad, actual 'i32'
     @atomicLoad(x);
 
-    // CHECK: [[# @LINE + 2 ]]:5: error: atomic RMW operation '+' only supported for numeric types, actual '*i32'
-    let p_ptr: **i32 = &ptr;
-    @atomicRmw(p_ptr, +, ptr);
+    // CHECK: [[# @LINE + 2 ]]:5: error: atomic RMW operation 'Add' only supported for numeric or pointer types, actual 'atomic_error.Point{}'
+    let p: Point = Point{x: 1, y: 2};
+    @atomicRmw(&p, .Add, p);
+
 }

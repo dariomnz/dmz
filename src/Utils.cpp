@@ -52,7 +52,7 @@ std::string get_file_line(const std::string& file_name, size_t line_num) {
         }
     }
     std::string error_msg = ss.str();
-    std::cerr << error_msg << std::endl;
+    // std::cerr << error_msg << std::endl;
     throw std::runtime_error(error_msg);
 }
 

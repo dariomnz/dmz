@@ -27,19 +27,19 @@ fn main() -> void {
 
     // RMW Add
     // CHECK: atomicrmw add ptr %i, i32 5 seq_cst, align 4
-    let old = @atomicRmw(&i, +, 5);
+    let old = @atomicRmw(&i, .Add, 5);
     printf("i %d old %d\n", i, old);
 
     // RMW Xchg (Exchange)
     // CHECK: atomicrmw xchg ptr %i, i32 100 seq_cst, align 4
-    let old2 = @atomicRmw(&i, =, 100);
+    let old2 = @atomicRmw(&i, .Xchg, 100);
     printf("i %d old2 %d\n", i, old2);
 
     // RMW Xchg with pointers
     let ptr: *i32 = &i;
     let p: *i32 = &i;
     let p_ptr: **i32 = &p;
-    // CHECK: atomicrmw xchg ptr %24, ptr %25 seq_cst, align 8
-    let old_p = @atomicRmw(p_ptr, =, ptr);
+    // CHECK: atomicrmw xchg ptr %21, ptr %22 seq_cst, align 8
+    let old_p = @atomicRmw(p_ptr, .Xchg, ptr);
     printf("i %d old_p %d\n", i, old_p);
 }

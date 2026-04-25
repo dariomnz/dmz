@@ -183,7 +183,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
             arg.setName("ret");
             // Prevent return optional with previous values
             const llvm::DataLayout &dl = m_module->getDataLayout();
-            auto retType = generate_type(*fnType->returnType);
+            auto retType = generate_type(*fnType->returnType, true);
             m_builder.CreateMemSetInline(
                 &arg, dl.getPrefTypeAlign(retType), m_builder.getInt8(0),
                 llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), dl.getTypeAllocSize(retType)));

@@ -82,14 +82,6 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_generic_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const TupleInstantiationExpr*>(&expr)) {
         node = fmt_tuple_instantiation_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const AtomicLoadExpr*>(&expr)) {
-        node = fmt_atomic_load_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const AtomicStoreExpr*>(&expr)) {
-        node = fmt_atomic_store_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const AtomicCmpExExpr*>(&expr)) {
-        node = fmt_atomic_cmp_ex_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const AtomicRmwExpr*>(&expr)) {
-        node = fmt_atomic_rmw_expr(*cast_expr);
     } else {
         expr.dump();
         dmz_unreachable(expr.location, "TODO");
@@ -360,52 +352,6 @@ ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
         gens.emplace_back(fmt_expr(*gen));
     }
     ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_atomic_load_expr(const AtomicLoadExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@atomicLoad"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_atomic_store_expr(const AtomicStoreExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@atomicStore"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(fmt_expr(*expr.val_expr));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_atomic_cmp_ex_expr(const AtomicCmpExExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>(expr.isWeak ? "@atomicCmpExW" : "@atomicCmpExS"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(fmt_expr(*expr.expected));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(fmt_expr(*expr.replacement));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_atomic_rmw_expr(const AtomicRmwExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@atomicRmw"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.ptr_expr));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(makePtr<Text>(get_op_str(expr.op)));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(fmt_expr(*expr.val_expr));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
     return ret;
 }
 }  // namespace fmt

@@ -572,43 +572,4 @@ void TestDecl::dump(size_t level) const { FunctionDecl::dump(level); }
 
 std::string TestDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
-void AtomicLoadExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "AtomicLoadExpr\n";
-    ptr_expr->dump(level + 1);
-}
-
-std::string AtomicLoadExpr::to_str() const { return "@atomicLoad(" + ptr_expr->to_str() + ")"; }
-
-void AtomicStoreExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "AtomicStoreExpr\n";
-    ptr_expr->dump(level + 1);
-    val_expr->dump(level + 1);
-}
-
-std::string AtomicStoreExpr::to_str() const {
-    return "@atomicStore(" + ptr_expr->to_str() + ", " + val_expr->to_str() + ")";
-}
-
-void AtomicCmpExExpr::dump(size_t level) const {
-    std::cerr << indent(level) << (isWeak ? "AtomicCmpExWeakExpr\n" : "AtomicCmpExStrongExpr\n");
-    ptr_expr->dump(level + 1);
-    expected->dump(level + 1);
-    replacement->dump(level + 1);
-}
-
-std::string AtomicCmpExExpr::to_str() const {
-    return (isWeak ? std::string("@atomicCmpExW(") : std::string("@atomicCmpExS(")) + ptr_expr->to_str() + ", " +
-           expected->to_str() + ", " + replacement->to_str() + ")";
-}
-
-void AtomicRmwExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "AtomicRmwExpr (" << get_op_str(op) << ")\n";
-    ptr_expr->dump(level + 1);
-    val_expr->dump(level + 1);
-}
-
-std::string AtomicRmwExpr::to_str() const {
-    return "@atomicRmw(" + ptr_expr->to_str() + ", " + get_op_str(op) + ", " + val_expr->to_str() + ")";
-}
-
 }  // namespace DMZ

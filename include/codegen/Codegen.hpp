@@ -1,14 +1,13 @@
 #pragma once
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm-20/llvm/IR/DIBuilder.h>
 #pragma GCC diagnostic pop
+#include <stack>
 #include <unordered_map>
 #include <unordered_set>
-#include <stack>
 
 #include "UtilsPtr.hpp"
 #include "semantic/SemanticSymbols.hpp"
@@ -159,10 +158,6 @@ class Codegen {
     llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
-    llvm::Value *generate_atomic_load(const ResolvedAtomicLoadExpr &expr);
-    llvm::Value *generate_atomic_store(const ResolvedAtomicStoreExpr &expr);
-    llvm::Value *generate_atomic_cmpex(const ResolvedAtomicCmpExExpr &expr);
-    llvm::Value *generate_atomic_rmw(const ResolvedAtomicRmwExpr &expr);
     llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
                                        const ResolvedTypeSimd &vecType);
     llvm::Value *generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr);
@@ -172,7 +167,12 @@ class Codegen {
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
     llvm::Value *generate_get_error_trace();
 
-    llvm::Value *generate_builtin_call(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_function(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_call(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_atomicLoad(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_atomicStore(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_atomicCmpEx(const ResolvedCallExpr &call, bool isWeak);
+    llvm::Value *generate_builtin_atomicRmw(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

@@ -880,22 +880,80 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const std::st
         return it->second;
     }
 
+    SourceLocation loc = SourceLocation::builtin();
     if (fnName == "@call") {
-        SourceLocation loc = SourceLocation::builtin();
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         std::vector<ptr<ResolvedParamDecl>> params;
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "fn", genericType->clone(), false));
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "args", genericType->clone(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(genericType->clone());
-        paramsTypes.emplace_back(genericType->clone());
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
         auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
-        auto funcDecl = makePtr<ResolvedBuiltinFunctionDecl>(loc, "@call", std::move(fnType), std::move(params), true);
-        auto ret = funcDecl.get();
-        it->second = ret;
-        m_currentModule->declarations.emplace_back(std::move(funcDecl));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
         debug_msg("created @call");
-        return ret;
+        return &funcDecl;
+    } else if (fnName == "@atomicLoad") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @atomicLoad");
+        return &funcDecl;
+    } else if (fnName == "@atomicStore") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericType->clone(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @atomicStore");
+        return &funcDecl;
+    } else if (fnName == "@atomicCmpExS" || fnName == "@atomicCmpExW") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atomicPtr", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "expected", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "desired", genericType->clone(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeBool>(loc));
+        if (fnName == "@atomicCmpExS") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+        } else if (fnName == "@atomicCmpExW") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+        }
+        debug_msg("created " + fnName);
+        return it->second;
+    } else if (fnName == "@atomicRmw") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "atom", genericType->clone(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "op", makePtr<ResolvedTypeEnum>(loc, nullptr), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericType->clone(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @atomicRmw");
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -955,6 +1013,142 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                                  std::move(retReturnType));
         call.type = ret->clone();
+        return ret;
+    } else if (resolvedCallee.identifier == "@atomicLoad") {
+        auto &atomicPtrParam = resolvedArguments[0];
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(atomicPtrParam->type.get());
+        if (!ptrType) {
+            return report(atomicPtrParam->location,
+                          "expected pointer type for @atomicLoad, actual '" + atomicPtrParam->type->to_str() + "'");
+        }
+        if (ptrType->pointerType->kind != ResolvedTypeKind::Number &&
+            ptrType->pointerType->kind != ResolvedTypeKind::Pointer) {
+            return report(ptrType->location,
+                          "atomic load operation only supported for numeric or pointer types, actual '" +
+                              ptrType->pointerType->to_str() + "'");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(atomicPtrParam->type->clone());
+        auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                                 ptrType->pointerType->clone());
+        call.type = ret->returnType->clone();
+        return ret;
+    } else if (resolvedCallee.identifier == "@atomicStore") {
+        auto &atomicPtrParam = resolvedArguments[0];
+        auto &valueParam = resolvedArguments[1];
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(atomicPtrParam->type.get());
+        if (!ptrType) {
+            return report(atomicPtrParam->location,
+                          "expected pointer type for @atomicStore, actual '" + atomicPtrParam->type->to_str() + "'");
+        }
+        if (ptrType->pointerType->kind != ResolvedTypeKind::Number &&
+            ptrType->pointerType->kind != ResolvedTypeKind::Pointer) {
+            return report(ptrType->location,
+                          "atomic store operation only supported for numeric or pointer types, actual '" +
+                              ptrType->pointerType->to_str() + "'");
+        }
+        if (!perform_implicit_cast(valueParam, *ptrType->pointerType)) return nullptr;
+        if (!valueParam->type->compare(*ptrType->pointerType)) {
+            return report(valueParam->location, "cannot store '" + valueParam->type->to_str() + "' into '" +
+                                                    ptrType->pointerType->to_str() + "'");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(atomicPtrParam->type->clone());
+        paramsTypes.emplace_back(valueParam->type->clone());
+        auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                                 makePtr<ResolvedTypeVoid>(call.location));
+        call.type = ret->returnType->clone();
+        return ret;
+    } else if (resolvedCallee.identifier == "@atomicCmpExS" || resolvedCallee.identifier == "@atomicCmpExW") {
+        auto &atomicPtrParam = resolvedArguments[0];
+        auto &expectedParam = resolvedArguments[1];
+        auto &desiredParam = resolvedArguments[2];
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(atomicPtrParam->type.get());
+        if (!ptrType) {
+            return report(atomicPtrParam->location, "expected pointer type for " + resolvedCallee.identifier +
+                                                        ", actual '" + atomicPtrParam->type->to_str() + "'");
+        }
+        if (ptrType->pointerType->kind != ResolvedTypeKind::Number &&
+            ptrType->pointerType->kind != ResolvedTypeKind::Pointer) {
+            return report(ptrType->location,
+                          "atomic compare-exchange operation only supported for numeric or pointer types, actual '" +
+                              ptrType->pointerType->to_str() + "'");
+        }
+        if (!perform_implicit_cast(expectedParam, *ptrType->pointerType)) return nullptr;
+        if (!perform_implicit_cast(desiredParam, *ptrType->pointerType)) return nullptr;
+
+        if (!expectedParam->type->compare(*ptrType->pointerType)) {
+            return report(expectedParam->location, "expected '" + ptrType->pointerType->to_str() +
+                                                       "' for second parameter of " + resolvedCallee.identifier +
+                                                       ", actual '" + expectedParam->type->to_str() + "'");
+        }
+        if (!desiredParam->type->compare(*ptrType->pointerType)) {
+            return report(desiredParam->location, "expected '" + ptrType->pointerType->to_str() +
+                                                      "' for third parameter of " + resolvedCallee.identifier +
+                                                      ", actual '" + desiredParam->type->to_str() + "'");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(atomicPtrParam->type->clone());
+        paramsTypes.emplace_back(expectedParam->type->clone());
+        paramsTypes.emplace_back(desiredParam->type->clone());
+        auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                                 makePtr<ResolvedTypeBool>(call.location));
+        call.type = ret->returnType->clone();
+        return ret;
+    } else if (resolvedCallee.identifier == "@atomicRmw") {
+        auto &atomicPtrParam = resolvedArguments[0];
+        auto &opParam = resolvedArguments[1];
+        auto &valueParam = resolvedArguments[2];
+
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(atomicPtrParam->type.get());
+        if (!ptrType) {
+            return report(atomicPtrParam->location,
+                          "expected pointer type for @atomicRmw, actual '" + atomicPtrParam->type->to_str() + "'");
+        }
+
+        ImportExpr atomicImportExpr(SourceLocation::builtin(), "atomic");
+        auto atomic_import_expr = resolve_import_expr(atomicImportExpr);
+        if (!atomic_import_expr) return {};
+
+        auto atomicOpDecl = lookup_in_module(call.location, atomic_import_expr->moduleDecl, "AtomicOp");
+        if (atomicOpDecl) {
+            println("AtomicOp found " << atomicOpDecl->type->className());
+            if (auto enumDecl = dynamic_cast<ResolvedTypeEnumDecl *>(atomicOpDecl->type.get())) {
+                if (!perform_implicit_cast(opParam, *makePtr<ResolvedTypeEnum>(call.location, enumDecl->enumDecl()))) {
+                    return nullptr;
+                }
+            }
+        } else {
+            return report(opParam->location, "AtomicOp not found in std/atomic.dmz");
+        }
+
+        if (ptrType->pointerType->kind != ResolvedTypeKind::Number &&
+            ptrType->pointerType->kind != ResolvedTypeKind::Pointer) {
+            std::string opStr = "unknown";
+            if (auto autoMember = dynamic_cast<ResolvedAutoMemberExpr *>(opParam.get())) {
+                opStr = autoMember->field;
+            }
+            return report(call.location, "atomic RMW operation '" + opStr +
+                                             "' only supported for numeric or pointer types, actual '" +
+                                             ptrType->pointerType->to_str() + "'");
+        }
+
+        if (!perform_implicit_cast(valueParam, *ptrType->pointerType)) return nullptr;
+        if (!valueParam->type->compare(*ptrType->pointerType)) {
+            return report(valueParam->location, "cannot RMW '" + valueParam->type->to_str() + "' into '" +
+                                                    ptrType->pointerType->to_str() + "'");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(atomicPtrParam->type->clone());
+        paramsTypes.emplace_back(opParam->type->clone());
+        paramsTypes.emplace_back(valueParam->type->clone());
+        auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                                 ptrType->pointerType->clone());
+        call.type = ret->returnType->clone();
         return ret;
     }
     return report(call.location, "unknown builtin function");

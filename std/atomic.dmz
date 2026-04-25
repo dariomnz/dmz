@@ -1,0 +1,32 @@
+
+pub const AtomicOp = enum {
+    Add,
+    Sub,
+    And,
+    Nand,
+    Or,
+    Xor,
+    Min,
+    Max,
+    Xchg,
+};
+
+// pub fn @atomicRmw<T>(atom: *T, op: AtomicOp, other: T) -> T {
+//     // Internaly implemented
+// }
+
+// pub fn @atomicLoad<T>(atom: *T) -> T {
+//     // Internaly implemented
+// }
+
+// pub fn @atomicStore<T>(atom: *T, other: T) -> void{
+//     // Internaly implemented
+// }
+
+// pub fn @atomicCmpExS<T>(atom: *T, expected: T, desired: T) -> bool {
+//     // Internaly implemented
+// }
+
+// pub fn @atomicCmpExW<T>(atom: *T, expected: T, desired: T) -> bool {
+//     // Internaly implemented
+// }

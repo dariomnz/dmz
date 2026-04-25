@@ -105,11 +105,6 @@ enum class TokenType {
     kw_packed,
     kw_pub,
     unknown,
-    kw_atomicLoad,
-    kw_atomicStore,
-    kw_atomicCmpExW,
-    kw_atomicCmpExS,
-    kw_atomicRmw,
     kw_this,
     eof,
 };
@@ -181,11 +176,6 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"@simdSize", TokenType::kw_simdsize},
     {"@simdSplat", TokenType::kw_simdsplat},
     {"@simdIota", TokenType::kw_simdiota},
-    {"@atomicLoad", TokenType::kw_atomicLoad},
-    {"@atomicStore", TokenType::kw_atomicStore},
-    {"@atomicCmpExW", TokenType::kw_atomicCmpExW},
-    {"@atomicCmpExS", TokenType::kw_atomicCmpExS},
-    {"@atomicRmw", TokenType::kw_atomicRmw},
     {"packed", TokenType::kw_packed},
     {"pub", TokenType::kw_pub},
     // Types
