@@ -599,6 +599,7 @@ struct ResolvedNullLiteral : public ResolvedExpr {
 
 struct ResolvedAutoMemberExpr : public ResolvedExpr {
     std::string field;
+    ResolvedFieldDecl *fieldDecl = nullptr;
 
     ResolvedAutoMemberExpr(SourceLocation location, std::string_view field)
         : ResolvedExpr(location, makePtr<ResolvedTypeGeneric>(location, nullptr)), field(field) {}

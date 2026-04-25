@@ -375,6 +375,7 @@ std::string AssignmentOperator::to_str() const { dmz_unreachable(location, "TODO
 
 void FieldDecl::dump(size_t level) const {
     std::cerr << indent(level) << "FieldDecl:" << (type ? type->to_str() : "") << " " << identifier << '\n';
+    // if (type) type->dump(level + 1);
     if (default_initializer) default_initializer->dump(level + 1);
 }
 

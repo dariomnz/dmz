@@ -18,6 +18,8 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl) {
         type = SemanticTokenType::Type;
     } else if (dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
         type = SemanticTokenType::Type;
+    } else if (dynamic_cast<const ResolvedEnumDecl*>(&decl)) {
+        type = SemanticTokenType::Type;
     } else if (dynamic_cast<const ResolvedParamDecl*>(&decl))
         type = SemanticTokenType::Parameter;
     else if (dynamic_cast<const ResolvedModuleDecl*>(&decl))
@@ -59,15 +61,13 @@ void SemanticTokensCollector::traverse_module(const ResolvedModuleDecl& module) 
 void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
     debug_msg(decl.location);
     if (decl.location.file_name == m_target_file) {
-        if (auto* unionDecl = dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
-            for (const auto& field : unionDecl->fields) {
-                traverse_decl(*field);
-            }
-            for (const auto& func : unionDecl->functions) {
-                traverse_decl(*func);
-            }
-        } else if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
+        if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
             if (structDecl->isTuple) return;
+            if (auto* genStruct = dynamic_cast<const ResolvedGenericStructDecl*>(&decl)) {
+                for (const auto& genDecl : genStruct->genericTypeDecls) {
+                    traverse_decl(*genDecl);
+                }
+            }
             for (const auto& field : structDecl->fields) {
                 traverse_decl(*field);
             }
@@ -212,6 +212,9 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             auto type = get_type_from_decl(memberExpr->member);
             add_token(memberLoc, memberExpr->member.identifier, type);
             traverse_expr(*memberExpr->base);
+        } else if (auto* memberExpr = dynamic_cast<const ResolvedAutoMemberExpr*>(&expr)) {
+            debug_msg("ResolvedAutoMemberExpr");
+            add_token(memberExpr->location, memberExpr->field, SemanticTokenType::Property);
         } else if (auto* instantiation = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
             debug_msg("ResolvedStructInstantiationExpr");
             if (!instantiation->isTuple) {

@@ -22,70 +22,23 @@ void NodeFinder::find_in_module(const ResolvedModuleDecl& mod) {
         if (found_decl) return;
     }
 }
+inline size_t identifier_len(std::string_view name) {
+    size_t ret = name.length();
+    if (name.find("structL") == 0)
+        ret = 6;
+    else if (name.find("unionL") == 0)
+        ret = 5;
+    else if (name.find("enumL") == 0)
+        ret = 4;
+    return ret;
+};
 
 void NodeFinder::find_in_type(const ResolvedType& type) {
     if (found_decl) return;
 
     if (const auto* std = dynamic_cast<const ResolvedTypeStructDecl*>(&type)) {
-        size_t len = 0;
-        if (std->decl->identifier.find("structL") == 0)
-            len = 6;  // "struct"
-        else if (std->decl->identifier.find("unionL") == 0)
-            len = 5;  // "union"
-        else
-            len = std->decl->identifier.length();
-
-        if (std->decl && is_at_location(std->location, len)) {
-            found_decl = std->decl;
-            return;
-        }
-        if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(std->decl)) {
-            if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
-        }
         if (std->ownedDecl) {
             find_in_decl(*std->ownedDecl);
-        }
-    } else if (const auto* st = dynamic_cast<const ResolvedTypeStruct*>(&type)) {
-        size_t len = 0;
-        if (st->decl->identifier.find("structL") == 0)
-            len = 6;  // "struct"
-        else if (st->decl->identifier.find("unionL") == 0)
-            len = 5;  // "union"
-        else
-            len = st->decl->identifier.length();
-
-        if (st->decl && is_at_location(st->location, len)) {
-            found_decl = st->decl;
-            return;
-        }
-        if (auto* specStru = dynamic_cast<const ResolvedSpecializedStructDecl*>(st->decl)) {
-            if (specStru->specializedTypes) find_in_type(*specStru->specializedTypes);
-        }
-    } else if (const auto* ut = dynamic_cast<const ResolvedTypeUnion*>(&type)) {
-        size_t len = 0;
-        if (ut->decl->identifier.find("structL") == 0)
-            len = 6;  // "struct"
-        else if (ut->decl->identifier.find("unionL") == 0)
-            len = 5;  // "union"
-        else
-            len = ut->decl->identifier.length();
-
-        if (ut->decl && is_at_location(ut->location, len)) {
-            found_decl = ut->decl;
-            return;
-        }
-    } else if (const auto* ud = dynamic_cast<const ResolvedTypeUnionDecl*>(&type)) {
-        size_t len = 0;
-        if (ud->decl->identifier.find("structL") == 0)
-            len = 6;  // "struct"
-        else if (ud->decl->identifier.find("unionL") == 0)
-            len = 5;  // "union"
-        else
-            len = ud->decl->identifier.length();
-
-        if (ud->decl && is_at_location(ud->location, len)) {
-            found_decl = ud->decl;
-            return;
         }
     } else if (const auto* mdt = dynamic_cast<const ResolvedTypeModule*>(&type)) {
         if (mdt->moduleDecl && is_at_location(mdt->location, mdt->moduleDecl->identifier.length())) {
@@ -122,11 +75,7 @@ void NodeFinder::find_in_type(const ResolvedType& type) {
 void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     if (found_decl) return;
 
-    size_t len = decl.identifier.length();
-    if (decl.identifier.find("structL") == 0)
-        len = 6;
-    else if (decl.identifier.find("unionL") == 0)
-        len = 5;
+    size_t len = identifier_len(decl.identifier);
 
     if (is_at_location(decl.location, len)) {
         found_decl = &decl;
@@ -263,6 +212,11 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             return;
         }
         find_in_expr(*me->base);
+    } else if (const auto* me = dynamic_cast<const ResolvedAutoMemberExpr*>(&expr)) {
+        if (is_at_location(me->location, me->field.length())) {
+            found_decl = me->fieldDecl;
+            return;
+        }
     } else if (const auto* sie = dynamic_cast<const ResolvedStructInstantiationExpr*>(&expr)) {
         if (!sie->isTuple) {
             find_in_expr(*sie->base);

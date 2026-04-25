@@ -861,6 +861,11 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                 return false;
             }
             expr->type = enumType->clone();
+            if (auto field = dynamic_cast<ResolvedFieldDecl *>(member)) {
+                autoMember->fieldDecl = field;
+            } else {
+                dmz_unreachable(member->location, "Expected a field decl get " + std::string(member->className()));
+            }
             expr->set_constant_value(member->get_constant_value());
         }
     }
