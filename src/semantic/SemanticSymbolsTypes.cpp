@@ -628,6 +628,10 @@ bool ResolvedTypePointer::compare(const ResolvedType &other) const {
         }
     }
 
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
+        if (numType->isPlatformSize) return debug_ret(true);
+    }
+
     return debug_ret(false);
 }
 
