@@ -1,11 +1,9 @@
-#include <iostream>
+#include <algorithm>
 #ifdef DEBUG_SEMANTIC
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
-
-#include <algorithm>
 
 #include "Debug.hpp"
 #include "Utils.hpp"
@@ -353,8 +351,6 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
             size_t paramIdx = isMemberCall ? i + 1 : i;
             if (!perform_implicit_cast(resolvedArguments[paramIdx], *fnType->paramsTypes[paramIdx])) return nullptr;
             if (!fnType->paramsTypes[paramIdx]->compare(*resolvedArguments[paramIdx]->type)) {
-                println(resolvedArguments[paramIdx]->type->className());
-                println(fnType->paramsTypes[paramIdx]->className());
                 return report(resolvedArguments[paramIdx]->location,
                               "unexpected type of argument '" + resolvedArguments[paramIdx]->type->to_str() +
                                   "' expected '" + fnType->paramsTypes[paramIdx]->to_str() + "'");

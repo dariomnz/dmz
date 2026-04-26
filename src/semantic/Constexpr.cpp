@@ -51,6 +51,9 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_call_expr(const ResolvedCallExpr &expr,
                                                                    [[maybe_unused]] bool allowSideEffects) {
+    if (auto constVal = expr.callee->get_constant_value()) {
+        return constVal;
+    }
     if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(expr.callee.get())) {
         if (auto func = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&declRef->decl)) {
             if (func->identifier == "@hasMethod") {

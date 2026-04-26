@@ -188,6 +188,39 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@testNum") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    ResolvedTypeNumber::usize(SourceLocation::builtin()));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
+    } else if (fnName == "@testRun") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "test", ResolvedTypeExpr::fromType(ResolvedTypeNumber::usize(SourceLocation::builtin())), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(
+            loc, nullptr, std::move(paramsTypes),
+            makePtr<ResolvedTypeOptional>(SourceLocation::builtin(),
+                                          makePtr<ResolvedTypeVoid>(SourceLocation::builtin())));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
+    } else if (fnName == "@testName") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "test", ResolvedTypeExpr::fromType(ResolvedTypeNumber::usize(SourceLocation::builtin())), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(
+            loc, nullptr, std::move(paramsTypes),
+            makePtr<ResolvedTypeSlice>(SourceLocation::builtin(), ResolvedTypeNumber::u8(SourceLocation::builtin())));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -524,6 +557,27 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         std::vector<ptr<ResolvedType>> params;
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
         return ret;
+    } else if (resolvedCallee.identifier == "@testNum") {
+        call.set_constant_value(m_tests.size());
+        auto ret = dynamic_cast<ResolvedTypeFunction *>(resolvedCallee.type.get());
+        if (!ret) dmz_unreachable(call.location, "not function type " + resolvedCallee.type->to_str());
+        return castPtr<ResolvedTypeFunction>(ret->clone());
+    } else if (resolvedCallee.identifier == "@testRun") {
+        auto ret = dynamic_cast<ResolvedTypeFunction *>(resolvedCallee.type.get());
+        if (!ret) dmz_unreachable(call.location, "not function type " + resolvedCallee.type->to_str());
+        // Check if the first parameter is const value
+        if (!resolvedArguments.empty() && !resolvedArguments[0]->get_constant_value().has_value()) {
+            return report(call.location, "expected const value for test name");
+        }
+        return castPtr<ResolvedTypeFunction>(ret->clone());
+    } else if (resolvedCallee.identifier == "@testName") {
+        auto ret = dynamic_cast<ResolvedTypeFunction *>(resolvedCallee.type.get());
+        if (!ret) dmz_unreachable(call.location, "not function type " + resolvedCallee.type->to_str());
+        // Check if the first parameter is const value
+        if (!resolvedArguments.empty() && !resolvedArguments[0]->get_constant_value().has_value()) {
+            return report(call.location, "expected const value for test name");
+        }
+        return castPtr<ResolvedTypeFunction>(ret->clone());
     }
     return report(call.location, "unknown builtin function");
 }

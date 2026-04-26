@@ -71,7 +71,6 @@ fn bang2() -> !void {
 // CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:18:5: in function 'error trace'
 // CHECK-NEXT:  18 |     try c();
 // CHECK-NEXT:           ^
-// CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'
 // CHECK-NEXT: Fail test [1/2] 'error trace' with error 'error.FailA'.
 // CHECK-NEXT: Run test [2/2] 'error trace 2'.
 // CHECK-NEXT: error: error.PermissionDenied
@@ -96,6 +95,5 @@ fn bang2() -> !void {
 // CHECK-NEXT: /home/dario/git/dmz/test/examples/error_trace.dmz:22:5: in function 'error trace 2'
 // CHECK-NEXT:  22 |     try foo(12);
 // CHECK-NEXT:           ^
-// CHECK-NEXT: builtin:0:1: in function 'std.builtin.@builtin_test_run'
 // CHECK-NEXT: Fail test [2/2] 'error trace 2' with error 'error.PermissionDenied'.
 // CHECK-NEXT: 0 passed, 2 failed.

@@ -174,7 +174,6 @@ void RangeExpr::dump(size_t level) const {
 
 std::string RangeExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
-
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
 std::string DeclRefExpr::to_str() const { return identifier; }

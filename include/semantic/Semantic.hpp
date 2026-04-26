@@ -81,7 +81,8 @@ class Sema {
         {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},
         {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},      {"@typeid", nullptr},
         {"@typeinfo", nullptr},     {"@hasMethod", nullptr},  {"@simdSize", nullptr},    {"@simdSplat", nullptr},
-        {"@simdIota", nullptr},     {"@errorTrace", nullptr},
+        {"@simdIota", nullptr},     {"@errorTrace", nullptr}, {"@testNum", nullptr},     {"@testRun", nullptr},
+        {"@testName", nullptr},
     };
 
    public:

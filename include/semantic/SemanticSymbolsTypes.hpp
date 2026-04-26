@@ -83,6 +83,7 @@ struct ResolvedTypeNumber : public ResolvedType {
 
     static ptr<ResolvedType> isize(SourceLocation location);
     static ptr<ResolvedType> usize(SourceLocation location);
+    static ptr<ResolvedType> u8(SourceLocation location);
 };
 
 struct ResolvedTypeBool : public ResolvedTypeNumber {

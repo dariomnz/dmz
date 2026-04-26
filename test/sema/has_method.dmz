@@ -10,9 +10,9 @@ fn main() -> void {
     const hasFoo = @hasMethod(s, "foo");
     const hasBar = @hasMethod(s, "bar");
 }
-
 // CHECK:         ResolvedVarDecl:const bool hasFoo
 // CHECK-NEXT:           ResolvedCallExpr:bool
+// CHECK-NEXT:           | value: 1
 // CHECK-NEXT:             ResolvedDeclRefExpr:bool @hasMethod
 // CHECK-NEXT:             | value: 1
 // CHECK-NEXT:             ResolvedDeclRefExpr:has_method.S{} s
@@ -20,6 +20,7 @@ fn main() -> void {
 
 // CHECK:         ResolvedVarDecl:const bool hasBar
 // CHECK-NEXT:           ResolvedCallExpr:bool
+// CHECK-NEXT:           | value: 0
 // CHECK-NEXT:             ResolvedDeclRefExpr:bool @hasMethod
 // CHECK-NEXT:             | value: 0
 // CHECK-NEXT:             ResolvedDeclRefExpr:has_method.S{} s

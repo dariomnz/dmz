@@ -613,7 +613,7 @@ void Codegen::generate_error_trace_clear(llvm::Value *idx) {
     m_builder.CreateStore(idx ? idx : m_builder.getInt32(0), sizePtr);
 }
 
-llvm::Value *Codegen::generate_get_error_trace() {
+llvm::Value *Codegen::generate_builtin_error_trace() {
     if (!m_errorTraceGlobal) {
         generate_error_trace_push({});
         generate_error_trace_clear();

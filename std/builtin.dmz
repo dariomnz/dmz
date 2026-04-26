@@ -1,19 +1,5 @@
 const std = import("std");
 
-fn @builtin_test_num() -> i32 {
-    // Internaly implemented
-    return 0;
-}
-
-fn @builtin_test_run(n: i32) -> !void {
-    // Internaly implemented
-}
-
-fn @builtin_test_name(n: i32) -> *u8 {
-    // Internaly implemented
-    return "";
-}
-
 const ErrorTraceEntry = struct {
     file: []u8,
     line: i32,
@@ -90,21 +76,34 @@ fn printErrorTrace(er: err) -> void {
     }
 }
 
+fn runTest(n: usize) -> !void {
+    inline for (0..@testNum()) |i| {
+        if (i == n) return @testRun(i);
+    }
+}
+
+fn getTestName(n: usize) -> []u8 {
+    inline for (0..@testNum()) |i| {
+        if (i == n) return @testName(i);
+    }
+    return "";
+}
+
 fn __builtin_main_test() -> void {
-    const num_test = @builtin_test_num();
+    const num_test = @testNum();
     let result = 0;
     const isTerminal = std.terminal.isTerminal();
 
     for (0..num_test) |i| {
         result = result + 1;
-        const test_name = @builtin_test_name(i);
+        const test_name = getTestName(i);
 
         if (isTerminal) std.io.print("{s}", .{std.terminal.COLORGREEN});
         std.io.print("Run test ", .{});
         if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});
         std.io.print("[{d}/{d}] '{s}'.\n", .{i + 1, num_test, test_name});
 
-        const test_result = @builtin_test_run(i);
+        const test_result = runTest(i);
         test_result catch |er| {
             printErrorTrace(er);
             if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRED});

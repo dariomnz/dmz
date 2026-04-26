@@ -44,47 +44,21 @@ test "add test 2" {
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '3'
 
-// CHECK: ResolvedFunctionDecl @builtin_test_num fn()->i32
-// CHECK-NEXT:         ResolvedBlock
-// CHECK-NEXT:           ResolvedReturnStmt
-// CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
+// CHECK:   ResolvedFunctionDecl __builtin_main_test fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:const usize num_test
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn()->usize @testNum
+// CHECK-NEXT:             | value: 2
 
-// CHECK:       ResolvedFunctionDecl @builtin_test_run fn(i32)->!void
-// CHECK-NEXT:         ResolvedParamDecl:i32 n
-// CHECK-NEXT:         ResolvedBlock
-// CHECK-NEXT:           ResolvedSwitchStmt
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 n
-// CHECK-NEXT:             ResolvedCaseStmt
-// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
-// CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedTryErrorExpr:void
-// CHECK-NEXT:                   ResolvedCallExpr:!void
-// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->!void add test
-// CHECK-NEXT:             ResolvedCaseStmt
-// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
-// CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedTryErrorExpr:void
-// CHECK-NEXT:                   ResolvedCallExpr:!void
-// CHECK-NEXT:                     ResolvedDeclRefExpr:fn()->!void add test 2
-// CHECK-NEXT:             ElseBlock
-// CHECK-NEXT:             ResolvedBlock
+// CHECK:         ResolvedVarDecl:const []u8 test_name
+// CHECK-NEXT:           ResolvedCallExpr:[]u8
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(usize)->[]u8 getTestName
+// CHECK-NEXT:             ResolvedDeclRefExpr:i64 i
 
-// CHECK:       ResolvedFunctionDecl @builtin_test_name fn(i32)->*u8
-// CHECK-NEXT:         ResolvedParamDecl:i32 n
-// CHECK-NEXT:         ResolvedBlock
-// CHECK-NEXT:           ResolvedSwitchStmt
-// CHECK-NEXT:             ResolvedDeclRefExpr:i32 n
-// CHECK-NEXT:             ResolvedCaseStmt
-// CHECK-NEXT:               ResolvedIntLiteral:i32 '0'
-// CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedReturnStmt
-// CHECK-NEXT:                   ResolvedStringLiteral:*u8 'add test'
-// CHECK-NEXT:             ResolvedCaseStmt
-// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
-// CHECK-NEXT:               ResolvedBlock
-// CHECK-NEXT:                 ResolvedReturnStmt
-// CHECK-NEXT:                   ResolvedStringLiteral:*u8 'add test 2'
-// CHECK-NEXT:             ElseBlock
-// CHECK-NEXT:             ResolvedBlock
-// CHECK-NEXT:               ResolvedReturnStmt
-// CHECK-NEXT:                 ResolvedStringLiteral:*u8 'Error in builtin_test_name'
+// CHECK:         ResolvedVarDecl:const !void test_result
+// CHECK-NEXT:           ResolvedCallExpr:!void
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(usize)->!void runTest
+// CHECK-NEXT:             ResolvedDeclRefExpr:i64 i

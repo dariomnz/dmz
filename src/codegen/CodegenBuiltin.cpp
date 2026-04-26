@@ -42,8 +42,14 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_simdsplat(call);
     } else if (builtin.identifier == "@simdIota") {
         return generate_builtin_simdiota(call);
+    } else if (builtin.identifier == "@testNum") {
+        return generate_builtin_testnum(call);
+    } else if (builtin.identifier == "@testName") {
+        return generate_builtin_testname(call);
+    } else if (builtin.identifier == "@testRun") {
+        return generate_builtin_testrun(call);
     } else if (builtin.identifier == "@errorTrace") {
-        return generate_get_error_trace();
+        return generate_builtin_error_trace();
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -204,12 +210,10 @@ llvm::Value *Codegen::generate_builtin_simdsize(const ResolvedCallExpr &callExpr
 }
 
 llvm::Value *Codegen::generate_builtin_typeid(const ResolvedCallExpr &callExpr) {
-    auto typeId = callExpr.get_constant_value();
-    if (typeId) {
-        return m_builder.getInt32(typeId.value());
+    if (auto typeId = callExpr.get_constant_value()) {
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), *typeId);
     } else {
         dmz_unreachable(callExpr.location, "this should not happend");
-        return m_builder.getInt32(-1);
     }
 }
 
@@ -384,5 +388,64 @@ llvm::Value *Codegen::generate_builtin_simdiota(const ResolvedCallExpr &callExpr
         vec = m_builder.CreateInsertElement(vec, val, i);
     }
     return vec;
+}
+
+std::vector<const ResolvedTestDecl *> Codegen::get_tests() {
+    if (cached_tests.empty()) {
+        for (auto &decl : m_resolvedTree) {
+            if (auto *moduleDecl = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
+                for (auto &modDecl : moduleDecl->declarations) {
+                    if (auto testDecl = dynamic_cast<ResolvedTestDecl *>(modDecl.get())) {
+                        cached_tests.emplace_back(testDecl);
+                    }
+                }
+            }
+        }
+    }
+    return cached_tests;
+}
+
+llvm::Value *Codegen::generate_builtin_testnum(const ResolvedCallExpr &callExpr) {
+    if (auto constVal = callExpr.get_constant_value()) {
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), *constVal);
+    } else {
+        auto tests = get_tests();
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), tests.size());
+    }
+}
+
+llvm::Value *Codegen::generate_builtin_testname(const ResolvedCallExpr &callExpr) {
+    debug_func(callExpr.location);
+    if (callExpr.arguments.empty()) dmz_unreachable(callExpr.location, "expected argument");
+    if (auto testNum = callExpr.arguments[0]->get_constant_value()) {
+        auto tests = get_tests();
+        auto ptr = create_global_string(tests[*testNum]->identifier, "test.name." + std::to_string(*testNum));
+        auto slice =
+            allocate_stack_variable(callExpr.location, "test.name.slice." + std::to_string(*testNum), *callExpr.type);
+        auto sliceType = generate_type(*callExpr.type);
+        llvm::Value *slice_value = llvm::UndefValue::get(sliceType);
+        slice_value = m_builder.CreateInsertValue(slice_value, ptr, 0);
+        auto length = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()),
+                                             tests[*testNum]->identifier.size());
+        slice_value = m_builder.CreateInsertValue(slice_value, length, 1);
+        m_builder.CreateStore(slice_value, slice);
+        return slice;
+    } else {
+        dmz_unreachable(callExpr.location, "callExpr not constant value this should not happend");
+    }
+}
+
+llvm::Value *Codegen::generate_builtin_testrun(const ResolvedCallExpr &callExpr) {
+    debug_func(callExpr.location);
+    if (callExpr.arguments.empty()) dmz_unreachable(callExpr.location, "expected argument");
+    if (auto testNum = callExpr.arguments[0]->get_constant_value()) {
+        auto tests = get_tests();
+        auto test = tests[*testNum];
+        auto ref = makePtr<ResolvedDeclRefExpr>(callExpr.location, test->identifier, *test, test->type->clone());
+        ResolvedCallExpr call(callExpr.location, callExpr.type->clone(), std::move(ref), {});
+        return generate_call_expr(call);
+    } else {
+        dmz_unreachable(callExpr.location, "callExpr not constant value this should not happend");
+    }
 }
 }  // namespace DMZ

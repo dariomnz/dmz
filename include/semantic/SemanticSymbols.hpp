@@ -54,6 +54,10 @@ struct ResolvedTypeExpr : public ResolvedExpr {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
+
+    static ptr<ResolvedTypeExpr> fromType(ptr<ResolvedType> type) {
+        return makePtr<ResolvedTypeExpr>(type->location, std::move(type));
+    }
 };
 
 struct ResolvedDecl : public ConstantValueContainer<int> {

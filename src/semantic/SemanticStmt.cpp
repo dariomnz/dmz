@@ -244,6 +244,67 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         auto takenForScope = forScope.takeScope();
         varOrReturn(condTypeCheck, resolve_expr(*forStmt.conditions[0]));
         auto structType = dynamic_cast<const ResolvedTypeStruct *>(condTypeCheck->type.get());
+
+        if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(condTypeCheck.get())) {
+            rangeExpr->startExpr->set_constant_value(cee.evaluate(*rangeExpr->startExpr, false));
+            auto startValue = rangeExpr->startExpr->get_constant_value();
+            if (!startValue) {
+                return report(rangeExpr->startExpr->location, "inline for range start must be compile time known");
+            }
+            rangeExpr->endExpr->set_constant_value(cee.evaluate(*rangeExpr->endExpr, false));
+            auto endValue = rangeExpr->endExpr->get_constant_value();
+            if (!endValue) {
+                return report(rangeExpr->endExpr->location, "inline for range end must be compile time known");
+            }
+
+            std::vector<ptr<ResolvedStmt>> unrolledBody;
+            ScopeRAII forIterationScope(*this);
+            auto takenForIterationScope = forIterationScope.takeScope();
+
+            for (long long i = startValue.value(); i < endValue.value(); i++) {
+                ScopeRAII iterationScope(*this);
+                auto takenIterationScope = iterationScope.takeScope();
+
+                auto captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[0]->location, ResolvedNumberKind::Int,
+                                                               CodegenUtils::ptrBitSize());
+                auto captureTypeExpr = makePtr<ResolvedTypeExpr>(forStmt.captures[0]->location, captureType->clone());
+                auto initializer = makePtr<ResolvedIntLiteral>(forStmt.captures[0]->location, (int)i);
+                initializer->type = captureType->clone();
+                initializer->set_constant_value(i);
+
+                auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false,
+                                                        forStmt.captures[0]->identifier, std::move(captureTypeExpr),
+                                                        false, std::move(takenIterationScope), std::move(initializer));
+                if (!insert_decl_to_current_scope(*varDecl)) return nullptr;
+
+                varDecl->state = ResolvedState::FullyResolved;
+                auto resolvedDeclStmt =
+                    makePtr<ResolvedDeclStmt>(forStmt.captures[0]->location, captureType->clone(), std::move(varDecl));
+                resolvedDeclStmt->initialized = true;
+                resolvedDeclStmt->state = ResolvedState::FullyResolved;
+
+                varOrReturn(resolvedIteration, resolve_block(*forStmt.body));
+                resolvedIteration->statements.insert(resolvedIteration->statements.begin(),
+                                                     std::move(resolvedDeclStmt));
+                unrolledBody.emplace_back(std::move(resolvedIteration));
+            }
+
+            auto resolvedBody =
+                makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody),
+                                       std::vector<ptr<ResolvedDeferRefStmt>>{}, std::move(takenForIterationScope));
+            auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr);
+            auto resolvedCapture = makePtr<ResolvedCaptureDecl>(
+                forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
+
+            std::vector<ptr<ResolvedExpr>> conditions;
+            conditions.emplace_back(std::move(condTypeCheck));
+            std::vector<ptr<ResolvedCaptureDecl>> captures;
+            captures.emplace_back(std::move(resolvedCapture));
+
+            return makePtr<ResolvedForStmt>(forStmt.location, std::move(conditions), std::move(captures),
+                                            std::move(resolvedBody), std::move(takenForScope), true);
+        }
+
         if (!structType) {
             if (condTypeCheck->type->kind == ResolvedTypeKind::Generic) {
                 ScopeRAII iterationScope(*this);

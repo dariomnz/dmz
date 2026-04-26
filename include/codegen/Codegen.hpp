@@ -163,7 +163,10 @@ class Codegen {
     void generate_error_trace_push(const SourceLocation &location);
     llvm::Value *generate_error_trace_get_idx();
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
-    llvm::Value *generate_get_error_trace();
+    llvm::Value *generate_builtin_error_trace();
+
+    vec<const ResolvedTestDecl *> cached_tests;
+    vec<const ResolvedTestDecl *> get_tests();
 
     llvm::Value *generate_builtin_function(const ResolvedBuiltinFunctionDecl &builtin, const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_call(const ResolvedCallExpr &call);
@@ -178,6 +181,9 @@ class Codegen {
     llvm::Value *generate_builtin_simdsize(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_simdsplat(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_simdiota(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_testnum(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_testname(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_testrun(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

@@ -110,6 +110,10 @@ ptr<ResolvedType> ResolvedTypeNumber::usize(SourceLocation location) {
     return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, CodegenUtils::ptrBitSize(), true);
 }
 
+ptr<ResolvedType> ResolvedTypeNumber::u8(SourceLocation location) {
+    return makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::UInt, 8, false);
+}
+
 bool ResolvedTypeBool::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << to_str() << " " << other.to_str() << " " << location);
     if (other.kind == ResolvedTypeKind::Bool) {
