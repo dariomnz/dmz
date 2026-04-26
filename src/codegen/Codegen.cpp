@@ -683,7 +683,7 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const SourceLocation &locatio
     const llvm::DataLayout &dl = m_module->getDataLayout();
     auto sizeInBytes = value->getAllocationSize(dl);
     if (!sizeInBytes.has_value()) dmz_unreachable(location, "size in bytes has no value");
-    if (*sizeInBytes < INLINE_SIZE_THRESHOLD) {
+    if (*sizeInBytes <= INLINE_SIZE_THRESHOLD) {
         tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
                                             llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes.value()));
     } else {
@@ -884,7 +884,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
             const llvm::DataLayout &dl = m_module->getDataLayout();
             const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
             auto sizeInBytes = sl->getSizeInBytes();
-            if (sizeInBytes < INLINE_SIZE_THRESHOLD) {
+            if (sizeInBytes <= INLINE_SIZE_THRESHOLD) {
                 return m_builder.CreateMemCpyInline(ptr, sl->getAlignment(), val, sl->getAlignment(),
                                                     llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
             } else {
@@ -896,7 +896,7 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
             const llvm::DataLayout &dl = m_module->getDataLayout();
             auto t = generate_type(from);
             auto sizeInBytes = dl.getTypeAllocSize(t);
-            if (sizeInBytes < INLINE_SIZE_THRESHOLD) {
+            if (sizeInBytes <= INLINE_SIZE_THRESHOLD) {
                 return m_builder.CreateMemCpyInline(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t),
                                                     llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
             } else {
