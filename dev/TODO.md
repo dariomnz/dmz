@@ -24,7 +24,7 @@
 - [x] add error. inplace
 - [x] jit stack trace on segfault
 - [x] stabilize lsp
-- [x] @call
+- [x] builtin @call
 - [x] all stmt are expr (struct and union for the moment)
 - [x] new semantic system with lazy resolution
 - [x] new scopes system tied to each declaration
@@ -35,4 +35,4 @@
 - [x] enums with .name with auto resolve
 - [x] remove builtin functions from lexer and be normal functions
 - [x] change @atomicRmw to use enum in op
-- [ ] @compileError
+- [x] @compileError

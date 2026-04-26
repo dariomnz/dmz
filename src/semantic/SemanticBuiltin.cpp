@@ -272,6 +272,17 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@compileError") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);  // Placeholder for return type
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "message", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeVoid>(loc));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -731,6 +742,17 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         paramsTypes.emplace_back(opParam->type->clone());
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              call.type->clone());
+    } else if (resolvedCallee.identifier == "@compileError") {
+        // @compileError("message")
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@compileError expects exactly one argument.");
+        }
+        auto &msgArg = resolvedArguments[0];
+        if (auto *strLit = dynamic_cast<ResolvedStringLiteral *>(msgArg.get())) {
+            return report(call.location, strLit->value);
+        } else {
+            return report(msgArg->location, "@compileError expects a string literal argument.");
+        }
     }
     return report(call.location, "unknown builtin function");
 }
