@@ -50,6 +50,7 @@ void Driver::display_help() {
     println("  -fmt                 format the dmz source file");
     println("  -quiet               suppress output for successful tests");
     println("  -fail-fast, -ff      terminate tests on first failure");
+    println("  -nolibc              do not link with libc");
 }
 
 CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
@@ -136,6 +137,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.quiet = true;
             } else if (arg == "-fail-fast" || arg == "-ff") {
                 options.failFast = true;
+            } else if (arg == "-nolibc") {
+                options.noLibc = true;
             } else {
                 error("unexpected option '" + std::string(arg) + '\'');
             }
@@ -346,6 +349,9 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
         if (!m_options.output.empty()) {
             args.emplace_back("-o");
             args.emplace_back(m_options.output.c_str());
+        }
+        if (m_options.noLibc) {
+            args.emplace_back("-nolibc");
         }
         args.emplace_back(nullptr);
         // for (auto &&arg : args) {

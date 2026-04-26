@@ -65,6 +65,10 @@ int Driver::jit_pass(ptr<llvm::LLVMContext> &context, ptr<llvm::Module> &module)
             return 1;
         }
 
+        if (m_options.noLibc) {
+            auto &MainJD = JIT->getMainJITDylib();
+            MainJD.setLinkOrder({{&MainJD, llvm::orc::JITDylibLookupFlags::MatchAllSymbols}});
+        }
         auto MainSym = JIT->lookup("main");
         debug_msg("Searching main symbol " << MainSym->getValue());
         if (!MainSym) {
