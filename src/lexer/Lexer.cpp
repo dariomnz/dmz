@@ -150,6 +150,10 @@ static inline bool isAlpha(const std::string_view& c) {
     return c.size() > 0 && (('a' <= c[0] && c[0] <= 'z') || ('A' <= c[0] && c[0] <= 'Z'));
 }
 static inline bool isDigit(const std::string_view& c) { return c.size() > 0 && '0' <= c[0] && c[0] <= '9'; }
+static inline bool isHexDigit(const std::string_view& c) {
+    return c.size() > 0 && (('0' <= c[0] && c[0] <= '9') || ('a' <= c[0] && c[0] <= 'f') || ('A' <= c[0] && c[0] <= 'F'));
+}
+static inline bool isBinDigit(const std::string_view& c) { return c.size() > 0 && ('0' == c[0] || '1' == c[0]); }
 
 static inline bool isAlnum(const std::string_view& c) { return isDigit(c) || isAlpha(c); }
 bool Lexer::next_line() {
@@ -225,6 +229,27 @@ Token Lexer::next_token() {
         t.type = TokenType::eof;
     } else if (isDigit(line_content.substr(0, 1))) {
         size_t digit_count = 1;
+        if (line_content.substr(0, 1) == "0" && line_content.size() > 1) {
+            if (line_content[1] == 'x') {
+                digit_count = 2;
+                while (isHexDigit(line_content.substr(digit_count, 1))) {
+                    digit_count++;
+                }
+                t.type = TokenType::lit_int;
+                t.str = line_content.substr(0, digit_count);
+                advance(digit_count);
+                return t;
+            } else if (line_content[1] == 'b') {
+                digit_count = 2;
+                while (isBinDigit(line_content.substr(digit_count, 1))) {
+                    digit_count++;
+                }
+                t.type = TokenType::lit_int;
+                t.str = line_content.substr(0, digit_count);
+                advance(digit_count);
+                return t;
+            }
+        }
         while (isDigit(line_content.substr(digit_count, 1))) {
             digit_count++;
         }

@@ -365,7 +365,15 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr, bool isType) {
     debug_func((m_currentModule ? m_currentModule->module_path : "<no module>") << " " << expr.location);
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
-        return makePtr<ResolvedIntLiteral>(number->location, std::stod(number->value));
+        int val = 0;
+        if (number->value.size() > 2 && number->value[0] == '0' && number->value[1] == 'x') {
+            val = std::stoll(number->value, nullptr, 16);
+        } else if (number->value.size() > 2 && number->value[0] == '0' && number->value[1] == 'b') {
+            val = std::stoll(number->value, nullptr, 2);
+        } else {
+            val = std::stoll(number->value, nullptr, 10);
+        }
+        return makePtr<ResolvedIntLiteral>(number->location, val);
     }
     if (const auto *number = dynamic_cast<const FloatLiteral *>(&expr)) {
         return makePtr<ResolvedFloatLiteral>(number->location, std::stod(number->value));

@@ -105,7 +105,7 @@
 		},
 		"numbers": {
 			"name": "constant.numeric.dmz",
-			"match": "\\b\\d+\\b"
+			"match": "\\b(0x[0-9a-fA-F]+|0b[01]+|[0-9]+)\\b"
 		},
 		"chars": {
 			"name": "string.quoted.single.dmz",
