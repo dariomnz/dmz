@@ -1,7 +1,7 @@
 // RUN: (dmz %s -ast-dump 2>&1 || true) | filecheck %s
 fn main() -> void {
     // CHECK: [[# @LINE + 1 ]]:20: error: expected ';' after declaration
-    let x: i32 = 0 |;
+    let x: i32 = 0 ?;
 
     // CHECK: [[# @LINE + 1 ]]:9: error: expected identifier
     let ;

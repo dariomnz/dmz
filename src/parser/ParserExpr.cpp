@@ -304,10 +304,7 @@ ptr<Expr> Parser::parse_prefix_expr() {
     }
 
     std::unordered_set<TokenType> unaryOps = {
-        TokenType::op_minus,
-        TokenType::amp,
-        TokenType::op_excla_mark,
-        TokenType::asterisk,
+        TokenType::op_minus, TokenType::amp, TokenType::op_excla_mark, TokenType::asterisk, TokenType::op_tilde,
     };
 
     if (unaryOps.count(tok.type) == 0) {
@@ -326,6 +323,7 @@ ptr<Expr> Parser::parse_prefix_expr() {
             return makePtr<RefPtrExpr>(tok.loc, std::move(rhs));
         case TokenType::op_excla_mark:
         case TokenType::op_minus:
+        case TokenType::op_tilde:
             if (restrictions & OnlyTypeExpr) {
                 if (tok.type == TokenType::op_excla_mark) {
                     return makePtr<TypeOptional>(tok.loc, std::move(rhs));
@@ -349,51 +347,78 @@ ptr<Expr> Parser::parse_expr() {
     return parse_expr_rhs(std::move(lhs), 0);
 }
 
-[[maybe_unused]] static inline int get_token_precedence(TokenType tok) {
+int Parser::get_token_precedence(TokenType tok) {
     debug_func("");
     switch (tok) {
         case TokenType::asterisk:
         case TokenType::op_div:
         case TokenType::op_percent:
-            return 6;
+            return 9;
         case TokenType::op_plus:
         case TokenType::op_minus:
-            return 5;
+            return 8;
+        case TokenType::op_shl:
+        case TokenType::op_shr:
+            return 7;
         case TokenType::op_less:
         case TokenType::op_more:
         case TokenType::op_less_eq:
         case TokenType::op_more_eq:
-            return 4;
+            return 6;
         case TokenType::op_equal:
         case TokenType::op_not_equal:
+            return 5;
+        case TokenType::amp:
+            return 4;
+        case TokenType::caret:
             return 3;
-        case TokenType::ampamp:
+        case TokenType::pipe:
             return 2;
-        case TokenType::pipepipe:
+        case TokenType::ampamp:
             return 1;
+        case TokenType::pipepipe:
+            return 0;
         default:
             return -1;
     }
+}
+
+int Parser::get_current_binop_precedence(TokenType &outOp) {
+    outOp = m_nextToken.type;
+    if (outOp == TokenType::op_less && peek_token().type == TokenType::op_less) {
+        outOp = TokenType::op_shl;
+        return 7;
+    }
+    if (outOp == TokenType::op_more && peek_token().type == TokenType::op_more) {
+        outOp = TokenType::op_shr;
+        return 7;
+    }
+    return get_token_precedence(outOp);
 }
 
 ptr<Expr> Parser::parse_expr_rhs(ptr<Expr> lhs, int precedence) {
     debug_func("prec " << precedence << " " << m_nextToken.loc << " '" << m_nextToken.str << "'");
     if ((restrictions & OnlyTypeExpr)) return lhs;
     while (true) {
-        Token op = m_nextToken;
-        int curOpPrec = get_token_precedence(op.type);
+        TokenType opType;
+        int curOpPrec = get_current_binop_precedence(opType);
 
         if (curOpPrec < precedence) return lhs;
-        eat_next_token();  // eat operator
+        SourceLocation loc = m_nextToken.loc;
+        eat_next_token();      // eat operator (first part if combined)
+        if (opType == TokenType::op_shl || opType == TokenType::op_shr) {
+            eat_next_token();  // eat second part
+        }
 
         varOrReturn(rhs, parse_prefix_expr());
 
-        if (curOpPrec < get_token_precedence(m_nextToken.type)) {
+        TokenType nextOp;
+        if (curOpPrec < get_current_binop_precedence(nextOp)) {
             rhs = parse_expr_rhs(std::move(rhs), curOpPrec + 1);
             if (!rhs) return nullptr;
         }
 
-        lhs = makePtr<BinaryOperator>(op.loc, std::move(lhs), std::move(rhs), op.type);
+        lhs = makePtr<BinaryOperator>(loc, std::move(lhs), std::move(rhs), opType);
     }
 }
 

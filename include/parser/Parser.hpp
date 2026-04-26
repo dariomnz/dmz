@@ -132,6 +132,8 @@ class Parser {
     ptr<Expr> parse_prefix_expr();
     ptr<Expr> parse_type();
     ptr<Expr> parse_expr();
+    int get_token_precedence(TokenType tok);
+    int get_current_binop_precedence(TokenType &outOp);
     ptr<Expr> parse_expr_rhs(ptr<Expr> lhs, int precedence);
     ptr<ParamDecl> parse_param_decl();
     ptr<std::vector<ptr<ParamDecl>>> parse_parameter_list();

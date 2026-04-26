@@ -104,6 +104,9 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
         CASE_TYPE(caret);
+        CASE_TYPE(op_shl);
+        CASE_TYPE(op_shr);
+        CASE_TYPE(op_tilde);
         CASE_TYPE(unknown);
         CASE_TYPE(eof);
     }
@@ -452,6 +455,10 @@ Token Lexer::next_token() {
         advance();
     } else if (line_content.substr(0, 1) == "?") {
         t.type = TokenType::op_quest_mark;
+        t.str = line_content.substr(0, 1);
+        advance();
+    } else if (line_content.substr(0, 1) == "~") {
+        t.type = TokenType::op_tilde;
         t.str = line_content.substr(0, 1);
         advance();
     } else if (line_content.substr(0, 1) == "!") {

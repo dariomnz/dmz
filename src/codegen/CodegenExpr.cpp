@@ -224,6 +224,7 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
         }
     }
     if (unop.op == TokenType::op_excla_mark) return m_builder.CreateNot(to_bool(rhs, *unop.operand->type));
+    if (unop.op == TokenType::op_tilde) return m_builder.CreateXor(rhs, llvm::ConstantInt::get(rhs->getType(), -1));
 
     unop.dump();
     dmz_unreachable(unop.location, "unknown unary op");
@@ -415,6 +416,24 @@ llvm::Value *Codegen::cast_binary_operator(const ResolvedBinaryOperator &binop, 
             return m_builder.CreateFCmpUNE(lhs, rhs);
         else
             dmz_unreachable(binop.location, "not expected type in op_not_equal");
+    }
+    if (binop.op == TokenType::amp) {
+        return m_builder.CreateAnd(lhs, rhs);
+    }
+    if (binop.op == TokenType::pipe) {
+        return m_builder.CreateOr(lhs, rhs);
+    }
+    if (binop.op == TokenType::caret) {
+        return m_builder.CreateXor(lhs, rhs);
+    }
+    if (binop.op == TokenType::op_shl) {
+        return m_builder.CreateShl(lhs, rhs);
+    }
+    if (binop.op == TokenType::op_shr) {
+        if (typeNum->numberKind == ResolvedNumberKind::Int)
+            return m_builder.CreateAShr(lhs, rhs);
+        else
+            return m_builder.CreateLShr(lhs, rhs);
     }
 
     binop.dump();

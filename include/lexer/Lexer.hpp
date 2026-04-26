@@ -42,6 +42,9 @@ enum class TokenType {
     amp,
     pipe,
     caret,
+    op_shl,
+    op_shr,
+    op_tilde,
     block_l,
     block_r,
     par_l,
@@ -117,6 +120,10 @@ static inline std::string get_op_str(TokenType op) {
     if (op == TokenType::amp) return "&";
 
     if (op == TokenType::caret) return "^";
+    if (op == TokenType::op_shl) return "<<";
+    if (op == TokenType::op_shr) return ">>";
+    if (op == TokenType::op_tilde) return "~";
+    if (op == TokenType::pipe) return "|";
     if (op == TokenType::op_not_equal) return "!=";
     if (op == TokenType::op_equal) return "==";
     if (op == TokenType::ampamp) return "&&";

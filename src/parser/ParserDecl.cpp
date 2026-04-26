@@ -6,7 +6,7 @@
 
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
-
+#include "sys/mman.h"
 namespace DMZ {
 
 ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {

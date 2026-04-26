@@ -529,6 +529,16 @@ ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &una
             return report(resolvedRHS->location,
                           '\'' + resolvedRHS->type->to_str() + "' cannot be used as an operand to unary operator '!'");
         }
+    } else if (unary.op == TokenType::op_tilde) {
+        if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(resolvedRHS->type.get())) {
+            if (numType->numberKind == ResolvedNumberKind::Float) {
+                return report(resolvedRHS->location,
+                              '\'' + resolvedRHS->type->to_str() + "' cannot be used as an operand to unary operator '~'");
+            }
+        } else {
+            return report(resolvedRHS->location,
+                          '\'' + resolvedRHS->type->to_str() + "' cannot be used as an operand to unary operator '~'");
+        }
     } else {
         if (isType) return report(unary.location, "unexpected op in unary operator of a type");
         if (resolvedRHS->type->kind == ResolvedTypeKind::Void)
@@ -591,6 +601,17 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
+
+    if (binop.op == TokenType::amp || binop.op == TokenType::pipe || binop.op == TokenType::caret ||
+        binop.op == TokenType::op_shl || binop.op == TokenType::op_shr) {
+        if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(resolvedLHS->type.get())) {
+            if (numType->numberKind == ResolvedNumberKind::Float) {
+                return report(binop.location,
+                              "bitwise operator '" + get_op_str(binop.op) + "' cannot be used on float type");
+            }
+        }
+    }
+
     if (!resolvedLHS->type->compare(*resolvedRHS->type)) {
         return report(binop.location, "unexpected type in binop, expected '" + resolvedLHS->type->to_str() +
                                           "' actual '" + resolvedRHS->type->to_str() + "' ");

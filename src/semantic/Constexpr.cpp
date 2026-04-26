@@ -132,6 +132,8 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_unary_operator(const Re
             return -val;
         case TokenType::op_excla_mark:
             return !val;
+        case TokenType::op_tilde:
+            return ~val;
         default:
             dmz_unreachable(unop.location, "unexpected binary operator");
     }
@@ -194,6 +196,16 @@ std::optional<int> ConstantExpressionEvaluator::evaluate_binary_operator(const R
             return val1 == val2;
         case TokenType::op_not_equal:
             return val1 != val2;
+        case TokenType::amp:
+            return val1 & val2;
+        case TokenType::pipe:
+            return val1 | val2;
+        case TokenType::caret:
+            return val1 ^ val2;
+        case TokenType::op_shl:
+            return val1 << val2;
+        case TokenType::op_shr:
+            return val1 >> val2;
         default:
             dmz_unreachable(binop.location, "unexpected binary operator");
     }
