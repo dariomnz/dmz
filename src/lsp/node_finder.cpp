@@ -278,21 +278,9 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*orelseErr->errorToOrElse);
         if (found_decl) return;
         find_in_expr(*orelseErr->orElseExpr);
-    } else if (auto* sizeofExpr = dynamic_cast<const ResolvedSizeofExpr*>(&expr)) {
-        if (sizeofExpr->sizeofExpr) find_in_expr(*sizeofExpr->sizeofExpr);
-    } else if (auto* typeidExpr = dynamic_cast<const ResolvedTypeidExpr*>(&expr)) {
-        find_in_expr(*typeidExpr->typeidExpr);
-    } else if (auto* typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr*>(&expr)) {
-        find_in_expr(*typeinfoExpr->typeinfoExpr);
     } else if (auto* rangeExpr = dynamic_cast<const ResolvedRangeExpr*>(&expr)) {
         find_in_expr(*rangeExpr->startExpr);
         find_in_expr(*rangeExpr->endExpr);
-    } else if (auto* hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr*>(&expr)) {
-        find_in_expr(*hasMethodExpr->structTypeExpr);
-    } else if (auto* simdSizeExpr = dynamic_cast<const ResolvedSimdSizeExpr*>(&expr)) {
-        find_in_expr(*simdSizeExpr->typeExpr);
-    } else if (auto* simdSplatExpr = dynamic_cast<const ResolvedSimdSplatExpr*>(&expr)) {
-        find_in_expr(*simdSplatExpr->value);
     } else if (auto* importExpr = dynamic_cast<const ResolvedImportExpr*>(&expr)) {
         // 'import("' is 8 characters. We estimate the length to cover the string.
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {

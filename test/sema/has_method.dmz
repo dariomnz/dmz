@@ -11,10 +11,16 @@ fn main() -> void {
     const hasBar = @hasMethod(s, "bar");
 }
 
-// CHECK:       ResolvedVarDecl:const bool hasFoo
-// CHECK-NEXT:  ResolvedHasMethodExpr:bool foo
-// CHECK-NEXT:  | value: 1
+// CHECK:         ResolvedVarDecl:const bool hasFoo
+// CHECK-NEXT:           ResolvedCallExpr:bool
+// CHECK-NEXT:             ResolvedDeclRefExpr:bool @hasMethod
+// CHECK-NEXT:             | value: 1
+// CHECK-NEXT:             ResolvedDeclRefExpr:has_method.S{} s
+// CHECK-NEXT:             ResolvedStringLiteral:*u8 'foo'
 
-// CHECK:       ResolvedVarDecl:const bool hasBar
-// CHECK-NEXT:  ResolvedHasMethodExpr:bool bar
-// CHECK-NEXT:  | value: 0
+// CHECK:         ResolvedVarDecl:const bool hasBar
+// CHECK-NEXT:           ResolvedCallExpr:bool
+// CHECK-NEXT:             ResolvedDeclRefExpr:bool @hasMethod
+// CHECK-NEXT:             | value: 0
+// CHECK-NEXT:             ResolvedDeclRefExpr:has_method.S{} s
+// CHECK-NEXT:             ResolvedStringLiteral:*u8 'bar'

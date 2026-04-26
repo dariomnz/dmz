@@ -113,32 +113,12 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
         return generate_orelse_error_expr(*orelseErr, keepPointer);
     }
-    if (auto *simdsplat = dynamic_cast<const ResolvedSimdSplatExpr *>(&expr)) {
-        return generate_simdsplat_expr(*simdsplat);
-    }
-    if (auto *simdiota = dynamic_cast<const ResolvedSimdIotaExpr *>(&expr)) {
-        return generate_simdiota_expr(*simdiota);
-    }
-    if (auto *sizeofExpr = dynamic_cast<const ResolvedSizeofExpr *>(&expr)) {
-        return generate_sizeof_expr(*sizeofExpr);
-    }
-    if (auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
-        return generate_typeid_expr(*typeidExpr);
-    }
-    if (auto *typeinfoExpr = dynamic_cast<const ResolvedTypeinfoExpr *>(&expr)) {
-        return generate_typeinfo_expr(*typeinfoExpr);
-    }
     expr.dump();
     dmz_unreachable(expr.location, "unexpected expression");
 }
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     debug_func("");
-    if (auto declRef = dynamic_cast<const ResolvedDeclRefExpr *>(call.callee.get())) {
-        if (declRef->decl.identifier == "@getErrorTrace") {
-            return generate_get_error_trace();
-        }
-    }
     if (auto memberExpr = dynamic_cast<const ResolvedMemberExpr *>(call.callee.get())) {
         if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(memberExpr->base->type.get())) {
             auto &name = memberExpr->member.identifier;
@@ -975,22 +955,6 @@ llvm::Value *Codegen::generate_orelse_error_expr(const ResolvedOrElseErrorExpr &
     return ret;
 }
 
-llvm::Value *Codegen::generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr) {
-    auto type = generate_type(*sizeofExpr.sizeofExpr->resolvedType);
-    auto size = llvm::ConstantExpr::getSizeOf(type);
-    return size;
-}
-
-llvm::Value *Codegen::generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr) {
-    auto typeId = typeidExpr.get_constant_value();
-    if (typeId) {
-        return m_builder.getInt32(typeId.value());
-    } else {
-        dmz_unreachable(typeidExpr.location, "this should not happend");
-        return m_builder.getInt32(-1);
-    }
-}
-
 llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const ResolvedExpr &from,
                                           const ResolvedRangeExpr &range) {
     const ResolvedTypeSlice *sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type);
@@ -1029,143 +993,6 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
     store_value(size, sliceSize, *range.startExpr->type, sizeType);
 
     return tmpSlice;
-}
-
-llvm::Value *Codegen::generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr) {
-    auto targetType = typeinfoExpr.typeinfoExpr->type.get();
-    auto returnStructPtrType = dynamic_cast<const ResolvedTypePointer *>(typeinfoExpr.type.get());
-    if (!returnStructPtrType) dmz_unreachable(typeinfoExpr.location, "unreachable: " + typeinfoExpr.type->to_str());
-    auto returnStructType = returnStructPtrType->pointerType.get();
-    // auto llvmUnionType = static_cast<llvm::StructType *>(generate_type(*returnStructType));
-    llvm::Type *sizeTy = llvm::Type::getIntNTy(*m_context, m_module->getDataLayout().getPointerSizeInBits());
-
-    std::string globalName = "TypeInfo." + targetType->to_str();
-    if (auto existingGlobal = m_module->getNamedGlobal(globalName)) {
-        return existingGlobal;
-    }
-
-    const ResolvedUnionDecl *unionDecl = nullptr;
-    if (auto ut = dynamic_cast<const ResolvedTypeUnion *>(returnStructType))
-        unionDecl = ut->unionDecl();
-    else if (auto ut = dynamic_cast<const ResolvedTypeUnionDecl *>(returnStructType))
-        unionDecl = ut->unionDecl();
-    if (!unionDecl) dmz_unreachable(typeinfoExpr.location, "TypeInfo must be a union");
-
-    uint64_t maxSize = 0;
-    const llvm::DataLayout &dl = m_module->getDataLayout();
-    for (auto &&field : unionDecl->fields) {
-        if (field->type->kind == ResolvedTypeKind::Void) continue;
-        llvm::Type *t = generate_type(*field->type, true);
-        maxSize = std::max(maxSize, dl.getTypeAllocSize(t).getFixedValue());
-    }
-
-    ResolvedTypeSlice sliceU8Type(typeinfoExpr.location,
-                                  makePtr<ResolvedTypeNumber>(typeinfoExpr.location, ResolvedNumberKind::UInt, 8));
-    auto llvmSliceU8Type = static_cast<llvm::StructType *>(generate_type(sliceU8Type));
-
-    int tag = ConstantExpressionEvaluator{}.evaluate_type(*targetType).value_or(99);
-    llvm::Constant *payload = nullptr;
-    llvm::Type *payloadType = nullptr;
-
-    if (targetType->kind == ResolvedTypeKind::Number) {
-        auto numType = static_cast<const ResolvedTypeNumber *>(targetType);
-        payloadType = llvm::StructType::get(*m_context, {m_builder.getInt32Ty()}, false);
-        payload = llvm::ConstantStruct::get(static_cast<llvm::StructType *>(payloadType),
-                                            {m_builder.getInt32(numType->bitSize)});
-    } else if (targetType->kind == ResolvedTypeKind::StructDecl || targetType->kind == ResolvedTypeKind::Struct) {
-        ResolvedStructDecl *structDecl = nullptr;
-        if (auto sd = dynamic_cast<const ResolvedTypeStructDecl *>(targetType))
-            structDecl = sd->decl;
-        else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType))
-            structDecl = sd->decl;
-
-        auto structNameGlobal = create_global_string(structDecl->name(), "typeinfo.name.str");
-        auto structNameLen = llvm::ConstantInt::get(sizeTy, structDecl->name().size());
-        auto structNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {structNameGlobal, structNameLen});
-
-        ResolvedTypeSlice sliceSliceU8Type(typeinfoExpr.location,
-                                           makePtr<ResolvedTypeSlice>(typeinfoExpr.location, sliceU8Type.clone()));
-        auto llvmSliceSliceU8Type = static_cast<llvm::StructType *>(generate_type(sliceSliceU8Type));
-
-        // Fields setup
-        std::vector<llvm::Constant *> fieldsArrayVals;
-        for (auto &field : structDecl->fields_strs) {
-            auto nameGlobal = create_global_string(field, "typeinfo.str");
-            auto nameLen = llvm::ConstantInt::get(sizeTy, field.size());
-            auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
-            fieldsArrayVals.push_back(nameSlice);
-        }
-
-        llvm::Constant *fieldsSlice = llvm::Constant::getNullValue(llvmSliceSliceU8Type);
-        if (!fieldsArrayVals.empty()) {
-            llvm::ArrayType *fieldsArrayTy = llvm::ArrayType::get(llvmSliceU8Type, fieldsArrayVals.size());
-            llvm::Constant *fieldsArrayInit = llvm::ConstantArray::get(fieldsArrayTy, fieldsArrayVals);
-            llvm::GlobalVariable *fieldsArrayGV =
-                new llvm::GlobalVariable(*m_module, fieldsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
-                                         fieldsArrayInit, globalName + ".fields");
-            llvm::Constant *fieldsLen = llvm::ConstantInt::get(sizeTy, fieldsArrayVals.size());
-            fieldsSlice = llvm::ConstantStruct::get(llvmSliceSliceU8Type, {fieldsArrayGV, fieldsLen});
-        }
-
-        // Methods setup
-        std::vector<llvm::Constant *> methodsArrayVals;
-        for (auto &method : structDecl->functions_strs) {
-            auto nameGlobal = create_global_string(method, "typeinfo.str");
-            auto nameLen = llvm::ConstantInt::get(sizeTy, method.size());
-            auto nameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {nameGlobal, nameLen});
-            methodsArrayVals.push_back(nameSlice);
-        }
-
-        llvm::Constant *methodsSlice = llvm::Constant::getNullValue(llvmSliceSliceU8Type);
-        if (!methodsArrayVals.empty()) {
-            llvm::ArrayType *methodsArrayTy = llvm::ArrayType::get(llvmSliceU8Type, methodsArrayVals.size());
-            llvm::Constant *methodsArrayInit = llvm::ConstantArray::get(methodsArrayTy, methodsArrayVals);
-            llvm::GlobalVariable *methodsArrayGV =
-                new llvm::GlobalVariable(*m_module, methodsArrayTy, true, llvm::GlobalValue::PrivateLinkage,
-                                         methodsArrayInit, globalName + ".methods");
-            llvm::Constant *methodsLen = llvm::ConstantInt::get(sizeTy, methodsArrayVals.size());
-            methodsSlice = llvm::ConstantStruct::get(llvmSliceSliceU8Type, {methodsArrayGV, methodsLen});
-        }
-
-        payloadType =
-            llvm::StructType::get(*m_context, {llvmSliceU8Type, llvmSliceSliceU8Type, llvmSliceSliceU8Type}, false);
-        payload = llvm::ConstantStruct::get(static_cast<llvm::StructType *>(payloadType),
-                                            {structNameSlice, fieldsSlice, methodsSlice});
-    } else if (targetType->kind == ResolvedTypeKind::Simd) {
-        auto simdType = static_cast<const ResolvedTypeSimd *>(targetType);
-
-        auto elementType = simdType->to_str();
-        auto elementNameGlobal = create_global_string(elementType, "typeinfo.simd.element.str");
-        auto elementNameLen = llvm::ConstantInt::get(sizeTy, elementType.size());
-        auto elementNameSlice = llvm::ConstantStruct::get(llvmSliceU8Type, {elementNameGlobal, elementNameLen});
-
-        auto simdLen = m_builder.getInt32(simdType->simdSize);
-
-        payloadType = llvm::StructType::get(*m_context, {llvmSliceU8Type, m_builder.getInt32Ty()}, false);
-        payload = llvm::ConstantStruct::get(static_cast<llvm::StructType *>(payloadType), {elementNameSlice, simdLen});
-    }
-
-    // Construct the union initializer
-    llvm::Constant *unionInit = nullptr;
-    llvm::Type *tagTy = generate_type(*unionDecl->tag->type, true);
-    unsigned tagBitSize = dl.getTypeSizeInBits(tagTy);
-    if (payload) {
-        std::vector<llvm::Type *> unionFields = {tagTy, payloadType};
-        auto *unionTmpType = llvm::StructType::get(*m_context, unionFields);
-        std::vector<llvm::Constant *> unionVals = {m_builder.getIntN(tagBitSize, tag), payload};
-        unionInit = llvm::ConstantStruct::get(unionTmpType, unionVals);
-    } else {
-        std::vector<llvm::Type *> unionFields = {tagTy, llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize)};
-        auto *unionTmpType = llvm::StructType::get(*m_context, unionFields);
-        std::vector<llvm::Constant *> unionVals = {
-            m_builder.getIntN(tagBitSize, tag),
-            llvm::ConstantAggregateZero::get(llvm::ArrayType::get(m_builder.getInt8Ty(), maxSize))};
-        unionInit = llvm::ConstantStruct::get(unionTmpType, unionVals);
-    }
-
-    auto global = new llvm::GlobalVariable(*m_module, unionInit->getType(), true, llvm::GlobalValue::PrivateLinkage,
-                                           unionInit, globalName);
-    return global;
 }
 
 llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
@@ -1242,41 +1069,5 @@ llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const 
     }
     dmz_unreachable(call.location, "unknown simd builtin");
     return nullptr;
-}
-
-llvm::Value *Codegen::generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr) {
-    debug_func("");
-    llvm::Value *val = generate_expr(*expr.value);
-    auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
-    if (!vecType) {
-        dmz_unreachable(expr.location, "unexpected type in simdsplat");
-    }
-    val = cast_to(val, *expr.value->type, *vecType->simdType);
-    return m_builder.CreateVectorSplat(vecType->simdSize, val);
-}
-
-llvm::Value *Codegen::generate_simdiota_expr(const ResolvedSimdIotaExpr &expr) {
-    debug_func("");
-    auto vecType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
-    if (!vecType) {
-        dmz_unreachable(expr.location, "unexpected type in simdiota");
-    }
-    auto numType = dynamic_cast<const ResolvedTypeNumber *>(vecType->simdType.get());
-    if (!numType) {
-        dmz_unreachable(expr.location, "unexpected type in simdiota");
-    }
-    auto llvmVecType = generate_type(*expr.type);
-    auto llvmNumType = generate_type(*numType);
-    llvm::Value *vec = llvm::UndefValue::get(llvmVecType);
-    for (int i = 0; i < vecType->simdSize; i++) {
-        llvm::Value *val;
-        if (numType->numberKind == ResolvedNumberKind::Float) {
-            val = llvm::ConstantFP::get(llvmNumType, i);
-        } else {
-            val = llvm::ConstantInt::get(llvmNumType, i);
-        }
-        vec = m_builder.CreateInsertElement(vec, val, i);
-    }
-    return vec;
 }
 }  // namespace DMZ

@@ -101,7 +101,7 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
     // Search in the module scope
     ResolvedDecl *decl = lookup(declRefExpr.location, declRefExpr.identifier);
     if (!decl && declRefExpr.identifier.starts_with("@")) {
-        decl = resolve_builtin_function_symbol(declRefExpr.identifier);
+        decl = resolve_builtin_function_symbol(declRefExpr, declRefExpr.identifier);
     }
 
     if (!decl) {
@@ -447,27 +447,6 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr, bool isType) {
     }
     if (const auto *errorInPlaceExpr = dynamic_cast<const ErrorInPlaceExpr *>(&expr)) {
         return makePtr<ResolvedErrorInPlaceExpr>(errorInPlaceExpr->location, errorInPlaceExpr->identifier);
-    }
-    if (const auto *sizeofExpr = dynamic_cast<const SizeofExpr *>(&expr)) {
-        return resolve_sizeof_expr(*sizeofExpr);
-    }
-    if (const auto *typeidExpr = dynamic_cast<const TypeidExpr *>(&expr)) {
-        return resolve_typeid_expr(*typeidExpr);
-    }
-    if (const auto *typeinfoExpr = dynamic_cast<const TypeinfoExpr *>(&expr)) {
-        return resolve_typeinfo_expr(*typeinfoExpr);
-    }
-    if (const auto *hasMethodExpr = dynamic_cast<const HasMethodExpr *>(&expr)) {
-        return resolve_has_method_expr(*hasMethodExpr);
-    }
-    if (const auto *simdSizeExpr = dynamic_cast<const SimdSizeExpr *>(&expr)) {
-        return resolve_simd_size_expr(*simdSizeExpr);
-    }
-    if (const auto *simdsplatExpr = dynamic_cast<const SimdSplatExpr *>(&expr)) {
-        return resolve_simdsplat_expr(*simdsplatExpr);
-    }
-    if (const auto *simdiotaExpr = dynamic_cast<const SimdIotaExpr *>(&expr)) {
-        return resolve_simdiota_expr(*simdiotaExpr);
     }
     if (const auto *rangeExpr = dynamic_cast<const RangeExpr *>(&expr)) {
         return resolve_range_expr(*rangeExpr);
@@ -1482,118 +1461,6 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
     return makePtr<ResolvedImportExpr>(importExpr.location, *im);
 }
 
-ptr<ResolvedSizeofExpr> Sema::resolve_sizeof_expr(const SizeofExpr &sizeofExpr) {
-    debug_func(sizeofExpr.location);
-
-    varOrReturn(expr, resolve_type_expr(*sizeofExpr.sizeofType));
-
-    return makePtr<ResolvedSizeofExpr>(sizeofExpr.location, std::move(expr));
-}
-
-ptr<ResolvedTypeidExpr> Sema::resolve_typeid_expr(const TypeidExpr &typeidExpr) {
-    debug_func(typeidExpr.location);
-    varOrReturn(expr, resolve_expr(*typeidExpr.typeidExpr));
-    auto resolved = makePtr<ResolvedTypeidExpr>(typeidExpr.location, std::move(expr));
-    resolved->set_constant_value(cee.evaluate(*resolved, false));
-    return resolved;
-}
-
-ptr<ResolvedTypeinfoExpr> Sema::resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr) {
-    debug_func(typeinfoExpr.location);
-    varOrReturn(expr, resolve_expr(*typeinfoExpr.typeinfoExpr));
-
-    if (!already_import_types) {
-        ImportExpr typesImportExpr(SourceLocation::builtin(), "types");
-        auto types_import_expr = resolve_import_expr(typesImportExpr);
-        if (!types_import_expr) return {};
-        already_import_types = true;
-    }
-
-    std::string targetUnionName = "TypeInfo";
-
-    ResolvedTypeUnionDecl *typeInfoDecl = nullptr;
-    for (auto &lazy_mod : m_lazy_modules) {
-        auto mod = lazy_mod.get();
-        auto pathStr = mod->module_path.string();
-        debug_msg("Module " << mod->name() << " path " << pathStr);
-        if (pathStr.ends_with("std/types.dmz")) {
-            for (auto &decl : mod->declarations) {
-                debug_msg("Target " << targetUnionName << " search " << decl->identifier);
-                if (decl->identifier == targetUnionName) {
-                    if (!ensure_fully_resolved(*decl)) return {};
-                    if (auto unionDeclRef = dynamic_cast<ResolvedTypeUnionDecl *>(decl->type.get())) {
-                        typeInfoDecl = unionDeclRef;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    if (!typeInfoDecl) {
-        return report(typeinfoExpr.location, "could not find " + targetUnionName + " in types.dmz");
-    }
-    auto returnType = makePtr<ResolvedTypePointer>(
-        typeinfoExpr.location, makePtr<ResolvedTypeUnion>(typeinfoExpr.location, typeInfoDecl->unionDecl()));
-    return makePtr<ResolvedTypeinfoExpr>(typeinfoExpr.location, std::move(returnType), std::move(expr));
-}
-
-ptr<ResolvedHasMethodExpr> Sema::resolve_has_method_expr(const HasMethodExpr &hasMethodExpr) {
-    debug_func(hasMethodExpr.location);
-    varOrReturn(structTypeExpr, resolve_expr(*hasMethodExpr.structType));
-
-    ResolvedType *baseType = structTypeExpr->type.get();
-    if (auto ptrType = dynamic_cast<ResolvedTypePointer *>(baseType)) {
-        baseType = ptrType->pointerType.get();
-    }
-
-    bool hasMethod = false;
-    ResolvedStructDecl *structToSearch = nullptr;
-    if (auto struDeclType = dynamic_cast<ResolvedTypeStructDecl *>(baseType)) {
-        structToSearch = struDeclType->decl;
-    } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(baseType)) {
-        structToSearch = struType->decl;
-    } else if (dynamic_cast<ResolvedTypeGeneric *>(baseType)) {
-        hasMethod = false;
-    } else {
-        return report(hasMethodExpr.location,
-                      "expected struct type for @hasMethod, actual '" + baseType->to_str() + "'");
-    }
-    if (structToSearch) {
-        // Lazy: ensure functions are resolved before checking for methods
-        if (!ensure_struct_funcs_resolved(*structToSearch)) return nullptr;
-        debug_msg("structToSearch->functions_strs.size() " << structToSearch->functions_strs.size());
-        for (auto &&func : structToSearch->functions_strs) {
-            debug_msg("func " << func << " method " << hasMethodExpr.methodName);
-            if (func == hasMethodExpr.methodName) {
-                hasMethod = true;
-                break;
-            }
-        }
-    }
-
-    auto resolved =
-        makePtr<ResolvedHasMethodExpr>(hasMethodExpr.location, std::move(structTypeExpr), hasMethodExpr.methodName);
-    resolved->set_constant_value(hasMethod ? 1 : 0);
-    return resolved;
-}
-
-ptr<ResolvedSimdSizeExpr> Sema::resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr) {
-    debug_func(simdSizeExpr.location);
-    varOrReturn(typeExpr, resolve_expr(*simdSizeExpr.simdType));
-
-    int bit_simd_size = CodegenUtils::target_simd_size();
-
-    if (!typeExpr->type) dmz_unreachable(typeExpr->location, "Expr without type");
-    int bit_type_size = CodegenUtils::typeBitSize(*typeExpr->type);
-    debug_msg("bit_simd_size: " << bit_simd_size << " bit_type_size: " << bit_type_size
-                                << " type: " << typeExpr->type->to_str());
-
-    auto resolved = makePtr<ResolvedSimdSizeExpr>(simdSizeExpr.location, std::move(typeExpr));
-    resolved->set_constant_value(bit_simd_size / bit_type_size);
-    return resolved;
-}
-
 ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
     debug_func(rangeExpr.location);
 
@@ -1612,21 +1479,5 @@ ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
     endExpr->set_constant_value(cee.evaluate(*endExpr, false));
 
     return makePtr<ResolvedRangeExpr>(rangeExpr.location, std::move(startExpr), std::move(endExpr));
-}
-
-ptr<ResolvedSimdSplatExpr> Sema::resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr) {
-    debug_func(simdSplatExpr.location);
-    varOrReturn(value, resolve_expr(*simdSplatExpr.value));
-    // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
-    auto dummyType = makePtr<ResolvedTypeSimd>(simdSplatExpr.location, value->type->clone(), nullptr, 0);
-    return makePtr<ResolvedSimdSplatExpr>(simdSplatExpr.location, std::move(value), std::move(dummyType));
-}
-
-ptr<ResolvedSimdIotaExpr> Sema::resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr) {
-    debug_func(simdiotaExpr.location);
-    // Initially, we don't know the size. We use a dummy type that will be replaced during implicit cast.
-    auto dummyType =
-        makePtr<ResolvedTypeSimd>(simdiotaExpr.location, ResolvedTypeNumber::usize(simdiotaExpr.location), nullptr, 0);
-    return makePtr<ResolvedSimdIotaExpr>(simdiotaExpr.location, std::move(dummyType));
 }
 }  // namespace DMZ

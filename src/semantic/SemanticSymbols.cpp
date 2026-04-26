@@ -96,54 +96,6 @@ void ResolvedNullLiteral::dump(size_t level, bool onlySelf) const {
     dump_constant_value(level);
 }
 
-void ResolvedSizeofExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSizeofExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    if (sizeofExpr) sizeofExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedTypeidExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedTypeidExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    if (typeidExpr) typeidExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedTypeinfoExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedTypeinfoExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    if (typeinfoExpr) typeinfoExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedHasMethodExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedHasMethodExpr:" << type->to_str() << " " << methodName << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    structTypeExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedSimdSizeExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSimdSizeExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    typeExpr->dump(level + 1, onlySelf);
-}
-
-void ResolvedSimdSplatExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSimdSplatExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-    value->dump(level + 1, onlySelf);
-}
-
-void ResolvedSimdIotaExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSimdIotaExpr:" << type->to_str() << "\n";
-    if (onlySelf) return;
-    dump_constant_value(level);
-}
-
 void ResolvedTypeExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedTypeExpr:" << type->to_str() << "\n";
     if (onlySelf) return;
@@ -162,8 +114,8 @@ void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedCallExpr:" << type->to_str() << '\n';
 
     if (onlySelf) return;
-    callee->dump(level + 1, onlySelf);
     dump_constant_value(level);
+    callee->dump(level + 1, onlySelf);
 
     for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);
 }
@@ -384,6 +336,7 @@ void ResolvedVarDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedVarDecl:" << (isMutable ? "" : "const ")
               << (type ? type->to_str() : "nullptr") << " " << identifier << '\n';
     if (onlySelf) return;
+    dump_constant_value(level);
     // if (resolvedTypeExpr) resolvedTypeExpr->dump(level + 1, onlySelf);
     if (initializer) initializer->dump(level + 1, onlySelf);
     if (type) {

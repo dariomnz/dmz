@@ -1,8 +1,6 @@
 #include "semantic/Constexpr.hpp"
 
-#include <iostream>
-
-#include "Debug.hpp"
+#include "codegen/CodegenUtils.hpp"
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
@@ -45,27 +43,33 @@ std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &exp
         }
         return evaluate_decl(memberExpr->member, allowSideEffects);
     }
-    if (const auto *typeidExpr = dynamic_cast<const ResolvedTypeidExpr *>(&expr)) {
-        return evaluate(*typeidExpr, allowSideEffects);
+    if (const auto *callExpr = dynamic_cast<const ResolvedCallExpr *>(&expr)) {
+        return evaluate_call_expr(*callExpr, allowSideEffects);
     }
-    if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
-        return evaluate(*typeExpr, allowSideEffects);
-    }
-    if (const auto *hasMethodExpr = dynamic_cast<const ResolvedHasMethodExpr *>(&expr)) {
-        return hasMethodExpr->get_constant_value();
-    }
-    return std::nullopt;
+    return expr.get_constant_value();
 }
 
-std::optional<int> ConstantExpressionEvaluator::evaluate(const ResolvedTypeidExpr &expr,
-                                                         [[maybe_unused]] bool allowSideEffects) {
-    return evaluate_type(*expr.typeidExpr->type);
-}
-
-std::optional<int> ConstantExpressionEvaluator::evaluate([[maybe_unused]] const ResolvedTypeExpr &expr,
-                                                         [[maybe_unused]] bool allowSideEffects) {
-    return std::nullopt;
-    // return evaluate_type(*expr.resolvedType);
+std::optional<int> ConstantExpressionEvaluator::evaluate_call_expr(const ResolvedCallExpr &expr,
+                                                                   [[maybe_unused]] bool allowSideEffects) {
+    if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(expr.callee.get())) {
+        if (auto func = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&declRef->decl)) {
+            if (func->identifier == "@hasMethod") {
+                return expr.get_constant_value();
+            } else if (func->identifier == "@typeid") {
+                auto &typeArg = expr.arguments[0];
+                return evaluate_type(*typeArg->type);
+            } else if (func->identifier == "@sizeof") {
+                auto &typeArg = expr.arguments[0];
+                return std::max(CodegenUtils::typeBitSize(*typeArg->type) / 8, 1);
+            } else if (func->identifier == "@simdSize") {
+                auto &typeArg = expr.arguments[0];
+                int bit_simd_size = CodegenUtils::target_simd_size();
+                int bit_type_size = CodegenUtils::typeBitSize(*typeArg->type);
+                return bit_simd_size / bit_type_size;
+            }
+        }
+    }
+    return expr.get_constant_value();
 }
 
 std::optional<int> ConstantExpressionEvaluator::evaluate_type(const ResolvedType &type) {

@@ -73,6 +73,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_true);
         CASE_TYPE(kw_false);
         CASE_TYPE(kw_null);
+        CASE_TYPE(kw_this);
+        CASE_TYPE(kw_simd);
         CASE_TYPE(kw_if);
         CASE_TYPE(kw_else);
         CASE_TYPE(kw_let);
@@ -99,19 +101,10 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_break);
         CASE_TYPE(kw_continue);
         // CASE_TYPE(kw_static);
-        CASE_TYPE(kw_sizeof);
-        CASE_TYPE(kw_typeid);
-        CASE_TYPE(kw_typeinfo);
-        CASE_TYPE(kw_hasmethod);
-        CASE_TYPE(kw_simd);
-        CASE_TYPE(kw_simdsize);
-        CASE_TYPE(kw_simdsplat);
-        CASE_TYPE(kw_simdiota);
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
         CASE_TYPE(caret);
         CASE_TYPE(unknown);
-        CASE_TYPE(kw_this);
         CASE_TYPE(eof);
     }
     return os;

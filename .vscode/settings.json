@@ -80,7 +80,7 @@
     "clangd.arguments": [
         "--compile-commands-dir=build/",
         "-header-insertion=never",
-        "-j=2",
+        "-j=4",
         "--background-index-priority=low",
         "--malloc-trim",
         "--pch-storage=disk"

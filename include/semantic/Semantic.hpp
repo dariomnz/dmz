@@ -78,8 +78,10 @@ class Sema {
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_vectorBuiltins;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
-        {"@call", nullptr},         {"@atomicLoad", nullptr},   {"@atomicStore", nullptr},
-        {"@atomicCmpExW", nullptr}, {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},
+        {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},
+        {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},      {"@typeid", nullptr},
+        {"@typeinfo", nullptr},     {"@hasMethod", nullptr},  {"@simdSize", nullptr},    {"@simdSplat", nullptr},
+        {"@simdIota", nullptr},     {"@errorTrace", nullptr},
     };
 
    public:
@@ -184,6 +186,10 @@ class Sema {
     bool ensure_struct_bodies_resolved(ResolvedStructDecl &st);
     bool ensure_fully_resolved(ResolvedDecl &decl);
 
+   public:
+    bool ensure_fully_resolved(ResolvedType &decl);
+
+   private:
     bool resolve_module_body(ResolvedModuleDecl &moduleDecl);
     bool resolve_pending_body();
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
@@ -191,7 +197,8 @@ class Sema {
     ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     // void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
-    ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const std::string &fnName);
+    ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const DeclRefExpr &declRefExpr,
+                                                                 const std::string &fnName);
     ptr<ResolvedTypeFunction> resolve_builtin_function_expr(ResolvedExpr &callee,
                                                             ResolvedBuiltinFunctionDecl &resolvedCallee,
                                                             std::vector<ptr<ResolvedExpr>> &resolvedArguments);
@@ -199,17 +206,9 @@ class Sema {
     void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
-    ptr<ResolvedSizeofExpr> resolve_sizeof_expr(const SizeofExpr &sizeofExpr);
-    ptr<ResolvedTypeidExpr> resolve_typeid_expr(const TypeidExpr &typeidExpr);
 
-    bool already_import_types = false;
-    ptr<ResolvedTypeinfoExpr> resolve_typeinfo_expr(const TypeinfoExpr &typeinfoExpr);
-    ptr<ResolvedHasMethodExpr> resolve_has_method_expr(const HasMethodExpr &hasMethodExpr);
     ResolvedBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr, const ResolvedExpr &resolvedBase,
                                                       const ResolvedTypeSimd &vecType);
-    ptr<ResolvedSimdSizeExpr> resolve_simd_size_expr(const SimdSizeExpr &simdSizeExpr);
-    ptr<ResolvedSimdSplatExpr> resolve_simdsplat_expr(const SimdSplatExpr &simdSplatExpr);
-    ptr<ResolvedSimdIotaExpr> resolve_simdiota_expr(const SimdIotaExpr &simdiotaExpr);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
     bool perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };

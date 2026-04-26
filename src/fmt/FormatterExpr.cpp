@@ -54,20 +54,6 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_struct_instantiation_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ArrayInstantiationExpr*>(&expr)) {
         node = fmt_array_instantiation_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const SizeofExpr*>(&expr)) {
-        node = fmt_sizeof_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const TypeidExpr*>(&expr)) {
-        node = fmt_typeid_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const TypeinfoExpr*>(&expr)) {
-        node = fmt_typeinfo_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const HasMethodExpr*>(&expr)) {
-        node = fmt_hasmethod_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const SimdSizeExpr*>(&expr)) {
-        node = fmt_simdsize_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const SimdSplatExpr*>(&expr)) {
-        node = fmt_simdsplat_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const SimdIotaExpr*>(&expr)) {
-        node = fmt_simdiota_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ArrayAtExpr*>(&expr)) {
         node = fmt_array_at_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const RefPtrExpr*>(&expr)) {
@@ -235,66 +221,6 @@ ptr<Node> Formatter::fmt_array_instantiation_expr(const ArrayInstantiationExpr& 
     }
 
     return build.comma_separated_list("{", "}", std::move(arguments), expr.haveTrailingComma);
-}
-
-ptr<Node> Formatter::fmt_sizeof_expr(const SizeofExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@sizeof"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.sizeofType));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_typeid_expr(const TypeidExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@typeid"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.typeidExpr));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_typeinfo_expr(const TypeinfoExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@typeinfo"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.typeinfoExpr));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_hasmethod_expr(const HasMethodExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@hasMethod"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.structType));
-    ret->nodes.emplace_back(makePtr<Text>(", "));
-    ret->nodes.emplace_back(build.string(expr.methodName));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_simdsize_expr(const SimdSizeExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@simdSize"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.simdType));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_simdsplat_expr(const SimdSplatExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(makePtr<Text>("@simdSplat"));
-    ret->nodes.emplace_back(makePtr<Text>("("));
-    ret->nodes.emplace_back(fmt_expr(*expr.value));
-    ret->nodes.emplace_back(makePtr<Text>(")"));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_simdiota_expr([[maybe_unused]] const SimdIotaExpr& expr) {
-    return makePtr<Text>("@simdIota()");
 }
 
 ptr<Node> Formatter::fmt_array_at_expr(const ArrayAtExpr& expr) {

@@ -16,41 +16,47 @@ fn main() -> void {
     printf("simdSize u8 %d\n", size_u8);
     printf("simdSize *void %d\n", size_void_ptr);
 }
-// CHECK: ResolvedFunctionDecl main fn()->void
-// CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_bool
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 256
-// CHECK-NEXT:           ResolvedTypeExpr:bool
-// CHECK-NEXT:             ResolvedTypeBool bool
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_i32
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 8
-// CHECK-NEXT:           ResolvedTypeExpr:i32
-// CHECK-NEXT:             ResolvedTypeNumber i32
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_i64
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 4
-// CHECK-NEXT:           ResolvedTypeExpr:i64
-// CHECK-NEXT:             ResolvedTypeNumber i64
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_f16
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 16
-// CHECK-NEXT:           ResolvedTypeExpr:f16
-// CHECK-NEXT:             ResolvedTypeNumber f16
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_u8
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 32
-// CHECK-NEXT:           ResolvedTypeExpr:u8
-// CHECK-NEXT:             ResolvedTypeNumber u8
-// CHECK-NEXT:     ResolvedDeclStmt usize
-// CHECK-NEXT:       ResolvedVarDecl:usize size_void_ptr
-// CHECK-NEXT:         ResolvedSimdSizeExpr:usize
-// CHECK-NEXT:         | value: 4
-// CHECK-NEXT:           ResolvedTypeExpr:*void
-// CHECK-NEXT:             ResolvedTypePointer *void
+// CHECK:   ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_bool
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 256
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:bool
+// CHECK-NEXT:               ResolvedTypeBool bool
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_i32
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 8
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:i32
+// CHECK-NEXT:               ResolvedTypeNumber i32
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_i64
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 4
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:i64
+// CHECK-NEXT:               ResolvedTypeNumber i64
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_f16
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 16
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:f16
+// CHECK-NEXT:               ResolvedTypeNumber f16
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_u8
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 32
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:u8
+// CHECK-NEXT:               ResolvedTypeNumber u8
+// CHECK-NEXT:       ResolvedDeclStmt usize
+// CHECK-NEXT:         ResolvedVarDecl:usize size_void_ptr
+// CHECK-NEXT:           ResolvedCallExpr:usize
+// CHECK-NEXT:           | value: 4
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize @simdSize
+// CHECK-NEXT:             ResolvedTypeExpr:*void
+// CHECK-NEXT:               ResolvedTypePointer *void

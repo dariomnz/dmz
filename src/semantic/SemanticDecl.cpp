@@ -1109,6 +1109,18 @@ bool Sema::ensure_fully_resolved(ResolvedDecl &decl) {
     return debug_ret(success);
 }
 
+bool Sema::ensure_fully_resolved(ResolvedType &type) {
+    debug_func(type.location << " " << type.className() << " " << type.to_str());
+
+    if (auto structDecl = dynamic_cast<ResolvedTypeStructDecl *>(&type)) {
+        return ensure_fully_resolved(*structDecl->decl);
+    } else if (auto strcut = dynamic_cast<ResolvedTypeStruct *>(&type)) {
+        return ensure_fully_resolved(*strcut->decl);
+    }
+
+    return debug_ret(true);
+}
+
 bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     debug_func("resolve_module_body for " << moduleDecl.module_path);
     bool error = false;

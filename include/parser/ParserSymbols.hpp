@@ -123,7 +123,8 @@ struct TypeError : public Type {
 
 struct TypeOptional : public Type {
     ptr<Expr> optionalType;
-    TypeOptional(SourceLocation location, ptr<Expr> optionalType) : Type(location), optionalType(std::move(optionalType)) {}
+    TypeOptional(SourceLocation location, ptr<Expr> optionalType)
+        : Type(location), optionalType(std::move(optionalType)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -425,71 +426,6 @@ struct RangeExpr : public Expr {
     ptr<Expr> endExpr;
     RangeExpr(SourceLocation location, ptr<Expr> startExpr, ptr<Expr> endExpr)
         : Expr(location), startExpr(std::move(startExpr)), endExpr(std::move(endExpr)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct SizeofExpr : public Expr {
-    ptr<Expr> sizeofType;
-    SizeofExpr(SourceLocation location, ptr<Expr> sizeofType) : Expr(location), sizeofType(std::move(sizeofType)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct TypeidExpr : public Expr {
-    ptr<Expr> typeidExpr;
-    TypeidExpr(SourceLocation location, ptr<Expr> typeidExpr) : Expr(location), typeidExpr(std::move(typeidExpr)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct TypeinfoExpr : public Expr {
-    ptr<Expr> typeinfoExpr;
-    TypeinfoExpr(SourceLocation location, ptr<Expr> typeinfoExpr)
-        : Expr(location), typeinfoExpr(std::move(typeinfoExpr)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct HasMethodExpr : public Expr {
-    ptr<Expr> structType;
-    std::string methodName;
-    HasMethodExpr(SourceLocation location, ptr<Expr> structType, std::string methodName)
-        : Expr(location), structType(std::move(structType)), methodName(std::move(methodName)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct SimdSizeExpr : public Expr {
-    ptr<Expr> simdType;
-    SimdSizeExpr(SourceLocation location, ptr<Expr> simdType) : Expr(location), simdType(std::move(simdType)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct SimdSplatExpr : public Expr {
-    ptr<Expr> value;
-    SimdSplatExpr(SourceLocation location, ptr<Expr> value) : Expr(location), value(std::move(value)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct SimdIotaExpr : public Expr {
-    SimdIotaExpr(SourceLocation location) : Expr(location) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -957,8 +893,7 @@ struct ImportExpr : public Expr {
 
 struct TestDecl : public FunctionDecl {
     TestDecl(SourceLocation location, std::string_view identifier, ptr<Block> body)
-        : FunctionDecl(location, true, identifier,
-                       makePtr<TypeOptional>(location, makePtr<TypeVoid>(location)), {},
+        : FunctionDecl(location, true, identifier, makePtr<TypeOptional>(location, makePtr<TypeVoid>(location)), {},
                        std::move(body)) {}
 
     void dump(size_t level = 0) const override;

@@ -21,8 +21,11 @@ class Codegen {
 
     ptr<llvm::LLVMContext> m_context;
     llvm::IRBuilder<> m_builder;
+
+   public:
     ptr<llvm::Module> m_module;
 
+   private:
     const ResolvedModuleDecl *m_currentModule = nullptr;
     std::unordered_map<const ResolvedDecl *, llvm::Value *> m_declarations;
     std::unordered_map<std::string, llvm::GlobalVariable *> m_globalStrings;
@@ -153,15 +156,10 @@ class Codegen {
     llvm::Value *generate_switch_stmt(const ResolvedSwitchStmt &stmt);
     void generate_global_var_decl(const ResolvedDeclStmt &stmt);
     void generate_pending_decls();
-    llvm::Value *generate_sizeof_expr(const ResolvedSizeofExpr &sizeofExpr);
-    llvm::Value *generate_typeid_expr(const ResolvedTypeidExpr &typeidExpr);
-    llvm::Value *generate_typeinfo_expr(const ResolvedTypeinfoExpr &typeinfoExpr);
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
     llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
                                        const ResolvedTypeSimd &vecType);
-    llvm::Value *generate_simdsplat_expr(const ResolvedSimdSplatExpr &expr);
-    llvm::Value *generate_simdiota_expr(const ResolvedSimdIotaExpr &expr);
     void generate_error_trace_push(const SourceLocation &location);
     llvm::Value *generate_error_trace_get_idx();
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
@@ -173,6 +171,13 @@ class Codegen {
     llvm::Value *generate_builtin_atomicStore(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_atomicCmpEx(const ResolvedCallExpr &call, bool isWeak);
     llvm::Value *generate_builtin_atomicRmw(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_sizeof(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_typeid(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_typeinfo(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_hasmethod(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdsize(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdsplat(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdiota(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

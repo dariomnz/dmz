@@ -165,13 +165,6 @@ class Parser {
     ptr<Comment> parse_comment();
     ptr<EmptyLine> parse_empty_line();
     ptr<TestDecl> parse_test_decl();
-    ptr<SizeofExpr> parse_sizeof_expr();
-    ptr<TypeidExpr> parse_typeid_expr();
-    ptr<TypeinfoExpr> parse_typeinfo_expr();
-    ptr<HasMethodExpr> parse_hasmethod_expr();
     ptr<TypeSimd> parse_simd_type();
-    ptr<SimdSizeExpr> parse_simdsize_expr();
-    ptr<SimdSplatExpr> parse_simdsplat_expr();
-    ptr<SimdIotaExpr> parse_simdiota_expr();
 };
 }  // namespace DMZ

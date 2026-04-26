@@ -163,27 +163,6 @@ ptr<Expr> Parser::parse_primary() {
                 return parse_error_group_expr_decl();
             }
         }
-        if (m_nextToken.type == TokenType::kw_sizeof) {
-            return parse_sizeof_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_typeid) {
-            return parse_typeid_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_typeinfo) {
-            return parse_typeinfo_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_hasmethod) {
-            return parse_hasmethod_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_simdsize) {
-            return parse_simdsize_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_simdsplat) {
-            return parse_simdsplat_expr();
-        }
-        if (m_nextToken.type == TokenType::kw_simdiota) {
-            return parse_simdiota_expr();
-        }
     }
     if (restrictions & OnlyTypeExpr) {
         return report(location, "expected type expression");
@@ -339,10 +318,8 @@ ptr<Expr> Parser::parse_prefix_expr() {
 
     varOrReturn(rhs, parse_prefix_expr());
 
-    if (restrictions & OnlyTypeExpr) {
-        if (tok.type == TokenType::asterisk) {
-            return makePtr<TypePointer>(tok.loc, std::move(rhs));
-        }
+    if (tok.type == TokenType::asterisk) {
+        return makePtr<TypePointer>(tok.loc, std::move(rhs));
     }
     switch (tok.type) {
         case TokenType::amp:
@@ -477,81 +454,6 @@ ptr<ImportExpr> Parser::parse_import_expr() {
     return makePtr<ImportExpr>(location, identifier);
 }
 
-ptr<SizeofExpr> Parser::parse_sizeof_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_sizeof, "expected @sizeof");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @sizeof
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(type, parse_type());
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<SizeofExpr>(location, std::move(type));
-}
-
-ptr<TypeidExpr> Parser::parse_typeid_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_typeid, "expected @typeid");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @typeid
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(expr, parse_expr());
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<TypeidExpr>(location, std::move(expr));
-}
-
-ptr<TypeinfoExpr> Parser::parse_typeinfo_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_typeinfo, "expected @typeinfo");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @typeinfo
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(type, parse_type());
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<TypeinfoExpr>(location, std::move(type));
-}
-
-ptr<HasMethodExpr> Parser::parse_hasmethod_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_hasmethod, "expected @hasMethod");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @hasMethod
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(expr, parse_expr());
-
-    matchOrReturn(TokenType::comma, "expected ','");
-    eat_next_token();  // eat ,
-
-    matchOrReturn(TokenType::lit_string, "expected string literal for method name");
-    varOrReturn(methodNameOpt, str_from_source(m_nextToken.str.substr(1, m_nextToken.str.size() - 2)));
-    auto methodName = methodNameOpt.value();
-    eat_next_token();  // eat method name
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<HasMethodExpr>(location, std::move(expr), std::move(methodName));
-}
 ptr<TypeSimd> Parser::parse_simd_type() {
     debug_func("");
     SourceLocation location = m_nextToken.loc;
@@ -574,52 +476,4 @@ ptr<TypeSimd> Parser::parse_simd_type() {
     return makePtr<TypeSimd>(location, std::move(type), std::move(size));
 }
 
-ptr<SimdSizeExpr> Parser::parse_simdsize_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_simdsize, "expected @simdsize");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @simdsize
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(type, parse_type());
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<SimdSizeExpr>(location, std::move(type));
-}
-
-ptr<SimdSplatExpr> Parser::parse_simdsplat_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_simdsplat, "expected @simdSplat");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @simdSplat
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    varOrReturn(value, parse_expr());
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<SimdSplatExpr>(location, std::move(value));
-}
-
-ptr<SimdIotaExpr> Parser::parse_simdiota_expr() {
-    debug_func("");
-    matchOrReturn(TokenType::kw_simdiota, "expected @simdIota");
-    auto location = m_nextToken.loc;
-    eat_next_token();  // eat @simdIota
-
-    matchOrReturn(TokenType::par_l, "expected '('");
-    eat_next_token();  // eat (
-
-    matchOrReturn(TokenType::par_r, "expected ')'");
-    eat_next_token();  // eat )
-
-    return makePtr<SimdIotaExpr>(location);
-}
 }  // namespace DMZ

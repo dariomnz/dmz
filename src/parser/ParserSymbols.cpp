@@ -174,48 +174,6 @@ void RangeExpr::dump(size_t level) const {
 
 std::string RangeExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
-void SizeofExpr::dump(size_t level) const { std::cerr << indent(level) << "Sizeof " << sizeofType->to_str() << "\n"; }
-
-std::string SizeofExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void TypeidExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "Typeid\n";
-    typeidExpr->dump(level + 1);
-}
-
-std::string TypeidExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void TypeinfoExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "Typeinfo\n";
-    typeinfoExpr->dump(level + 1);
-}
-
-std::string TypeinfoExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void HasMethodExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "HasMethod " << methodName << "\n";
-    structType->dump(level + 1);
-}
-
-std::string HasMethodExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void SimdSizeExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "SimdSizeExpr\n";
-    simdType->dump(level + 1);
-}
-
-std::string SimdSizeExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void SimdSplatExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "SimdSplatExpr\n";
-    value->dump(level + 1);
-}
-
-std::string SimdSplatExpr::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void SimdIotaExpr::dump(size_t level) const { std::cerr << indent(level) << "SimdIotaExpr\n"; }
-
-std::string SimdIotaExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void DeclRefExpr::dump(size_t level) const { std::cerr << indent(level) << "DeclRefExpr " << identifier << '\n'; }
 
