@@ -221,6 +221,57 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@simdLoad") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "ptr", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
+    } else if (fnName == "@simdStore") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "ptr", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "val", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeVoid>(loc));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
+    } else if (fnName == "@simdSelect") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "a", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "b", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "mask", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
+    } else if (fnName == "@simdReduce") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "val", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "op", makePtr<ResolvedTypeExpr>(loc, makePtr<ResolvedTypeEnum>(loc, nullptr)), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeGeneric>(loc, nullptr));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -578,6 +629,108 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
             return report(call.location, "expected const value for test name");
         }
         return castPtr<ResolvedTypeFunction>(ret->clone());
+    } else if (resolvedCallee.identifier == "@simdLoad") {
+        if (resolvedArguments.empty()) return report(call.location, "expected argument for @simdLoad");
+        auto &ptrParam = resolvedArguments[0];
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(ptrParam->type.get());
+        if (!ptrType) {
+            return report(ptrParam->location, "expected pointer type for @simdLoad");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(ptrParam->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
+    } else if (resolvedCallee.identifier == "@simdStore") {
+        if (resolvedArguments.size() != 2) return report(call.location, "expected 2 arguments for @simdStore");
+        auto &valParam = resolvedArguments[0];
+        auto &ptrParam = resolvedArguments[1];
+        auto *simdType = dynamic_cast<const ResolvedTypeSimd *>(valParam->type.get());
+        if (!simdType) return report(valParam->location, "expected SIMD type for @simdStore");
+
+        auto *ptrType = dynamic_cast<const ResolvedTypePointer *>(ptrParam->type.get());
+        if (!ptrType) return report(ptrParam->location, "expected pointer type for @simdStore");
+
+        if (!perform_implicit_cast(ptrParam, *makePtr<ResolvedTypePointer>(call.location, simdType->simdType->clone())))
+            return nullptr;
+
+        call.type = makePtr<ResolvedTypeVoid>(call.location);
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valParam->type->clone());
+        paramsTypes.emplace_back(ptrParam->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
+    } else if (resolvedCallee.identifier == "@simdSelect") {
+        if (resolvedArguments.size() != 3) return report(call.location, "expected 3 arguments for @simdSelect");
+        auto &aParam = resolvedArguments[0];
+        auto &bParam = resolvedArguments[1];
+        auto &maskParam = resolvedArguments[2];
+
+        auto *simdType = dynamic_cast<const ResolvedTypeSimd *>(aParam->type.get());
+        if (!simdType) return report(aParam->location, "expected SIMD type for @simdSelect");
+
+        if (!perform_implicit_cast(bParam, *simdType)) return nullptr;
+
+        auto maskType = makePtr<ResolvedTypeSimd>(call.location, makePtr<ResolvedTypeBool>(call.location), nullptr,
+                                                  simdType->simdSize);
+        if (!perform_implicit_cast(maskParam, *maskType)) return nullptr;
+
+        call.type = simdType->clone();
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(aParam->type->clone());
+        paramsTypes.emplace_back(bParam->type->clone());
+        paramsTypes.emplace_back(maskParam->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
+    } else if (resolvedCallee.identifier == "@simdReduce") {
+        if (resolvedArguments.size() != 2) return report(call.location, "expected 2 arguments for @simdReduce");
+        auto &valParam = resolvedArguments[0];
+        auto &opParam = resolvedArguments[1];
+
+        auto *simdType = dynamic_cast<const ResolvedTypeSimd *>(valParam->type.get());
+        if (!simdType) return report(valParam->location, "expected SIMD type for @simdReduce");
+
+        ImportExpr simdImportExpr(SourceLocation::builtin(), "simd");
+        auto simd_import_expr = resolve_import_expr(simdImportExpr);
+        if (!simd_import_expr) return {};
+
+        auto simdReduceKindDecl = lookup_in_module(call.location, simd_import_expr->moduleDecl, "SimdReduceKind");
+        if (simdReduceKindDecl) {
+            if (auto enumDecl = dynamic_cast<ResolvedTypeEnumDecl *>(simdReduceKindDecl->type.get())) {
+                if (!perform_implicit_cast(opParam, *makePtr<ResolvedTypeEnum>(call.location, enumDecl->enumDecl()))) {
+                    return nullptr;
+                }
+            }
+        } else {
+            return report(opParam->location, "SimdReduceKind not found in std/simd.dmz");
+        }
+
+        auto elementType = simdType->simdType.get();
+        auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
+        if (!numType && elementType->kind != ResolvedTypeKind::Generic) {
+            return report(call.location, "reduction operations only supported for numeric vector elements");
+        }
+
+        std::string opStr = "unknown";
+        if (auto autoMember = dynamic_cast<ResolvedAutoMemberExpr *>(opParam.get())) {
+            opStr = autoMember->field;
+        }
+
+        if (opStr == "Sub") {
+            return report(call.location, "Sub reduction is not supported; no vector subtract-reduce in hardware");
+        }
+        if (opStr == "And" || opStr == "Or" || opStr == "Xor") {
+            if (numType && numType->numberKind == ResolvedNumberKind::Float) {
+                return report(call.location, "bitwise reduction only supported for integer vectors");
+            }
+        }
+
+        call.type = simdType->simdType->clone();
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valParam->type->clone());
+        paramsTypes.emplace_back(opParam->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
     }
     return report(call.location, "unknown builtin function");
 }

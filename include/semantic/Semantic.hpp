@@ -75,14 +75,14 @@ class Sema {
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
     std::unordered_map<const StructDecl *, ResolvedStructDecl *> m_resolvedStructs;
-    std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_vectorBuiltins;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
         {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},
         {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},      {"@typeid", nullptr},
         {"@typeinfo", nullptr},     {"@hasMethod", nullptr},  {"@simdSize", nullptr},    {"@simdSplat", nullptr},
         {"@simdIota", nullptr},     {"@errorTrace", nullptr}, {"@testNum", nullptr},     {"@testRun", nullptr},
-        {"@testName", nullptr},
+        {"@testName", nullptr},     {"@simdLoad", nullptr},   {"@simdStore", nullptr},   {"@simdSelect", nullptr},
+        {"@simdReduce", nullptr},
     };
 
    public:
@@ -208,8 +208,6 @@ class Sema {
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
 
-    ResolvedBuiltinFunctionDecl *resolve_simd_buildin(const MemberExpr &memberExpr, const ResolvedExpr &resolvedBase,
-                                                      const ResolvedTypeSimd &vecType);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
     bool perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };

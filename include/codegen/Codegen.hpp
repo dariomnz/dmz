@@ -158,8 +158,6 @@ class Codegen {
     void generate_pending_decls();
     llvm::Value *generate_slice_expr(const ResolvedType &sliceType, const ResolvedExpr &from,
                                      const ResolvedRangeExpr &range);
-    llvm::Value *generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
-                                       const ResolvedTypeSimd &vecType);
     void generate_error_trace_push(const SourceLocation &location);
     llvm::Value *generate_error_trace_get_idx();
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
@@ -184,6 +182,10 @@ class Codegen {
     llvm::Value *generate_builtin_testnum(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_testname(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_testrun(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdLoad(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdStore(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdSelect(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdReduce(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

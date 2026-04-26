@@ -104,12 +104,12 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     let i: usize = offset;
     while (i <= slice.len - simd_len) {
         const slice_ptr = &slice[i];
-        const data = @simd<T, simd_len>.load(slice_ptr);
+        const data: @simd<T, simd_len> = @simdLoad(slice_ptr);
         const match_mask = data == scalar_vec;
 
-        if (match_mask.reduceOr()) {
-            const matches = index_vec.select(@simdSplat(simd_len), match_mask);
-            return i + matches.reduceMin();
+        if (@simdReduce(match_mask, .Or)) {
+            const matches: @simd<u16, simd_len> = @simdSelect(index_vec, @simdSplat(simd_len), match_mask);
+            return i + @simdReduce(matches, .Min);
         }
         i += simd_len;
     }
@@ -160,8 +160,8 @@ fn memcpySIMD<T>(dest: []T, src: []T) -> void {
         const src_ptr = &src[i];
         const dest_ptr = &dest[i];
 
-        const data = @simd<T, simd_len>.load(src_ptr);
-        data.store(dest_ptr);
+        const data: @simd<T, simd_len> = @simdLoad(src_ptr);
+        @simdStore(data, dest_ptr);
 
         i += simd_len;
     }
@@ -207,7 +207,7 @@ fn memsetSIMD<T>(dest: []T, value: T) -> void {
     let i: usize = offset;
     while (i <= len - simd_len) {
         const dest_ptr = &dest[i];
-        value_vec.store(dest_ptr);
+        @simdStore(value_vec, dest_ptr);
         i += simd_len;
     }
 

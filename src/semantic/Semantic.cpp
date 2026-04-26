@@ -819,6 +819,24 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                             return false;
                         }
                     }
+                } else if (decl->identifier == "@simdLoad") {
+                    // ptrParam is a pointer to data to load
+                    // use it to infer the type of the loaded data
+                    auto &ptrParam = callExpr->arguments[0];
+                    ptr<ResolvedType> baseType = nullptr;
+                    if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+                        callExpr->type = simdType->clone();
+                        baseType = simdType->simdType->clone();
+                    }
+
+                    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(ptrParam->type.get())) {
+                        auto &simdType = ptrType->pointerType;
+                        if (!baseType->equal(*simdType)) {
+                            report(callExpr->location,
+                                   "cannot load '" + ptrType->to_str() + "' into '" + expectedType.to_str() + "'");
+                            return false;
+                        }
+                    }
                 }
             }
         }

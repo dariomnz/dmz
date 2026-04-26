@@ -4,10 +4,10 @@ extern fn printf(fmt: *u8, ...) -> void;
 
 fn main() -> void {
     let arr: [4]i32 = {1, 2, 3, 4};
-    let v: @simd<i32, 4> = @simd<i32, 4>.load(&arr[0]);
+    let v: @simd<i32, 4> = @simdLoad(&arr[0]);
 
     let out: [4]i32 = {0, 0, 0, 0};
-    v.store(&out[0]);
+    @simdStore(v,&out[0]);
 
     printf("v = %d %d %d %d\n", v[0], v[1], v[2], v[3]);
     printf("out = %d %d %d %d\n", out[0], out[1], out[2], out[3]);

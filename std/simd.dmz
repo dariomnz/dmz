@@ -1,0 +1,10 @@
+pub const SimdReduceKind = enum {
+    Add,
+    Sub,
+    Mul,
+    Min,
+    Max,
+    And,
+    Or,
+    Xor,
+};

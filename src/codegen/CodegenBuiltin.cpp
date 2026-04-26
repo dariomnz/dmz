@@ -48,6 +48,14 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_testname(call);
     } else if (builtin.identifier == "@testRun") {
         return generate_builtin_testrun(call);
+    } else if (builtin.identifier == "@simdLoad") {
+        return generate_builtin_simdLoad(call);
+    } else if (builtin.identifier == "@simdStore") {
+        return generate_builtin_simdStore(call);
+    } else if (builtin.identifier == "@simdSelect") {
+        return generate_builtin_simdSelect(call);
+    } else if (builtin.identifier == "@simdReduce") {
+        return generate_builtin_simdReduce(call);
     } else if (builtin.identifier == "@errorTrace") {
         return generate_builtin_error_trace();
     }
@@ -446,6 +454,91 @@ llvm::Value *Codegen::generate_builtin_testrun(const ResolvedCallExpr &callExpr)
         return generate_call_expr(call);
     } else {
         dmz_unreachable(callExpr.location, "callExpr not constant value this should not happend");
+    }
+}
+llvm::Value *Codegen::generate_builtin_simdLoad(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "expected argument");
+    llvm::Value *ptr = generate_expr(*call.arguments[0]);
+    auto *simdType = dynamic_cast<const ResolvedTypeSimd *>(call.type.get());
+    llvm::Type *llvmSimdType = generate_type(*simdType);
+    auto load = m_builder.CreateLoad(llvmSimdType, ptr, "simd.load");
+    load->setAlignment(llvm::Align(1));
+    return load;
+}
+
+llvm::Value *Codegen::generate_builtin_simdStore(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 2) dmz_unreachable(call.location, "expected 2 arguments");
+    llvm::Value *destPtr = generate_expr(*call.arguments[1]);
+    llvm::Value *simdVal = generate_expr(*call.arguments[0]);
+    auto store = m_builder.CreateStore(simdVal, destPtr);
+    store->setAlignment(llvm::Align(1));
+    return nullptr;
+}
+
+llvm::Value *Codegen::generate_builtin_simdSelect(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 3) dmz_unreachable(call.location, "expected 3 arguments");
+    llvm::Value *vecA = generate_expr(*call.arguments[0]);
+    llvm::Value *vecB = generate_expr(*call.arguments[1]);
+    llvm::Value *mask = generate_expr(*call.arguments[2]);
+    return m_builder.CreateSelect(mask, vecA, vecB);
+}
+
+llvm::Value *Codegen::generate_builtin_simdReduce(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 2) dmz_unreachable(call.location, "expected 2 arguments");
+    llvm::Value *simdVal = generate_expr(*call.arguments[0]);
+    int opVal = call.arguments[1]->get_constant_value().value_or(-1);
+    if (opVal < 0) {
+        dmz_unreachable(call.location, "@simdReduce: operator is not a constant");
+    }
+
+    auto simdType = dynamic_cast<const ResolvedTypeSimd *>(call.arguments[0]->type.get());
+    if (!simdType) dmz_unreachable(call.location, "@simdReduce: element type is not a simd");
+    auto elementType = simdType->simdType.get();
+    auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
+    if (!numType) dmz_unreachable(call.location, "@simdReduce: element type is not a number");
+
+    bool isFloat = numType->numberKind == ResolvedNumberKind::Float;
+    bool isSigned = numType->numberKind == ResolvedNumberKind::Int;
+
+    switch (opVal) {
+        case 0:  // .Add
+            if (isFloat) {
+                llvm::Type *scalarTy = generate_type(*numType);
+                return m_builder.CreateFAddReduce(llvm::ConstantFP::get(scalarTy, 0.0), simdVal);
+            } else {
+                return m_builder.CreateAddReduce(simdVal);
+            }
+        case 2:  // .Mul
+            if (isFloat) {
+                llvm::Type *scalarTy = generate_type(*numType);
+                return m_builder.CreateFMulReduce(llvm::ConstantFP::get(scalarTy, 1.0), simdVal);
+            } else {
+                return m_builder.CreateMulReduce(simdVal);
+            }
+        case 3:  // .Min
+            if (isFloat) {
+                return m_builder.CreateFPMinReduce(simdVal);
+            } else {
+                return m_builder.CreateIntMinReduce(simdVal, isSigned);
+            }
+        case 4:  // .Max
+            if (isFloat) {
+                return m_builder.CreateFPMaxReduce(simdVal);
+            } else {
+                return m_builder.CreateIntMaxReduce(simdVal, isSigned);
+            }
+        case 5:  // .And
+            return m_builder.CreateAndReduce(simdVal);
+        case 6:  // .Or
+            return m_builder.CreateOrReduce(simdVal);
+        case 7:  // .Xor
+            return m_builder.CreateXorReduce(simdVal);
+        default:
+            dmz_unreachable(call.location, "unsupported simd reduction operator");
     }
 }
 }  // namespace DMZ

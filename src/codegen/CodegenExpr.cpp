@@ -119,16 +119,6 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
 
 llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     debug_func("");
-    if (auto memberExpr = dynamic_cast<const ResolvedMemberExpr *>(call.callee.get())) {
-        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(memberExpr->base->type.get())) {
-            auto &name = memberExpr->member.identifier;
-            if (name == "load" || name == "store" || name == "select" || name == "reduceAdd" || name == "reduceMul" ||
-                name == "reduceAnd" || name == "reduceOr" || name == "reduceXor" || name == "reduceMin" ||
-                name == "reduceMax") {
-                return generate_simd_builtin(call, *memberExpr, *simdType);
-            }
-        }
-    }
     if (auto *declRef = dynamic_cast<const ResolvedDeclRefExpr *>(call.callee.get())) {
         if (auto *builtin = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(&declRef->decl)) {
             return generate_builtin_function(*builtin, call);
@@ -993,81 +983,5 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
     store_value(size, sliceSize, *range.startExpr->type, sizeType);
 
     return tmpSlice;
-}
-
-llvm::Value *Codegen::generate_simd_builtin(const ResolvedCallExpr &call, const ResolvedMemberExpr &memberExpr,
-                                            const ResolvedTypeSimd &simdType) {
-    debug_func(memberExpr.location);
-    auto name = memberExpr.member.identifier;
-    if (name == "load") {
-        // load(ptr)
-        llvm::Value *ptr = generate_expr(*call.arguments[0]);
-        llvm::Type *llvmSimdType = generate_type(simdType);
-        auto load = m_builder.CreateLoad(llvmSimdType, ptr, "simd.load");
-        load->setAlignment(llvm::Align(1));
-        return load;
-    } else if (name == "store") {
-        // store(self_ptr, ptr)
-        // arguments[0] is self_ptr (from resolve_call_expr), arguments[1] is dest ptr
-        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
-        llvm::Value *destPtr = generate_expr(*call.arguments[1]);
-        llvm::Value *simdVal = load_value(selfPtr, simdType);
-        auto store = m_builder.CreateStore(simdVal, destPtr);
-        store->setAlignment(llvm::Align(1));
-        return store;
-    } else if (name == "select") {
-        // select(self_ptr, vec_b, mask)
-        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
-        llvm::Value *vecB = generate_expr(*call.arguments[1]);
-        llvm::Value *mask = generate_expr(*call.arguments[2]);
-        llvm::Value *simdVal = load_value(selfPtr, simdType);
-        return m_builder.CreateSelect(mask, simdVal, vecB);
-    } else if (name == "reduceAdd" || name == "reduceMul" || name == "reduceMin" || name == "reduceMax" ||
-               name == "reduceAnd" || name == "reduceOr" || name == "reduceXor") {
-        // reduce(self_ptr)
-        llvm::Value *selfPtr = generate_expr(*call.arguments[0]);
-        llvm::Value *simdVal = load_value(selfPtr, simdType);
-
-        auto elementType = simdType.simdType.get();
-        auto numType = dynamic_cast<const ResolvedTypeNumber *>(elementType);
-        bool isFloat = numType->numberKind == ResolvedNumberKind::Float;
-        bool isSigned = numType->numberKind == ResolvedNumberKind::Int;
-
-        if (name == "reduceAdd") {
-            if (isFloat) {
-                llvm::Type *scalarTy = generate_type(*numType);
-                return m_builder.CreateFAddReduce(llvm::ConstantFP::get(scalarTy, 0.0), simdVal);
-            } else {
-                return m_builder.CreateAddReduce(simdVal);
-            }
-        } else if (name == "reduceMul") {
-            if (isFloat) {
-                llvm::Type *scalarTy = generate_type(*numType);
-                return m_builder.CreateFMulReduce(llvm::ConstantFP::get(scalarTy, 1.0), simdVal);
-            } else {
-                return m_builder.CreateMulReduce(simdVal);
-            }
-        } else if (name == "reduceMin") {
-            if (isFloat) {
-                return m_builder.CreateFPMinReduce(simdVal);
-            } else {
-                return m_builder.CreateIntMinReduce(simdVal, isSigned);
-            }
-        } else if (name == "reduceMax") {
-            if (isFloat) {
-                return m_builder.CreateFPMaxReduce(simdVal);
-            } else {
-                return m_builder.CreateIntMaxReduce(simdVal, isSigned);
-            }
-        } else if (name == "reduceAnd") {
-            return m_builder.CreateAndReduce(simdVal);
-        } else if (name == "reduceOr") {
-            return m_builder.CreateOrReduce(simdVal);
-        } else if (name == "reduceXor") {
-            return m_builder.CreateXorReduce(simdVal);
-        }
-    }
-    dmz_unreachable(call.location, "unknown simd builtin");
-    return nullptr;
 }
 }  // namespace DMZ
