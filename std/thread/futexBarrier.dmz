@@ -34,7 +34,7 @@ pub const FutexBarrier = struct {
     }
 };
 
-test "barrier test" {
+test "futex barrier test" {
     const num_threads = 10;
     const barrier = FutexBarrier.init(num_threads);
     const barrier_ptr = &barrier;

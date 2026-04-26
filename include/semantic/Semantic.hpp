@@ -19,7 +19,6 @@ class Sema {
     Driver &m_driver;
     ptr<ModuleDecl> m_ast;
     std::vector<ptr<ResolvedModuleDecl>> m_lazy_modules;
-    std::unordered_map<std::string, ResolvedModuleDecl *> m_pre_resolved_modules;
 
     void dump_scopes() const;
 
@@ -89,8 +88,9 @@ class Sema {
     explicit Sema(Driver &driver, ptr<ModuleDecl> ast) : m_driver(driver), m_ast(std::move(ast)) {}
 
     std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
-    void add_pre_resolved_module(ResolvedModuleDecl *mod) { m_pre_resolved_modules[mod->module_path.string()] = mod; }
+    void add_pre_resolved_module(ptr<ResolvedModuleDecl> mod) { m_lazy_modules.emplace_back(std::move(mod)); }
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
+    void queue_module(ptr<ModuleDecl> ast, std::filesystem::path sourcePath);
 
    private:
     std::string resolve_decl_name(std::string_view identifier);

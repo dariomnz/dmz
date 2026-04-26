@@ -490,6 +490,21 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     dmz_unreachable(type.location, "TODO");
 }
 
+void Sema::queue_module(ptr<ModuleDecl> ast, std::filesystem::path sourcePath) {
+    debug_func(sourcePath);
+    if (std::filesystem::exists(sourcePath))
+        ast->module_path = std::filesystem::canonical(sourcePath);
+    else
+        ast->module_path = std::filesystem::absolute(sourcePath);
+
+    std::vector<ptr<ModuleDecl>> modules;
+    modules.emplace_back(std::move(ast));
+    auto resolvedModules = resolve_modules_decls(modules);
+    for (auto &mod : resolvedModules) {
+        m_lazy_modules.push_back(std::move(mod));
+    }
+}
+
 std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::path sourcePath, bool needMain) {
     debug_func("");
     ScopedTimer(StatType::Semantic_Declarations);
@@ -570,7 +585,12 @@ bool Sema::resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls) {
         m_lazy_modules.swap(moduleDecls);
         for (size_t i = 0; i < m_lazy_modules.size(); i++) {
             auto &&module = m_lazy_modules[i];
-            if (module->module_path != m_driver.m_options.source) continue;
+            bool isRoot = (module->module_path == m_driver.m_options.source);
+            bool inTestDir = !m_driver.m_options.testDir.empty() && [&]() {
+                auto rel = std::filesystem::relative(module->module_path, m_driver.m_options.testDir);
+                return !rel.empty() && !rel.string().starts_with("..");
+            }();
+            if (!isRoot && !inTestDir) continue;
             ScopedTimerName(StatType::Semantic_Body, module->name());
             if (!resolve_module_body(*module)) {
                 error = true;

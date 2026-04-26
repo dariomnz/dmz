@@ -42,10 +42,14 @@ class LSPServer {
     void process_file(const std::string& filename, const std::string& source);
 
     struct Document {
+        struct CacheEntry {
+            ptr<ResolvedModuleDecl> module;
+            std::filesystem::file_time_type last_write_time;
+        };
         std::string source;
         ptr<Sema> sema;
-        ptr<ResolvedModuleDecl> module;
-        std::filesystem::file_time_type last_write_time;
+        ResolvedModuleDecl* mainModule = nullptr;
+        std::unordered_map<std::string, CacheEntry> cache;
     };
 
     std::unordered_map<std::string, Document> m_documents;

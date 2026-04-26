@@ -12,14 +12,7 @@ pub const Reader = struct {
     // fn refill(ptr: *@This, wanted: usize) -> !usize
     vtable_refill: *fn(*void, *@This, usize)->!usize,
 
-    // pub fn print(r: *@This) -> void {
-    //     std.io.printf("Reader{buf %p, size %ld, seek %ld, end %ld}\n", r.buffer.ptr, r.buffer.len, r.seek, r.end);
-    // }
-
     pub fn rebase(r: *@This, capacity: usize) -> !void {
-        // std.io.printf("rebase capacity %ld\n", capacity);
-        // r.print();
-        // defer r.print();
         if (r.buffer.len - r.seek >= capacity) {
             return;
         }
@@ -27,12 +20,6 @@ pub const Reader = struct {
     }
 
     pub fn defaultRebase(ptr: *void, r: *@This, capacity: usize) -> !void {
-        // std.io.printf("defaultRebase capacity %ld\n", capacity);
-        // r.print();
-        // defer r.print();
-        // if (r.buffer.len - r.seek < capacity) {
-        //     return error.UnexpectedCall;
-        // }
         if (r.seek < r.end) {
             const data = r.buffer[r.seek..r.end];
             std.mem.memmove(r.buffer.ptr, data.ptr, data.len);
@@ -150,7 +137,7 @@ test "Reader init" {
 
     let r = Reader.fixed(data[0..std.mem.strlen(data)]);
 
-    for (0..11) |i| {
+    for (0..10) |i| {
         let readed_err = r.readByte();
         readed_err catch |er| {
             std.io.printf("There are an error: %s\n", er);

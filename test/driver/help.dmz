@@ -23,6 +23,8 @@
 // CHECK-NEXT:   -module            compile a module to .o file
 // CHECK-NEXT:   -g                 generate debug symbols
 // CHECK-NEXT:   -run               runs the program with lli (Just In Time)
-// CHECK-NEXT:   -test              runs the test with lli (Just In Time)
+// CHECK-NEXT:   -test [file|dir]     runs tests with lli (JIT); if dir given, runs all .dmz files in it
 // CHECK-NEXT:   -test-compiler [dir] runs the compiler tests in [dir] (default: ./test)
 // CHECK-NEXT:   -fmt               format the dmz source file
+// CHECK-NEXT:   -quiet               suppress output for successful tests
+// CHECK-NEXT:   -fail-fast, -ff      terminate tests on first failure

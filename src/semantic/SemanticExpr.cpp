@@ -1285,17 +1285,10 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
     }
 
     ResolvedModuleDecl *im = nullptr;
-    auto it_pre = m_pre_resolved_modules.find(module_path.string());
-    if (it_pre != m_pre_resolved_modules.end()) {
-        im = it_pre->second;
-    }
-
-    if (!im) {
-        for (auto &lazy_mod : m_lazy_modules) {
-            if (lazy_mod->module_path == module_path) {
-                im = lazy_mod.get();
-                break;
-            }
+    for (auto &lazy_mod : m_lazy_modules) {
+        if (lazy_mod->module_path == module_path) {
+            im = lazy_mod.get();
+            break;
         }
     }
 

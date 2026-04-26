@@ -886,7 +886,11 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_modules_decls(std::vector<ptr
         std::string identifier;
         std::filesystem::path module_path;
         if (module) {
-            module->module_path = std::filesystem::canonical(module->module_path);
+            if (std::filesystem::exists(module->module_path)) {
+                module->module_path = std::filesystem::canonical(module->module_path);
+            } else {
+                module->module_path = std::filesystem::absolute(module->module_path);
+            }
             identifier = module->identifier;
             module_path = module->module_path;
         }
@@ -990,12 +994,17 @@ bool Sema::discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl) {
 
     // Sub-pass 2: Register function declarations (signatures only, no bodies)
     // Now all type names are available for param/return type resolution
+    bool isRoot = (resolvedModuleDecl.module_path == m_driver.m_options.source);
+    bool inTestDir = !m_driver.m_options.testDir.empty() && [&]() {
+        auto rel = std::filesystem::relative(resolvedModuleDecl.module_path, m_driver.m_options.testDir);
+        return !rel.empty() && !rel.string().starts_with("..");
+    }();
     for (auto &&decl : resolvedModuleDecl.moduleDecl->declarations) {
         if (const auto *fn = dynamic_cast<const FuncDecl *>(decl.get())) {
             debug_msg(decl->identifier << " " << decl->location);
             auto resolvedDecl = resolve_function_decl(*fn);
 
-            if (resolvedModuleDecl.module_path == m_driver.m_options.source) {
+            if (isRoot || inTestDir) {
                 if (auto *test = dynamic_cast<ResolvedTestDecl *>(resolvedDecl.get())) {
                     auto it = std::find_if(m_tests.begin(), m_tests.end(),
                                            [test](ResolvedTestDecl *t) { return t->identifier == test->identifier; });
@@ -1128,8 +1137,12 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
 
     debug_msg(moduleDecl.module_path << " " << m_driver.m_options.source);
     bool isSourceModule = (moduleDecl.module_path == m_driver.m_options.source);
+    bool inTestDir = !m_driver.m_options.testDir.empty() && [&]() {
+        auto rel = std::filesystem::relative(moduleDecl.module_path, m_driver.m_options.testDir);
+        return !rel.empty() && !rel.string().starts_with("..");
+    }();
 
-    if (isSourceModule) {
+    if (isSourceModule || inTestDir) {
         debug_msg("Source module: resolving entry points only");
         for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
             auto currentDecl = moduleDecl.declarations[i].get();

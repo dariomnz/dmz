@@ -9,6 +9,7 @@ class NodeFinder {
    public:
     NodeFinder(const std::string& target_file, size_t line, size_t col);
     const ResolvedDecl* found_decl = nullptr;
+    const ResolvedExpr* found_expr = nullptr;
 
     void find_in_module(const ResolvedModuleDecl& module);
     void find_in_decl(const ResolvedDecl& decl);

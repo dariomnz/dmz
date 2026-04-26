@@ -6,7 +6,7 @@
 namespace DMZ::lsp {
 
 NodeFinder::NodeFinder(const std::string& file, size_t line, size_t col)
-    : found_decl(nullptr), m_target_file(file), m_line(line), m_col(col) {}
+    : found_decl(nullptr), found_expr(nullptr), m_target_file(file), m_line(line), m_col(col) {}
 
 bool NodeFinder::is_at_location(const SourceLocation& loc, size_t length) const {
     if (loc.file_name != m_target_file) return false;
@@ -19,7 +19,7 @@ bool NodeFinder::is_at_location(const SourceLocation& loc, size_t length) const 
 void NodeFinder::find_in_module(const ResolvedModuleDecl& mod) {
     for (const auto& decl : mod.declarations) {
         find_in_decl(*decl);
-        if (found_decl) return;
+        if (found_decl || found_expr) return;
     }
 }
 inline size_t identifier_len(std::string_view name) {
@@ -34,7 +34,7 @@ inline size_t identifier_len(std::string_view name) {
 };
 
 void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
-    if (found_decl) return;
+    if (found_decl || found_expr) return;
 
     size_t len = identifier_len(decl.identifier);
 
@@ -117,7 +117,7 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
 }
 
 void NodeFinder::find_in_stmt(const ResolvedStmt& stmt) {
-    if (found_decl) return;
+    if (found_decl || found_expr) return;
 
     if (const auto* block = dynamic_cast<const ResolvedBlock*>(&stmt)) {
         for (const auto& s : block->statements) {
@@ -162,7 +162,7 @@ void NodeFinder::find_in_stmt(const ResolvedStmt& stmt) {
 }
 
 void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
-    if (found_decl) return;
+    if (found_decl || found_expr) return;
 
     if (const auto* dr = dynamic_cast<const ResolvedDeclRefExpr*>(&expr)) {
         if (is_at_location(dr->location, dr->identifier.length())) {
@@ -286,6 +286,11 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {
             found_decl = &importExpr->moduleDecl;
         }
+    }
+
+    if (found_decl || found_expr) return;
+    if (is_at_location(expr.location)) {
+        found_expr = &expr;
     }
 }
 }  // namespace DMZ::lsp

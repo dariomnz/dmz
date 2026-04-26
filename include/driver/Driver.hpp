@@ -12,6 +12,7 @@ class LLVMContext;
 namespace DMZ {
 struct CompilerOptions {
     std::filesystem::path source;
+    std::filesystem::path testDir;  // set when -test is given a directory
     std::unordered_map<std::string, std::filesystem::path> imports;
     std::filesystem::path output;
     std::string optimizationLevel = "-O0";

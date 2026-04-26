@@ -16,8 +16,6 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl) {
         type = SemanticTokenType::Function;
     else if (dynamic_cast<const ResolvedStructDecl*>(&decl)) {
         type = SemanticTokenType::Type;
-    } else if (dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
-        type = SemanticTokenType::Type;
     } else if (dynamic_cast<const ResolvedEnumDecl*>(&decl)) {
         type = SemanticTokenType::Type;
     } else if (dynamic_cast<const ResolvedParamDecl*>(&decl))
@@ -27,11 +25,11 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl) {
     else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&decl))
         type = SemanticTokenType::Type;
 
-    if (decl.type->kind == ResolvedTypeKind::StructDecl)
+    if (dynamic_cast<const ResolvedTypeStructDecl*>(decl.type.get()))
         type = SemanticTokenType::Type;
-    else if (decl.type->kind == ResolvedTypeKind::Function)
+    else if (dynamic_cast<const ResolvedTypeFunction*>(decl.type.get()))
         type = SemanticTokenType::Function;
-    else if (decl.type->kind == ResolvedTypeKind::Module)
+    else if (dynamic_cast<const ResolvedTypeModule*>(decl.type.get()))
         type = SemanticTokenType::Namespace;
     return type;
 }

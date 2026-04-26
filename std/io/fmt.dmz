@@ -357,7 +357,7 @@ test "print integers" {
 
     const test_struct: Test_struct2 = {};
     const aux_arr: [4]i32 = {1, 2, 3, 4};
-    const simd = @simd<i32, 4>.load(&aux_arr[0]);
+    const simd: @simd<i32, 4> = @simdLoad(&aux_arr[0]);
     const tuple = .{big, 1.23, true, w2, test_struct, error.InplaceError, simd};
     let ret2 = try fmt(w2, "Big value '{}' float '{}' bool '{}' struct '{}' struct '{}' error '{}' simd '{}'\n", tuple);
     w2.flush();

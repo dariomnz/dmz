@@ -36,3 +36,5 @@
 - [x] remove builtin functions from lexer and be normal functions
 - [x] change @atomicRmw to use enum in op
 - [x] @compileError
+- [ ] inline asm
+- [ ] compile without libc

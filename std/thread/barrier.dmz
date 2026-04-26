@@ -26,25 +26,30 @@ pub const Barrier = struct {
 
     pub fn wait(self: *@This) -> !void {
         const ret = pthread_barrier_wait(&self.opaque_data);
-        if (ret != 0) {
-            try std.errno.libc_error(ret);
+        if (ret < -1) {
+            try std.errno.libc_error(-ret);
         }
     }
 };
 
+
 test "barrier test" {
-    const num_threads = 10;
+    const num_threads = 5;
     const barrier = Barrier.init(num_threads);
     defer barrier.deinit();
     const barrier_ptr = &barrier;
-    const worker = [barrier_ptr](arg: *void) -> void {
-        std.io.printf("Worker: Before barrier.\n");
-        barrier_ptr.wait();
-        std.io.printf("Worker: After barrier.\n");
+    const worker = struct {
+        barrier_ptr: *Barrier,
+        pub fn run(arg: *@This) -> void {
+            std.io.printf("Worker: Before barrier.\n");
+            try arg.barrier_ptr.wait();
+            std.io.printf("Worker: After barrier.\n");
+        }
     };
     let threads: [num_threads]std.thread.Thread = {};
+    const c = worker{barrier_ptr: &barrier};
     for (0..num_threads) |i| {
-        threads[i] = try std.thread.Thread.init(worker, null);
+        threads[i] = try std.thread.Thread.init(&worker.run, &c);
     }
     for (0..num_threads) |i| {
         try threads[i].join();

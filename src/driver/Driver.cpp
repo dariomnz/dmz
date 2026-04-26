@@ -45,7 +45,7 @@ void Driver::display_help() {
     println("  -module              compile a module to .o file");
     println("  -g                   generate debug symbols");
     println("  -run                 runs the program with lli (Just In Time)");
-    println("  -test                runs the test with lli (Just In Time)");
+    println("  -test [file|dir]     runs tests with lli (JIT); if dir given, runs all .dmz files in it");
     println("  -test-compiler [dir] runs the compiler tests in [dir] (default: ./test)");
     println("  -fmt                 format the dmz source file");
     println("  -quiet               suppress output for successful tests");
@@ -455,19 +455,59 @@ int Driver::main() {
         return run_tests(m_options.source.string(), testOpts);
     }
 
-    auto lexer = lexer_pass(m_options.source);
-    if (need_exit()) return exit_code();
-    auto ast = parser_pass(std::move(lexer));
-    if (need_exit()) return exit_code();
-    if (m_options.fmt || m_options.fmtDump) {
-        fmt_pass(std::move(ast));
+    vec<ptr<ResolvedModuleDecl>> resolvedTree;
+    if (m_options.test && std::filesystem::is_directory(m_options.source)) {
+        namespace fs = std::filesystem;
+        fs::path dir = fs::canonical(m_options.source);
+
+        std::vector<fs::path> files;
+        for (const auto &entry : fs::recursive_directory_iterator(dir))
+            if (entry.is_regular_file() && entry.path().extension() == ".dmz") files.push_back(entry.path());
+        std::sort(files.begin(), files.end());
+
+        if (files.empty()) {
+            println("No .dmz files found in " + dir.string());
+            return EXIT_SUCCESS;
+        }
+
+        m_options.testDir = dir;
+        m_options.source = files[0];
+
+        auto firstLexer = lexer_pass(files[0]);
+        if (need_exit()) return exit_code();
+        auto firstAst = parser_pass(std::move(firstLexer));
+        if (need_exit()) return exit_code();
+
+        Sema sema(*this, std::move(firstAst));
+
+        for (size_t i = 1; i < files.size(); i++) {
+            m_options.source = files[i];
+            auto lexer = lexer_pass(files[i]);
+            if (need_exit()) return exit_code();
+            auto ast = parser_pass(std::move(lexer));
+            if (need_exit()) return exit_code();
+            sema.queue_module(std::move(ast), files[i]);
+        }
+
+        m_options.source = files[0];
+        resolvedTree = sema.resolve_ast_decl(files[0], false);
+        if (resolvedTree.empty()) return EXIT_FAILURE;
+        if (!sema.resolve_ast_body(resolvedTree)) return EXIT_FAILURE;
+    } else {
+        auto lexer = lexer_pass(m_options.source);
+        if (need_exit()) return exit_code();
+        auto ast = parser_pass(std::move(lexer));
+        if (need_exit()) return exit_code();
+        if (m_options.fmt || m_options.fmtDump) {
+            fmt_pass(std::move(ast));
+            if (need_exit()) return exit_code();
+        }
+
+        resolvedTree = semantic_pass(std::move(ast));
         if (need_exit()) return exit_code();
     }
 
-    auto resolvedTrees = semantic_pass(std::move(ast));
-    if (need_exit()) return exit_code();
-
-    auto module = codegen_pass(std::move(resolvedTrees));
+    auto module = codegen_pass(std::move(resolvedTree));
     if (need_exit()) return exit_code();
 
     if (m_options.asmDump) {

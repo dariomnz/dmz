@@ -867,7 +867,7 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         if (printErrorTraceFn) {
             m_builder.CreateCall(printErrorTraceFn, {error_value});
         } else {
-            auto fmt = create_global_string("help: import 'std' to enable error trace printing");
+            auto fmt = create_global_string("help: import 'std' to enable error trace printing\n");
             m_builder.CreateCall(printf_func, {fmt});
         }
 
