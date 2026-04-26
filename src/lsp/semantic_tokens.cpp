@@ -72,6 +72,9 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
             for (const auto& func : structDecl->functions) {
                 traverse_decl(*func);
             }
+            for (const auto& otherDecl : structDecl->otherDecls) {
+                traverse_decl(*otherDecl);
+            }
         } else if (auto* funcDecl = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
             if (!dynamic_cast<const ResolvedTestDecl*>(funcDecl)) {
                 add_token(funcDecl->location, funcDecl->identifier, SemanticTokenType::Function,

@@ -174,6 +174,15 @@ ResolvedDecl *Sema::lookup_in_struct(const SourceLocation &loc, const ResolvedSt
         if (id != decl->identifier) continue;
         return decl.get();
     }
+    for (auto &&decl : structDecl.otherDecls) {
+        debug_msg("Search other: " << decl->identifier << " in " << structDecl.identifier << " to find " << id);
+        if (auto ds = dynamic_cast<ResolvedDeclStmt *>(decl.get())) {
+            if (id == ds->varDecl->identifier) return ds->varDecl.get();
+        }
+        if (id != decl->identifier) continue;
+        m_pending_decls.emplace(decl.get());
+        return decl.get();
+    }
     if (auto unionDecl = dynamic_cast<const ResolvedUnionDecl *>(&structDecl)) {
         if (id == "tag") {
             return unionDecl->tag.get();

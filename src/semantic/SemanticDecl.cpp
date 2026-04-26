@@ -499,23 +499,27 @@ bool Sema::resolve_union_members(ResolvedUnionDecl &resolvedUnionDecl) {
     int idx = 0;
 
     for (auto &&decl : resolvedUnionDecl.unionDecl()->decls) {
-        auto field = dynamic_cast<const FieldDecl *>(decl.get());
-        if (!field) continue;
-        auto typeExpr = resolve_type_expr(*field->type);
-        if (!typeExpr) {
-            report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
-            return false;
-        }
-        ptr<ResolvedExpr> default_initializer = nullptr;
-        if (field->default_initializer) {
-            default_initializer = resolve_expr(*field->default_initializer);
-            if (!default_initializer) return false;
-        }
+        if (auto field = dynamic_cast<const FieldDecl *>(decl.get())) {
+            auto typeExpr = resolve_type_expr(*field->type);
+            if (!typeExpr) {
+                report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
+                return false;
+            }
+            ptr<ResolvedExpr> default_initializer = nullptr;
+            if (field->default_initializer) {
+                default_initializer = resolve_expr(*field->default_initializer);
+                if (!default_initializer) return false;
+            }
 
-        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr), idx++,
-                                                   std::move(default_initializer));
-        resolvedFields.emplace_back(std::move(retField));
-        resolvedFields_strs.emplace_back(field->identifier);
+            auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr), idx++,
+                                                       std::move(default_initializer));
+            resolvedFields.emplace_back(std::move(retField));
+            resolvedFields_strs.emplace_back(field->identifier);
+        } else if (auto declStmt = dynamic_cast<const DeclStmt *>(decl.get())) {
+            auto resDeclStmt = resolve_decl_stmt(*declStmt);
+            if (!resDeclStmt) return false;
+            resolvedUnionDecl.otherDecls.emplace_back(std::move(resDeclStmt));
+        }
     }
 
     if (resolvedUnionDecl.fields.size() != 0) {
@@ -537,38 +541,43 @@ bool Sema::resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl) {
     int idx = 0;
     ResolvedTypeNumber int_type{resolvedEnumDecl.location, ResolvedNumberKind::UInt, 32};
     for (auto &&decl : resolvedEnumDecl.enumDecl()->decls) {
-        auto field = dynamic_cast<const FieldDecl *>(decl.get());
-        if (!field) continue;
-        auto type = makePtr<ResolvedTypeEnum>(field->location, &resolvedEnumDecl);
-        ptr<ResolvedExpr> default_initializer = nullptr;
-        if (field->default_initializer) {
-            default_initializer = resolve_expr(*field->default_initializer);
-            if (!default_initializer) return false;
-            if (!int_type.compare(*default_initializer->type)) {
-                report(default_initializer->location,
-                       "unexpected type in enum field initializer '" + default_initializer->type->to_str() + "'");
-                return false;
+        if (auto field = dynamic_cast<const FieldDecl *>(decl.get())) {
+            auto type = makePtr<ResolvedTypeEnum>(field->location, &resolvedEnumDecl);
+            ptr<ResolvedExpr> default_initializer = nullptr;
+            if (field->default_initializer) {
+                default_initializer = resolve_expr(*field->default_initializer);
+                if (!default_initializer) return false;
+                if (!int_type.compare(*default_initializer->type)) {
+                    report(default_initializer->location,
+                           "unexpected type in enum field initializer '" + default_initializer->type->to_str() + "'");
+                    return false;
+                }
+                default_initializer->set_constant_value(cee.evaluate(*default_initializer, false));
+                if (!default_initializer->get_constant_value()) {
+                    report(default_initializer->location,
+                           "enum initializer must be a compile-time constant expression");
+                    return false;
+                }
             }
-            default_initializer->set_constant_value(cee.evaluate(*default_initializer, false));
-            if (!default_initializer->get_constant_value()) {
-                report(default_initializer->location, "enum initializer must be a compile-time constant expression");
-                return false;
+
+            auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier,
+                                                       makePtr<ResolvedTypeExpr>(field->location, std::move(type)),
+                                                       idx++, std::move(default_initializer));
+            if (retField->default_initializer) {
+                idx = retField->default_initializer->get_constant_value().value();
+                retField->set_constant_value(idx);
+                idx++;
+            } else {
+                retField->set_constant_value(retField->index);
             }
-        }
 
-        auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier,
-                                                   makePtr<ResolvedTypeExpr>(field->location, std::move(type)), idx++,
-                                                   std::move(default_initializer));
-        if (retField->default_initializer) {
-            idx = retField->default_initializer->get_constant_value().value();
-            retField->set_constant_value(idx);
-            idx++;
-        } else {
-            retField->set_constant_value(retField->index);
+            resolvedFields.emplace_back(std::move(retField));
+            resolvedFields_strs.emplace_back(field->identifier);
+        } else if (auto declStmt = dynamic_cast<const DeclStmt *>(decl.get())) {
+            auto resDeclStmt = resolve_decl_stmt(*declStmt);
+            if (!resDeclStmt) return false;
+            resolvedEnumDecl.otherDecls.emplace_back(std::move(resDeclStmt));
         }
-
-        resolvedFields.emplace_back(std::move(retField));
-        resolvedFields_strs.emplace_back(field->identifier);
     }
 
     if (resolvedEnumDecl.fields.size() != 0) {
@@ -682,23 +691,27 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         std::vector<std::string> resolvedFields_strs;
         int idx = 0;
         for (auto &&decl : resolvedStructDecl.structDecl->decls) {
-            auto field = dynamic_cast<const FieldDecl *>(decl.get());
-            if (!field) continue;
-            auto typeExpr = resolve_type_expr(*field->type);
-            if (!typeExpr) {
-                report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
-                return false;
-            }
-            ptr<ResolvedExpr> default_initizlizer = nullptr;
-            if (field->default_initializer) {
-                default_initizlizer = resolve_expr(*field->default_initializer);
-                if (!default_initizlizer) return false;
-            }
+            if (auto field = dynamic_cast<const FieldDecl *>(decl.get())) {
+                auto typeExpr = resolve_type_expr(*field->type);
+                if (!typeExpr) {
+                    report(field->type->location, "unexpected type '" + field->type->to_str() + "'");
+                    return false;
+                }
+                ptr<ResolvedExpr> default_initizlizer = nullptr;
+                if (field->default_initializer) {
+                    default_initizlizer = resolve_expr(*field->default_initializer);
+                    if (!default_initizlizer) return false;
+                }
 
-            auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr), idx++,
-                                                       std::move(default_initizlizer));
-            resolvedFields.emplace_back(std::move(retField));
-            resolvedFields_strs.emplace_back(field->identifier);
+                auto retField = makePtr<ResolvedFieldDecl>(field->location, field->identifier, std::move(typeExpr),
+                                                           idx++, std::move(default_initizlizer));
+                resolvedFields.emplace_back(std::move(retField));
+                resolvedFields_strs.emplace_back(field->identifier);
+            } else if (auto declStmt = dynamic_cast<const DeclStmt *>(decl.get())) {
+                auto resDeclStmt = resolve_decl_stmt(*declStmt);
+                if (!resDeclStmt) return false;
+                resolvedStructDecl.otherDecls.emplace_back(std::move(resDeclStmt));
+            }
         }
 
         if (resolvedStructDecl.fields.size() != 0) {
@@ -1184,6 +1197,9 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
     std::vector<ptr<ResolvedType>> savedTypesStruct;
     std::optional<DeferAction> deferSpecializedTypeStruct = std::nullopt;
     if (auto *member = dynamic_cast<ResolvedMemberFunctionDecl *>(&function)) {
+        if (auto *parentSt = dynamic_cast<ResolvedStructDecl *>(const_cast<ResolvedDecl *>(member->parentDecl))) {
+            if (!ensure_struct_members_resolved(*parentSt)) return false;
+        }
         if (auto *spec =
                 dynamic_cast<ResolvedSpecializedStructDecl *>(const_cast<ResolvedDecl *>(member->parentDecl))) {
             // Specialize types

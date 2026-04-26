@@ -2,6 +2,6 @@
 const Error = struct {
     r: i32,
     let g = 0,
-    // CHECK: [[# @LINE -1 ]]:5: error: expected identifier or fn in struct
+    // CHECK: [[# @LINE -1 ]]:14: error: expected ';' after declaration
     b: i32,
 }

@@ -1,0 +1,23 @@
+// RUN: (dmz %s -llvm-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+const A = struct {
+    const B = struct {
+        C: i32,
+    };
+
+    let var = 123;
+
+    pub fn foo() -> void {
+        let x = B{C: 1};
+        var += 1;
+        printf("x.C %d var %d\n", x.C, var);
+    }
+};
+
+fn main() -> void {
+    A.foo();
+}
+
+// CHECK: @global_in_struct.A.var = internal global i32 123

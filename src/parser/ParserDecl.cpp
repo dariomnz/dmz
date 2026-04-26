@@ -149,77 +149,21 @@ ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst, bool isGlobal) 
 //  ::= '{' (<fieldDecl> (',' <fieldDecl>)* ','?)? '}'
 ptr<StructDecl> Parser::parse_struct_decl() {
     debug_func("");
-    SourceLocation location = m_nextToken.loc;
-    bool isPacked = false;
-    bool isPublic = false;
-    if (m_nextToken.type == TokenType::kw_pub) {
-        eat_next_token();  // eat pub
-        isPublic = true;
-    }
-
-    if (m_nextToken.type == TokenType::kw_packed) {
-        eat_next_token();  // eat packet
-        isPacked = true;
-    }
-
-    matchOrReturn(TokenType::kw_struct, "expected 'struct'");
-    eat_next_token();  // eat struct
-
-    std::string structIdentifier = "structL" + std::to_string(location.line) + "C" + std::to_string(location.col);
-    auto genericTypes = parse_generic_types_decl();
-
-    matchOrReturn(TokenType::block_l, "expected '{'");
-    eat_next_token();  // eat openingToken
-
-    std::vector<ptr<Decl>> declList;
-    ptr<StructDecl> structDecl;
-    if (genericTypes.size() != 0) {
-        structDecl = makePtr<GenericStructDecl>(location, isPublic, structIdentifier, isPacked, std::move(declList),
-                                                std::move(genericTypes));
-    } else {
-        structDecl = makePtr<StructDecl>(location, isPublic, structIdentifier, isPacked, std::move(declList));
-    }
-
-    while (true) {
-        if (m_nextToken.type == TokenType::block_r) break;
-
-        if (m_nextToken.type == TokenType::comment) {
-            varOrReturn(comment, parse_comment());
-            declList.emplace_back(std::move(comment));
-        } else if (m_nextToken.type == TokenType::empty_line) {
-            varOrReturn(empty_line, parse_empty_line());
-            declList.emplace_back(std::move(empty_line));
-        } else if (m_nextToken.type == TokenType::id) {
-            varOrReturn(init, parse_field_decl());
-            declList.emplace_back(std::move(init));
-            if (m_nextToken.type != TokenType::comma) break;
-            eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
-            bool isPublic = m_nextToken.type == TokenType::kw_pub;
-            if (isPublic) {
-                eat_next_token();  // eat pub
-            }
-            varOrReturn(init, parse_function_decl());
-            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            auto memberFunc =
-                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
-                                            std::move(func->params), std::move(func->body), structDecl.get());
-            declList.emplace_back(std::move(memberFunc));
-        } else {
-            return report(m_nextToken.loc, "expected identifier or fn in struct");
-        }
-    }
-
-    matchOrReturn(TokenType::block_r, "expected '}'");
-    eat_next_token();  // eat closingToken
-
-    structDecl->decls = std::move(declList);
-
-    return structDecl;
+    return parse_aggregate_decl(TokenType::kw_struct);
 }
 
 ptr<UnionDecl> Parser::parse_union_decl() {
     debug_func("");
+    return castPtr<UnionDecl>(parse_aggregate_decl(TokenType::kw_union));
+}
+
+ptr<EnumDecl> Parser::parse_enum_decl() {
+    debug_func("");
+    return castPtr<EnumDecl>(parse_aggregate_decl(TokenType::kw_enum));
+}
+
+ptr<StructDecl> Parser::parse_aggregate_decl(TokenType kindToken) {
+    debug_func("");
     SourceLocation location = m_nextToken.loc;
     bool isPacked = false;
     bool isPublic = false;
@@ -233,34 +177,70 @@ ptr<UnionDecl> Parser::parse_union_decl() {
         isPacked = true;
     }
 
-    matchOrReturn(TokenType::kw_union, "expected 'union'");
-    eat_next_token();  // eat union
+    matchOrReturn(kindToken, "expected struct, union or enum");
+    eat_next_token();
 
-    std::string unionIdentifier = "unionL" + std::to_string(location.line) + "C" + std::to_string(location.col);
+    std::string typeNameStr;
+    if (kindToken == TokenType::kw_struct) {
+        typeNameStr = "struct";
+    } else if (kindToken == TokenType::kw_union) {
+        typeNameStr = "union";
+    } else if (kindToken == TokenType::kw_enum) {
+        typeNameStr = "enum";
+    } else {
+        dmz_unreachable(location, "invalid aggregate kind");
+    }
+
+    std::string identifier = typeNameStr + "L" + std::to_string(location.line) + "C" + std::to_string(location.col);
+
+    std::vector<ptr<GenericTypeDecl>> genericTypes;
+    if (kindToken != TokenType::kw_union) {
+        genericTypes = parse_generic_types_decl();
+        if (kindToken == TokenType::kw_enum && !genericTypes.empty()) {
+            return report(m_nextToken.loc, "enums cannot be generic");
+        }
+    }
 
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat openingToken
 
     std::vector<ptr<Decl>> declList;
-    ptr<UnionDecl> unionDecl;
-    unionDecl = makePtr<UnionDecl>(location, isPublic, unionIdentifier, isPacked, std::move(declList));
+    ptr<StructDecl> aggregate;
+    if (kindToken == TokenType::kw_struct) {
+        if (genericTypes.size() != 0) {
+            aggregate = makePtr<GenericStructDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>(),
+                                                   std::move(genericTypes));
+        } else {
+            aggregate = makePtr<StructDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>());
+        }
+    } else if (kindToken == TokenType::kw_union) {
+        aggregate = makePtr<UnionDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>());
+    } else {
+        aggregate = makePtr<EnumDecl>(location, isPublic, identifier, std::vector<ptr<Decl>>());
+    }
 
     while (true) {
         if (m_nextToken.type == TokenType::block_r) break;
 
-        if (m_nextToken.type == TokenType::comment) {
+        auto tokenType = m_nextToken.type;
+        auto peekTokenType = peek_token().type;
+        if (tokenType == TokenType::comment) {
             varOrReturn(comment, parse_comment());
             declList.emplace_back(std::move(comment));
-        } else if (m_nextToken.type == TokenType::empty_line) {
+        } else if (tokenType == TokenType::empty_line) {
             varOrReturn(empty_line, parse_empty_line());
             declList.emplace_back(std::move(empty_line));
-        } else if (m_nextToken.type == TokenType::id) {
-            varOrReturn(init, parse_field_decl());
+        } else if ((tokenType == TokenType::kw_const || tokenType == TokenType::kw_let) ||
+                   (tokenType == TokenType::kw_pub &&
+                    (peekTokenType == TokenType::kw_const || peekTokenType == TokenType::kw_let))) {
+            varOrReturn(st, parse_decl_stmt(true));
+            declList.emplace_back(std::move(st));
+        } else if (tokenType == TokenType::id) {
+            varOrReturn(init, parse_field_decl(kindToken != TokenType::kw_enum));
             declList.emplace_back(std::move(init));
-            if (m_nextToken.type != TokenType::comma) break;
-            eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
-            bool isPublic = m_nextToken.type == TokenType::kw_pub;
+            if (m_nextToken.type == TokenType::comma) eat_next_token();
+        } else if (tokenType == TokenType::kw_fn || tokenType == TokenType::kw_pub) {
+            bool isPublic = tokenType == TokenType::kw_pub;
             if (isPublic) {
                 eat_next_token();  // eat pub
             }
@@ -268,82 +248,19 @@ ptr<UnionDecl> Parser::parse_union_decl() {
             varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
             auto memberFunc =
                 makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
-                                            std::move(func->params), std::move(func->body), unionDecl.get());
+                                            std::move(func->params), std::move(func->body), aggregate.get());
             declList.emplace_back(std::move(memberFunc));
         } else {
-            return report(m_nextToken.loc, "expected identifier or fn in union");
+            return report(m_nextToken.loc, "expected identifier, fn, const or let in " + typeNameStr);
         }
     }
 
     matchOrReturn(TokenType::block_r, "expected '}'");
     eat_next_token();  // eat closingToken
 
-    unionDecl->decls = std::move(declList);
+    aggregate->decls = std::move(declList);
 
-    return unionDecl;
-}
-
-ptr<EnumDecl> Parser::parse_enum_decl() {
-    debug_func("");
-    SourceLocation location = m_nextToken.loc;
-    bool isPublic = false;
-    if (m_nextToken.type == TokenType::kw_pub) {
-        eat_next_token();  // eat pub
-        isPublic = true;
-    }
-
-    matchOrReturn(TokenType::kw_enum, "expected 'enum'");
-    eat_next_token();  // eat enum
-
-    std::string enumIdentifier = "enumL" + std::to_string(location.line) + "C" + std::to_string(location.col);
-    auto genericTypes = parse_generic_types_decl();
-    if (!genericTypes.empty()) {
-        return report(m_nextToken.loc, "unions cannot be generic");
-    }
-
-    matchOrReturn(TokenType::block_l, "expected '{'");
-    eat_next_token();  // eat openingToken
-
-    std::vector<ptr<Decl>> declList;
-    ptr<EnumDecl> enumDecl;
-    enumDecl = makePtr<EnumDecl>(location, isPublic, enumIdentifier, std::move(declList));
-
-    while (true) {
-        if (m_nextToken.type == TokenType::block_r) break;
-
-        if (m_nextToken.type == TokenType::comment) {
-            varOrReturn(comment, parse_comment());
-            declList.emplace_back(std::move(comment));
-        } else if (m_nextToken.type == TokenType::empty_line) {
-            varOrReturn(empty_line, parse_empty_line());
-            declList.emplace_back(std::move(empty_line));
-        } else if (m_nextToken.type == TokenType::id) {
-            varOrReturn(init, parse_field_decl(false));
-            declList.emplace_back(std::move(init));
-            if (m_nextToken.type != TokenType::comma) break;
-            eat_next_token();  // eat ','
-        } else if (m_nextToken.type == TokenType::kw_fn || m_nextToken.type == TokenType::kw_pub) {
-            bool isPublic = m_nextToken.type == TokenType::kw_pub;
-            if (isPublic) {
-                eat_next_token();  // eat pub
-            }
-            varOrReturn(init, parse_function_decl());
-            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            auto memberFunc =
-                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
-                                            std::move(func->params), std::move(func->body), enumDecl.get());
-            declList.emplace_back(std::move(memberFunc));
-        } else {
-            return report(m_nextToken.loc, "expected identifier or fn in union");
-        }
-    }
-
-    matchOrReturn(TokenType::block_r, "expected '}'");
-    eat_next_token();  // eat closingToken
-
-    enumDecl->decls = std::move(declList);
-
-    return enumDecl;
+    return aggregate;
 }
 
 // <fieldDecl>

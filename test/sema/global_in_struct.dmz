@@ -1,0 +1,44 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+const A = struct {
+    const B = struct {
+        C: i32,
+    };
+
+    pub fn foo() -> void {
+        let x = B{C: 1};
+        printf("x.C %d\n", x.C);
+    }
+};
+
+fn main() -> void {
+    A.foo();
+}
+
+// CHECK:     ResolvedVarDecl:const global_in_struct.A A
+// CHECK-NEXT:       ResolvedTypeExpr:global_in_struct.A
+// CHECK-NEXT:         ResolvedTypeStructDecl global_in_struct.A
+// CHECK-NEXT:       ResolvedTypeStructDecl global_in_struct.A
+// CHECK-NEXT:         ResolvedStructDecl global_in_struct.A
+// CHECK-NEXT:           ResolvedStaticMemberFunctionDecl foo fn()->void
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:               ResolvedDeclStmt global_in_struct.A.B{}
+// CHECK-NEXT:                 ResolvedVarDecl:global_in_struct.A.B{} x
+// CHECK-NEXT:                   ResolvedStructInstantiationExpr:global_in_struct.A.B{}
+// CHECK-NEXT:                     ResolvedFieldInitStmt:i32 C
+// CHECK-NEXT:                       ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:                       | value: 1
+// CHECK-NEXT:               ResolvedCallExpr:i32
+// CHECK-NEXT:                 ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
+// CHECK-NEXT:                 ResolvedStringLiteral:*u8 'x.C %d\n'
+// CHECK-NEXT:                 ResolvedMemberExpr:i32 C
+// CHECK-NEXT:                   ResolvedDeclRefExpr:global_in_struct.A.B{} x
+// CHECK-NEXT:           ResolvedDeclStmt global_in_struct.A.B
+// CHECK-NEXT:             ResolvedVarDecl:const global_in_struct.A.B B
+// CHECK-NEXT:               ResolvedTypeExpr:global_in_struct.A.B
+// CHECK-NEXT:                 ResolvedTypeStructDecl global_in_struct.A.B
+// CHECK-NEXT:               ResolvedTypeStructDecl global_in_struct.A.B
+// CHECK-NEXT:                 ResolvedStructDecl global_in_struct.A.B
+// CHECK-NEXT:                   ResolvedFieldDecl:i32 C

@@ -37,4 +37,5 @@
 - [x] change @atomicRmw to use enum in op
 - [x] @compileError
 - [x] inline asm
-- [ ] compile without libc
+- [x] compile without libc
+- [ ] create export fn

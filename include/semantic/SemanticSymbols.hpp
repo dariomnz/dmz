@@ -473,6 +473,7 @@ struct ResolvedStructDecl : public ResolvedDecl {
     std::vector<ptr<ResolvedMemberFunctionDecl>> functions;
     std::vector<std::string> fields_strs;
     std::vector<std::string> functions_strs;
+    std::vector<ptr<ResolvedDecl>> otherDecls;
     ptr<ResolvedScope> scope;
 
     // Lazy resolution state

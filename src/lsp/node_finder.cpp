@@ -87,6 +87,10 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
             find_in_decl(*method);
             if (found_decl) return;
         }
+        for (const auto& otherDecl : sd->otherDecls) {
+            find_in_decl(*otherDecl);
+            if (found_decl) return;
+        }
     } else if (const auto* ud = dynamic_cast<const ResolvedUnionDecl*>(&decl)) {
         for (const auto& field : ud->fields) {
             find_in_decl(*field);

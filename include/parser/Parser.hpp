@@ -148,6 +148,7 @@ class Parser {
     ptr<StructDecl> parse_struct_decl();
     ptr<UnionDecl> parse_union_decl();
     ptr<EnumDecl> parse_enum_decl();
+    ptr<StructDecl> parse_aggregate_decl(TokenType kindToken);
     ptr<FieldDecl> parse_field_decl(bool withType = true);
     ptr<FieldInitStmt> parse_field_init_stmt();
     ptr<DeferStmt> parse_defer_stmt();

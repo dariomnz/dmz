@@ -383,6 +383,7 @@ void ResolvedStructDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
 }
 
 void ResolvedStructDecl::dump_dependencies(size_t level, bool dot_format) const {
@@ -396,6 +397,7 @@ void ResolvedUnionDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
 }
 
 void ResolvedUnionDecl::dump_dependencies(size_t level, bool dot_format) const {
@@ -409,6 +411,7 @@ void ResolvedEnumDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
 }
 
 void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
@@ -418,6 +421,7 @@ void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
     for (auto &&spec : specializations) spec->dump(level + 1, onlySelf);
 }
 
@@ -438,6 +442,7 @@ void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
     if (onlySelf) return;
     for (auto &&field : fields) field->dump(level + 1, onlySelf);
     for (auto &&function : functions) function->dump(level + 1, onlySelf);
+    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
 }
 
 std::string ResolvedSpecializedStructDecl::name() const { return ResolvedDecl::name() + specializedTypes->to_str(); }
