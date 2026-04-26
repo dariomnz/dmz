@@ -523,6 +523,36 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         m_debugBuilder.replaceTemporary(llvm::TempDICompositeType(forwardDecl), finalType);
         m_debugTypes[decl->name()] = finalType;
         return finalType;
+    } else if (type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::EnumDecl) {
+        const ResolvedEnumDecl *decl = nullptr;
+        if (auto typeEnum = dynamic_cast<const ResolvedTypeEnum *>(&type)) {
+            decl = typeEnum->enumDecl();
+        } else if (auto typeEnum = dynamic_cast<const ResolvedTypeEnumDecl *>(&type)) {
+            decl = typeEnum->enumDecl();
+        }
+        if (!decl) dmz_unreachable(type.location, "unexpected error");
+
+        if (auto it = m_debugTypes.find(decl->name()); it != m_debugTypes.end()) {
+            return it->second;
+        }
+
+        ResolvedTypeNumber int_type{decl->location, ResolvedNumberKind::UInt, 32};
+        auto enumFile = generate_debug_file(decl->location.file_name);
+        auto underlyingType = generate_type(int_type);
+        auto bitSize = m_module->getDataLayout().getTypeSizeInBits(underlyingType);
+        auto alignSize = m_module->getDataLayout().getPrefTypeAlign(underlyingType).value() * 8;
+
+        std::vector<llvm::Metadata *> Enumerators;
+        for (auto &&field : decl->fields) {
+            Enumerators.push_back(m_debugBuilder.createEnumerator(field->name(), *field->get_constant_value()));
+        }
+
+        auto finalType = m_debugBuilder.createEnumerationType(
+            enumFile, decl->name(), enumFile, decl->location.line, bitSize, alignSize,
+            m_debugBuilder.getOrCreateArray(Enumerators), generate_debug_type(int_type));
+
+        m_debugTypes[decl->name()] = finalType;
+        return finalType;
     }
     type.dump();
     dmz_unreachable(type.location, "TODO");
