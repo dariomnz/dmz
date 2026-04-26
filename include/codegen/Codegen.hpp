@@ -123,6 +123,7 @@ class Codegen {
     llvm::Value *generate_decl_stmt(const ResolvedDeclStmt &stmt);
     llvm::Value *generate_assignment(const ResolvedAssignment &stmt);
 
+    constexpr static const size_t INLINE_SIZE_THRESHOLD = 64;
     bool store_value_generate_memcpy(const ResolvedType &from);
     llvm::Value *store_value(llvm::Value *val, llvm::Value *ptr, const ResolvedType &from, const ResolvedType &to);
     llvm::Value *load_value(llvm::Value *v, const ResolvedType &type);

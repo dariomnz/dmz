@@ -681,8 +681,15 @@ llvm::AllocaInst *Codegen::allocate_stack_variable(const SourceLocation &locatio
     debug_msg("m_memsetInsertPoint " << (void *)m_memsetInsertPoint);
     tmpBuilderMemset.SetInsertPoint(m_memsetInsertPoint);
     const llvm::DataLayout &dl = m_module->getDataLayout();
-    tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
-                                        tmpBuilderMemset.getInt64(*value->getAllocationSize(dl)));
+    auto sizeInBytes = value->getAllocationSize(dl);
+    if (!sizeInBytes.has_value()) dmz_unreachable(location, "size in bytes has no value");
+    if (*sizeInBytes < INLINE_SIZE_THRESHOLD) {
+        tmpBuilderMemset.CreateMemSetInline(value, dl.getPrefTypeAlign(value->getType()), tmpBuilderMemset.getInt8(0),
+                                            llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes.value()));
+    } else {
+        tmpBuilderMemset.CreateMemSet(value, tmpBuilderMemset.getInt8(0), sizeInBytes.value(),
+                                      dl.getPrefTypeAlign(value->getType()));
+    }
     if (m_debugSymbols) {
         llvm::DILocalVariable *localVar = m_debugBuilder.createAutoVariable(
             m_currentDebugScope, identifier, m_currentDebugFile, location.line, generate_debug_type(type));
@@ -876,15 +883,26 @@ llvm::Value *Codegen::store_value(llvm::Value *val, llvm::Value *ptr, const Reso
         if (from.generate_struct()) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             const llvm::StructLayout *sl = dl.getStructLayout(static_cast<llvm::StructType *>(generate_type(from)));
-
-            return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(), sl->getSizeInBytes());
+            auto sizeInBytes = sl->getSizeInBytes();
+            if (sizeInBytes < INLINE_SIZE_THRESHOLD) {
+                return m_builder.CreateMemCpyInline(ptr, sl->getAlignment(), val, sl->getAlignment(),
+                                                    llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
+            } else {
+                return m_builder.CreateMemCpy(ptr, sl->getAlignment(), val, sl->getAlignment(),
+                                              llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
+            }
         }
         if (from.kind == ResolvedTypeKind::Array) {
             const llvm::DataLayout &dl = m_module->getDataLayout();
             auto t = generate_type(from);
-
-            return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t),
-                                          dl.getTypeAllocSize(t));
+            auto sizeInBytes = dl.getTypeAllocSize(t);
+            if (sizeInBytes < INLINE_SIZE_THRESHOLD) {
+                return m_builder.CreateMemCpyInline(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t),
+                                                    llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
+            } else {
+                return m_builder.CreateMemCpy(ptr, dl.getPrefTypeAlign(t), val, dl.getPrefTypeAlign(t),
+                                              llvm::ConstantInt::get(m_builder.getIntPtrTy(dl), sizeInBytes));
+            }
         }
     }
 
