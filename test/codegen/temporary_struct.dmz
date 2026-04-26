@@ -1,21 +1,24 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '3\n3\n1\n2\n3\n')
 const S = struct {
-  x: i32,
-  s2: S2,
+    x: i32,
+    s2: S2,
 };
 
 const S2 = struct {
-  x: i32,
-  y: i32,
-  z: i32,
+    x: i32,
+    y: i32,
+    z: i32,
 };
 
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void {
+    printf("%d\n", n);
+}
 
 fn foo() -> void {
-  println(S2 { x: 1, y: 2, z: 3 }.z);
-  println(S{ x: 1, s2: S2 { x: 2, y: 3, z: 4 } }.s2.y);
+    println(S2{x: 1, y: 2, z: 3}.z);
+    println(S{x: 1, s2: S2{x: 2, y: 3, z: 4}}.s2.y);
 }
 // CHECK: define void @temporary_struct.foo() {
 // CHECK-NEXT: entry:
@@ -33,7 +36,7 @@ fn foo() -> void {
 // CHECK-NEXT:   %2 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 0
 // CHECK-NEXT:   store i32 1, ptr %2, align 4
 // CHECK-NEXT:   %3 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 1
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %3, ptr align 4 %tmp.struct.temporary_struct.S21, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %3, ptr align 4 %tmp.struct.temporary_struct.S21, i64 12, i1 false)
 // CHECK-NEXT:   %4 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 1
 // CHECK-NEXT:   %5 = getelementptr inbounds nuw %temporary_struct.S2, ptr %4, i32 0, i32 1
 // CHECK-NEXT:   %6 = load i32, ptr %5, align 4
@@ -42,9 +45,9 @@ fn foo() -> void {
 // CHECK-NEXT: }
 
 fn bar() -> void {
-  println(S2 { x: 1, y: 2, z: 3 }.x);
-  println(S2 { x: 1, y: 2, z: 3 }.y);
-  println(S2 { x: 1, y: 2, z: 3 }.z);
+    println(S2{x: 1, y: 2, z: 3}.x);
+    println(S2{x: 1, y: 2, z: 3}.y);
+    println(S2{x: 1, y: 2, z: 3}.z);
 }
 // CHECK: define void @temporary_struct.bar() {
 // CHECK-NEXT: entry:
@@ -70,6 +73,6 @@ fn bar() -> void {
 // CHECK-NEXT: }
 
 fn main() -> void {
-  foo();
-  bar();
+    foo();
+    bar();
 }

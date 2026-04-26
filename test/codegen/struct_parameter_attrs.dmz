@@ -1,15 +1,18 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '1\n2\n3\n2\n')
 const S = struct {
-  x: i32,
+    x: i32,
 };
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void {
+    printf("%d\n", n);
+}
 
 fn foo(a: i32, b: S, c: i32, d: S) -> void {
-  println(a);
-  println(b.x);
-  println(c);
-  println(d.x);
+    println(a);
+    println(b.x);
+    println(c);
+    println(d.x);
 }
 // CHECK: define void @struct_parameter_attrs.foo(i32 %0, ptr readonly %1, i32 %2, ptr readonly %3) {
 // CHECK-NEXT: entry:
@@ -33,8 +36,8 @@ fn foo(a: i32, b: S, c: i32, d: S) -> void {
 // CHECK-NEXT: }
 
 fn main() -> void {
-  let s = S { x: 2 };
-  foo(1, s, 3, s);
+    let s = S{x: 2};
+    foo(1, s, 3, s);
 }
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
@@ -43,7 +46,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %s, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.struct_parameter_attrs.S, i8 0, i64 4, i1 false)
 // CHECK-NEXT:   store %struct_parameter_attrs.S { i32 2 }, ptr %tmp.struct.struct_parameter_attrs.S, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %s, ptr align 4 %tmp.struct.struct_parameter_attrs.S, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %s, ptr align 4 %tmp.struct.struct_parameter_attrs.S, i64 4, i1 false)
 // CHECK-NEXT:   call void @struct_parameter_attrs.foo(i32 1, ptr readonly %s, i32 3, ptr readonly %s)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

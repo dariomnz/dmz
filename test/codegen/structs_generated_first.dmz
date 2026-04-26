@@ -5,7 +5,7 @@
 // CHECK: %structs_generated_first.S = type { i32, i32 }
 
 fn foo(s: S) -> S2 {
-  return S2 { x: s.x, y: s.y };
+    return S2{x: s.x, y: s.y};
 }
 // CHECK: define void @structs_generated_first.foo(ptr sret(%structs_generated_first.S2) %ret, ptr readonly %0) {
 // CHECK-NEXT: entry:
@@ -20,19 +20,28 @@ fn foo(s: S) -> S2 {
 // CHECK-NEXT:   store i32 %2, ptr %5, align 4
 // CHECK-NEXT:   %6 = getelementptr inbounds nuw %structs_generated_first.S2, ptr %tmp.struct.structs_generated_first.S2, i32 0, i32 1
 // CHECK-NEXT:   store i32 %4, ptr %6, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ret, ptr align 4 %tmp.struct.structs_generated_first.S2, i64 8, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %ret, ptr align 4 %tmp.struct.structs_generated_first.S2, i64 8, i1 false)
 // CHECK-NEXT:   br label %return
 // CHECK-NEXT: 
 // CHECK-NEXT: return:                                           ; preds = %entry
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-extern fn printf(fmt:*u8, ...) -> i32; fn println(n:i32) -> void {printf("%d\n", n);}
-
-fn main() -> void {
-  let x = S { x: 10, y: 120 };
-  println(foo(x).x);
-  println(foo(x).y);
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void {
+    printf("%d\n", n);
 }
 
-const S = struct { x: i32, y:i32 };
-const S2 = struct { x: i32, y:i32 };
+fn main() -> void {
+    let x = S{x: 10, y: 120};
+    println(foo(x).x);
+    println(foo(x).y);
+}
+
+const S = struct {
+    x: i32,
+    y: i32,
+};
+const S2 = struct {
+    x: i32,
+    y: i32,
+};

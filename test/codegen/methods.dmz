@@ -1,10 +1,10 @@
 // RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
 // RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'Color{1, 2, 3}\nColor{11, 12, 13}\n')
 
-extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 fn main() -> void {
-    let c:Color = Color{r:1, g:2, b:3};
+    let c: Color = Color{r: 1, g: 2, b: 3};
     c.print();
     c.add(10);
     c.print();
@@ -16,7 +16,7 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %c, i8 0, i64 12, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.methods.Color, i8 0, i64 12, i1 false)
 // CHECK-NEXT:   store %methods.Color { i32 1, i32 2, i32 3 }, ptr %tmp.struct.methods.Color, align 4
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %c, ptr align 4 %tmp.struct.methods.Color, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %c, ptr align 4 %tmp.struct.methods.Color, i64 12, i1 false)
 // CHECK-NEXT:   %0 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
 // CHECK-NEXT:   call void @methods.Color.add(ptr byref(%methods.Color) %c, i32 10)
 // CHECK-NEXT:   %1 = call i32 @methods.Color.print(ptr byref(%methods.Color) %c)
@@ -27,11 +27,11 @@ const Color = struct {
     r: i32,
     g: i32,
     b: i32,
-    
+
     pub fn print(self: *@This) -> i32 {
         return printf("Color{%d, %d, %d}\n", self.r, self.g, self.b);
     }
-    pub fn add(self: *@This, n:i32) -> void {
+    pub fn add(self: *@This, n: i32) -> void {
         self.r += n;
         self.g += n;
         self.b += n;

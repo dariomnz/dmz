@@ -193,9 +193,9 @@ fn main() -> void {
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp19, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %struct.ret.tmp26, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @error_handle.foo(ptr sret(%error.struct.i32) %struct.ret.tmp, i32 10)
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result, ptr align 8 %struct.ret.tmp, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %result, ptr align 8 %struct.ret.tmp, i64 16, i1 false)
 // CHECK-NEXT:   call void @error_handle.bar(ptr sret(%error.struct.i32) %struct.ret.tmp1, i32 2)
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %result2, ptr align 8 %struct.ret.tmp1, i64 16, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %result2, ptr align 8 %struct.ret.tmp1, i64 16, i1 false)
 // CHECK-NEXT:   %0 = getelementptr inbounds nuw %error.struct.i32, ptr %result, i32 0, i32 1
 // CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
 // CHECK-NEXT:   %2 = ptrtoint ptr %1 to i64
