@@ -857,6 +857,14 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                             return false;
                         }
                     }
+                } else if (decl->identifier == "@asm") {
+                    callExpr->type = expectedType.clone();
+                    if (auto funcType = dynamic_cast<ResolvedTypeFunction *>(callExpr->type.get())) {
+                        if (funcType->returnType->kind == ResolvedTypeKind::Generic) {
+                            report(callExpr->location, "@asm must have a concrete return type");
+                            return false;
+                        }
+                    }
                 }
             }
         }

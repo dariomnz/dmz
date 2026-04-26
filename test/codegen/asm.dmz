@@ -1,0 +1,15 @@
+// RUN: (dmz %s -llvm-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(msg: *u8, ...) -> i32;
+
+fn main() -> void {
+    const nr_write: u64 = 1;
+    const stdout: u64 = 1;
+    const msg = "ASM Syscall Test\n";
+    const len: u64 = 17;
+
+    let res: u64 = @asm("syscall", "={rax},{rax},{rdi},{rsi},{rdx}", nr_write, stdout, msg, len);
+
+    // CHECK: %1 = call i64 asm sideeffect "syscall", "={rax},{rax},{rdi},{rsi},{rdx}"(i64 1, i64 1, ptr %0, i64 17)
+    printf("result %d\n", res);
+}

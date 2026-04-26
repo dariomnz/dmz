@@ -218,10 +218,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
     // if (functionDecl.identifier == "println")
     // generate_builtin_println_body(functionDecl);
     // else
-    ResolvedBlock *body;
-    if (auto specFunc = dynamic_cast<const ResolvedSpecializedFunctionDecl *>(&functionDecl)) {
-        body = specFunc->body.get();
-    }
+    ResolvedBlock *body = nullptr;
     if (auto function = dynamic_cast<const ResolvedFunctionDecl *>(&functionDecl)) {
         body = function->body.get();
     }

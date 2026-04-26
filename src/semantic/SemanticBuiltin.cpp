@@ -283,6 +283,26 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@asm") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        auto stringPtr = makePtr<ResolvedTypePointer>(loc, ResolvedTypeNumber::u8(loc));
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(
+            makePtr<ResolvedParamDecl>(loc, "asmCode", ResolvedTypeExpr::fromType(stringPtr->clone()), false));
+        params.emplace_back(
+            makePtr<ResolvedParamDecl>(loc, "constraints", ResolvedTypeExpr::fromType(stringPtr->clone()), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "args", makePtr<ResolvedTypeExpr>(loc, makePtr<ResolvedTypeVarArg>(loc)), false, true));
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
+
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -753,6 +773,26 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         } else {
             return report(msgArg->location, "@compileError expects a string literal argument.");
         }
+    } else if (resolvedCallee.identifier == "@asm") {
+        if (resolvedArguments.size() < 2)
+            return report(call.location, "@asm expects at least 2 arguments: (AsmCode, Constraints, ...Args)");
+
+        auto &asmCodeExpr = resolvedArguments[0];
+        if (!dynamic_cast<ResolvedStringLiteral *>(asmCodeExpr.get())) {
+            return report(asmCodeExpr->location, "@asm first argument must be a string literal");
+        }
+
+        auto &constraintsExpr = resolvedArguments[1];
+        if (!dynamic_cast<ResolvedStringLiteral *>(constraintsExpr.get())) {
+            return report(constraintsExpr->location, "@asm second argument must be a string literal");
+        }
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        for (auto &arg : resolvedArguments) {
+            paramsTypes.emplace_back(arg->type->clone());
+        }
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
     }
     return report(call.location, "unknown builtin function");
 }

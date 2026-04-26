@@ -1,0 +1,26 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(msg: *u8, ...) -> i32;
+
+fn main() -> void {
+    const nr_write: u64 = 1;
+    const stdout: u64 = 1;
+    const msg = "ASM Syscall Test\n";
+    const len: u64 = 17;
+
+    let res: u64 = @asm("syscall", "={rax},{rax},{rdi},{rsi},{rdx}", nr_write, stdout, msg, len);
+
+    printf("result %d\n", res);
+    // CHECK: ResolvedVarDecl:u64 res
+    // CHECK-NEXT:       ResolvedCallExpr:u64
+    // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, *u8, ...)->generic @asm
+    // CHECK-NEXT:         ResolvedStringLiteral:*u8 'syscall'
+    // CHECK-NEXT:         ResolvedStringLiteral:*u8 '={rax},{rax},{rdi},{rsi},{rdx}'
+    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 nr_write
+    // CHECK-NEXT:         | value: 1
+    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 stdout
+    // CHECK-NEXT:         | value: 1
+    // CHECK-NEXT:         ResolvedDeclRefExpr:*u8 msg
+    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 len
+    // CHECK-NEXT:         | value: 17
+}

@@ -7,6 +7,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <llvm/IR/InlineAsm.h>
 #include <llvm/IR/Module.h>
 #pragma GCC diagnostic pop
 
@@ -58,6 +59,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_simdReduce(call);
     } else if (builtin.identifier == "@errorTrace") {
         return generate_builtin_error_trace();
+    } else if (builtin.identifier == "@asm") {
+        return generate_builtin_asm(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -540,5 +543,38 @@ llvm::Value *Codegen::generate_builtin_simdReduce(const ResolvedCallExpr &call) 
         default:
             dmz_unreachable(call.location, "unsupported simd reduction operator");
     }
+}
+
+llvm::Value *Codegen::generate_builtin_asm(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() < 2) dmz_unreachable(call.location, "expected at least 2 arguments");
+
+    auto *asmCodeLit = dynamic_cast<const ResolvedStringLiteral *>(call.arguments[0].get());
+    auto *constraintsLit = dynamic_cast<const ResolvedStringLiteral *>(call.arguments[1].get());
+
+    if (!asmCodeLit || !constraintsLit) {
+        dmz_unreachable(call.location, "@asm first two arguments must be string literals");
+    }
+
+    llvm::Type *retType = generate_type(*call.type);
+    std::vector<llvm::Type *> paramTypes;
+    std::vector<llvm::Value *> args;
+
+    for (size_t i = 2; i < call.arguments.size(); ++i) {
+        auto *val = generate_expr(*call.arguments[i]);
+        paramTypes.emplace_back(val->getType());
+        args.emplace_back(val);
+    }
+
+    llvm::FunctionType *asmFnType = llvm::FunctionType::get(retType, paramTypes, false);
+
+    bool hasSideEffects = true;
+    bool isAlignStack = false;
+    auto dialect = llvm::InlineAsm::AD_ATT;
+
+    llvm::InlineAsm *ia = llvm::InlineAsm::get(asmFnType, asmCodeLit->value, constraintsLit->value, hasSideEffects,
+                                               isAlignStack, dialect);
+
+    return m_builder.CreateCall(asmFnType, ia, args);
 }
 }  // namespace DMZ
