@@ -1,0 +1,67 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn printf(fmt:*u8, ...) -> i32;
+
+const Point = struct {
+    x:i32,
+    y:i32,
+
+    pub fn add<T>(self: *@This, n: T) -> void {
+        self.x += n;
+        self.y += n;
+    }
+// CHECK: ResolvedStructDecl struct_generic_member.Point
+// CHECK-NEXT:           ResolvedFieldDecl:i32 x
+// CHECK-NEXT:           ResolvedFieldDecl:i32 y
+// CHECK-NEXT:           ResolvedGenericMemberFunctionDecl add fn(*struct_generic_member.Point{}, T)->void
+// CHECK-NEXT:             ResolvedGenericTypeDecl T
+// CHECK-NEXT:             ResolvedParamDecl:*struct_generic_member.Point{} self
+// CHECK-NEXT:             ResolvedParamDecl:T n
+// CHECK-NEXT:             ResolvedBlock
+// CHECK-NEXT:               ResolvedAssignment
+// CHECK-NEXT:                 ResolvedMemberExpr:i32 x
+// CHECK-NEXT:                   ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                     ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                 ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:                   ResolvedMemberExpr:i32 x
+// CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                   ResolvedDeclRefExpr:T n
+// CHECK-NEXT:               ResolvedAssignment
+// CHECK-NEXT:                 ResolvedMemberExpr:i32 y
+// CHECK-NEXT:                   ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                     ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                 ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:                   ResolvedMemberExpr:i32 y
+// CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                   ResolvedDeclRefExpr:T n
+// CHECK-NEXT:             ResolvedSpecializedFunctionDecl add<i32> fn(*struct_generic_member.Point{}, i32)->void
+// CHECK-NEXT:               ResolvedParamDecl:*struct_generic_member.Point{} self
+// CHECK-NEXT:               ResolvedParamDecl:i32 n
+// CHECK-NEXT:               ResolvedBlock
+// CHECK-NEXT:                 ResolvedAssignment
+// CHECK-NEXT:                   ResolvedMemberExpr:i32 x
+// CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                   ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:                     ResolvedMemberExpr:i32 x
+// CHECK-NEXT:                       ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                         ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                     ResolvedDeclRefExpr:i32 n
+// CHECK-NEXT:                 ResolvedAssignment
+// CHECK-NEXT:                   ResolvedMemberExpr:i32 y
+// CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                   ResolvedBinaryOperator:i32 '+='
+// CHECK-NEXT:                     ResolvedMemberExpr:i32 y
+// CHECK-NEXT:                       ResolvedDerefPtrExpr:struct_generic_member.Point{}
+// CHECK-NEXT:                         ResolvedDeclRefExpr:*struct_generic_member.Point{} self
+// CHECK-NEXT:                     ResolvedDeclRefExpr:i32 n
+};
+
+fn main() -> void {
+    let p = Point{x:1, y:2};
+    p.add<i32>(5);
+    printf("Point %d %d\n", p.x, p.y);
+}

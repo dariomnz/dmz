@@ -784,7 +784,9 @@ llvm::Value *Codegen::cast_to(llvm::Value *v, const ResolvedType &from, const Re
                             "From: " + fromPtr->to_str() + " to: " + toPtr->to_str() + " unsuported type from ptr");
         }
     } else if (auto fromNum = dynamic_cast<const ResolvedTypeNumber *>(fromPtr)) {
-        if (auto toNum = dynamic_cast<const ResolvedTypeNumber *>(toPtr)) {
+        if (toPtr->kind == ResolvedTypeKind::Pointer) {
+            return m_builder.CreateIntToPtr(v, generate_type(*toPtr), "int.to.ptr");
+        } else if (auto toNum = dynamic_cast<const ResolvedTypeNumber *>(toPtr)) {
             if (fromNum->numberKind == ResolvedNumberKind::Int) {
                 if (toNum->numberKind == ResolvedNumberKind::Int) {
                     if (fromNum->bitSize == 1)

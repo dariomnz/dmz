@@ -34,7 +34,7 @@ std::vector<ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
 
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
-ptr<FuncDecl> Parser::parse_function_decl() {
+ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
     debug_func("");
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
@@ -84,10 +84,11 @@ ptr<FuncDecl> Parser::parse_function_decl() {
 
     if (genericTypes.size() != 0) {
         return makePtr<GenericFunctionDecl>(loc, isPublic, functionIdentifier, std::move(type),
-                                            std::move(*parameterList), std::move(block), std::move(genericTypes));
+                                            std::move(*parameterList), std::move(block), std::move(genericTypes),
+                                            parentDecl);
     } else {
         return makePtr<FunctionDecl>(loc, isPublic, functionIdentifier, std::move(type), std::move(*parameterList),
-                                     std::move(block));
+                                     std::move(block), parentDecl);
     }
 }
 
@@ -244,12 +245,9 @@ ptr<StructDecl> Parser::parse_aggregate_decl(TokenType kindToken) {
             if (isPublic) {
                 eat_next_token();  // eat pub
             }
-            varOrReturn(init, parse_function_decl());
-            varOrReturn(func, dynamic_cast<FunctionDecl*>(init.get()));
-            auto memberFunc =
-                makePtr<MemberFunctionDecl>(func->location, isPublic, func->identifier, std::move(func->type),
-                                            std::move(func->params), std::move(func->body), aggregate.get());
-            declList.emplace_back(std::move(memberFunc));
+            varOrReturn(func, parse_function_decl(aggregate.get()));
+            if (isPublic) func->isPublic = true;
+            declList.emplace_back(std::move(func));
         } else {
             return report(m_nextToken.loc, "expected identifier, fn, const or let in " + typeNameStr);
         }
@@ -334,28 +332,6 @@ ptr<ErrorDecl> Parser::parse_error_decl() {
     return makePtr<ErrorDecl>(location, id);
 }
 
-ptr<ModuleDecl> Parser::parse_module_decl() {
-    debug_func("");
-    dmz_unreachable(m_nextToken.loc, "TODO: think if permit declaration of modules");
-    // auto location = m_nextToken.loc;
-    // matchOrReturn(TokenType::kw_module, "expected 'module'");
-    // eat_next_token();  // eat module
-
-    // matchOrReturn(TokenType::id, "expected identifier");
-    // auto identifier = m_nextToken.str;
-    // eat_next_token();  // eat identifier
-
-    // matchOrReturn(TokenType::block_l, "expected '{'");
-    // eat_next_token();  // eat {
-
-    // auto declarations = parse_in_module_decl();
-
-    // matchOrReturn(TokenType::block_r, "expected '}'");
-    // eat_next_token();  // eat {
-
-    // return makePtr<ModuleDecl>(location, identifier, std::move(declarations));
-}
-
 std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
     debug_func("");
     std::vector<ptr<Decl>> declarations;
@@ -374,11 +350,6 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
             }
         } else if (ttype == TokenType::kw_const || ttype == TokenType::kw_let) {
             if (auto st = parse_decl_stmt(true)) {
-                declarations.emplace_back(std::move(st));
-                continue;
-            }
-        } else if (ttype == TokenType::kw_module) {
-            if (auto st = parse_module_decl()) {
                 declarations.emplace_back(std::move(st));
                 continue;
             }

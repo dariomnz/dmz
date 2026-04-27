@@ -22,6 +22,7 @@ struct CompilerOptions {
     bool importDump = false;
     bool noRemoveUnused = false;
     bool resDump = false;
+    bool resModDump = false;
     bool depsDump = false;
     bool depsDotDump = false;
     bool llvmDump = false;

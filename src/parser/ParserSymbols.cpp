@@ -73,7 +73,7 @@ void TypePointer::dump(size_t level) const { std::cerr << indent(level) << "Type
 std::string TypePointer::to_str() const { return "*" + pointerType->to_str(); }
 
 void FunctionDecl::dump(size_t level) const {
-    if (dynamic_cast<const MemberFunctionDecl *>(this)) {
+    if (parentDecl) {
         std::cerr << indent(level) << "MemberFunctionDecl ";
     } else if (dynamic_cast<const TestDecl *>(this)) {
         std::cerr << indent(level) << "TestDecl ";
@@ -90,7 +90,12 @@ void FunctionDecl::dump(size_t level) const {
 std::string FunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void GenericFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericFunctionDecl " << identifier << " -> " << type->to_str() << "\n";
+    if (parentDecl) {
+        std::cerr << indent(level) << "GenericMemberFunctionDecl ";
+    } else {
+        std::cerr << indent(level) << "GenericFunctionDecl ";
+    }
+    std::cerr << identifier << " -> " << type->to_str() << "\n";
     for (auto &&genType : genericTypes) genType->dump(level + 1);
 
     for (auto &&param : params) param->dump(level + 1);
@@ -99,17 +104,6 @@ void GenericFunctionDecl::dump(size_t level) const {
 }
 
 std::string GenericFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void MemberFunctionDecl::dump(size_t level) const { FunctionDecl::dump(level); }
-
-std::string MemberFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void MemberGenericFunctionDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "MemberGenericFunctionDecl:" << parentDecl->to_str() << "\n";
-    GenericFunctionDecl::dump(level + 1);
-}
-
-std::string MemberGenericFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ExternFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type->to_str() << "\n";

@@ -157,8 +157,8 @@ void ResolvedExternFunctionDecl::dump(size_t level, bool onlySelf) const {
 void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
     if (dynamic_cast<const ResolvedBuiltinFunctionDecl *>(this)) {
         std::cerr << indent(level) << "ResolvedBuiltinFunctionDecl ";
-    } else if (auto member = dynamic_cast<const ResolvedMemberFunctionDecl *>(this)) {
-        if (member->isStatic) {
+    } else if (parentDecl) {
+        if (isStatic) {
             std::cerr << indent(level) << "ResolvedStaticMemberFunctionDecl ";
         } else {
             std::cerr << indent(level) << "ResolvedMemberFunctionDecl ";
@@ -176,12 +176,21 @@ void ResolvedFunctionDecl::dump(size_t level, bool onlySelf) const {
 }
 
 void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedGenericFunctionDecl " << identifier << " " << type->to_str() << '\n';
-    for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
+    if (parentDecl) {
+        if (isStatic) {
+            std::cerr << indent(level) << "ResolvedGenericStaticMemberFunctionDecl ";
+        } else {
+            std::cerr << indent(level) << "ResolvedGenericMemberFunctionDecl ";
+        }
+    } else {
+        std::cerr << indent(level) << "ResolvedGenericFunctionDecl ";
+    }
+    std::cerr << identifier << " " << type->to_str() << '\n';
 
     if (onlySelf) return;
-    for (auto &&param : params) param->dump(level + 1, onlySelf);
 
+    for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
+    for (auto &&param : params) param->dump(level + 1, onlySelf);
     if (body) body->dump(level + 1, onlySelf);
 
     for (auto &&func : specializations) {
@@ -196,11 +205,6 @@ void ResolvedGenericFunctionDecl::dump_dependencies(size_t level, bool dot_forma
 
 std::string ResolvedGenericFunctionDecl::name() const {
     return ResolvedDecl::name() + ResolvedGenericTypeDecl::generic_types_to_str(genericTypeDecls);
-}
-
-void ResolvedMemberFunctionDecl::dump(size_t level, bool onlySelf) const {
-    ResolvedFunctionDecl::dump(level, onlySelf);
-    if (onlySelf) return;
 }
 
 void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {

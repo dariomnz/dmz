@@ -37,6 +37,7 @@ void Driver::display_help() {
     println("  -import-dump         print the abstract syntax tree after import");
     println("  -no-remove-unused    disable the removal of unused code");
     println("  -res-dump            print the resolved syntax tree");
+    println("  -res-mod-dump        print the resolved syntax tree only source");
     println("  -deps-dump           print the resolved syntax tree with dependencies");
     println("  -deps-dot-dump       print the resolved syntax tree with dependencies in dot format");
     println("  -cfg-dump            print the control flow graph");
@@ -89,6 +90,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.noRemoveUnused = true;
             } else if (arg == "-res-dump") {
                 options.resDump = true;
+            } else if (arg == "-res-mod-dump") {
+                options.resModDump = true;
             } else if (arg == "-deps-dump") {
                 options.depsDump = true;
             } else if (arg == "-deps-dot-dump") {
@@ -256,9 +259,10 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
         return {};
     }
 
-    if (m_options.resDump) {
+    if (m_options.resDump || m_options.resModDump) {
         if (!m_haveError) {
             for (auto &&fn : resolvedTree) {
+                if (m_options.resModDump && fn->module_path != m_options.source) continue;
                 fn->dump();
             }
         }

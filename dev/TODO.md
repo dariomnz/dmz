@@ -39,3 +39,5 @@
 - [x] inline asm
 - [x] compile without libc
 - [ ] create export fn
+- [ ] @ptrCast for ptrs and for slices
+- [ ] casting sistem with builtins

@@ -124,8 +124,7 @@ class Sema {
                                                              ResolvedGenericStructDecl &struDecl,
                                                              const ResolvedTypeSpecialized &specializedTypes);
     ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
-    ptr<ResolvedMemberFunctionDecl> resolve_member_function_decl(const ResolvedDecl &parentDecl,
-                                                                 const MemberFunctionDecl &function);
+    ptr<ResolvedFunctionDecl> resolve_member_function_decl(const ResolvedDecl &parentDecl, const FuncDecl &function);
     ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
     ptr<ResolvedBlock> resolve_block(const Block &block);
     ptr<ResolvedStmt> resolve_stmt(const Stmt &stmt);

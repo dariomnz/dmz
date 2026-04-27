@@ -623,11 +623,13 @@ struct ExternFunctionDecl : public FuncDecl {
 
 struct FunctionDecl : public FuncDecl {
     ptr<Block> body;
+    Type* parentDecl = nullptr;
 
     FunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                 std::vector<ptr<ParamDecl>> params, ptr<Block> body)
+                 std::vector<ptr<ParamDecl>> params, ptr<Block> body, Type* parentDecl = nullptr)
         : FuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)),
-          body(std::move(body)) {}
+          body(std::move(body)),
+          parentDecl(parentDecl) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
@@ -639,39 +641,10 @@ struct GenericFunctionDecl : public FunctionDecl {
 
     GenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
                         std::vector<ptr<ParamDecl>> params, ptr<Block> body,
-                        std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
+                        std::vector<ptr<GenericTypeDecl>> genericTypes, Type* parentDecl = nullptr)
+        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body),
+                       parentDecl),
           genericTypes(std::move(genericTypes)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-// Forware declaration
-struct StructDecl;
-struct MemberFunctionDecl : public FunctionDecl {
-    Type* parentDecl;
-
-    MemberFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                       std::vector<ptr<ParamDecl>> params, ptr<Block> body, Type* parentDecl)
-        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body)),
-          parentDecl(parentDecl) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct MemberGenericFunctionDecl : public GenericFunctionDecl {
-    Type* parentDecl;
-
-    MemberGenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                              std::vector<ptr<ParamDecl>> params, ptr<Block> body,
-                              std::vector<ptr<GenericTypeDecl>> genericTypes, Type* parentDecl)
-        : GenericFunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params),
-                              std::move(body), std::move(genericTypes)),
-          parentDecl(parentDecl) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

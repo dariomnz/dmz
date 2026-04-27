@@ -52,16 +52,17 @@ std::vector<ptr<ResolvedGenericTypeDecl>> Sema::resolve_generic_types_decl(
     return resolvedTypes;
 }
 
-ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const ResolvedDecl &parentDecl,
-                                                                   const MemberFunctionDecl &function) {
+ptr<ResolvedFunctionDecl> Sema::resolve_member_function_decl(const ResolvedDecl &parentDecl, const FuncDecl &function) {
     debug_func(function.location);
 
-    varOrReturn(resolvedFunc, resolve_function_decl(function));
-    if (!dynamic_cast<ResolvedFunctionDecl *>(resolvedFunc.get())) {
-        dmz_unreachable(function.location, "function is not a function");
+    varOrReturn(resolvedFuncDecl, resolve_function_decl(function));
+
+    if (!dynamic_cast<ResolvedFunctionDecl *>(resolvedFuncDecl.get())) {
+        resolvedFuncDecl->dump();
+        dmz_unreachable(function.location, "this should be a function declaration");
     }
 
-    ptr<ResolvedFunctionDecl> resolvedFunctionDecl = castPtr<ResolvedFunctionDecl>(std::move(resolvedFunc));
+    auto resolvedFunc = castPtr<ResolvedFunctionDecl>(std::move(resolvedFuncDecl));
 
     bool isStatic = true;
 
@@ -82,36 +83,23 @@ ptr<ResolvedMemberFunctionDecl> Sema::resolve_member_function_decl(const Resolve
     }
 
     if (parentType) {
-        if (resolvedFunctionDecl->params.size() > 0) {
+        if (resolvedFunc->params.size() > 0) {
             auto paramType = makePtr<ResolvedTypePointer>(function.location, std::move(parentType));
-            if (resolvedFunctionDecl->params[0]->type->equal(*paramType)) {
+            if (resolvedFunc->params[0]->type->equal(*paramType)) {
                 isStatic = false;
             }
         }
     }
 
-    ptr<ResolvedMemberFunctionDecl> ret = nullptr;
-    if (dynamic_cast<ResolvedGenericFunctionDecl *>(resolvedFunctionDecl.get())) {
-        dmz_unreachable(function.location, "TODO");
-        // ret = makePtr<ResolvedGenericFunctionDecl>(
-        //     genFunc->location, genFunc->isPublic, genFunc->identifier, std::move(genFunc->type),
-        //     std::move(genFunc->params), std::move(genFunc->scope), std::move(genFunc->genericScope),
-        //     genFunc->functionDecl, std::move(genFunc->genericTypeDecls), &parentDecl, isStatic);
-    } else {
-        ret = makePtr<ResolvedMemberFunctionDecl>(
-            resolvedFunctionDecl->location, resolvedFunctionDecl->isPublic, resolvedFunctionDecl->identifier,
-            std::move(resolvedFunctionDecl->type), std::move(resolvedFunctionDecl->params),
-            std::move(resolvedFunctionDecl->resolvedReturnTypeExpr), std::move(resolvedFunctionDecl->scope),
-            resolvedFunctionDecl->functionDecl, &parentDecl, isStatic);
+    resolvedFunc->parentDecl = parentStructDecl;
+    resolvedFunc->isStatic = isStatic;
+
+    if (auto rf = dynamic_cast<ResolvedFuncDecl *>(resolvedFunc.get())) {
+        rf->scope->currentFunction = rf;
+        rf->scope->currentStruct = parentStructDecl;
     }
 
-    auto fnType = ret->getFnType();
-    fnType->fnDecl = ret.get();
-    ret->body = std::move(resolvedFunctionDecl->body);
-    ret->symbolName = std::move(resolvedFunctionDecl->symbolName);
-    ret->scope->currentFunction = ret.get();
-    ret->scope->currentStruct = parentStructDecl;
-    return ret;
+    return resolvedFunc;
 }
 
 ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
@@ -354,12 +342,9 @@ ResolvedSpecializedStructDecl *Sema::specialize_generic_struct(const SourceLocat
     ScopeRAII parentStructScope(*this, struDecl.genericScope.get());
     ScopeRAII structScope(*this);
 
-    std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
-    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
-
     auto resolvedStruct = makePtr<ResolvedSpecializedStructDecl>(
         struDecl.location, struDecl.isPublic, struDecl.identifier, struDecl.structDecl, struDecl.isPacked,
-        std::move(resolvedFields), std::move(resolvedFunctions), structScope.takeScope(), &struDecl,
+        vec<ptr<ResolvedFieldDecl>>{}, vec<ptr<ResolvedFunctionDecl>>{}, structScope.takeScope(), &struDecl,
         castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
 
     auto *retStruct = struDecl.specializations.emplace_back(std::move(resolvedStruct)).get();
@@ -610,25 +595,25 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
     if (dynamic_cast<const GenericStructDecl *>(&structDecl)) {
         auto resGenStructDecl = makePtr<ResolvedGenericStructDecl>(
             structDecl.location, structDecl.isPublic, resolve_decl_name(structDecl.identifier), &structDecl,
-            structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{},
+            structDecl.isPacked, vec<ptr<ResolvedFieldDecl>>{}, vec<ptr<ResolvedFunctionDecl>>{},
             std::move(takenFieldScope), std::move(takenGenericScope), std::move(resolvedGenericTypesDecl));
         if (resGenStructDecl->genericScope) resGenStructDecl->genericScope->currentStruct = resGenStructDecl.get();
         resStructDecl = std::move(resGenStructDecl);
     } else if (auto unionDecl = dynamic_cast<const UnionDecl *>(&structDecl)) {
-        resStructDecl = makePtr<ResolvedUnionDecl>(
-            unionDecl->location, unionDecl->isPublic, resolve_decl_name(unionDecl->identifier), unionDecl,
-            unionDecl->isPacked, std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{},
-            std::move(takenFieldScope));
+        resStructDecl = makePtr<ResolvedUnionDecl>(unionDecl->location, unionDecl->isPublic,
+                                                   resolve_decl_name(unionDecl->identifier), unionDecl,
+                                                   unionDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
+                                                   vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     } else if (auto enumDecl = dynamic_cast<const EnumDecl *>(&structDecl)) {
         resStructDecl =
             makePtr<ResolvedEnumDecl>(enumDecl->location, enumDecl->isPublic, resolve_decl_name(enumDecl->identifier),
-                                      enumDecl, enumDecl->isPacked, std::vector<ptr<ResolvedFieldDecl>>{},
-                                      std::vector<ptr<ResolvedMemberFunctionDecl>>{}, std::move(takenFieldScope));
+                                      enumDecl, enumDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
+                                      vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     } else {
-        resStructDecl = makePtr<ResolvedStructDecl>(
-            structDecl.location, structDecl.isPublic, resolve_decl_name(structDecl.identifier), &structDecl,
-            structDecl.isPacked, std::vector<ptr<ResolvedFieldDecl>>{}, std::vector<ptr<ResolvedMemberFunctionDecl>>{},
-            std::move(takenFieldScope));
+        resStructDecl = makePtr<ResolvedStructDecl>(structDecl.location, structDecl.isPublic,
+                                                    resolve_decl_name(structDecl.identifier), &structDecl,
+                                                    structDecl.isPacked, vec<ptr<ResolvedFieldDecl>>{},
+                                                    vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     }
     if (resStructDecl->scope) resStructDecl->scope->currentStruct = resStructDecl.get();
 
@@ -852,16 +837,17 @@ bool Sema::resolve_struct_decl_funcs(ResolvedStructDecl &resolvedStructDecl) {
         });
     }
 
-    std::vector<ptr<ResolvedMemberFunctionDecl>> resolvedFunctions;
+    std::vector<ptr<ResolvedFunctionDecl>> resolvedFunctions;
     std::vector<std::string> resolvedFunctions_strs;
     if (resolvedStructDecl.structDecl) {
         for (auto &&decl : resolvedStructDecl.structDecl->decls) {
-            auto function = dynamic_cast<const MemberFunctionDecl *>(decl.get());
-            if (!function) continue;
-            auto memberFunc = (resolve_member_function_decl(resolvedStructDecl, *function));
-            if (!memberFunc) return false;
-            resolvedFunctions.emplace_back(std::move(memberFunc));
-            resolvedFunctions_strs.emplace_back(function->identifier);
+            auto func = dynamic_cast<const FunctionDecl *>(decl.get());
+            if (!func) continue;
+
+            auto resolvedMember = resolve_member_function_decl(resolvedStructDecl, *func);
+            if (!resolvedMember) return false;
+            resolvedFunctions.emplace_back(std::move(resolvedMember));
+            resolvedFunctions_strs.emplace_back(func->identifier);
         }
     }
 
@@ -1196,12 +1182,9 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
 
     std::vector<ptr<ResolvedType>> savedTypesStruct;
     std::optional<DeferAction> deferSpecializedTypeStruct = std::nullopt;
-    if (auto *member = dynamic_cast<ResolvedMemberFunctionDecl *>(&function)) {
-        if (auto *parentSt = dynamic_cast<ResolvedStructDecl *>(const_cast<ResolvedDecl *>(member->parentDecl))) {
-            if (!ensure_struct_members_resolved(*parentSt)) return false;
-        }
-        if (auto *spec =
-                dynamic_cast<ResolvedSpecializedStructDecl *>(const_cast<ResolvedDecl *>(member->parentDecl))) {
+    if (function.parentDecl) {
+        if (!ensure_struct_members_resolved(*function.parentDecl)) return false;
+        if (auto *spec = dynamic_cast<ResolvedSpecializedStructDecl *>(function.parentDecl)) {
             // Specialize types
             for (size_t i = 0; i < spec->genStruct->genericTypeDecls.size(); i++) {
                 debug_msg("Specialize " << spec->genStruct->genericTypeDecls[i]->identifier << " to "

@@ -1,9 +1,10 @@
-#include <algorithm>
 #ifdef DEBUG_SEMANTIC
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
+
+#include <algorithm>
 
 #include "Debug.hpp"
 #include "Utils.hpp"
@@ -133,14 +134,17 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
 
     return resolvedDeclRefExpr;
 }
-
 ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &location,
                                                        ResolvedGenericFunctionDecl &funcDecl,
                                                        const std::vector<ptr<ResolvedExpr>> &arguments) {
-    debug_func(location);
+    debug_func(location << " inferring generics for function: " << funcDecl.name());
+
     std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> inferredTypes;
 
     for (size_t i = 0; i < funcDecl.params.size() && i < arguments.size(); ++i) {
+        debug_msg(location << "  examining param[" << i << "] (" << funcDecl.params[i]->name() << "): expected "
+                           << funcDecl.params[i]->type->to_str() << ", got " << arguments[i]->type->to_str());
+
         if (!internal_infer_type(inferredTypes, *funcDecl.params[i]->type, *arguments[i]->type)) {
             return report(arguments[i]->location, "type mismatch during generic inference: expected '" +
                                                       funcDecl.params[i]->type->to_str() + "', actual '" +
@@ -151,10 +155,11 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
     std::vector<ptr<ResolvedType>> specializedTypes;
     for (auto &&gtDecl : funcDecl.genericTypeDecls) {
         if (inferredTypes.count(gtDecl.get())) {
-            debug_msg(location << " func " << funcDecl.name() << " inferred type for '" << gtDecl->identifier
-                               << "' is '" << inferredTypes[gtDecl.get()]->to_str() << "'");
+            debug_msg(location << "  -> inferred '" << gtDecl->identifier << "' as '"
+                               << inferredTypes[gtDecl.get()]->to_str() << "'");
             specializedTypes.emplace_back(inferredTypes[gtDecl.get()]->clone());
         } else {
+            debug_msg(location << "  !! failed to infer generic type: " << gtDecl->identifier);
             return report(location, "could not infer generic type for '" + gtDecl->identifier + "'");
         }
     }
@@ -164,10 +169,20 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
 
 bool Sema::internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> &inferredTypes,
                                const ResolvedType &paramType, const ResolvedType &argType) {
+    debug_msg("    internal_infer: " << paramType.to_str() << " <-> " << argType.to_str());
+
     if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&paramType)) {
         if (inferredTypes.count(genType->decl)) {
-            return inferredTypes[genType->decl]->compare(argType);
+            bool matches = inferredTypes[genType->decl]->compare(argType);
+            if (!matches) {
+                debug_msg("    !! conflict for '" << genType->decl->identifier << "': already '"
+                                                  << inferredTypes[genType->decl]->to_str() << "', cannot be '"
+                                                  << argType.to_str() << "'");
+            }
+            return matches;
         }
+
+        debug_msg("    assigning '" << genType->decl->identifier << "' = " << argType.to_str());
         inferredTypes[genType->decl] = argType.clone();
         return true;
     }
@@ -192,6 +207,7 @@ bool Sema::internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr
                                    *static_cast<const ResolvedTypeArray &>(argType).arrayType);
     }
 
+    // return paramType.compare(argType);
     return true;
 }
 
@@ -202,10 +218,16 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
 
     varOrReturn(resolvedCallee, resolve_expr(*call.callee));
 
-    if (auto memberExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedCallee.get())) {
-        if (auto memFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(&memberExpr->member)) {
-            isMemberCall = !memFunc->isStatic;
-            if (isMemberCall) {
+    ResolvedMemberExpr *memberExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedCallee.get());
+    if (!memberExpr) {
+        if (auto genericExpr = dynamic_cast<ResolvedGenericExpr *>(resolvedCallee.get())) {
+            memberExpr = dynamic_cast<ResolvedMemberExpr *>(genericExpr->base.get());
+        }
+    }
+    if (memberExpr) {
+        if (auto memFunc = dynamic_cast<const ResolvedFunctionDecl *>(&memberExpr->member)) {
+            if (memFunc->parentDecl && !memFunc->isStatic) {
+                isMemberCall = true;
                 resolvedBase = std::move(memberExpr->base);
                 // Recreate resolvedCallee
                 resolvedCallee = resolve_expr(*call.callee);
@@ -240,10 +262,10 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     }
 
     bool errGeneric = false;
-    errGeneric |= fnType->returnType->kind == ResolvedTypeKind::Generic;
+    errGeneric |= fnType->returnType->is_generic();
     for (auto &&param : fnType->paramsTypes) {
         if (errGeneric) break;
-        errGeneric |= param->kind == ResolvedTypeKind::Generic;
+        errGeneric |= param->is_generic();
     }
 
     size_t call_args_num = call.arguments.size();
@@ -540,8 +562,8 @@ ptr<ResolvedUnaryOperator> Sema::resolve_unary_operator(const UnaryOperator &una
     } else if (unary.op == TokenType::op_tilde) {
         if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(resolvedRHS->type.get())) {
             if (numType->numberKind == ResolvedNumberKind::Float) {
-                return report(resolvedRHS->location,
-                              '\'' + resolvedRHS->type->to_str() + "' cannot be used as an operand to unary operator '~'");
+                return report(resolvedRHS->location, '\'' + resolvedRHS->type->to_str() +
+                                                         "' cannot be used as an operand to unary operator '~'");
             }
         } else {
             return report(resolvedRHS->location,
@@ -679,7 +701,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             1, nullptr));
         ScopeRAII sliceScope(*this);
         return ResolvedStructDecl(SourceLocation{}, true, "slice", nullptr, false, std::move(sliceFields),
-                                  std::vector<ptr<ResolvedMemberFunctionDecl>>{}, sliceScope.takeScope());
+                                  vec<ptr<ResolvedFunctionDecl>>{}, sliceScope.takeScope());
     }();
     const ResolvedDecl *decl = nullptr;
     auto resolvedBase = resolve_expr(*memberExpr.base);
@@ -758,8 +780,8 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
                                                    memberExpr.field + '\'');
         }
 
-        if (auto memberFunc = dynamic_cast<const ResolvedMemberFunctionDecl *>(decl)) {
-            if (!isDecl && memberFunc->isStatic) {
+        if (auto memberFunc = dynamic_cast<const ResolvedFunctionDecl *>(decl)) {
+            if (memberFunc->parentDecl && !isDecl && memberFunc->isStatic) {
                 return report(memberExpr.location, "cannot use static member with an instance of struct '" +
                                                        resolvedBase->type->to_str() + "'");
             }
@@ -793,7 +815,7 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (!errorGroupDecl)
             return report(resolvedBase->location, "expected not null the decl in type to be a error group decl");
         for (auto &&err : errorGroupDecl->errors) {
-            // println("Err " << err->identifier << " field " << memberExpr.field);
+            debug_msg("Err " << err->identifier << " field " << memberExpr.field);
             if (err->identifier == memberExpr.field) {
                 decl = err.get();
                 break;
@@ -1067,9 +1089,9 @@ ptr<ResolvedExpr> Sema::resolve_tuple_instantiation(const TupleInstantiationExpr
             index++;
         }
         ScopeRAII tupleScope(*this);
-        auto structDecl = makePtr<ResolvedStructDecl>(
-            tupleInstantiation.location, false, tupleName, nullptr, false, std::move(tupleFields),
-            std::vector<ptr<ResolvedMemberFunctionDecl>>{}, tupleScope.takeScope());
+        auto structDecl = makePtr<ResolvedStructDecl>(tupleInstantiation.location, false, tupleName, nullptr, false,
+                                                      std::move(tupleFields), vec<ptr<ResolvedFunctionDecl>>{},
+                                                      tupleScope.takeScope());
         structDecl->isTuple = true;
         structDeclPtr = structDecl.get();
         m_instantiatedTuples[tupleName] = structDeclPtr;
