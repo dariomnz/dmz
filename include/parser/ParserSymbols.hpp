@@ -623,12 +623,14 @@ struct ExternFunctionDecl : public FuncDecl {
 
 struct FunctionDecl : public FuncDecl {
     ptr<Block> body;
+    bool isExport;
     Type* parentDecl = nullptr;
 
     FunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                 std::vector<ptr<ParamDecl>> params, ptr<Block> body, Type* parentDecl = nullptr)
+                 std::vector<ptr<ParamDecl>> params, ptr<Block> body, bool isExport, Type* parentDecl = nullptr)
         : FuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params)),
           body(std::move(body)),
+          isExport(isExport),
           parentDecl(parentDecl) {}
 
     void dump(size_t level = 0) const override;
@@ -867,7 +869,7 @@ struct ImportExpr : public Expr {
 struct TestDecl : public FunctionDecl {
     TestDecl(SourceLocation location, std::string_view identifier, ptr<Block> body)
         : FunctionDecl(location, true, identifier, makePtr<TypeOptional>(location, makePtr<TypeVoid>(location)), {},
-                       std::move(body)) {}
+                       std::move(body), false) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

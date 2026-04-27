@@ -353,16 +353,18 @@ struct ResolvedFunctionDecl : public ResolvedFuncDecl {
     ptr<ResolvedBlock> body;
     ResolvedStructDecl *parentDecl = nullptr;
     bool isStatic = false;
+    bool isExport = false;
 
     ResolvedFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<ResolvedType> type,
                          std::vector<ptr<ResolvedParamDecl>> params, ptr<ResolvedExpr> resolvedReturnTypeExpr,
                          ptr<ResolvedScope> scope, const FunctionDecl *functionDecl,
-                         ResolvedStructDecl *parentDecl = nullptr, bool isStatic = false)
+                         ResolvedStructDecl *parentDecl = nullptr, bool isStatic = false, bool isExport = false)
         : ResolvedFuncDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params),
                            std::move(resolvedReturnTypeExpr), std::move(scope)),
           functionDecl(functionDecl),
           parentDecl(parentDecl),
-          isStatic(isStatic) {}
+          isStatic(isStatic),
+          isExport(isExport) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

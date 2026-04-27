@@ -35,11 +35,12 @@ std::vector<ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
 ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
-    debug_func("");
+    debug_func("parentDecl " << parentDecl);
     SourceLocation loc = m_nextToken.loc;
     SourceLocation structLocation;
     bool isPublic = false;
     bool isExtern = false;
+    bool isExport = false;
 
     if (m_nextToken.type == TokenType::kw_pub) {
         eat_next_token();  // eat pub
@@ -48,6 +49,10 @@ ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
     if (m_nextToken.type == TokenType::kw_extern) {
         isExtern = true;
         eat_next_token();  // eat extern
+    }
+    if (m_nextToken.type == TokenType::kw_export) {
+        isExport = true;
+        eat_next_token();  // eat export
     }
 
     matchOrReturn(TokenType::kw_fn, "expected 'fn'");
@@ -88,7 +93,7 @@ ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
                                             parentDecl);
     } else {
         return makePtr<FunctionDecl>(loc, isPublic, functionIdentifier, std::move(type), std::move(*parameterList),
-                                     std::move(block), parentDecl);
+                                     std::move(block), isExport, parentDecl);
     }
 }
 
@@ -343,7 +348,7 @@ std::vector<ptr<Decl>> Parser::parse_in_module_decl() {
         } else {
             ttype = m_nextToken.type;
         }
-        if (ttype == TokenType::kw_extern || ttype == TokenType::kw_fn) {
+        if (ttype == TokenType::kw_extern || ttype == TokenType::kw_export || ttype == TokenType::kw_fn) {
             if (auto fn = parse_function_decl()) {
                 declarations.emplace_back(std::move(fn));
                 continue;

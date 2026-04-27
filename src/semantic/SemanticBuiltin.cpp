@@ -284,7 +284,6 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         it->second = &funcDecl;
         return &funcDecl;
     } else if (fnName == "@asm") {
-        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
         auto stringPtr = makePtr<ResolvedTypePointer>(loc, ResolvedTypeNumber::u8(loc));
         std::vector<ptr<ResolvedParamDecl>> params;
         params.emplace_back(
@@ -299,7 +298,8 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         paramsTypes.emplace_back(params[1]->type->clone());
         paramsTypes.emplace_back(params[2]->type->clone());
 
-        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeVoid>(loc));
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
@@ -791,8 +791,12 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         for (auto &arg : resolvedArguments) {
             paramsTypes.emplace_back(arg->type->clone());
         }
+        auto fnType = dynamic_cast<const ResolvedTypeFunction *>(call.type.get());
+        if (!fnType) {
+            dmz_unreachable(call.location, "@asm: call.type is not a function type");
+        }
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
-                                             call.type->clone());
+                                             fnType->returnType->clone());
     }
     return report(call.location, "unknown builtin function");
 }

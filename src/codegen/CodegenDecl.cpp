@@ -19,6 +19,12 @@ std::string Codegen::generate_decl_name(const ResolvedDecl &decl) {
     debug_func(Dumper([&name]() { std::cerr << name; }));
     if (dynamic_cast<const ResolvedFuncDecl *>(&decl)) {
         debug_msg("Generating decl name for: " << decl.name());
+        if (auto functionDecl = dynamic_cast<const ResolvedFunctionDecl *>(&decl)) {
+            if (functionDecl->isExport) {
+                name = functionDecl->identifier;
+                return name;
+            }
+        }
         if (decl.identifier == "main") {
             name = "__builtin_main";
             return name;

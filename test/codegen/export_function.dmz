@@ -1,0 +1,27 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+export fn println(str: *u8) -> void {
+    printf("%s\n", str);
+}
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    println("hello");
+}
+
+// CHECK: define void @__builtin_main() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @println(ptr byref(i8) @string.literal.FDBE39C8)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+// CHECK: define void @println(ptr byref(i8) %0) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %str = alloca ptr, align 8
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %str, i8 0, i64 8, i1 false)
+// CHECK-NEXT:   store ptr %0, ptr %str, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %str, align 8
+// CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %1)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

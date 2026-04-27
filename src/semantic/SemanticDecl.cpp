@@ -191,9 +191,10 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         } else {
-            auto ret = makePtr<ResolvedFunctionDecl>(
-                function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
-                std::move(resolvedReturnTypeExpr), std::move(takenScope), functionDecl);
+            auto ret = makePtr<ResolvedFunctionDecl>(function.location, function.isPublic, function.identifier,
+                                                     std::move(fnType), std::move(resolvedParams),
+                                                     std::move(resolvedReturnTypeExpr), std::move(takenScope),
+                                                     functionDecl, nullptr, false, functionDecl->isExport);
             ret->getFnType()->fnDecl = ret.get();
             ret->symbolName = resolve_decl_name(function.identifier);
             if (ret->scope) ret->scope->currentFunction = ret.get();
@@ -1135,21 +1136,13 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
     ScopeRAII moduleScope(*this, moduleDecl.scope.get());
 
     debug_msg(moduleDecl.module_path << " " << m_driver.m_options.source);
-    bool isSourceModule = (moduleDecl.module_path == m_driver.m_options.source);
-    bool inTestDir = !m_driver.m_options.testDir.empty() && [&]() {
-        auto rel = std::filesystem::relative(moduleDecl.module_path, m_driver.m_options.testDir);
-        return !rel.empty() && !rel.string().starts_with("..");
-    }();
+    debug_msg("Source module: resolving entry points only");
+    for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
+        auto currentDecl = moduleDecl.declarations[i].get();
 
-    if (isSourceModule || inTestDir) {
-        debug_msg("Source module: resolving entry points only");
-        for (size_t i = 0; i < moduleDecl.declarations.size(); i++) {
-            auto currentDecl = moduleDecl.declarations[i].get();
-
-            if (!ensure_fully_resolved(*currentDecl)) {
-                error = true;
-                continue;
-            }
+        if (!ensure_fully_resolved(*currentDecl)) {
+            error = true;
+            continue;
         }
     }
     debug_msg("error " << error);

@@ -170,3 +170,7 @@ pub fn mmap(addr: *void, length: usize, prot: usize, flags: usize, fd: i32, offs
 pub fn munmap(addr: *void, length: usize) -> isize {
     return syscall2(.munmap, addr, length);
 }
+
+pub fn exit(code: i32) -> void {
+    syscall1(.exit, code);
+}

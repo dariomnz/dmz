@@ -77,6 +77,8 @@ void FunctionDecl::dump(size_t level) const {
         std::cerr << indent(level) << "MemberFunctionDecl ";
     } else if (dynamic_cast<const TestDecl *>(this)) {
         std::cerr << indent(level) << "TestDecl ";
+    } else if (isExport) {
+        std::cerr << indent(level) << "ExportFunctionDecl ";
     } else {
         std::cerr << indent(level) << "FunctionDecl ";
     }

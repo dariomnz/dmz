@@ -1,0 +1,9 @@
+const std = import("std");
+
+export fn memset(s: *void, c: i32, n: usize) -> *void {
+    let slice: []u8 = {};
+    slice.ptr = s;
+    slice.len = n;
+    std.mem.memset(slice, c);
+    return s;
+}

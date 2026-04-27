@@ -73,6 +73,12 @@ ptr<Node> Formatter::fmt_func_decl(const FuncDecl& fnDecl) {
             ret->nodes.emplace_back(makePtr<Text>("pub"));
             ret->nodes.emplace_back(makePtr<Space>());
         }
+        if (auto functionDecl = dynamic_cast<const FunctionDecl*>(&fnDecl)) {
+            if (functionDecl->isExport) {
+                ret->nodes.emplace_back(makePtr<Text>("export"));
+                ret->nodes.emplace_back(makePtr<Space>());
+            }
+        }
         if (dynamic_cast<const ExternFunctionDecl*>(&fnDecl)) {
             ret->nodes.emplace_back(makePtr<Text>("extern"));
             ret->nodes.emplace_back(makePtr<Space>());

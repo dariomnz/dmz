@@ -34,7 +34,7 @@ class Sema {
         ResolvedModuleDecl *m_oldModule;
         ResolvedFuncDecl *m_oldFunction;
         ResolvedStructDecl *m_oldStruct;
-        std::unique_ptr<ResolvedScope> m_ownedScope;
+        ptr<ResolvedScope> m_ownedScope;
         ResolvedScope *m_currentScopePtr;
 
        public:
@@ -64,7 +64,7 @@ class Sema {
         }
 
         ResolvedScope *getScope() { return m_currentScopePtr; }
-        std::unique_ptr<ResolvedScope> takeScope() { return std::move(m_ownedScope); }
+        ptr<ResolvedScope> takeScope() { return std::move(m_ownedScope); }
     };
     ResolvedModuleDecl *m_currentModule = nullptr;
 

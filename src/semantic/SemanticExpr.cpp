@@ -1300,7 +1300,7 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
         auto it = m_driver.m_options.imports.find(imported);
         if (it == m_driver.m_options.imports.end()) {
             if (imported == "std" || imported == "builtin" || imported == "types" || imported == "atomic" ||
-                imported == "simd") {
+                imported == "simd" || imported == "start") {
                 std::string module_name_str(imported);
                 module_name_str += ".dmz";
                 std::filesystem::path stdPath = m_driver.m_options.source.parent_path() / "std" / module_name_str;
@@ -1324,7 +1324,8 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
                 return nullptr;
             }
 
-            if (imported == "builtin" || imported == "types" || imported == "atomic" || imported == "simd") {
+            if (imported == "builtin" || imported == "types" || imported == "atomic" || imported == "simd" ||
+                imported == "start") {
                 identifier = "std." + imported;
             } else {
                 identifier = imported;

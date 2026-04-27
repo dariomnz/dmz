@@ -355,6 +355,8 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
             args.emplace_back(m_options.output.c_str());
         }
         if (m_options.noLibc) {
+            // args.emplace_back("-nostdlib");
+            // args.emplace_back("-static");
             args.emplace_back("-nolibc");
         }
         args.emplace_back(nullptr);

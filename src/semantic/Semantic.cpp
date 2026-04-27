@@ -545,6 +545,13 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
         m_ast = std::move(modules[0]);
     }
 
+    if (m_driver.m_options.noLibc) {
+        ImportExpr startImportExpr(SourceLocation::builtin(), "start");
+        auto start_import_expr = resolve_import_expr(startImportExpr);
+        if (!start_import_expr) return {};
+        m_pending_decls.emplace(&start_import_expr->moduleDecl);
+    }
+
     if (m_driver.m_options.test) {
         ImportExpr stdImportExpr(SourceLocation::builtin(), "std");
         auto std_import_expr = resolve_import_expr(stdImportExpr);
