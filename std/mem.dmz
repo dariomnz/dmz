@@ -1,5 +1,7 @@
 pub const Allocator = import("alloc/allocator.dmz").Allocator;
-pub const libc_allocator = import("alloc/libc.dmz").libc_allocator;
+pub const LibcAllocator = import("alloc/libc.dmz").LibcAllocator;
+pub const MmapAllocator = import("alloc/heap.dmz").MmapAllocator;
+pub const Arena = import("alloc/arena.dmz").Arena;
 
 pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;

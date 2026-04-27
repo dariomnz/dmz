@@ -4,7 +4,7 @@ const Point = struct {
     x: i32,
     y: i32,
 
-    fn addOne(self: *@This) -> void {
+    pub fn addOne(self: *@This) -> void {
         self.x += 1;
         self.y += 1;
     }

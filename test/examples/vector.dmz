@@ -20,7 +20,7 @@ fn printVector<T>(v: *std.vec<T>) -> void {
 }
 
 fn main() -> void {
-    let libc_alloc = std.mem.libc_allocator.init();
+    let libc_alloc = std.mem.LibcAllocator.init();
     let allocator = libc_alloc.Allocator();
     let v = std.vec<i32>.init(allocator);
     defer v.deinit();

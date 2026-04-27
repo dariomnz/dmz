@@ -1,8 +1,8 @@
 // RUN: dmz %s -run | filecheck %s
 
-// CHECK: Allocated in vector = 1048544
+// CHECK: Allocated in vector = 524288
 // CHECK: Time taken in vector 100000:
-// CHECK: Allocated in hashmap = 22936720
+// CHECK: Allocated in hashmap = 20971280
 // CHECK: Time taken in hashmap 100000:
 // CHECK: Allocated in list = 1600000
 // CHECK: Time taken in list 100000:
@@ -18,9 +18,9 @@ fn eq_i32(lhs: i32, rhs: i32) -> bool {
 }
 
 fn main() -> void {
-    let libc_alloc = std.mem.libc_allocator.init();
+    let libc_alloc = std.mem.LibcAllocator.init();
     let allocator = libc_alloc.Allocator();
-
+    
     const iters = 100000;
     {
         const start_allocated = libc_alloc.allocated;

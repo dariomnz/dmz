@@ -5,7 +5,7 @@ extern fn malloc(size: usize) -> *void;
 extern fn realloc(ptr: *void, size: usize) -> *void;
 extern fn free(ptr: *void) -> void;
 
-pub const libc_allocator = struct {
+pub const LibcAllocator = struct {
     allocated: usize,
     allocated_count: usize,
 
@@ -60,3 +60,19 @@ pub const libc_allocator = struct {
         };
     }
 };
+
+
+test "LibcAllocator basic" {
+    let allocator = LibcAllocator.init();
+    defer allocator.deinit();
+    const a = allocator.Allocator();
+    const b = try a.malloc<u8>(10);
+    std.io.print("Malloc {d} bytes\n", .{b.len});
+    std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
+    const c = try a.realloc(b, 20);
+    std.io.print("Realloc {d} bytes\n", .{c.len});
+    std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
+    defer a.free(c);
+    std.io.print("Free {d} bytes\n", .{c.len});
+    std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
+}
