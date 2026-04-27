@@ -42,7 +42,7 @@ void LSPServer::collect_module_completions(const ResolvedModuleDecl* decl, std::
             kind = CompletionItemKind::TypeParameter;
 
         items << "{\"label\":\"" << escape_json(d->identifier) << "\",\"kind\":" << static_cast<int>(kind)
-              << ",\"detail\":\"" << escape_json(d->type->to_str()) << "\"}";
+              << ",\"detail\":\"" << escape_json(d->type != nullptr ? d->type->to_str() : "") << "\"}";
         has_items = true;
     }
 }

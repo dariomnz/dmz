@@ -1162,12 +1162,14 @@ bool Sema::resolve_module_body(ResolvedModuleDecl &moduleDecl) {
 bool Sema::resolve_pending_body() {
     debug_func("");
     bool error = false;
-    while (m_pending_decls.size() != 0) {
-        auto decl = *m_pending_decls.begin();
-        if (!ensure_fully_resolved(*decl)) {
-            error = true;
+
+    while (!m_pending_decls.empty()) {
+        auto pending = std::move(m_pending_decls);
+        for (auto *decl : pending) {
+            if (!ensure_fully_resolved(*decl)) {
+                error = true;
+            }
         }
-        m_pending_decls.erase(decl);
     }
     return !error;
 }

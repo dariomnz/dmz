@@ -959,6 +959,7 @@ struct ResolvedModuleDecl : public ResolvedDecl {
     ptr<ModuleDecl> moduleDecl;
     std::filesystem::path module_path;
     std::vector<ptr<ResolvedDecl>> declarations;
+    std::vector<ptr<ResolvedDecl>> anonymous_decls;
     ptr<ResolvedScope> scope;
     int tuple_counter = 0;
 

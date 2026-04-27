@@ -395,11 +395,15 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         } else {
             retTypeStruct = makePtr<ResolvedTypeStructDecl>(type.location, res);
         }
-        retTypeStruct->ownedDecl = std::move(ownedStructDecl);
-        if (retTypeStruct->ownedDecl) {
-            if (m_currentModule && m_currentModule->module_path == m_driver.m_options.source) {
-                debug_msg("Adding struct " << retTypeStruct->ownedDecl->name() << " to pending decls");
-                m_pending_decls.emplace(retTypeStruct->ownedDecl.get());
+
+        if (ownedStructDecl) {
+            if (m_currentModule) {
+                debug_msg("Adding struct " << ownedStructDecl->name() << " to pending decls");
+                m_pending_decls.emplace(ownedStructDecl.get());
+                retTypeStruct->ownedDecl = ownedStructDecl.get();
+                m_currentModule->anonymous_decls.emplace_back(std::move(ownedStructDecl));
+            } else {
+                dmz_unreachable(type.location, "TODO: need to handle anonymous decls in external modules");
             }
         }
         ret = std::move(retTypeStruct);

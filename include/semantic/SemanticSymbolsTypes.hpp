@@ -102,7 +102,7 @@ struct ResolvedUnionDecl;   // Forward declaration
 struct ResolvedEnumDecl;    // Forward declaration
 
 struct ResolvedTypeStructDecl : public ResolvedType {
-    ptr<ResolvedStructDecl> ownedDecl;
+    ResolvedStructDecl *ownedDecl = nullptr;
     ResolvedStructDecl *decl;
     ResolvedTypeStructDecl(SourceLocation location, ResolvedStructDecl *decl)
         : ResolvedType(ResolvedTypeKind::StructDecl, std::move(location)), decl(decl) {}

@@ -579,7 +579,6 @@ void Codegen::generate_pending_decls() {
     debug_func("");
     while (!m_pendingDecls.empty()) {
         auto pending = std::move(m_pendingDecls);
-        m_pendingDecls.clear();
         for (auto *decl : pending) {
             generate_body(*decl);
         }
