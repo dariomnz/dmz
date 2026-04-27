@@ -13,7 +13,7 @@ pub const Mutex = struct {
         const this = @This{};
         const ret = pthread_mutex_init(&this, null);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
         return this;
     }
@@ -21,21 +21,21 @@ pub const Mutex = struct {
     pub fn deinit(self: *@This) -> !void {
         const ret = pthread_mutex_destroy(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn lock(self: *@This) -> !void {
         const ret = pthread_mutex_lock(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn unlock(self: *@This) -> !void {
         const ret = pthread_mutex_unlock(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 };

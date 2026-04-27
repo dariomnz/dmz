@@ -1,73 +1,37 @@
-extern fn malloc(size: usize) -> *void;
-extern fn realloc(ptr: *void, size: usize) -> *void;
-extern fn free(ptr: *void) -> void;
+pub const Allocator = import("alloc/allocator.dmz").Allocator;
+pub const libc_allocator = import("alloc/libc.dmz").libc_allocator;
+
 pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
-// pub extern fn memcpy(dest: *void, src: *void, size: usize) -> *void;
-pub extern fn strlen(str: *u8) -> usize;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
-// pub extern fn memset(ptr: *void, value: i32, size: usize) -> *void;
 
-pub const Allocator = struct {
-    allocator: *void,
-    vtable_malloc: *fn(*void, usize)->*void,
-    vtable_realloc: *fn(*void, *void, usize)->*void,
-    vtable_free: *fn(*void, *void)->void,
+pub fn bytesAsSlice<T>(bytes: []u8) -> ![]T {
+    const byte_count = bytes.len;
+    const t_count = byte_count / @sizeof(T);
 
-    pub fn malloc(self: *@This, size: usize) -> *void {
-        return self.vtable_malloc(self.allocator, size);
+    if (byte_count % @sizeof(T) != 0) {
+        return error.NotMultipleOfSize;
     }
 
-    pub fn realloc(self: *@This, ptr: *void, size: usize) -> *void {
-        return self.vtable_realloc(self.allocator, ptr, size);
-    }
+    let newSlice: []T = {};
+    newSlice.ptr = bytes.ptr;
+    newSlice.len = t_count;
+    return newSlice;
+}
 
-    pub fn free(self: *@This, ptr: *void) -> void {
-        self.vtable_free(self.allocator, ptr);
-    }
-};
+pub fn sliceAsBytes<T>(slice: []T) -> []u8 {
+    let bytes: []u8 = {};
+    bytes.ptr = slice.ptr;
+    bytes.len = slice.len * @sizeof(T);
+    return bytes;
+}
 
-pub const libc_allocator = struct {
-    allocated: usize,
-    allocated_count: usize,
-
-    pub fn init() -> @This {
-        return @This{
-            allocated: 0,
-            allocated_count: 0,
-        };
-    }
-
-    pub fn deinit(self: *@This) -> !void {
-        if (self.allocated_count != 0) {
-            return error.LeakMemory;
-        }
-    }
-
-    fn malloc(self: *@This, size: usize) -> *void {
-        self.allocated += size;
-        self.allocated_count++;
-        return malloc(size);
-    }
-
-    fn realloc(self: *@This, ptr: *void, size: usize) -> *void {
-        self.allocated += size;
-        return realloc(ptr, size);
-    }
-
-    fn free(self: *@This, ptr: *void) -> void {
-        self.allocated_count--;
-        free(ptr);
-    }
-
-    pub fn Allocator(self: *@This) -> Allocator {
-        return Allocator{
-            allocator: self,
-            vtable_malloc: &self.malloc,
-            vtable_realloc: &self.realloc,
-            vtable_free: &self.free,
-        };
-    }
-};
+pub fn strlen(str: *u8) -> usize {
+    const MAX_USIZE: usize = -1;
+    let slice: []u8 = {};
+    slice.ptr = str;
+    slice.len = MAX_USIZE;
+    return indexOf<u8>(slice, '\0');
+}
 
 pub fn indexOf<T>(slice: []T, scalar: T) -> isize {
     return indexOfScalarSIMD<T>(slice, scalar);
@@ -242,8 +206,8 @@ test "indexOfScalarSIMD i32" {
 }
 
 test "indexOfScalar benchmark" {
-    const size = 1024 * 1024 * 10;
-    let ptr: *u8 = malloc(size);
+    const size = 1024 * 1024 * 2;
+    let ptr: [size]u8 = {};
     memset(ptr[0..size], 123);
     const scalar = 124;
     ptr[size - 1] = scalar;
@@ -260,15 +224,12 @@ test "indexOfScalar benchmark" {
     std.io.print("indexOfScalarSIMD: {d}ms indexOfScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(index2 == size - 1);
     try std.testing.expect(time_diff < time_diff2);
-    free(ptr);
 }
 
 test "memcpy benchmark" {
-    const size = 1024 * 1024 * 10;
-    let ptr1: *u8 = malloc(size);
-    defer free(ptr1);
-    let ptr2: *u8 = malloc(size);
-    defer free(ptr2);
+    const size = 1024 * 1024 * 2;
+    let ptr1: [size]u8 = {};
+    let ptr2: [size]u8 = {};
     const scalar = 124;
     ptr1[size - 1] = scalar;
     const start = std.time.get();
@@ -284,11 +245,9 @@ test "memcpy benchmark" {
     try std.testing.expect(time_diff < time_diff2);
 }
 
-
 test "memset benchmark" {
-    const size = 1024 * 1024 * 10;
-    let ptr: *u8 = malloc(size);
-    defer free(ptr);
+    const size = 1024 * 1024 * 2;
+    let ptr: [size]u8 = {};
     const scalar = 124;
     const start = std.time.get();
     memsetSIMD<u8>(ptr[0..size], scalar);
@@ -301,6 +260,16 @@ test "memset benchmark" {
 
     std.io.print("memsetSIMD: {d}ms memsetScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(time_diff < time_diff2);
+}
+
+test "strlen basic" {
+    const str: *u8 = "";
+    const index = strlen(str);
+    try std.testing.expect(index == 0);
+
+    const str2: *u8 = "hello world";
+    const index2 = strlen(str2);
+    try std.testing.expect(index2 == 11);
 }
 
 // test "leak" {

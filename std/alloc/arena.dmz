@@ -1,0 +1,94 @@
+const std = import("std");
+
+pub const Arena = struct {
+    buffer: []u8,
+    offset: usize,
+    
+    const alignment = 8;
+
+    /// Se inicializa con un trozo de memoria ya existente
+    pub fn init(buffer: []u8) -> Arena {
+        return Arena{
+            buffer: buffer,
+            offset: 0,
+        };
+    }
+
+    fn malloc(self: *@This, size: usize) -> ![]u8 {
+        const aligned_offset = (self.offset + (alignment - 1)) & ~(alignment - 1);
+        
+        if (aligned_offset + size > self.buffer.len) {
+            return error.OutOfMemory;
+        }
+
+        const ptr = &self.buffer[aligned_offset];
+        self.offset = aligned_offset + size;
+        let slice: []u8 = {};
+        slice.ptr = ptr;
+        slice.len = size;
+        return slice;
+    }
+
+    fn free(self: *@This, ptr: []u8) -> void {
+    }
+
+    fn realloc(self: *@This, ptr: []u8, new_size: usize) -> ![]u8 {
+        const ptr_addr:usize = ptr.ptr;
+        const ptr_end = ptr_addr + ptr.len;
+        const arena_start:usize = self.buffer.ptr;
+        const current_offset_addr:usize = arena_start + self.offset;
+
+        if (ptr_end == current_offset_addr) {
+            const aligned_offset = (ptr_addr + new_size + (alignment - 1)) & ~(alignment - 1);
+            const new_relative_offset = aligned_offset - arena_start;
+
+            if (new_relative_offset <= self.buffer.len) {
+                self.offset = new_relative_offset;
+                return ptr[0..new_size];
+            }
+        }
+
+        const new_ptr = try self.malloc(new_size);
+        std.mem.memcpy(new_ptr[0..new_size], ptr[0..ptr.len]);
+        
+        return new_ptr;
+    }
+
+    pub fn allocator(self: *@This) -> std.mem.Allocator {
+        return std.mem.Allocator{
+            allocator: self,
+            vtable: std.mem.Allocator.VTable{
+                malloc: &self.malloc,
+                realloc: &self.realloc,
+                free: &self.free,
+            },
+        };
+    }
+
+    pub fn reset(self: *@This) -> void {
+        self.offset = 0;
+    }
+};
+
+
+test "arrena allocator" {
+    const buffer: [1024]u8 = {};
+    const arena = Arena.init(buffer[0..1024]);
+    const allocator = arena.allocator();
+    const ptr = try allocator.malloc<u8>(1024);
+    try std.testing.expect(ptr.len == 1024);
+    allocator.free(ptr);
+}
+
+test "arena realloc" {
+    const buffer: [1024]u8 = {};
+    const arena = Arena.init(buffer[0..1024]);
+    const allocator = arena.allocator();
+    let ptr = try allocator.malloc<u8>(10);
+    try std.testing.expect(ptr.len == 10);
+    try std.testing.expect(arena.offset == 10);
+    ptr = try allocator.realloc(ptr, 1024);
+    try std.testing.expect(ptr.len == 1024);
+    try std.testing.expect(arena.offset == 1024);
+    allocator.free(ptr);
+}

@@ -1,0 +1,97 @@
+
+const std = import("std");
+
+pub const MmapAllocator = struct {
+
+    const DEFAULT_PAGE_SIZE = 4096;
+
+    allocated_bytes: usize = 0,
+
+    const Header = struct {
+        size: usize,
+    };
+
+    pub fn init() -> @This {
+        return @This{};
+    }
+
+    fn malloc(self: *@This, size: usize) -> ![]u8 {
+        const total_size = size + @sizeof(Header);
+
+        const raw_ptr = try std.syscall.mmap(
+            null,
+            total_size,
+            std.syscall.PROT.READ | std.syscall.PROT.WRITE,
+            std.syscall.MAP.PRIVATE | std.syscall.MAP.ANONYMOUS,
+            -1,
+            0,
+        );
+
+        const header: *Header = raw_ptr;
+        header.size = total_size;
+
+        self.allocated_bytes += total_size;
+        const raw_ptr_int: usize = raw_ptr;
+        let returnSlice: []u8 = {};
+        returnSlice.ptr = raw_ptr_int + @sizeof(Header);
+        returnSlice.len = size;
+        return returnSlice;
+    }
+
+    fn free(self: *@This, ptr: []u8) -> void {
+        const int_ptr: usize = ptr.ptr;
+        const header_ptr: *Header = int_ptr - @sizeof(Header);
+        const total_size = header_ptr.size;
+
+        const ret = std.syscall.munmap(header_ptr, total_size);
+        if (ret < 0) {
+            std.errno.syscallError(ret) catch |e| {
+                std.io.print("Error when freeing memory: {}", .{e});
+            };
+        }
+
+        self.allocated_bytes -= total_size;
+    }
+
+    fn realloc(self: *@This, ptr: []u8, new_size: usize) -> ![]u8 {
+        const int_ptr: usize = ptr.ptr;
+        const header_ptr: *Header = int_ptr - @sizeof(Header);
+        const old_user_size: usize = header_ptr.size;
+
+        if (new_size <= old_user_size) return ptr;
+
+        const old_ptr: *u8 = ptr.ptr;
+        const new_ptr = try self.malloc(new_size);
+        std.mem.memcpy<u8>(new_ptr[0..new_size], old_ptr[0..old_user_size]);
+
+        self.free(ptr);
+        return new_ptr;
+    }
+
+    pub fn allocator(self: *@This) -> std.mem.Allocator {
+        return std.mem.Allocator{
+            allocator: self,
+            vtable: std.mem.Allocator.VTable{
+                malloc: &self.malloc,
+                realloc: &self.realloc,
+                free: &self.free,
+            },
+        };
+    }
+};
+
+test "MmapAllocator basic" {
+    let allocator = MmapAllocator.init();
+    const alloc = allocator.allocator();
+    {
+        let x = try alloc.malloc<u8>(10);
+        defer alloc.free(x);
+
+        x[3] = 123;
+
+        std.io.print("x: {}, allocator.allocated_bytes: {}\n", .{x, allocator.allocated_bytes});
+
+        try std.testing.expectEqual(123, x[3]);
+    }
+    std.io.print("allocator.allocated_bytes: {}\n", .{allocator.allocated_bytes});
+}

@@ -1,0 +1,62 @@
+const std = import("std");
+const Allocator = std.mem.Allocator;
+
+extern fn malloc(size: usize) -> *void;
+extern fn realloc(ptr: *void, size: usize) -> *void;
+extern fn free(ptr: *void) -> void;
+
+pub const libc_allocator = struct {
+    allocated: usize,
+    allocated_count: usize,
+
+    pub fn init() -> @This {
+        return @This{
+            allocated: 0,
+            allocated_count: 0,
+        };
+    }
+
+    pub fn deinit(self: *@This) -> !void {
+        if (self.allocated_count != 0) {
+            return error.LeakMemory;
+        }
+    }
+
+    fn malloc(self: *@This, size: usize) -> ![]u8 {
+        self.allocated += size;
+        self.allocated_count++;
+        const ptr = malloc(size);
+        if (ptr == null) return error.OutOfMemory;
+        let slice: []u8 = {};
+        slice.ptr = ptr;
+        slice.len = size;
+        return slice;
+    }
+
+    fn realloc(self: *@This, ptr: []u8, size: usize) -> ![]u8 {
+        self.allocated -= ptr.len;
+        self.allocated += size;
+        const raw = realloc(ptr.ptr, size);
+        if (raw == null) return error.OutOfMemory;
+        let slice: []u8 = {};
+        slice.ptr = raw;
+        slice.len = size;
+        return slice;
+    }
+
+    fn free(self: *@This, ptr: []u8) -> void {
+        self.allocated_count--;
+        free(ptr.ptr);
+    }
+
+    pub fn Allocator(self: *@This) -> Allocator {
+        return Allocator{
+            allocator: self,
+            vtable: Allocator.VTable{
+                malloc: &self.malloc,
+                realloc: &self.realloc,
+                free: &self.free,
+            },
+        };
+    }
+};

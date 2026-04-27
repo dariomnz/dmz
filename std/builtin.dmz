@@ -13,7 +13,7 @@ const ErrorTrace = struct {
 };
 
 fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
-    const file = std.io.file.open(file_path.ptr, std.io.file.O_RDONLY);
+    const file = std.io.file.open(file_path.ptr, std.io.file.O_RDONLY, 0);
     if (file < 0) return;
     defer std.io.file.close(file);
 

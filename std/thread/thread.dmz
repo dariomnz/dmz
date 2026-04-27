@@ -11,7 +11,7 @@ pub const Thread = struct {
         const this = @This{};
         const ret = pthread_create(&this.thread_id, null, start_routine, arg);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
         return this;
     }
@@ -19,7 +19,7 @@ pub const Thread = struct {
     pub fn join(self: *@This) -> !void {
         const ret = pthread_join(self.thread_id, null);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 };

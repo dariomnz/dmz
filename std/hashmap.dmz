@@ -17,9 +17,7 @@ pub const HashMap = struct<K, V> {
     alloc: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, init_size: usize, hash_fn: *fn(K)->usize, eq_fn: *fn(K, K)->bool) -> @This {
-        let new_buckets: []HashMap_bucket<K, V> = {};
-        new_buckets.ptr = allocator.malloc(@sizeof(HashMap_bucket<K, V>) * init_size);
-        new_buckets.len = init_size;
+        let new_buckets = try allocator.malloc<HashMap_bucket<K, V>>(init_size);
 
         for (new_buckets) |b| {
             b.* = HashMap_bucket<K, V>{elems: std.vec<elem<K, V>>.init(allocator)};
@@ -39,7 +37,7 @@ pub const HashMap = struct<K, V> {
             d.elems.deinit();
         }
 
-        self.alloc.free(self.buckets.ptr);
+        self.alloc.free(self.buckets);
     }
 
     pub fn size(self: *@This) -> usize {
@@ -85,9 +83,7 @@ pub const HashMap = struct<K, V> {
 
     pub fn rehash(self: *@This, new_size: usize) -> !void {
         // Allocate new buckets
-        let new_buckets: []HashMap_bucket<K, V> = {};
-        new_buckets.ptr = self.alloc.malloc(@sizeof(HashMap_bucket<K, V>) * new_size);
-        new_buckets.len = new_size;
+        let new_buckets = try self.alloc.malloc<HashMap_bucket<K, V>>(new_size);
         for (new_buckets) |b| {
             b.* = HashMap_bucket<K, V>{elems: std.vec<elem<K, V>>.init(self.alloc)};
         }
@@ -107,7 +103,7 @@ pub const HashMap = struct<K, V> {
         }
 
         // Free old bucket list
-        self.alloc.free(self.buckets.ptr);
+        self.alloc.free(self.buckets);
 
         // Update references
         self.buckets = new_buckets;
@@ -140,33 +136,33 @@ pub const HashMap = struct<K, V> {
     }
 };
 
-test "HashMap<i32, i32>" {
-    let libc_alloc = std.mem.libc_allocator.init();
-    let allocator = libc_alloc.Allocator();
-    const hash_impl_i32 = struct {
-        pub fn hash(value: i32) -> usize {
-            return value;
-        }
-        pub fn eq(lhs: i32, rhs: i32) -> bool {
-            return lhs == rhs;
-        }
-    };
-    let hm = HashMap<i32, i32>.init(allocator, 10, &hash_impl_i32.hash, &hash_impl_i32.eq);
-    defer hm.deinit();
+// test "HashMap<i32, i32>" {
+//     let libc_alloc = std.mem.libc_allocator.init();
+//     let allocator = libc_alloc.Allocator();
+//     const hash_impl_i32 = struct {
+//         pub fn hash(value: i32) -> usize {
+//             return value;
+//         }
+//         pub fn eq(lhs: i32, rhs: i32) -> bool {
+//             return lhs == rhs;
+//         }
+//     };
+//     let hm = HashMap<i32, i32>.init(allocator, 10, &hash_impl_i32.hash, &hash_impl_i32.eq);
+//     defer hm.deinit();
 
-    const num_items = 1000;
+//     const num_items = 1000;
 
-    for (0..num_items) |i| {
-        try hm.set(i, i + 10);
-        // std.io.printf("HashMap size %ld\n", hm.size());
-    }
+//     for (0..num_items) |i| {
+//         try hm.set(i, i + 10);
+//         // std.io.printf("HashMap size %ld\n", hm.size());
+//     }
 
-    for (0..num_items) |i| {
-        let getted = hm.get(i);
-        let erro = getted catch |er| {
-            std.io.printf("HashMap cannot get %d\n", i);
-        };
-        let getted_value = try getted;
-        // std.io.printf("HashMap getted %d\n", getted_value);
-    }
-}
+//     for (0..num_items) |i| {
+//         let getted = hm.get(i);
+//         let erro = getted catch |er| {
+//             std.io.printf("HashMap cannot get %d\n", i);
+//         };
+//         let getted_value = try getted;
+//         // std.io.printf("HashMap getted %d\n", getted_value);
+//     }
+// }

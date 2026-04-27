@@ -12,7 +12,7 @@ pub const Barrier = struct {
         const this = @This{};
         const ret = pthread_barrier_init(&this.opaque_data, null, count);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
         return this;
     }
@@ -20,18 +20,17 @@ pub const Barrier = struct {
     pub fn deinit(self: *@This) -> !void {
         const ret = pthread_barrier_destroy(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn wait(self: *@This) -> !void {
         const ret = pthread_barrier_wait(&self.opaque_data);
         if (ret < -1) {
-            try std.errno.libc_error(-ret);
+            try std.errno.syscallError(-ret);
         }
     }
 };
-
 
 test "barrier test" {
     const num_threads = 5;

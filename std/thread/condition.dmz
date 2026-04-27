@@ -14,7 +14,7 @@ pub const Condition = struct {
         const this = @This{};
         const ret = pthread_cond_init(&this, null);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
         return this;
     }
@@ -22,28 +22,28 @@ pub const Condition = struct {
     pub fn deinit(self: *@This) -> !void {
         const ret = pthread_cond_destroy(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn wait(self: *@This, mutex: *std.thread.Mutex) -> !void {
         const ret = pthread_cond_wait(&self.opaque_data, &mutex.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn notifyOne(self: *@This) -> !void {
         const ret = pthread_cond_signal(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 
     pub fn notifyAll(self: *@This) -> !void {
         const ret = pthread_cond_broadcast(&self.opaque_data);
         if (ret != 0) {
-            try std.errno.libc_error(ret);
+            try std.errno.syscallError(ret);
         }
     }
 };

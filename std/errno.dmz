@@ -12,7 +12,7 @@ const POSIX_errs = error {
     BAD_FILE_NUMBER,
     NO_CHILD_PROCESSES,
     RESOURCE_TEMPORARILY_UNAVAILABLE,
-    OUT_OF_MEMORY,
+    OutOfMemory,
     PERMISSION_DENIED,
     BAD_ADDRESS,
     BLOCK_DEVICE_REQUIRED,
@@ -134,17 +134,13 @@ const POSIX_errs = error {
     MEMORY_PAGE_POISONED,
 };
 
-extern fn __errno_location() -> *i32;
-
-fn @builtin_get_errno() -> i32 {
-    const errno_ptr: *i32 = __errno_location();
-    const errno_num = errno_ptr.*;
-    return errno_num;
-}
-
-pub fn libc_error(errno: i32) -> !void {
-    switch (errno) {
-        case 0 => return POSIX_errs.SUCCESS;
+pub fn syscallError(errno: i32) -> !void {
+    let value = errno;
+    if (value < 0) {
+        value = -value;
+    }
+    switch (value) {
+        case 0 => return;
         case 1 => return POSIX_errs.OPERATION_NOT_PERMITTED;
         case 2 => return POSIX_errs.NO_SUCH_FILE_OR_DIRECTORY;
         case 3 => return POSIX_errs.NO_SUCH_PROCESS;
@@ -156,7 +152,7 @@ pub fn libc_error(errno: i32) -> !void {
         case 9 => return POSIX_errs.BAD_FILE_NUMBER;
         case 10 => return POSIX_errs.NO_CHILD_PROCESSES;
         case 11 => return POSIX_errs.RESOURCE_TEMPORARILY_UNAVAILABLE;
-        case 12 => return POSIX_errs.OUT_OF_MEMORY;
+        case 12 => return POSIX_errs.OutOfMemory;
         case 13 => return POSIX_errs.PERMISSION_DENIED;
         case 14 => return POSIX_errs.BAD_ADDRESS;
         case 15 => return POSIX_errs.BLOCK_DEVICE_REQUIRED;
@@ -278,9 +274,4 @@ pub fn libc_error(errno: i32) -> !void {
         case 133 => return POSIX_errs.MEMORY_PAGE_POISONED;
         else => return POSIX_errs.UNKNOWN;
     }
-}
-
-pub fn libc_errno() -> !void {
-    const errno = @builtin_get_errno();
-    return libc_error(errno);
 }

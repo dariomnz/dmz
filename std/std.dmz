@@ -12,3 +12,4 @@ pub const types = import("types.dmz");
 pub const algorithm = import("algorithm.dmz");
 pub const terminal = import("terminal.dmz");
 pub const thread = import("thread.dmz");
+pub const syscall = import("syscall.dmz");

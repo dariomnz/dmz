@@ -5,12 +5,11 @@ pub const Condition = import("./thread/condition.dmz").Condition;
 pub const FutexMutex = import("./thread/futexMutex.dmz").FutexMutex;
 pub const FutexCondition = import("./thread/futexCondition.dmz").FutexCondition;
 
-extern fn usleep(useconds: u32) -> i32;
-
 pub fn sleep(ms: u32) -> !void {
-    const result = usleep(ms * 1000);
+    const time = std.syscall.TimeSpec{tv_sec: 0, tv_nsec: ms * 1000 * 1000};
+    const result = std.syscall.nanosleep(&time, null);
     if (result != 0) {
-        return std.errno.libc_errno();
+        return std.errno.syscallError(result);
     }
 }
 
@@ -23,7 +22,7 @@ test "thread mutex" {
     let cont_mutex = Mutex.init();
     defer try cont_mutex.deinit();
     let cont_mutex_ptr = &cont_mutex;
-    
+
     const incrementar_contador = struct {
         contador_ptr: *i32,
         cont_mutex_ptr: *Mutex,

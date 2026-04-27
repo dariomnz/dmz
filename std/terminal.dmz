@@ -1,9 +1,11 @@
 const std = import("std");
 
-extern fn isatty(fd: i32) -> i32;
-
 pub fn isTerminal() -> bool {
-    return isatty(std.io.file.stdout) == 1;
+    const termios: [64]u8 = {};
+    // 0x5401
+    const TCGETS = 21505;
+    const ret = std.syscall.ioctl(std.io.file.stdout, TCGETS, &termios);
+    return ret == 0;
 }
 
 pub const COLORRESET: []u8 = "\x1B[0m";
