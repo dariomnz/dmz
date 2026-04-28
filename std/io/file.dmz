@@ -9,21 +9,21 @@ pub const O_RDONLY = 0;
 pub fn open(name: *u8, flags: i32, mode: u32) -> i32 {
     return std.syscall.open(name, flags, mode);
 }
-pub fn write(fd: i32, buffer: *u8, count: usize) -> isize {
-    return std.syscall.write(fd, buffer, count);
+pub fn write(fd: i32, buffer: []u8) -> isize {
+    return std.syscall.write(fd, @ptrCast(buffer.ptr), buffer.len);
 }
-pub fn read(fd: i32, buffer: *u8, count: usize) -> isize {
-    return std.syscall.read(fd, buffer, count);
+pub fn read(fd: i32, buffer: []u8) -> isize {
+    return std.syscall.read(fd, @ptrCast(buffer.ptr), buffer.len);
 }
 pub fn close(fd: i32) -> i32 {
     return std.syscall.close(fd);
 }
 
-pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
+pub fn writeAll(fd: i32, buffer: []u8) -> !usize {
     let writed = 0;
-    let buf_slice = buffer[0..count];
+    let buf_slice = buffer;
     while (buf_slice.len > 0) {
-        const ret = write(fd, buf_slice.ptr, buf_slice.len);
+        const ret = write(fd, buf_slice);
         if (ret < 0) {
             try std.errno.syscallError(ret);
         } else {
@@ -39,7 +39,7 @@ pub fn writeAll(fd: i32, buffer: *u8, count: usize) -> !usize {
 
 pub fn readOne(fd: i32, buffer: []u8) -> !usize {
     // std.io.printf("fd %d to readAll %ld\n", fd, buffer.len);
-    const readed = read(fd, buffer.ptr, buffer.len);
+    const readed = read(fd, buffer);
     // std.io.printf("readed %d\n", readed);
     if (readed < 0) {
         try std.errno.syscallError(readed);
@@ -60,9 +60,9 @@ pub const reader = struct {
         let ret = std.io.Reader{
             buffer: buf,
             vtable_ptr: null,
-            vtable_refill: &reader.refill,
+            vtable_refill: @ptrCast(&reader.refill),
         };
-        ret.vtable_ptr = self;
+        ret.vtable_ptr = @ptrCast(self);
         return ret;
     }
 

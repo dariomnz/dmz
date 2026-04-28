@@ -890,6 +890,21 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                             return false;
                         }
                     }
+                } else if (decl->identifier == "@ptrCast") {
+                    // Infer target pointer type from context
+                    if (!callExpr->arguments.empty() &&
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Pointer) {
+                        report(callExpr->location, "cannot cast from non-pointer type '" +
+                                                       callExpr->arguments[0]->type->to_str() + "' into pointer");
+                        return false;
+                    }
+                    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&expectedType)) {
+                        callExpr->type = ptrType->clone();
+                    } else {
+                        report(callExpr->location,
+                               "cannot ptr cast to non-pointer type '" + expectedType.to_str() + "'");
+                        return false;
+                    }
                 }
             }
         }

@@ -1,0 +1,8 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let i: i32 = 10;
+    let i_ptr1: *i8 = @ptrCast(&i);
+    // CHECK: [[# @LINE + 1 ]]:23: error: initializer type mismatch expected '*i8' actual '*i32'
+    let i_ptr2: *i8 = &i;
+}

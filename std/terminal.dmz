@@ -4,7 +4,7 @@ pub fn isTerminal() -> bool {
     const termios: [64]u8 = {};
     // 0x5401
     const TCGETS = 21505;
-    const ret = std.syscall.ioctl(std.io.file.stdout, TCGETS, &termios);
+    const ret = std.syscall.ioctl(std.io.file.stdout, TCGETS, @ptrCast(&termios));
     return ret == 0;
 }
 

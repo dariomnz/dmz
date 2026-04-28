@@ -13,7 +13,7 @@ fn main() -> void {
     printf("result %d\n", res);
     // CHECK: ResolvedVarDecl:u64 res
     // CHECK-NEXT:       ResolvedCallExpr:u64
-    // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, *u8, ...)->generic @asm
+    // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, *u8, ...)->void @asm
     // CHECK-NEXT:         ResolvedStringLiteral:*u8 'syscall'
     // CHECK-NEXT:         ResolvedStringLiteral:*u8 '={rax},{rax},{rdi},{rsi},{rdx}'
     // CHECK-NEXT:         ResolvedDeclRefExpr:u64 nr_write

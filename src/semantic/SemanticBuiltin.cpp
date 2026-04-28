@@ -303,6 +303,19 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@ptrCast") {
+        // @ptrCast(ptr) -> *TargetType  (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "ptr", ResolvedTypeExpr::fromType(ResolvedTypePointer::opaquePtr(loc)), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @ptrCast");
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -797,6 +810,27 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         }
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              fnType->returnType->clone());
+    } else if (resolvedCallee.identifier == "@ptrCast") {
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@ptrCast expects exactly 1 argument: (ptr)");
+        }
+        auto &ptrArg = resolvedArguments[0];
+
+        // Arg must be a pointer
+        auto srcPtrType = dynamic_cast<const ResolvedTypePointer *>(ptrArg->type.get());
+        if (!srcPtrType) {
+            return report(ptrArg->location,
+                          "@ptrCast: argument must be a pointer, got '" + ptrArg->type->to_str() + "'");
+        }
+
+        // Return type is opaque pointer
+        auto returnType = ResolvedTypePointer::opaquePtr(call.location);
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(ptrArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
     }
     return report(call.location, "unknown builtin function");
 }

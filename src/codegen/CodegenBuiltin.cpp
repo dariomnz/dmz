@@ -61,6 +61,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_error_trace();
     } else if (builtin.identifier == "@asm") {
         return generate_builtin_asm(call);
+    } else if (builtin.identifier == "@ptrCast") {
+        return generate_builtin_ptrCast(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -543,6 +545,12 @@ llvm::Value *Codegen::generate_builtin_simdReduce(const ResolvedCallExpr &call) 
         default:
             dmz_unreachable(call.location, "unsupported simd reduction operator");
     }
+}
+
+llvm::Value *Codegen::generate_builtin_ptrCast(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "@ptrCast expects 1 argument");
+    return generate_expr(*call.arguments[0]);
 }
 
 llvm::Value *Codegen::generate_builtin_asm(const ResolvedCallExpr &call) {

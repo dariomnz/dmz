@@ -615,11 +615,6 @@ bool ResolvedTypePointer::compare(const ResolvedType &other) const {
     if (equal(other)) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
 
-    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&other)) {
-        if (pointerType->compare(*ptrType->pointerType)) return debug_ret(true);
-        if (pointerType->kind == ResolvedTypeKind::Void) return debug_ret(true);
-        if (ptrType->pointerType->kind == ResolvedTypeKind::Void) return debug_ret(true);
-    }
     if (dynamic_cast<const ResolvedTypeError *>(&other)) {
         if (auto numType = dynamic_cast<ResolvedTypeNumber *>(pointerType.get())) {
             if (numType->numberKind == ResolvedNumberKind::UInt && numType->bitSize == 8) {

@@ -23,11 +23,11 @@ pub const stdout = struct {
     }
 
     fn flush(ptr: *void, w: *Writer, data: []u8, splat: usize) -> !usize {
-        let flused = try file.writeAll(file.stdout, w.buffer.ptr, w.end);
+        let flused = try file.writeAll(file.stdout, w.buffer[0..w.end]);
         w.end = 0;
 
         for (0..splat) |i| {
-            flused += try file.writeAll(file.stdout, data.ptr, data.len);
+            flused += try file.writeAll(file.stdout, data);
         }
         return flused;
     }
@@ -38,9 +38,9 @@ pub const stdin = struct {
         let ret = Reader{
             buffer: buf,
             vtable_ptr: null,
-            vtable_refill: &stdin.refill,
+            vtable_refill: @ptrCast(&stdin.refill),
         };
-        ret.vtable_ptr = &ret;
+        ret.vtable_ptr = @ptrCast(&ret);
         return ret;
     }
 

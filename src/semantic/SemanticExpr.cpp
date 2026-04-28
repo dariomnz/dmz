@@ -791,8 +791,9 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
                               "cannot access non-static field '" + memberExpr.field + "' without an instance");
             }
         }
-    } else if (dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
+    } else if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(baseType)) {
         if (memberExpr.field == "ptr") {
+            sliceDecl.fields[0]->type = makePtr<ResolvedTypePointer>(SourceLocation{}, sliceType->sliceType->clone());
             decl = sliceDecl.fields[0].get();
         } else if (memberExpr.field == "len") {
             decl = sliceDecl.fields[1].get();

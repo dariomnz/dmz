@@ -38,6 +38,8 @@
 - [x] @compileError
 - [x] inline asm
 - [x] compile without libc
-- [ ] create export fn
-- [ ] @ptrCast for ptrs and for slices
+- [x] create export fn
+- [x] @ptrCast for ptrs
+- [ ] backwards for loops
 - [ ] casting sistem with builtins
+- [ ] implement @alignof and @align for types

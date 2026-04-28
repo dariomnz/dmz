@@ -15,14 +15,14 @@ pub fn bytesAsSlice<T>(bytes: []u8) -> ![]T {
     }
 
     let newSlice: []T = {};
-    newSlice.ptr = bytes.ptr;
+    newSlice.ptr = @ptrCast(bytes.ptr);
     newSlice.len = t_count;
     return newSlice;
 }
 
 pub fn sliceAsBytes<T>(slice: []T) -> []u8 {
     let bytes: []u8 = {};
-    bytes.ptr = slice.ptr;
+    bytes.ptr = @ptrCast(slice.ptr);
     bytes.len = slice.len * @sizeof(T);
     return bytes;
 }
@@ -30,7 +30,7 @@ pub fn sliceAsBytes<T>(slice: []T) -> []u8 {
 pub fn strlen(str: *u8) -> usize {
     const MAX_USIZE: usize = -1;
     let slice: []u8 = {};
-    slice.ptr = str;
+    slice.ptr = @ptrCast(str);
     slice.len = MAX_USIZE;
     return indexOf<u8>(slice, '\0');
 }
@@ -86,28 +86,49 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     return -1;
 }
 
-pub fn memcpy<T>(dest: []T, src: []T) -> void {
-    memcpySIMD<T>(dest, src);
-}
-
-fn memcpyScalar<T>(dest: []T, src: []T) -> void {
+pub fn copy<T>(dest: []T, src: []T) -> void {
     let len = src.len;
     if (dest.len < src.len) len = dest.len;
     if (len == 0) return;
+
+    const d_ptr: usize = dest.ptr;
+    const s_ptr: usize = src.ptr;
+
+    if (d_ptr < s_ptr) {
+        copySIMD<T>(dest[0..len], src[0..len]);
+    } else if (d_ptr > s_ptr) {
+        // memmoveSIMDBackwards<T>(dest[0..len], src[0..len]);
+    }
+}
+
+// pub fn memcpy<T>(dest: []T, src: []T) -> void {
+//     copySIMD<T>(dest, src);
+// }
+
+// Need same len
+fn copyScalar<T>(dest: []T, src: []T) -> void {
+    let len: usize = src.len;
 
     for (0..len) |i| {
         dest[i] = src[i];
     }
 }
 
-fn memcpySIMD<T>(dest: []T, src: []T) -> void {
+fn copyScalarBackwards<T>(dest: []T, src: []T) -> void {
+    let len: usize = src.len;
+    for (len..0) |i| {
+        dest[i] = src[i];
+    }
+}
+
+fn copySIMD<T>(dest: []T, src: []T) -> void {
     let len = src.len;
     if (dest.len < src.len) len = dest.len;
     if (len == 0) return;
 
     const simd_len = @simdSize(T);
     if (len < simd_len) {
-        memcpyScalar<T>(dest, src);
+        copyScalar<T>(dest, src);
         return;
     }
 
@@ -118,7 +139,7 @@ fn memcpySIMD<T>(dest: []T, src: []T) -> void {
     let offset: usize = 0;
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
-        memcpyScalar<T>(dest[0..offset], src[0..offset]);
+        copyScalar<T>(dest[0..offset], src[0..offset]);
     }
 
     let i: usize = offset;
@@ -132,7 +153,7 @@ fn memcpySIMD<T>(dest: []T, src: []T) -> void {
         i += simd_len;
     }
 
-    memcpyScalar<T>(dest[i..len], src[i..len]);
+    copyScalar<T>(dest[i..len], src[i..len]);
 }
 
 pub fn memset<T>(dest: []T, value: T) -> void {
@@ -235,15 +256,15 @@ test "memcpy benchmark" {
     const scalar = 124;
     ptr1[size - 1] = scalar;
     const start = std.time.get();
-    memcpySIMD<u8>(ptr2[0..size], ptr1[0..size]);
+    copySIMD<u8>(ptr2[0..size], ptr1[0..size]);
     const end = std.time.get();
     const time_diff = (end - start) * 1000;
     const start2 = std.time.get();
-    memcpyScalar<u8>(ptr2[0..size], ptr1[0..size]);
+    copyScalar<u8>(ptr2[0..size], ptr1[0..size]);
     const end2 = std.time.get();
     const time_diff2 = (end2 - start2) * 1000;
 
-    std.io.print("memcpySIMD: {d}ms memcpyScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
+    std.io.print("copySIMD: {d}ms copyScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(time_diff < time_diff2);
 }
 
