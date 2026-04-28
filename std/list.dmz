@@ -10,24 +10,24 @@ pub const NodeIterator = struct<T> {
 
     pub fn next(self: *@This) -> *T {
         if (!self.current) {
-            return null;
+            return @ptrCast(null);
         }
         const value_ptr = &self.current.value;
 
         self.current = self.current.next;
 
-        return value_ptr;
+        return @ptrCast(value_ptr);
     }
 };
 
 pub const SimplyLinkedList = struct<T> {
-    head: *Node<i32>,
+    head: *Node<T>,
     len: usize,
     alloc: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) -> @This {
         return @This{
-            head: null,
+            head: @ptrCast(null),
             len: 0,
             alloc: allocator,
         };
@@ -43,7 +43,7 @@ pub const SimplyLinkedList = struct<T> {
             self.alloc.free(node_slice);
             current = next;
         }
-        self.head = null;
+        self.head = @ptrCast(null);
         self.len = 0;
     }
 

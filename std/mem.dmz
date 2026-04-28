@@ -93,17 +93,25 @@ pub fn copy<T>(dest: []T, src: []T) -> void {
 
     const d_ptr: usize = dest.ptr;
     const s_ptr: usize = src.ptr;
-
-    if (d_ptr < s_ptr) {
-        copySIMD<T>(dest[0..len], src[0..len]);
-    } else if (d_ptr > s_ptr) {
-        // memmoveSIMDBackwards<T>(dest[0..len], src[0..len]);
+    const size = len * @sizeof(T);
+    const backwards = d_ptr > s_ptr && d_ptr < (s_ptr + size);
+    const typeid = @typeid(T);
+    inline if (typeid == std.types.bool_t || typeid == std.types.pointer_t || typeid == std.types.int_t || typeid == std.types.uint_t ||
+        typeid == std.types.float_t) {
+        if (backwards) {
+            copySIMDBackwards<T>(dest[0..len], src[0..len]);
+        } else {
+            copySIMD<T>(dest[0..len], src[0..len]);
+        }
+    } else {
+        if (backwards) {
+            copySIMDBackwards<u8>(std.mem.sliceAsBytes<T>(dest[0..len]), std.mem.sliceAsBytes<T>(src[0..len]));
+        } else {
+            copySIMD<u8>(std.mem.sliceAsBytes<T>(dest[0..len]), std.mem.sliceAsBytes<T>(src[0..len]));
+        }
     }
-}
 
-// pub fn memcpy<T>(dest: []T, src: []T) -> void {
-//     copySIMD<T>(dest, src);
-// }
+}
 
 // Need same len
 fn copyScalar<T>(dest: []T, src: []T) -> void {
@@ -114,17 +122,17 @@ fn copyScalar<T>(dest: []T, src: []T) -> void {
     }
 }
 
+// Need same len
 fn copyScalarBackwards<T>(dest: []T, src: []T) -> void {
     let len: usize = src.len;
-    for (len..0) |i| {
+    for ((len - 1)..-1) |i| {
         dest[i] = src[i];
     }
 }
 
+// Need same len
 fn copySIMD<T>(dest: []T, src: []T) -> void {
     let len = src.len;
-    if (dest.len < src.len) len = dest.len;
-    if (len == 0) return;
 
     const simd_len = @simdSize(T);
     if (len < simd_len) {
@@ -154,6 +162,40 @@ fn copySIMD<T>(dest: []T, src: []T) -> void {
     }
 
     copyScalar<T>(dest[i..len], src[i..len]);
+}
+
+fn copySIMDBackwards<T>(dest: []T, src: []T) -> void {
+    const len = src.len;
+
+    const simd_len = @simdSize(T);
+    if (len < simd_len) {
+        copyScalarBackwards<T>(dest, src);
+        return;
+    }
+
+    // Alinear el final del puntero de destino para el copiado hacia atrás
+    let end_ptr_int: usize = dest.ptr;
+    end_ptr_int += (len * @sizeof(T));
+    const alignment = @sizeof(@simd<T, simd_len>);
+    const remainder = end_ptr_int % alignment;
+
+    const tail_count = remainder / @sizeof(T);
+    if (tail_count > 0) {
+        copyScalarBackwards<T>(dest[(len - tail_count)..len], src[(len - tail_count)..len]);
+    }
+
+    let i: usize = len - tail_count;
+    while (i >= simd_len) {
+        const start = i - simd_len;
+        const data: @simd<T, simd_len> = @simdLoad(&src[start]);
+        @simdStore(data, &dest[start]);
+
+        i -= simd_len;
+    }
+
+    if (i > 0) {
+        copyScalarBackwards<T>(dest[0..i], src[0..i]);
+    }
 }
 
 pub fn memset<T>(dest: []T, value: T) -> void {
@@ -249,7 +291,7 @@ test "indexOfScalar benchmark" {
     try std.testing.expect(time_diff < time_diff2);
 }
 
-test "memcpy benchmark" {
+test "copy benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr1: [size]u8 = {};
     let ptr2: [size]u8 = {};
@@ -266,6 +308,43 @@ test "memcpy benchmark" {
 
     std.io.print("copySIMD: {d}ms copyScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(time_diff < time_diff2);
+}
+
+test "copy: basic integrity" {
+    let src: [8]u8 = {1, 2, 3, 4, 5, 6, 7, 8};
+    let dest: [8]u8 = {};
+    copy<u8>(dest[0..8], src[0..8]);
+    try std.testing.expectEqualSlice(src[0..8], dest[0..8]);
+}
+
+test "copy: overlap backwards (dest > src)" {
+    // Initial: { 1, 2, 3, 4, 5, 6 }
+    // Copy [0..4] to [2..6]
+    // Expected: { 1, 2, 1, 2, 3, 4 }
+    let buf: [6]u8 = {1, 2, 3, 4, 5, 6};
+    let expected: [6]u8 = {1, 2, 1, 2, 3, 4};
+
+    copy<u8>(buf[2..6], buf[0..4]);
+
+    try std.testing.expectEqualSlice(expected[0..6], buf[0..6]);
+}
+
+test "copy: misaligned large buffers" {
+    const size = 1024;
+    let src: [size]u8 = {};
+    let dest: [size]u8 = {};
+
+    for (0..size) |i| 
+        src[i] = i % 256;
+
+    // Test multiple offsets to trigger different alignment remainders
+    let offset: usize = 0;
+    while (offset < 16) {
+        memset<u8>(dest[0..size], 0);
+        copy<u8>(dest[offset..size], src[offset..size]);
+        try std.testing.expectEqualSlice(src[offset..size], dest[offset..size]);
+        offset += 1;
+    }
 }
 
 test "memset benchmark" {

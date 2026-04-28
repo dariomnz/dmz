@@ -33,8 +33,8 @@ test "thread test" {
             pthread_exit(null);
         }
     };
-    const t1 = try Thread.init(&worker.call, &worker{id: 1});
-    const t2 = try Thread.init(&worker.call, &worker{id: 2});
+    const t1 = try Thread.init(@ptrCast(&worker.call), @ptrCast(&worker{id: 1}));
+    const t2 = try Thread.init(@ptrCast(&worker.call), @ptrCast(&worker{id: 2}));
     t1.join();
     t2.join();
 }

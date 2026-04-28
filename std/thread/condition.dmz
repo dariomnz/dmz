@@ -12,7 +12,7 @@ pub const Condition = struct {
 
     pub fn init() -> Condition {
         const this = @This{};
-        const ret = pthread_cond_init(&this, null);
+        const ret = pthread_cond_init(@ptrCast(&this), null);
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
@@ -20,28 +20,28 @@ pub const Condition = struct {
     }
 
     pub fn deinit(self: *@This) -> !void {
-        const ret = pthread_cond_destroy(&self.opaque_data);
+        const ret = pthread_cond_destroy(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn wait(self: *@This, mutex: *std.thread.Mutex) -> !void {
-        const ret = pthread_cond_wait(&self.opaque_data, &mutex.opaque_data);
+        const ret = pthread_cond_wait(@ptrCast(&self.opaque_data), @ptrCast(&mutex.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn notifyOne(self: *@This) -> !void {
-        const ret = pthread_cond_signal(&self.opaque_data);
+        const ret = pthread_cond_signal(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn notifyAll(self: *@This) -> !void {
-        const ret = pthread_cond_broadcast(&self.opaque_data);
+        const ret = pthread_cond_broadcast(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
@@ -94,8 +94,8 @@ test "conditional variable test" {
         }
     };
 
-    const t1 = try std.thread.Thread.init(&worker.run, &ctx_value);
-    const t2 = try std.thread.Thread.init(&boss.run, &ctx_value);
+    const t1 = try std.thread.Thread.init(@ptrCast(&worker.run), @ptrCast(&ctx_value));
+    const t2 = try std.thread.Thread.init(@ptrCast(&boss.run), @ptrCast(&ctx_value));
     try t1.join();
     try t2.join();
 }

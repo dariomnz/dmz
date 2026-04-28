@@ -11,7 +11,7 @@ pub const Mutex = struct {
 
     pub fn init() -> Mutex {
         const this = @This{};
-        const ret = pthread_mutex_init(&this, null);
+        const ret = pthread_mutex_init(@ptrCast(&this.opaque_data), null);
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
@@ -19,21 +19,21 @@ pub const Mutex = struct {
     }
 
     pub fn deinit(self: *@This) -> !void {
-        const ret = pthread_mutex_destroy(&self.opaque_data);
+        const ret = pthread_mutex_destroy(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn lock(self: *@This) -> !void {
-        const ret = pthread_mutex_lock(&self.opaque_data);
+        const ret = pthread_mutex_lock(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn unlock(self: *@This) -> !void {
-        const ret = pthread_mutex_unlock(&self.opaque_data);
+        const ret = pthread_mutex_unlock(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }

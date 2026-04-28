@@ -28,7 +28,7 @@ pub const LibcAllocator = struct {
         const ptr = malloc(size);
         if (ptr == null) return error.OutOfMemory;
         let slice: []u8 = {};
-        slice.ptr = ptr;
+        slice.ptr = @ptrCast(ptr);
         slice.len = size;
         return slice;
     }
@@ -36,31 +36,30 @@ pub const LibcAllocator = struct {
     fn realloc(self: *@This, ptr: []u8, size: usize) -> ![]u8 {
         self.allocated -= ptr.len;
         self.allocated += size;
-        const raw = realloc(ptr.ptr, size);
+        const raw = realloc(@ptrCast(ptr.ptr), size);
         if (raw == null) return error.OutOfMemory;
         let slice: []u8 = {};
-        slice.ptr = raw;
+        slice.ptr = @ptrCast(raw);
         slice.len = size;
         return slice;
     }
 
     fn free(self: *@This, ptr: []u8) -> void {
         self.allocated_count--;
-        free(ptr.ptr);
+        free(@ptrCast(ptr.ptr));
     }
 
     pub fn Allocator(self: *@This) -> Allocator {
         return Allocator{
-            allocator: self,
+            allocator: @ptrCast(self),
             vtable: Allocator.VTable{
-                malloc: &self.malloc,
-                realloc: &self.realloc,
-                free: &self.free,
+                malloc: @ptrCast(&self.malloc),
+                realloc: @ptrCast(&self.realloc),
+                free: @ptrCast(&self.free),
             },
         };
     }
 };
-
 
 test "LibcAllocator basic" {
     let allocator = LibcAllocator.init();

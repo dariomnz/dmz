@@ -27,8 +27,8 @@ pub fn fmtType<T>(w: std.io.Writer, arg: T, spec: FormatOptions) -> !usize {
         case std.types.bool_t => return fmtBool(w, arg, spec);
         case std.types.struct_t => return fmtStruct<T>(w, arg, spec);
         case std.types.void_t => return w.writeAll("void");
-        case std.types.pointer_t => return fmtPointer(w, arg, spec);
-        case std.types.slice_t => return fmtSlice<T>(w, arg, spec);
+        case std.types.pointer_t => return fmtPointer(w, @ptrCast(arg), spec);
+        case std.types.slice_t => return fmtSlice(w, arg, spec);
         case std.types.range_t => return w.writeAll("unsupported range");
         case std.types.array_t => return w.writeAll("unsupported array");
         case std.types.function_t => return w.writeAll("unsupported function");
@@ -177,7 +177,7 @@ pub fn fmtStruct<T>(w: std.io.Writer, s: T, spec: FormatOptions) -> !usize {
 
 pub fn fmtPointer(w: std.io.Writer, ptr: *void, spec: FormatOptions) -> !usize {
     if (spec.tag == FormatOptions.string) {
-        return w.writeStr(ptr);
+        return w.writeStr(@ptrCast(ptr));
     }
     const addr: usize = ptr;
 
@@ -188,13 +188,9 @@ pub fn fmtPointer(w: std.io.Writer, ptr: *void, spec: FormatOptions) -> !usize {
     }
 }
 
-pub fn fmtSlice<T>(w: std.io.Writer, s: T, spec: FormatOptions) -> !usize {
+pub fn fmtSlice<T>(w: std.io.Writer, s: []T, spec: FormatOptions) -> !usize {
     if (spec.tag == FormatOptions.string) {
-        let str_slice: []u8 = {};
-        str_slice.ptr = s.ptr;
-        // str_slice.len = @sizeof(s[0]) * s.len;
-        str_slice.len = s.len;
-        return w.writeAll(str_slice);
+        return w.writeAll(std.mem.sliceAsBytes<T>(s));
     }
     let ret: usize = 0;
     ret += try w.writeAll("[len: ");
@@ -346,7 +342,7 @@ test "print integers" {
     let w = std.io.Writer.fixed(buf[0..buf_len]);
     let ret = try fmt(w, "Value a {} value b {}\n", .{a + 1, b});
     let expected = "Value a 7 value b 10\n";
-    try std.testing.expect(std.mem.memcmp(&buf[0], expected, std.mem.strlen(expected)) == 0);
+    try std.testing.expect(std.mem.memcmp(@ptrCast(&buf[0]), @ptrCast(expected), std.mem.strlen(expected)) == 0);
 
     let buf2: [buf_len]u8 = {};
     let w2 = std.io.stdout.writer(buf2[0..buf_len]);

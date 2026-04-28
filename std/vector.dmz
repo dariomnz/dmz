@@ -46,8 +46,7 @@ pub const vec = struct<T> {
         }
 
         if (index < (self.len - 1)) {
-            const num_bytes = (self.len - index - 1) * @sizeof(T);
-            std.mem.memmove(&self.buf[index], &self.buf[index + 1], num_bytes);
+            std.mem.copy<T>(self.buf[index..self.len], self.buf[(index + 1)..self.len]);
         }
 
         self.len--;

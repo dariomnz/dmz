@@ -7,7 +7,7 @@ pub const FutexCondition = import("./thread/futexCondition.dmz").FutexCondition;
 
 pub fn sleep(ms: u32) -> !void {
     const time = std.syscall.TimeSpec{tv_sec: 0, tv_nsec: ms * 1000 * 1000};
-    const result = std.syscall.nanosleep(&time, null);
+    const result = std.syscall.nanosleep(&time, @ptrCast(null));
     if (result != 0) {
         return std.errno.syscallError(result);
     }
@@ -40,7 +40,7 @@ test "thread mutex" {
     let threads: [NUM_HILOS]Thread = {};
 
     for (0..NUM_HILOS) |i| {
-        threads[i] = try Thread.init(&incrementar_contador.call, &c);
+        threads[i] = try Thread.init(@ptrCast(&incrementar_contador.call), @ptrCast(&c));
     }
 
     for (0..NUM_HILOS) |i| {
@@ -68,7 +68,7 @@ test "thread atomic" {
     let threads: [NUM_HILOS]Thread = {};
 
     for (0..NUM_HILOS) |i| {
-        threads[i] = try Thread.init(&incrementar_contador.call, &c);
+        threads[i] = try Thread.init(@ptrCast(&incrementar_contador.call), @ptrCast(&c));
     }
 
     for (0..NUM_HILOS) |i| {

@@ -10,7 +10,7 @@ pub const Barrier = struct {
 
     pub fn init(count: u32) -> Barrier {
         const this = @This{};
-        const ret = pthread_barrier_init(&this.opaque_data, null, count);
+        const ret = pthread_barrier_init(@ptrCast(&this.opaque_data), null, count);
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
@@ -18,14 +18,14 @@ pub const Barrier = struct {
     }
 
     pub fn deinit(self: *@This) -> !void {
-        const ret = pthread_barrier_destroy(&self.opaque_data);
+        const ret = pthread_barrier_destroy(@ptrCast(&self.opaque_data));
         if (ret != 0) {
             try std.errno.syscallError(ret);
         }
     }
 
     pub fn wait(self: *@This) -> !void {
-        const ret = pthread_barrier_wait(&self.opaque_data);
+        const ret = pthread_barrier_wait(@ptrCast(&self.opaque_data));
         if (ret < -1) {
             try std.errno.syscallError(-ret);
         }
@@ -48,7 +48,7 @@ test "barrier test" {
     let threads: [num_threads]std.thread.Thread = {};
     const c = worker{barrier_ptr: &barrier};
     for (0..num_threads) |i| {
-        threads[i] = try std.thread.Thread.init(&worker.run, &c);
+        threads[i] = try std.thread.Thread.init(@ptrCast(&worker.run), @ptrCast(&c));
     }
     for (0..num_threads) |i| {
         try threads[i].join();

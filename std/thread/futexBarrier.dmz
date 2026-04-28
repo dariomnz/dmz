@@ -49,7 +49,7 @@ test "futex barrier test" {
     let threads: [num_threads]std.thread.Thread = {};
     const c = worker{barrier_ptr: &barrier};
     for (0..num_threads) |i| {
-        threads[i] = try std.thread.Thread.init(&worker.run, &c);
+        threads[i] = try std.thread.Thread.init(@ptrCast(&worker.run), @ptrCast(&c));
     }
     for (0..num_threads) |i| {
         try threads[i].join();

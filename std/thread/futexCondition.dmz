@@ -77,8 +77,8 @@ test "conditional variable test" {
         }
     };
 
-    const t1 = try std.thread.Thread.init(&worker.run, &ctx_value);
-    const t2 = try std.thread.Thread.init(&boss.run, &ctx_value);
+    const t1 = try std.thread.Thread.init(@ptrCast(&worker.run), @ptrCast(&ctx_value));
+    const t2 = try std.thread.Thread.init(@ptrCast(&boss.run), @ptrCast(&ctx_value));
     try t1.join();
     try t2.join();
 }

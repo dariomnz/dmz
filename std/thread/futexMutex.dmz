@@ -74,7 +74,7 @@ test "thread futex mutex" {
     let threads: [NUM_HILOS]std.thread.Thread = {};
 
     for (0..NUM_HILOS) |i| {
-        threads[i] = try std.thread.Thread.init(&incrementar_contador.call, &c);
+        threads[i] = try std.thread.Thread.init(@ptrCast(&incrementar_contador.call), @ptrCast(&c));
     }
 
     for (0..NUM_HILOS) |i| {

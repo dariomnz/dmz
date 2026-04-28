@@ -27,7 +27,7 @@ pub const MmapAllocator = struct {
             0,
         );
 
-        const header: *Header = raw_ptr;
+        const header: *Header = @ptrCast(raw_ptr);
         header.size = total_size;
 
         self.allocated_bytes += total_size;
@@ -43,7 +43,7 @@ pub const MmapAllocator = struct {
         const header_ptr: *Header = int_ptr - @sizeof(Header);
         const total_size = header_ptr.size;
 
-        const ret = std.syscall.munmap(header_ptr, total_size);
+        const ret = std.syscall.munmap(@ptrCast(header_ptr), total_size);
         if (ret < 0) {
             std.errno.syscallError(ret) catch |e| {
                 std.io.print("Error when freeing memory: {}", .{e});
@@ -62,7 +62,7 @@ pub const MmapAllocator = struct {
 
         const old_ptr: *u8 = ptr.ptr;
         const new_ptr = try self.malloc(new_size);
-        std.mem.memcpy<u8>(new_ptr[0..new_size], old_ptr[0..old_user_size]);
+        std.mem.copy<u8>(new_ptr[0..new_size], old_ptr[0..old_user_size]);
 
         self.free(ptr);
         return new_ptr;
@@ -70,11 +70,11 @@ pub const MmapAllocator = struct {
 
     pub fn allocator(self: *@This) -> std.mem.Allocator {
         return std.mem.Allocator{
-            allocator: self,
+            allocator: @ptrCast(self),
             vtable: std.mem.Allocator.VTable{
-                malloc: &self.malloc,
-                realloc: &self.realloc,
-                free: &self.free,
+                malloc: @ptrCast(&self.malloc),
+                realloc: @ptrCast(&self.realloc),
+                free: @ptrCast(&self.free),
             },
         };
     }

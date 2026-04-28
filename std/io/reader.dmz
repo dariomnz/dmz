@@ -22,7 +22,7 @@ pub const Reader = struct {
     pub fn defaultRebase(ptr: *void, r: *@This, capacity: usize) -> !void {
         if (r.seek < r.end) {
             const data = r.buffer[r.seek..r.end];
-            std.mem.memmove(r.buffer.ptr, data.ptr, data.len);
+            std.mem.copy<u8>(r.buffer, data);
         }
         r.end = r.end - r.seek;
         r.seek = 0;
@@ -35,7 +35,7 @@ pub const Reader = struct {
             vtable_ptr: null,
             vtable_refill: &@This.fixedRefill,
         };
-        ret.vtable_ptr = &ret;
+        ret.vtable_ptr = @ptrCast(&ret);
         return ret;
     }
 
