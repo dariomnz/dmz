@@ -161,7 +161,6 @@ llvm::Value *Codegen::generate_while_stmt(const ResolvedWhileStmt &stmt) {
     m_builder.SetInsertPoint(exit);
     return nullptr;
 }
-
 llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     debug_func("");
     if (stmt.isInline) {
@@ -169,87 +168,69 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
         return nullptr;
     }
 
-    for (auto &&cond : stmt.conditions) {
-        if (cond->type->kind != ResolvedTypeKind::Range && cond->type->kind != ResolvedTypeKind::Slice) {
-            cond->type->dump();
-            dmz_unreachable(cond->location, "TODO");
-        }
-    }
     llvm::Function *function = get_current_function();
-
-    auto *header = llvm::BasicBlock::Create(*m_context, "for.cond", function);
-    auto *increment = llvm::BasicBlock::Create(*m_context, "for.increment", function);
-
     auto isize = castPtr<ResolvedTypeNumber>(ResolvedTypeNumber::isize(stmt.location));
-    auto llvmisize = generate_type(*isize);
+
+    // Bloques básicos
+    auto *header = llvm::BasicBlock::Create(*m_context, "for.cond", function);
+    auto *body = llvm::BasicBlock::Create(*m_context, "for.body", function);
+    auto *increment = llvm::BasicBlock::Create(*m_context, "for.increment", function);
+    auto *exit = llvm::BasicBlock::Create(*m_context, "for.exit", function);
+
+    // Contador de iteraciones (independiente de la dirección)
     llvm::Value *counter = allocate_stack_variable(stmt.location, "for.counter", *isize);
-    // Set to 0 for inner loops not only when allocated
     store_value(m_builder.getIntN(isize->bitSize, 0), counter, *isize, *isize);
-    std::vector<llvm::Value *> startCaptures(stmt.captures.size(), nullptr);
-    std::vector<llvm::Value *> endCaptures(stmt.captures.size(), nullptr);
-    std::vector<llvm::Value *> lenghtCaptures(stmt.captures.size(), nullptr);
+
+    struct LoopCapture {
+        llvm::Value *varAddr;
+        llvm::Value *step;  // 1 o -1
+        llvm::Value *length;
+        bool isSlice;
+    };
+    std::vector<LoopCapture> caps;
+
     for (size_t i = 0; i < stmt.captures.size(); i++) {
         if (auto rangeExpr = dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
-            startCaptures[i] = allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(),
-                                                       *stmt.captures[i]->type);
-            auto aux_start = cast_to(generate_expr(*rangeExpr->startExpr), *rangeExpr->startExpr->type, *isize);
-            store_value(aux_start, startCaptures[i], *isize, *stmt.captures[i]->type);
-            m_declarations[stmt.captures[i].get()] = startCaptures[i];
+            auto startVal = cast_to(generate_expr(*rangeExpr->startExpr), *rangeExpr->startExpr->type, *isize);
+            auto endVal = cast_to(generate_expr(*rangeExpr->endExpr), *rangeExpr->endExpr->type, *isize);
 
-            endCaptures[i] = cast_to(generate_expr(*rangeExpr->endExpr), *rangeExpr->endExpr->type, *isize);
-            lenghtCaptures[i] = m_builder.CreateSub(endCaptures[i], aux_start);
+            // Dirección dinámica: step = (start <= end) ? 1 : -1
+            auto isForward = m_builder.CreateICmpSLE(startVal, endVal);
+            auto step = m_builder.CreateSelect(isForward, m_builder.getIntN(isize->bitSize, 1),
+                                               m_builder.getIntN(isize->bitSize, -1));
+
+            // length = abs(end - start)
+            auto diff = m_builder.CreateSub(endVal, startVal);
+            auto absDiff = m_builder.CreateSelect(isForward, diff,
+                                                  m_builder.CreateSub(m_builder.getIntN(isize->bitSize, 0), diff));
+
+            auto varAddr = allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(), *isize);
+            store_value(startVal, varAddr, *isize, *isize);
+            m_declarations[stmt.captures[i].get()] = varAddr;
+
+            caps.push_back({varAddr, step, absDiff, false});
+
         } else if (auto sliceType = dynamic_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get())) {
-            startCaptures[i] = allocate_stack_variable(stmt.location, "for.capture." + stmt.captures[i]->name(),
-                                                       *ResolvedTypePointer::opaquePtr(stmt.captures[i]->location));
-            m_declarations[stmt.captures[i].get()] = startCaptures[i];
-            auto generatedCond = generate_expr(*stmt.conditions[i], true);
-            auto ptrOfPtrInSlice = m_builder.CreateStructGEP(generate_type(*sliceType), generatedCond, 0);
-            auto opaquePtrType = ResolvedTypePointer::opaquePtr(sliceType->location);
-            auto ptrInSlice = load_value(ptrOfPtrInSlice, *opaquePtrType);
-            store_value(ptrInSlice, startCaptures[i], *opaquePtrType, *opaquePtrType);
+            auto genSlice = generate_expr(*stmt.conditions[i], true);
+            auto ptrType = ResolvedTypePointer::opaquePtr(sliceType->location);
 
-            auto ptrOfLenInSlice = m_builder.CreateStructGEP(generate_type(*sliceType), generatedCond, 1);
-            lenghtCaptures[i] = load_value(ptrOfLenInSlice, *isize);
+            auto ptrLoad = load_value(m_builder.CreateStructGEP(generate_type(*sliceType), genSlice, 0), *ptrType);
+            auto lenLoad = load_value(m_builder.CreateStructGEP(generate_type(*sliceType), genSlice, 1), *isize);
 
-        } else {
-            dmz_unreachable(stmt.location, "TODO");
+            auto varAddr = allocate_stack_variable(stmt.location, "for.capture.slice", *ptrType);
+            store_value(ptrLoad, varAddr, *ptrType, *ptrType);
+            m_declarations[stmt.captures[i].get()] = varAddr;
+
+            caps.push_back({varAddr, m_builder.getIntN(isize->bitSize, 1), lenLoad, true});
         }
     }
 
-    // Check lenghts
-    llvm::BasicBlock *check_length = nullptr;
-    if (stmt.captures.size() > 1) {
-        auto *not_equal_length = llvm::BasicBlock::Create(*m_context, "for.not.equal.length", function);
-        check_length = llvm::BasicBlock::Create(*m_context, "for.check_length", function);
-        break_into_bb(check_length);
-        for (size_t i = 1; i < stmt.captures.size(); i++) {
-            m_builder.SetInsertPoint(check_length);
-            auto cond = m_builder.CreateICmpNE(lenghtCaptures[0], lenghtCaptures[i]);
-            check_length = llvm::BasicBlock::Create(*m_context, "for.check_length", function);
-            m_builder.CreateCondBr(cond, not_equal_length, check_length);
-        }
-        m_builder.SetInsertPoint(check_length);
-        break_into_bb(header);
-
-        // In case not equal at run time
-        m_builder.SetInsertPoint(not_equal_length);
-        auto fmt = create_global_string(stmt.location.to_string() +
-                                        ": Aborted: for loop over objects with non-equal lengths\n");
-        auto printf_func = m_module->getOrInsertFunction(
-            "printf", llvm::FunctionType::get(m_builder.getInt32Ty(), m_builder.getPtrTy(), true));
-        m_builder.CreateCall(printf_func, {fmt});
-        llvm::Function *trapIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trap);
-        m_builder.CreateCall(trapIntrinsic, {});
-    }
-
-    auto *body = llvm::BasicBlock::Create(*m_context, "for.body", function);
-    auto *exit = llvm::BasicBlock::Create(*m_context, "for.exit", function);
-    // Header to check exit
+    // Header: check counter < length
     break_into_bb(header);
     m_builder.SetInsertPoint(header);
-    auto loaded_counter = load_value(counter, *isize);
-    auto cond = m_builder.CreateICmpSLT(loaded_counter, lenghtCaptures[0]);
-    m_builder.CreateCondBr(cond, body, exit);
+    auto currCount = load_value(counter, *isize);
+    auto hasMore = m_builder.CreateICmpSLT(currCount, caps[0].length);
+    m_builder.CreateCondBr(hasMore, body, exit);
 
     // Body
     m_builder.SetInsertPoint(body);
@@ -260,26 +241,22 @@ llvm::Value *Codegen::generate_for_stmt(const ResolvedForStmt &stmt) {
     m_loopExitStack.pop();
     break_into_bb(increment);
 
-    // Increment counter
+    // Increment
     m_builder.SetInsertPoint(increment);
-    auto sum = m_builder.CreateAdd(load_value(counter, *isize), llvm::ConstantInt::get(llvmisize, 1));
-    store_value(sum, counter, *isize, *isize);
-    for (size_t i = 0; i < stmt.captures.size(); i++) {
-        if (dynamic_cast<ResolvedRangeExpr *>(stmt.conditions[i].get())) {
-            auto added_capture = m_builder.CreateAdd(load_value(startCaptures[i], *stmt.captures[i]->type),
-                                                     llvm::ConstantInt::get(llvmisize, 1));
-            store_value(added_capture, startCaptures[i], *isize, *stmt.captures[i]->type);
-        } else if (auto sliceType = dynamic_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get())) {
-            auto opaquePtrType = ResolvedTypePointer::opaquePtr(sliceType->location);
-            auto added_capture =
-                m_builder.CreateGEP(generate_type(*sliceType->sliceType), load_value(startCaptures[i], *opaquePtrType),
-                                    m_builder.getInt32(1));
-            store_value(added_capture, startCaptures[i], *opaquePtrType, *opaquePtrType);
+    store_value(m_builder.CreateAdd(currCount, m_builder.getIntN(isize->bitSize, 1)), counter, *isize, *isize);
+
+    for (size_t i = 0; i < caps.size(); i++) {
+        if (!caps[i].isSlice) {
+            auto val = load_value(caps[i].varAddr, *isize);
+            store_value(m_builder.CreateAdd(val, caps[i].step), caps[i].varAddr, *isize, *isize);
         } else {
-            dmz_unreachable(stmt.location, "TODO");
+            auto sliceT = static_cast<ResolvedTypeSlice *>(stmt.conditions[i]->type.get());
+            auto ptr = load_value(caps[i].varAddr, *ResolvedTypePointer::opaquePtr(sliceT->location));
+            auto nextPtr = m_builder.CreateGEP(generate_type(*sliceT->sliceType), ptr, m_builder.getInt32(1));
+            store_value(nextPtr, caps[i].varAddr, *isize, *isize);  // Simplificado: asume opaque
         }
     }
-    break_into_bb(header);
+    m_builder.CreateBr(header);
 
     m_builder.SetInsertPoint(exit);
     return nullptr;

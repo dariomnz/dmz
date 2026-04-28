@@ -18,7 +18,7 @@ fn main() -> void {
     let ptr: *i32;
     let numElementos: i32 = 5;
 
-    ptr = malloc(numElementos * 4);
+    ptr = @ptrCast(malloc(numElementos * 4));
 
     printf("Memory successfully allocated for %d integers.\n", numElementos);
 
@@ -29,6 +29,6 @@ fn main() -> void {
         i = i + 1;
     }
 
-    free(ptr);
+    free(@ptrCast(ptr));
     printf("Memory freed.\n");
 }

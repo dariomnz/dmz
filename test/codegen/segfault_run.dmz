@@ -10,6 +10,6 @@
 // CHECK-NEXT: in main
 
 fn main() -> void {
-    const ptr: *i32 = null;
+    const ptr: *i32 = @ptrCast(null);
     ptr.* = 1;
 }

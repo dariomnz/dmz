@@ -16,32 +16,32 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCaptureDecl:generic x
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedBlock
-// CHECK-NEXT:             ResolvedDeclStmt i64
-// CHECK-NEXT:               ResolvedVarDecl:const i64 x
-// CHECK-NEXT:                 ResolvedIntLiteral:i64 '0'
+// CHECK-NEXT:             ResolvedDeclStmt isize
+// CHECK-NEXT:               ResolvedVarDecl:const isize x
+// CHECK-NEXT:                 ResolvedIntLiteral:isize '0'
 // CHECK-NEXT:                 | value: 0
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
-// CHECK-NEXT:               ResolvedDeclRefExpr:i64 x
+// CHECK-NEXT:               ResolvedDeclRefExpr:isize x
 // CHECK-NEXT:               | value: 0
 // CHECK-NEXT:           ResolvedBlock
-// CHECK-NEXT:             ResolvedDeclStmt i64
-// CHECK-NEXT:               ResolvedVarDecl:const i64 x
-// CHECK-NEXT:                 ResolvedIntLiteral:i64 '1'
+// CHECK-NEXT:             ResolvedDeclStmt isize
+// CHECK-NEXT:               ResolvedVarDecl:const isize x
+// CHECK-NEXT:                 ResolvedIntLiteral:isize '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
-// CHECK-NEXT:               ResolvedDeclRefExpr:i64 x
+// CHECK-NEXT:               ResolvedDeclRefExpr:isize x
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:           ResolvedBlock
-// CHECK-NEXT:             ResolvedDeclStmt i64
-// CHECK-NEXT:               ResolvedVarDecl:const i64 x
-// CHECK-NEXT:                 ResolvedIntLiteral:i64 '2'
+// CHECK-NEXT:             ResolvedDeclStmt isize
+// CHECK-NEXT:               ResolvedVarDecl:const isize x
+// CHECK-NEXT:                 ResolvedIntLiteral:isize '2'
 // CHECK-NEXT:                 | value: 2
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
-// CHECK-NEXT:               ResolvedDeclRefExpr:i64 x
+// CHECK-NEXT:               ResolvedDeclRefExpr:isize x
 // CHECK-NEXT:               | value: 2

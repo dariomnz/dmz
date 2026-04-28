@@ -26,8 +26,8 @@ const Square = struct {
 
     pub fn Shape(self: *@This) -> Shape {
         return Shape{
-            shape: self,
-            drawOpaquePtr: &self.draw,
+            shape: @ptrCast(self),
+            drawOpaquePtr: @ptrCast(&self.draw),
         };
     }
 };
@@ -41,8 +41,8 @@ const Triangle = struct {
 
     pub fn Shape(self: *@This) -> Shape {
         return Shape{
-            shape: self,
-            drawOpaquePtr: &self.draw,
+            shape: @ptrCast(self),
+            drawOpaquePtr: @ptrCast(&self.draw),
         };
     }
 };

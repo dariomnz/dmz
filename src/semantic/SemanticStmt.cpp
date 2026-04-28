@@ -265,8 +265,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 ScopeRAII iterationScope(*this);
                 auto takenIterationScope = iterationScope.takeScope();
 
-                auto captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[0]->location, ResolvedNumberKind::Int,
-                                                               CodegenUtils::ptrBitSize());
+                auto captureType = ResolvedTypeNumber::isize(forStmt.captures[0]->location);
                 auto captureTypeExpr = makePtr<ResolvedTypeExpr>(forStmt.captures[0]->location, captureType->clone());
                 auto initializer = makePtr<ResolvedIntLiteral>(forStmt.captures[0]->location, (int)i);
                 initializer->type = captureType->clone();
@@ -404,8 +403,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 }
                 size_of_forloop = currentSize;
             }
-            captureType = makePtr<ResolvedTypeNumber>(forStmt.captures[i]->location, ResolvedNumberKind::Int,
-                                                      CodegenUtils::ptrBitSize());
+            captureType = ResolvedTypeNumber::isize(forStmt.captures[i]->location);
         } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
             captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
         } else {

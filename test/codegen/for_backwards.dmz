@@ -1,0 +1,110 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'x: 5\nx: 4\nx: 3\nx: 2\nx: 1\nx: 5 y: 10\nx: 4 y: 9\nx: 3 y: 8\nx: 2 y: 7\nx: 1 y: 6\naaaaaaaaaa\n')
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    for (5..0) |x| {
+        printf("x: %d\n", x);
+    }
+    for (5..0, 10..5) |x, y| {
+        printf("x: %d y: %d\n", x, y);
+    }
+    for (10..0) |i| {
+        printf("a");
+    }
+    printf("\n");
+}
+
+// CHECK:  define void @__builtin_main() {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    %for.counter = alloca i64, align 8
+// CHECK-NEXT:    %for.capture.x = alloca i64, align 8
+// CHECK-NEXT:    %for.counter5 = alloca i64, align 8
+// CHECK-NEXT:    %for.capture.x6 = alloca i64, align 8
+// CHECK-NEXT:    %for.capture.y = alloca i64, align 8
+// CHECK-NEXT:    %for.counter11 = alloca i64, align 8
+// CHECK-NEXT:    %for.capture.i = alloca i64, align 8
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.x, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter5, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.x6, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.y, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.counter11, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr align 8 %for.capture.i, i8 0, i64 8, i1 false)
+// CHECK-NEXT:    store i64 0, ptr %for.counter, align 4
+// CHECK-NEXT:    store i64 5, ptr %for.capture.x, align 4
+// CHECK-NEXT:    br label %for.cond
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.cond:                                         ; preds = %for.increment, %entry
+// CHECK-NEXT:    %0 = load i64, ptr %for.counter, align 4
+// CHECK-NEXT:    %1 = icmp slt i64 %0, 5
+// CHECK-NEXT:    br i1 %1, label %for.body, label %for.exit
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.body:                                         ; preds = %for.cond
+// CHECK-NEXT:    %2 = load i64, ptr %for.capture.x, align 4
+// CHECK-NEXT:    %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.8DD29067, i64 %2)
+// CHECK-NEXT:    br label %for.increment
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.increment:                                    ; preds = %for.body
+// CHECK-NEXT:    %4 = add i64 %0, 1
+// CHECK-NEXT:    store i64 %4, ptr %for.counter, align 4
+// CHECK-NEXT:    %5 = load i64, ptr %for.capture.x, align 4
+// CHECK-NEXT:    %6 = add i64 %5, -1
+// CHECK-NEXT:    store i64 %6, ptr %for.capture.x, align 4
+// CHECK-NEXT:    br label %for.cond
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.exit:                                         ; preds = %for.cond
+// CHECK-NEXT:    store i64 0, ptr %for.counter5, align 4
+// CHECK-NEXT:    store i64 5, ptr %for.capture.x6, align 4
+// CHECK-NEXT:    store i64 10, ptr %for.capture.y, align 4
+// CHECK-NEXT:    br label %for.cond1
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.cond1:                                        ; preds = %for.increment3, %for.exit
+// CHECK-NEXT:    %7 = load i64, ptr %for.counter5, align 4
+// CHECK-NEXT:    %8 = icmp slt i64 %7, 5
+// CHECK-NEXT:    br i1 %8, label %for.body2, label %for.exit4
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.body2:                                        ; preds = %for.cond1
+// CHECK-NEXT:    %9 = load i64, ptr %for.capture.x6, align 4
+// CHECK-NEXT:    %10 = load i64, ptr %for.capture.y, align 4
+// CHECK-NEXT:    %11 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.42ABC2A2, i64 %9, i64 %10)
+// CHECK-NEXT:    br label %for.increment3
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.increment3:                                   ; preds = %for.body2
+// CHECK-NEXT:    %12 = add i64 %7, 1
+// CHECK-NEXT:    store i64 %12, ptr %for.counter5, align 4
+// CHECK-NEXT:    %13 = load i64, ptr %for.capture.x6, align 4
+// CHECK-NEXT:    %14 = add i64 %13, -1
+// CHECK-NEXT:    store i64 %14, ptr %for.capture.x6, align 4
+// CHECK-NEXT:    %15 = load i64, ptr %for.capture.y, align 4
+// CHECK-NEXT:    %16 = add i64 %15, -1
+// CHECK-NEXT:    store i64 %16, ptr %for.capture.y, align 4
+// CHECK-NEXT:    br label %for.cond1
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.exit4:                                        ; preds = %for.cond1
+// CHECK-NEXT:    store i64 0, ptr %for.counter11, align 4
+// CHECK-NEXT:    store i64 10, ptr %for.capture.i, align 4
+// CHECK-NEXT:    br label %for.cond7
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.cond7:                                        ; preds = %for.increment9, %for.exit4
+// CHECK-NEXT:    %17 = load i64, ptr %for.counter11, align 4
+// CHECK-NEXT:    %18 = icmp slt i64 %17, 10
+// CHECK-NEXT:    br i1 %18, label %for.body8, label %for.exit10
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.body8:                                        ; preds = %for.cond7
+// CHECK-NEXT:    %19 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.88C1ED6B)
+// CHECK-NEXT:    br label %for.increment9
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.increment9:                                   ; preds = %for.body8
+// CHECK-NEXT:    %20 = add i64 %17, 1
+// CHECK-NEXT:    store i64 %20, ptr %for.counter11, align 4
+// CHECK-NEXT:    %21 = load i64, ptr %for.capture.i, align 4
+// CHECK-NEXT:    %22 = add i64 %21, -1
+// CHECK-NEXT:    store i64 %22, ptr %for.capture.i, align 4
+// CHECK-NEXT:    br label %for.cond7
+// CHECK-NEXT:  
+// CHECK-NEXT:  for.exit10:                                       ; preds = %for.cond7
+// CHECK-NEXT:    %23 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.3E83B8F0)
+// CHECK-NEXT:    ret void
+// CHECK-NEXT:  }
+// CHECK-NEXT:  

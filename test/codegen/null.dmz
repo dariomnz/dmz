@@ -34,7 +34,7 @@ fn foo(n:*i32) -> void {
 
 fn main() -> void {
     let i = 42;
-    foo(null);
+    foo(@ptrCast(null));
     foo(&i);
 }
 // CHECK: define void @__builtin_main() {
