@@ -7,7 +7,7 @@
 
 namespace DMZ::lsp {
 
-SemanticTokensCollector::SemanticTokensCollector(const std::string& target_file, const std::string& source)
+SemanticTokensCollector::SemanticTokensCollector(std::string_view target_file, std::string_view source)
     : m_target_file(target_file), m_source(source) {}
 
 SemanticTokenType get_type_from_decl(const ResolvedDecl& decl) {

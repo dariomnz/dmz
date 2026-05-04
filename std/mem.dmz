@@ -198,25 +198,25 @@ fn copySIMDBackwards<T>(dest: []T, src: []T) -> void {
     }
 }
 
-pub fn memset<T>(dest: []T, value: T) -> void {
-    memsetSIMD<T>(dest, value);
+pub fn set<T>(dest: []T, value: T) -> void {
+    setSIMD<T>(dest, value);
 }
 
-fn memsetScalar<T>(dest: []T, value: T) -> void {
+fn setScalar<T>(dest: []T, value: T) -> void {
     if (dest.len == 0) return;
     for (0..dest.len) |i| {
         dest[i] = value;
     }
 }
 
-fn memsetSIMD<T>(dest: []T, value: T) -> void {
+fn setSIMD<T>(dest: []T, value: T) -> void {
     let len = dest.len;
     if (len == 0) return;
 
     const simd_len = @simdSize(T);
 
     if (len < simd_len) {
-        memsetScalar<T>(dest, value);
+        setScalar<T>(dest, value);
         return;
     }
 
@@ -228,7 +228,7 @@ fn memsetSIMD<T>(dest: []T, value: T) -> void {
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
         if (offset > len) offset = len;
-        memsetScalar<T>(dest[0..offset], value);
+        setScalar<T>(dest[0..offset], value);
     }
 
     const value_vec: @simd<T, simd_len> = @simdSplat(value);
@@ -241,7 +241,7 @@ fn memsetSIMD<T>(dest: []T, value: T) -> void {
     }
 
     if (i < len) {
-        memsetScalar<T>(dest[i..len], value);
+        setScalar<T>(dest[i..len], value);
     }
 }
 
@@ -273,7 +273,7 @@ test "indexOfScalarSIMD i32" {
 test "indexOfScalar benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr: [size]u8 = {};
-    memset(ptr[0..size], 123);
+    set(ptr[0..size], 123);
     const scalar = 124;
     ptr[size - 1] = scalar;
     const start = std.time.get();
@@ -291,23 +291,42 @@ test "indexOfScalar benchmark" {
     try std.testing.expect(time_diff < time_diff2);
 }
 
-test "copy benchmark" {
+test "copy: benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr1: [size]u8 = {};
     let ptr2: [size]u8 = {};
     const scalar = 124;
     ptr1[size - 1] = scalar;
-    const start = std.time.get();
-    copySIMD<u8>(ptr2[0..size], ptr1[0..size]);
-    const end = std.time.get();
-    const time_diff = (end - start) * 1000;
-    const start2 = std.time.get();
-    copyScalar<u8>(ptr2[0..size], ptr1[0..size]);
-    const end2 = std.time.get();
-    const time_diff2 = (end2 - start2) * 1000;
 
-    std.io.print("copySIMD: {d}ms copyScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
-    try std.testing.expect(time_diff < time_diff2);
+    const start_simd = std.time.get();
+    copySIMD<u8>(ptr2[0..size], ptr1[0..size]);
+    const end_simd = std.time.get();
+    const time_diff_simd = (end_simd - start_simd) * 1000;
+
+    const start_scalar = std.time.get();
+    copyScalar<u8>(ptr2[0..size], ptr1[0..size]);
+    const end_scalar = std.time.get();
+    const time_diff_scalar = (end_scalar - start_scalar) * 1000;
+    std.io.print(
+        "copySIMD: {d}ms copyScalar: {d}ms factor: {d} \n",
+        .{time_diff_simd, time_diff_scalar, time_diff_scalar / time_diff_simd},
+    );
+    try std.testing.expect(time_diff_simd < time_diff_scalar);
+    const start_back = std.time.get();
+    copySIMDBackwards<u8>(ptr2[0..size], ptr1[0..size]);
+    const end_back = std.time.get();
+    const time_diff_back = (end_back - start_back) * 1000;
+
+    const start_scalar_back = std.time.get();
+    copyScalarBackwards<u8>(ptr2[0..size], ptr1[0..size]);
+    const end_scalar_back = std.time.get();
+    const time_diff_scalar_back = (end_scalar_back - start_scalar_back) * 1000;
+
+    std.io.print(
+        "copySIMDBackwards: {d}ms copyScalarBackwards: {d}ms factor: {d} \n",
+        .{time_diff_back, time_diff_scalar_back, time_diff_scalar_back / time_diff_back},
+    );
+    try std.testing.expect(time_diff_back < time_diff_scalar_back);
 }
 
 test "copy: basic integrity" {
@@ -340,27 +359,27 @@ test "copy: misaligned large buffers" {
     // Test multiple offsets to trigger different alignment remainders
     let offset: usize = 0;
     while (offset < 16) {
-        memset<u8>(dest[0..size], 0);
+        set<u8>(dest[0..size], 0);
         copy<u8>(dest[offset..size], src[offset..size]);
         try std.testing.expectEqualSlice(src[offset..size], dest[offset..size]);
         offset += 1;
     }
 }
 
-test "memset benchmark" {
+test "set benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr: [size]u8 = {};
     const scalar = 124;
     const start = std.time.get();
-    memsetSIMD<u8>(ptr[0..size], scalar);
+    setSIMD<u8>(ptr[0..size], scalar);
     const end = std.time.get();
     const time_diff = (end - start) * 1000;
     const start2 = std.time.get();
-    memsetScalar<u8>(ptr[0..size], scalar);
+    setScalar<u8>(ptr[0..size], scalar);
     const end2 = std.time.get();
     const time_diff2 = (end2 - start2) * 1000;
 
-    std.io.print("memsetSIMD: {d}ms memsetScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
+    std.io.print("setSIMD: {d}ms setScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(time_diff < time_diff2);
 }
 

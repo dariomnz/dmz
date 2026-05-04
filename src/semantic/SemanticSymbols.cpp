@@ -571,6 +571,12 @@ void ResolvedModuleDecl::dump(size_t level, bool onlySelf) const {
 
 void ResolvedModuleDecl::dump_dependencies(size_t level, bool dot_format) const {
     ResolvedDecl::dump_dependencies(level, dot_format);
+    for (auto *user : isUsedBy) {
+        std::cerr << indent_line(level + 1, 0, false) << "Is used by: " << user->identifier << '\n';
+    }
+    for (auto *used : dependsOn) {
+        std::cerr << indent_line(level + 1, 0, false) << "Depends on: " << used->identifier << '\n';
+    }
     for (auto &&decl : declarations) decl->dump_dependencies(level + 1, dot_format);
 }
 

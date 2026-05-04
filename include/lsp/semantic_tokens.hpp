@@ -51,7 +51,7 @@ struct SemanticToken {
 
 class SemanticTokensCollector {
    public:
-    SemanticTokensCollector(const std::string& target_file, const std::string& source = "");
+    SemanticTokensCollector(std::string_view target_file, std::string_view source = "");
     std::vector<SemanticToken> collect(const ResolvedModuleDecl* mainModule);
 
    private:
@@ -64,8 +64,8 @@ class SemanticTokensCollector {
     void add_token(const SourceLocation& loc, std::string_view identifier, SemanticTokenType type,
                    uint32_t modifiers = (uint32_t)SemanticTokenModifier::None);
 
-    std::string m_target_file;
-    std::string m_source;
+    std::string_view m_target_file;
+    std::string_view m_source;
     std::vector<SemanticToken> m_tokens;
 };
 

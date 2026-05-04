@@ -1358,6 +1358,14 @@ ptr<ResolvedImportExpr> Sema::resolve_import_expr(const ImportExpr &importExpr) 
     if (!ensure_module_discovered(*im)) return nullptr;
     im->symbolName = identifier;
 
+    if (m_currentModule && m_currentModule != im) {
+        if (std::find(m_currentModule->dependsOn.begin(), m_currentModule->dependsOn.end(), im) ==
+            m_currentModule->dependsOn.end()) {
+            m_currentModule->dependsOn.emplace_back(im);
+            im->isUsedBy.emplace_back(m_currentModule);
+        }
+    }
+
     return makePtr<ResolvedImportExpr>(importExpr.location, *im);
 }
 

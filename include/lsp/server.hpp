@@ -21,6 +21,7 @@ class LSPServer {
     void on_exit();
     void on_did_open(const std::string& params);
     void on_did_change(const std::string& params);
+    void on_did_close(const std::string& params);
     void on_definition(const std::string& id, const std::string& params);
     void on_hover(const std::string& id, const std::string& params);
     void on_semantic_tokens(const std::string& id, const std::string& params);
@@ -41,18 +42,25 @@ class LSPServer {
                              const std::vector<std::string>& messages);
     void process_file(const std::string& filename, const std::string& source);
 
-    struct Document {
-        struct CacheEntry {
-            ptr<ResolvedModuleDecl> module;
-            std::filesystem::file_time_type last_write_time;
-        };
+    struct CacheEntry {
+        ptr<ResolvedModuleDecl> module;
+        std::filesystem::file_time_type last_write_time;
         std::string source;
-        ptr<Sema> sema;
+    };
+
+    void dump_cache();
+    void dump_documents();
+    void invalidate_module(const std::string& path);
+    void invalidate_module(const std::string& path, std::unordered_set<std::string>& invalidated);
+
+    struct Document {
         ResolvedModuleDecl* mainModule = nullptr;
-        std::unordered_map<std::string, CacheEntry> cache;
+        std::vector<SourceLocation> errors;
+        std::vector<std::string> messages;
     };
 
     std::unordered_map<std::string, Document> m_documents;
+    std::unordered_map<std::string, CacheEntry> m_module_cache;
     std::string m_std_path;
 };
 

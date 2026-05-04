@@ -18,7 +18,7 @@ class Sema {
    private:
     Driver &m_driver;
     ptr<ModuleDecl> m_ast;
-    std::vector<ptr<ResolvedModuleDecl>> m_lazy_modules;
+    vec<ptr<ResolvedModuleDecl>> m_lazy_modules;
 
     void dump_scopes() const;
 
@@ -26,7 +26,7 @@ class Sema {
     ResolvedFuncDecl *m_currentFunction = nullptr;
     ResolvedStructDecl *m_currentStruct = nullptr;
     int m_loopDepth = 0;
-    std::vector<ResolvedCatchErrorExpr *> m_catchStack;
+    vec<ResolvedCatchErrorExpr *> m_catchStack;
 
     class ScopeRAII {
         Sema &m_sema;
@@ -87,10 +87,12 @@ class Sema {
    public:
     explicit Sema(Driver &driver, ptr<ModuleDecl> ast) : m_driver(driver), m_ast(std::move(ast)) {}
 
-    std::vector<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
+    vec<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
     void add_pre_resolved_module(ptr<ResolvedModuleDecl> mod) { m_lazy_modules.emplace_back(std::move(mod)); }
     bool resolve_ast_body(std::vector<ptr<ResolvedModuleDecl>> &moduleDecls);
     void queue_module(ptr<ModuleDecl> ast, std::filesystem::path sourcePath);
+
+    vec<ptr<ResolvedModuleDecl>> take_resolved_modules() { return std::move(m_lazy_modules); }
 
    private:
     std::string resolve_decl_name(std::string_view identifier);
@@ -178,6 +180,7 @@ class Sema {
     // Lazy resolution: single discovery pass + on-demand resolution
     bool discover_module_decls(ResolvedModuleDecl &resolvedModuleDecl);
 
+   public:
     // Lazy ensure methods — resolve only when needed
     bool ensure_module_parsed(ResolvedModuleDecl &mod);
     bool ensure_module_discovered(ResolvedModuleDecl &mod);

@@ -539,6 +539,7 @@ std::vector<ptr<ResolvedModuleDecl>> Sema::resolve_ast_decl(std::filesystem::pat
     for (auto &mod : resolvedModules) {
         m_lazy_modules.push_back(std::move(mod));
     }
+    resolvedModules.clear();
 
     // Put main module AST back
     if (!modules.empty()) {

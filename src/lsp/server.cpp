@@ -50,6 +50,8 @@ void LSPServer::handle_message(const std::string& message) {
         on_did_open(message);
     } else if (method == "textDocument/didChange") {
         on_did_change(message);
+    } else if (method == "textDocument/didClose") {
+        on_did_close(message);
     } else if (method == "textDocument/definition") {
         on_definition(id, message);
     } else if (method == "textDocument/hover") {
@@ -157,6 +159,23 @@ void LSPServer::on_did_open(const std::string& params) {
 
 void LSPServer::on_did_change(const std::string& params) { on_did_open(params); }
 
+void LSPServer::on_did_close(const std::string& params) {
+    std::string uri = get_json_value(params, "uri");
+    if (uri.starts_with("file://")) uri = uri.substr(7);
+
+    invalidate_module(uri);
+
+    m_documents.erase(uri);
+    if (m_documents.empty()) {
+        m_module_cache.clear();
+    } else if (m_module_cache.count(uri)) {
+        m_module_cache[uri].source = "";
+    }
+
+    dump_documents();
+    dump_cache();
+}
+
 void LSPServer::on_definition(const std::string& id, const std::string& params) {
     std::string uri = get_json_value(params, "uri");
     if (uri.starts_with("file://")) uri = uri.substr(7);
@@ -236,7 +255,8 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
         } else {
             ss << escape_json(finder.found_decl->type->to_str());
         }
-        if (auto val = doc.sema->cee.evaluate_decl(*finder.found_decl)) {
+        ConstantExpressionEvaluator cee;
+        if (auto val = cee.evaluate_decl(*finder.found_decl)) {
             ss << " = " << *val;
         }
         ss << "\\n```\"}}";
@@ -251,19 +271,30 @@ void LSPServer::on_semantic_tokens(const std::string& id, const std::string& par
     std::string uri = get_json_value(params, "uri");
     if (uri.starts_with("file://")) uri = uri.substr(7);
 
-    if (m_documents.find(uri) == m_documents.end()) {
+    if (m_module_cache.find(uri) == m_module_cache.end()) {
+        std::cerr << "[LSP] Document " << uri << " not found for semantic tokens" << std::endl;
+        dump_documents();
+        dump_cache();
         send_response(id, "{\"data\":[]}");
         return;
     }
 
-    auto& doc = m_documents[uri];
-    if (!doc.mainModule) {
-        send_response(id, "{\"data\":[]}");
-        return;
+    auto& cache_entry = m_module_cache[uri];
+    if (!cache_entry.module) {
+        if (!cache_entry.source.empty()) {
+            process_file(uri, cache_entry.source);
+        }
+        if (!cache_entry.module) {
+            std::cerr << "[LSP] No main module for " << uri << std::endl;
+            dump_documents();
+            dump_cache();
+            send_response(id, "{\"data\":[]}");
+            return;
+        }
     }
 
-    SemanticTokensCollector collector(uri, doc.source);
-    std::vector<SemanticToken> tokens = collector.collect(doc.mainModule);
+    SemanticTokensCollector collector(uri, cache_entry.source);
+    std::vector<SemanticToken> tokens = collector.collect(cache_entry.module.get());
 
     std::stringstream ss;
     ss << "{\"data\":[";
@@ -282,6 +313,7 @@ void LSPServer::on_semantic_tokens(const std::string& id, const std::string& par
         lastChar = t.col;
     }
     ss << "]}";
+    std::cerr << "[LSP] Sending semantic tokens response" << std::endl;
     send_response(id, ss.str());
 }
 
@@ -289,15 +321,23 @@ void LSPServer::on_semantic_tokens_range(const std::string& id, const std::strin
     std::string uri = get_json_value(params, "uri");
     if (uri.starts_with("file://")) uri = uri.substr(7);
 
-    if (m_documents.find(uri) == m_documents.end()) {
+    if (m_module_cache.find(uri) == m_module_cache.end()) {
         send_response(id, "{\"data\":[]}");
         return;
     }
 
-    auto& doc = m_documents[uri];
-    if (!doc.mainModule) {
-        send_response(id, "{\"data\":[]}");
-        return;
+    auto& cache_entry = m_module_cache[uri];
+    if (!cache_entry.module) {
+        if (!cache_entry.source.empty()) {
+            process_file(uri, cache_entry.source);
+        }
+        if (!cache_entry.module) {
+            std::cerr << "[LSP] No main module for " << uri << std::endl;
+            dump_documents();
+            dump_cache();
+            send_response(id, "{\"data\":[]}");
+            return;
+        }
     }
 
     // Very basic parsing of range from JSON
@@ -318,8 +358,8 @@ void LSPServer::on_semantic_tokens_range(const std::string& id, const std::strin
         }
     }
 
-    SemanticTokensCollector collector(uri, doc.source);
-    std::vector<SemanticToken> all_tokens = collector.collect(doc.mainModule);
+    SemanticTokensCollector collector(uri, cache_entry.source);
+    std::vector<SemanticToken> all_tokens = collector.collect(cache_entry.module.get());
 
     std::vector<SemanticToken> tokens;
     for (const auto& t : all_tokens) {
@@ -355,13 +395,13 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
     std::string line_str = get_json_value(params, "line");
     std::string char_str = get_json_value(params, "character");
 
-    if (line_str.empty() || char_str.empty() || m_documents.find(uri) == m_documents.end()) {
+    if (line_str.empty() || char_str.empty() || m_module_cache.find(uri) == m_module_cache.end()) {
         std::cerr << "[LSP] Completion request failed: invalid parameters." << std::endl;
         send_response(id, "{\"isIncomplete\":false,\"items\":[]}");
         return;
     }
 
-    auto& doc = m_documents[uri];
+    auto& cache_entry = m_module_cache[uri];
     size_t line = std::stoul(line_str) + 1;
     size_t col = std::stoul(char_str);
 
@@ -370,16 +410,16 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
     // Scan backwards from cursor to find if we're in a member completion context
     size_t current_line = 1;
     size_t current_pos = 0;
-    while (current_line < line && current_pos < doc.source.length()) {
-        if (doc.source[current_pos] == '\n') current_line++;
+    while (current_line < line && current_pos < cache_entry.source.length()) {
+        if (cache_entry.source[current_pos] == '\n') current_line++;
         current_pos++;
     }
 
     bool is_member_completion = false;
     int dot_col = -1;
     int col_iter = (int)col;
-    while (col_iter >= 0 && current_pos + col_iter < doc.source.length()) {
-        char c = doc.source[current_pos + col_iter];
+    while (col_iter >= 0 && current_pos + col_iter < cache_entry.source.length()) {
+        char c = cache_entry.source[current_pos + col_iter];
         if (c == '.') {
             is_member_completion = true;
             dot_col = col_iter;
@@ -397,8 +437,8 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
     bool has_items = false;
     if (is_member_completion) {
         // First, try to find the base type via the resolved AST (incomplete MemberExpr approach)
-        if (doc.mainModule) {
-            const ResolvedType* baseType = find_incomplete_member_base_type(doc.mainModule, uri, line);
+        if (cache_entry.module) {
+            const ResolvedType* baseType = find_incomplete_member_base_type(cache_entry.module.get(), uri, line);
             if (baseType) {
                 std::cerr << "[LSP] Found base type for member completion: " << baseType->to_str() << std::endl;
                 collect_completions_from_type(baseType, items, has_items);
@@ -407,13 +447,13 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
             // If not found via incomplete MemberExpr, try NodeFinder approach
             if (!has_items && dot_col >= 0) {
                 int base_col = dot_col - 1;
-                while (base_col >= 0 && std::isspace(doc.source[current_pos + base_col])) {
+                while (base_col >= 0 && std::isspace(cache_entry.source[current_pos + base_col])) {
                     base_col--;
                 }
                 if (base_col < 0) base_col = 0;
 
                 NodeFinder base_finder(uri, line, (size_t)base_col);
-                base_finder.find_in_module(*doc.mainModule);
+                base_finder.find_in_module(*cache_entry.module);
 
                 if (base_finder.found_decl && base_finder.found_decl->type) {
                     std::cerr << "[LSP] Found base decl via NodeFinder: " << base_finder.found_decl->identifier
@@ -430,9 +470,9 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
         }
     } else {
         // Non-member completion: try NodeFinder at current position (for direct type member access if any)
-        if (doc.mainModule) {
+        if (cache_entry.module) {
             NodeFinder base_finder(uri, line, col);
-            base_finder.find_in_module(*doc.mainModule);
+            base_finder.find_in_module(*cache_entry.module);
             if (base_finder.found_decl && base_finder.found_decl->type) {
                 std::cerr << "[LSP] Found non-member decl via NodeFinder: " << base_finder.found_decl->identifier
                           << std::endl;
@@ -441,14 +481,14 @@ void LSPServer::on_completion(const std::string& id, const std::string& params) 
         }
     }
 
-    if (!has_items && doc.mainModule) {
-        const ResolvedScope* scope = find_scope_at_position(doc.mainModule, uri, line, col);
+    if (!has_items && cache_entry.module) {
+        const ResolvedScope* scope = find_scope_at_position(cache_entry.module.get(), uri, line, col);
         if (scope) {
             std::cerr << "[LSP] Found scope at position: " << line << ":" << col << std::endl;
             collect_scope_completions(scope, line, items, has_items);
-        } else if (doc.mainModule->scope) {
+        } else if (cache_entry.module->scope) {
             std::cerr << "[LSP] Using module scope" << std::endl;
-            collect_scope_completions(doc.mainModule->scope.get(), line, items, has_items);
+            collect_scope_completions(cache_entry.module->scope.get(), line, items, has_items);
         }
     }
 
@@ -478,19 +518,43 @@ void LSPServer::publish_diagnostics(const std::string& filename, const std::vect
 }
 
 void LSPServer::process_file(const std::string& filename, const std::string& source) {
-    if (m_documents.count(filename) && m_documents[filename].source == source && m_documents[filename].sema) {
+    std::cerr << "[LSP] Processing file: " << filename << std::endl;
+    // 1. Check for disk changes in modules not open in editor
+    std::vector<std::string> to_invalidate;
+    for (auto& [path, entry] : m_module_cache) {
+        if (!m_documents.count(path)) {
+            if (std::filesystem::exists(path)) {
+                auto current_time = std::filesystem::last_write_time(path);
+                if (current_time > entry.last_write_time) {
+                    std::cerr << "[LSP] Module changed on disk: " << path << std::endl;
+                    to_invalidate.push_back(path);
+                }
+            } else {
+                std::cerr << "[LSP] Module deleted: " << path << std::endl;
+                to_invalidate.push_back(path);
+            }
+        }
+    }
+    for (auto const& p : to_invalidate) invalidate_module(p);
+
+    // 2. Check if main file needs invalidation (source changed)
+    if (m_module_cache.count(filename) && m_module_cache[filename].source != source) {
+        std::cerr << "[LSP] Main file changed: " << filename << std::endl;
+        invalidate_module(filename);
+    }
+
+    // 3. If already cached and valid, just return
+    if (m_module_cache.count(filename) && m_module_cache[filename].module) {
+        m_documents[filename].mainModule = m_module_cache[filename].module.get();
         return;
     }
 
-    std::cerr << "[LSP] Processing file: " << filename << std::endl;
     CompilerOptions options;
     options.source = filename;
     options.isModule = true;
     Driver driver(options);
 
-    m_documents[filename].source = source;
     m_documents[filename].mainModule = nullptr;
-    m_documents[filename].sema = nullptr;
 
     std::vector<SourceLocation> errors;
     std::vector<std::string> messages;
@@ -505,63 +569,60 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
         auto [ast, success] = parser.parse_source_file();
 
         if (ast) {
-            auto sema = makePtr<Sema>(driver, std::move(ast));
-            auto& current_doc = m_documents[filename];
+            Sema sema(driver, std::move(ast));
 
-            bool invalidate_cache = false;
-            // Check if any module in this document's cache has changed on disk
-            for (auto const& [path, entry] : current_doc.cache) {
-                if (!entry.module) continue;
-                if (!std::filesystem::exists(path)) {
-                    invalidate_cache = true;
-                    break;
-                }
-                auto current_time = std::filesystem::last_write_time(path);
-                if (current_time > entry.last_write_time) {
-                    invalidate_cache = true;
-                    break;
-                }
-            }
-
-            if (invalidate_cache) {
-                std::cerr << "[LSP] Cache invalidated for: " << filename << std::endl;
-                current_doc.cache.clear();
-                current_doc.mainModule = nullptr;
-            }
-
-            // Populate sema with all cached modules from this document
-            for (auto& [path, entry] : current_doc.cache) {
+            // Move all modules from global cache to sema
+            for (auto& [path, entry] : m_module_cache) {
                 if (entry.module) {
-                    sema->add_pre_resolved_module(std::move(entry.module));
+                    sema.add_pre_resolved_module(std::move(entry.module));
                 }
             }
-            // Clear cache before repopulating it from the new semantic results
-            current_doc.cache.clear();
-            current_doc.mainModule = nullptr;
 
-            auto resolvedTree = sema->resolve_ast_decl(filename, false);
+            auto resolvedTree = sema.resolve_ast_decl(filename, false);
             if (!resolvedTree.empty()) {
-                bool bodySuccess = sema->resolve_ast_body(resolvedTree);
-                std::cerr << "[LSP] resolve_ast_body success=" << bodySuccess << " size=" << resolvedTree.size()
-                          << std::endl;
+                sema.resolve_ast_body(resolvedTree);
 
-                // Update this document's cache with newly resolved modules
+                vec<ResolvedModuleDecl*> toResolve;
+                // Collect modules to ensure resolved
                 for (auto&& mod : resolvedTree) {
-                    if (mod) {
-                        auto& path = mod->module_path;
-                        if (path == filename) {
-                            current_doc.mainModule = mod.get();
-                        }
-                        current_doc.cache[path].module = std::move(mod);
-                        current_doc.cache[path].last_write_time = std::filesystem::last_write_time(path);
+                    if (m_documents.count(mod->module_path)) {
+                        toResolve.emplace_back(mod.get());
                     }
                 }
-            } else {
-                std::cerr << "[LSP] resolve_ast_decl returned empty tree" << std::endl;
+
+                // Move all modules back into sema so ensure_fully_resolved can find them
+                for (auto& mod : resolvedTree) {
+                    if (mod) sema.add_pre_resolved_module(std::move(mod));
+                }
+                resolvedTree.clear();
+
+                // Eager resolve all open documents
+                for (auto const& mod : toResolve) {
+                    sema.ensure_fully_resolved(*mod);
+                }
+
+                // Take them all back from sema to update the cache
+                auto finalTree = sema.take_resolved_modules();
+
+                // Update global cache with newly resolved modules
+                for (auto&& mod : finalTree) {
+                    if (mod) {
+                        auto& path = mod->module_path;
+                        auto& entry = m_module_cache[path];
+                        entry.module = std::move(mod);
+                        if (std::filesystem::exists(path)) {
+                            entry.last_write_time = std::filesystem::last_write_time(path);
+                        }
+                        if (m_documents.count(path)) {
+                            m_documents[path].mainModule = entry.module.get();
+                        }
+
+                        if (path == filename) {
+                            entry.source = source;
+                        }
+                    }
+                }
             }
-            current_doc.sema = std::move(sema);
-        } else {
-            std::cerr << "[LSP] Parser returned null AST" << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "[LSP] Exception during processing: " << e.what() << std::endl;
@@ -571,41 +632,90 @@ void LSPServer::process_file(const std::string& filename, const std::string& sou
 
     std::cerr.rdbuf(old_cerr);
 
-    std::cerr << "[LSP] Captured errors:" << std::endl;
-    std::cerr << err_ss.str() << std::endl;
-
-    // Simple parsing of captured errors
+    // Legacy parsing of captured errors
     std::string line;
     while (std::getline(err_ss, line)) {
         if (line.empty()) continue;
-        // Format: file:line:col: error: msg
-        size_t first_colon = line.find(':');
-        if (first_colon == std::string::npos) continue;
-        size_t second_colon = line.find(':', first_colon + 1);
-        if (second_colon == std::string::npos) continue;
-        size_t third_colon = line.find(':', second_colon + 1);
-        if (third_colon == std::string::npos) continue;
+        if (line.find(":") != std::string::npos) {
+            auto first_colon = line.find(":");
+            auto second_colon = line.find(":", first_colon + 1);
+            auto third_colon = line.find(":", second_colon + 1);
+            if (first_colon != std::string::npos && second_colon != std::string::npos &&
+                third_colon != std::string::npos) {
+                std::string file = line.substr(0, first_colon);
+                if (file != filename) continue;
+                try {
+                    int l = std::stoi(line.substr(first_colon + 1, second_colon - first_colon - 1));
+                    int c = std::stoi(line.substr(second_colon + 1, third_colon - second_colon - 1)) - 1;
 
-        std::string f = line.substr(0, first_colon);
-        if (f != filename) continue;
+                    size_t msg_start = line.find("error: ", third_colon);
+                    if (msg_start == std::string::npos) msg_start = line.find("warning: ", third_colon);
+                    if (msg_start == std::string::npos) continue;
 
-        try {
-            int l = std::stoi(line.substr(first_colon + 1, second_colon - first_colon - 1));
-            int c = std::stoi(line.substr(second_colon + 1, third_colon - second_colon - 1)) - 1;
-
-            size_t msg_start = line.find("error: ", third_colon);
-            if (msg_start == std::string::npos) msg_start = line.find("warning: ", third_colon);
-            if (msg_start == std::string::npos) continue;
-
-            std::string msg = line.substr(msg_start);
-            errors.push_back({f, (size_t)l, (size_t)c});
-            messages.push_back(msg);
-        } catch (...) {
-            continue;
+                    std::string msg = line.substr(msg_start);
+                    errors.push_back({file, (size_t)l, (size_t)c});
+                    messages.push_back(msg);
+                } catch (...) {
+                    continue;
+                }
+            }
         }
     }
 
+    m_documents[filename].errors = errors;
+    m_documents[filename].messages = messages;
     publish_diagnostics(filename, errors, messages);
+
+    dump_documents();
+    dump_cache();
 }
 
+void LSPServer::dump_cache() {
+    std::cerr << "[LSP] Cache dump:" << std::endl;
+    for (auto const& [path, entry] : m_module_cache) {
+        std::cerr << "  " << path << " " << entry.module.get() << std::endl;
+    }
+}
+
+void LSPServer::dump_documents() {
+    std::cerr << "[LSP] Documents dump:" << std::endl;
+    for (auto const& [path, entry] : m_documents) {
+        std::cerr << "  " << path << " " << entry.mainModule << std::endl;
+    }
+}
+
+void LSPServer::invalidate_module(const std::string& path) {
+    std::unordered_set<std::string> invalidated;
+    invalidate_module(path, invalidated);
+
+    for (auto& path : invalidated) {
+        if (m_module_cache.count(path)) {
+            if (m_module_cache[path].source.empty()) {
+                m_module_cache.erase(path);
+            } else {
+                m_module_cache[path].module = nullptr;
+            }
+        }
+        if (m_documents.count(path)) {
+            m_documents[path].mainModule = nullptr;
+        }
+    }
+}
+
+void LSPServer::invalidate_module(const std::string& path, std::unordered_set<std::string>& invalidated) {
+    if (invalidated.count(path)) return;
+    invalidated.insert(path);
+
+    if (m_module_cache.count(path) && m_module_cache[path].module) {
+        std::cerr << "[LSP] Invalidating cache for: " << path << std::endl;
+        for (auto it = m_module_cache[path].module->isUsedBy.begin();
+             it != m_module_cache[path].module->isUsedBy.end();) {
+            auto& user = *it;
+            std::cerr << "[LSP] Invalidating dependent: " << user->module_path << std::endl;
+            invalidate_module(user->module_path, invalidated);
+            std::erase(user->dependsOn, m_module_cache[path].module.get());
+            it = m_module_cache[path].module->isUsedBy.erase(it);
+        }
+    }
+}
 }  // namespace DMZ::lsp

@@ -4,6 +4,28 @@ export fn memset(s: *void, c: i32, n: usize) -> *void {
     let slice: []u8 = {};
     slice.ptr = @ptrCast(s);
     slice.len = n;
-    std.mem.memset(slice, c);
+    std.mem.set(slice, c);
     return s;
+}
+
+export fn memcpy(dest: *void, src: *void, n: usize) -> *void {
+    let dest_slice: []u8 = {};
+    dest_slice.ptr = @ptrCast(dest);
+    dest_slice.len = n;
+    let src_slice: []u8 = {};
+    src_slice.ptr = @ptrCast(src);
+    src_slice.len = n;
+    std.mem.copy(dest_slice, src_slice);
+    return dest;
+}
+
+export fn memmove(dest: *void, src: *void, n: usize) -> *void {
+    let dest_slice: []u8 = {};
+    dest_slice.ptr = @ptrCast(dest);
+    dest_slice.len = n;
+    let src_slice: []u8 = {};
+    src_slice.ptr = @ptrCast(src);
+    src_slice.len = n;
+    std.mem.copy(dest_slice, src_slice);
+    return dest;
 }

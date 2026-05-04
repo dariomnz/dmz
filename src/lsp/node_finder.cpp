@@ -5,7 +5,7 @@
 
 namespace DMZ::lsp {
 
-NodeFinder::NodeFinder(const std::string& file, size_t line, size_t col)
+NodeFinder::NodeFinder(std::string_view file, size_t line, size_t col)
     : found_decl(nullptr), found_expr(nullptr), m_target_file(file), m_line(line), m_col(col) {}
 
 bool NodeFinder::is_at_location(const SourceLocation& loc, size_t length) const {
