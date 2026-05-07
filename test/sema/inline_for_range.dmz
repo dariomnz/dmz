@@ -23,6 +23,7 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
+// CHECK-NEXT:               | value: '%d\n'
 // CHECK-NEXT:               ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:               | value: 0
 // CHECK-NEXT:           ResolvedBlock
@@ -33,6 +34,7 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
+// CHECK-NEXT:               | value: '%d\n'
 // CHECK-NEXT:               ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:           ResolvedBlock
@@ -43,5 +45,6 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '%d\n'
+// CHECK-NEXT:               | value: '%d\n'
 // CHECK-NEXT:               ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:               | value: 2

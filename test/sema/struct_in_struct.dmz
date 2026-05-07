@@ -35,5 +35,6 @@ fn main() -> void {
 // CHECK-NEXT:              ResolvedCallExpr:i32
 // CHECK-NEXT:                ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:                ResolvedStringLiteral:*u8 'x.C %d\n'
+// CHECK-NEXT:                | value: 'x.C %d\n'
 // CHECK-NEXT:                ResolvedMemberExpr:i32 C
 // CHECK-NEXT:                  ResolvedDeclRefExpr:struct_in_struct.A.structL7C18.B{} x

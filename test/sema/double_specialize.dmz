@@ -39,6 +39,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'foo %d %d\n'
+// CHECK-NEXT:         | value: 'foo %d %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:         ResolvedDeclRefExpr:K arg
 // CHECK-NEXT:       ResolvedIfStmt
@@ -84,6 +85,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'foo %d %d\n'
+// CHECK-NEXT:           | value: 'foo %d %d\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 arg
 // CHECK-NEXT:         ResolvedIfStmt
@@ -130,6 +132,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 'bar %d %d\n'
+// CHECK-NEXT:         | value: 'bar %d %d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:         ResolvedDeclRefExpr:T arg
 // CHECK-NEXT:       ResolvedIfStmt
@@ -158,6 +161,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'bar %d %d\n'
+// CHECK-NEXT:           | value: 'bar %d %d\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:           ResolvedDeclRefExpr:i32 arg
 // CHECK-NEXT:         ResolvedIfStmt

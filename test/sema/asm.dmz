@@ -14,13 +14,16 @@ fn main() -> void {
     // CHECK: ResolvedVarDecl:u64 res
     // CHECK-NEXT:       ResolvedCallExpr:u64
     // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, *u8, ...)->void @asm
-    // CHECK-NEXT:         ResolvedStringLiteral:*u8 'syscall'
-    // CHECK-NEXT:         ResolvedStringLiteral:*u8 '={rax},{rax},{rdi},{rsi},{rdx}'
-    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 nr_write
-    // CHECK-NEXT:         | value: 1
-    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 stdout
-    // CHECK-NEXT:         | value: 1
-    // CHECK-NEXT:         ResolvedDeclRefExpr:*u8 msg
-    // CHECK-NEXT:         ResolvedDeclRefExpr:u64 len
-    // CHECK-NEXT:         | value: 17
+    // CHECK-NEXT:             ResolvedStringLiteral:*u8 'syscall'
+    // CHECK-NEXT:             | value: 'syscall'
+    // CHECK-NEXT:             ResolvedStringLiteral:*u8 '={rax},{rax},{rdi},{rsi},{rdx}'
+    // CHECK-NEXT:             | value: '={rax},{rax},{rdi},{rsi},{rdx}'
+    // CHECK-NEXT:             ResolvedDeclRefExpr:u64 nr_write
+    // CHECK-NEXT:             | value: 1
+    // CHECK-NEXT:             ResolvedDeclRefExpr:u64 stdout
+    // CHECK-NEXT:             | value: 1
+    // CHECK-NEXT:             ResolvedDeclRefExpr:*u8 msg
+    // CHECK-NEXT:             | value: 'ASM Syscall Test\n'
+    // CHECK-NEXT:             ResolvedDeclRefExpr:u64 len
+    // CHECK-NEXT:             | value: 17
 }

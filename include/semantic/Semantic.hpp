@@ -198,7 +198,7 @@ class Sema {
     bool resolve_pending_body();
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
-    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value, bool isInline);
+    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<ComptimeValue> constant_value, bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     // void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
     ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const DeclRefExpr &declRefExpr,

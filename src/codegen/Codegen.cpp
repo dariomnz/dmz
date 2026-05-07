@@ -544,7 +544,7 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
 
         std::vector<llvm::Metadata *> Enumerators;
         for (auto &&field : decl->fields) {
-            Enumerators.push_back(m_debugBuilder.createEnumerator(field->name(), *field->get_constant_value()));
+            Enumerators.push_back(m_debugBuilder.createEnumerator(field->name(), field->get_constant_value()->getInt()));
         }
 
         auto finalType = m_debugBuilder.createEnumerationType(

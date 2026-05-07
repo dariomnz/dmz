@@ -67,6 +67,7 @@ fn main() -> void {
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'value %d\n'
+// CHECK-NEXT:           | value: 'value %d\n'
 // CHECK-NEXT:           ResolvedDeclRefExpr:T scalar
 // CHECK-NEXT:     ResolvedSpecializedFunctionDecl print3<i32> fn(i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 scalar
@@ -75,6 +76,7 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedCallExpr:i32
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 'value %d\n'
+// CHECK-NEXT:             | value: 'value %d\n'
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 scalar
 // CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock

@@ -18,6 +18,7 @@ const Color = struct {
 // CHECK-NEXT:             ResolvedCallExpr:i32
 // CHECK-NEXT:               ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 'Color{%d, %d, %d}\n'
+// CHECK-NEXT:               | value: 'Color{%d, %d, %d}\n'
 // CHECK-NEXT:               ResolvedMemberExpr:i32 r
 // CHECK-NEXT:                 ResolvedDerefPtrExpr:methods.Color{}
 // CHECK-NEXT:                   ResolvedDeclRefExpr:*methods.Color{} self

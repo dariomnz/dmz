@@ -290,7 +290,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         varOrReturn(arraySizeExpr, resolve_expr(*arrType->arraySize));
         int arraySize = 0;
         if (auto as = arraySizeExpr->get_constant_value()) {
-            arraySize = as.value();
+            arraySize = as->getInt();
         } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(arraySizeExpr.get())) {
             arraySize = intLit->value;
         } else {
@@ -423,7 +423,7 @@ ptr<ResolvedType> Sema::resolve_simd_type(const TypeSimd &simdType) {
     varOrReturn(sizeExpr, resolve_expr(*simdType.simdSize));
     int vectorSize = 0;
     if (auto as = sizeExpr->get_constant_value()) {
-        vectorSize = as.value();
+        vectorSize = as->getInt();
     } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(sizeExpr.get())) {
         vectorSize = intLit->value;
     } else {

@@ -7,6 +7,8 @@
 
 namespace DMZ {
 
+void SourceLocation::dump() const { std::cerr << *this << "\n"; }
+
 std::string SourceLocation::to_string() const {
     std::stringstream os;
     os << *this;

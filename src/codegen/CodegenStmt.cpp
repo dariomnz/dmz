@@ -291,10 +291,10 @@ llvm::Value *Codegen::generate_assignment(const ResolvedAssignment &stmt) {
 llvm::Value *Codegen::generate_switch_stmt(const ResolvedSwitchStmt &stmt) {
     debug_func("");
     if (stmt.isInline) {
-        int condVal = *stmt.condition->get_constant_value();
+        int condVal = stmt.condition->get_constant_value()->getInt();
         for (auto &&cas : stmt.cases) {
             for (auto &&cond : cas->conditions) {
-                int caseVal = *cond->get_constant_value();
+                int caseVal = cond->get_constant_value()->getInt();
                 if (condVal == caseVal) {
                     generate_block(*cas->block);
                     return nullptr;

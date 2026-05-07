@@ -16,6 +16,7 @@ const a = struct<T> {
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'a.method\n'
+// CHECK-NEXT:           | value: 'a.method\n'
 // CHECK-NEXT:     ResolvedSpecializedStructDecl structs_generic_mutual.a<i32>
 // CHECK-NEXT:       ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.a<i32>{}, structs_generic_mutual.b<i32>{})->void
 // CHECK-NEXT:         ResolvedParamDecl:*structs_generic_mutual.a<i32>{} self
@@ -24,6 +25,7 @@ const a = struct<T> {
 // CHECK-NEXT:           ResolvedCallExpr:i32
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 'a.method\n'
+// CHECK-NEXT:             | value: 'a.method\n'
 
 const b = struct<T> {
     pub fn method(self: *@This, other: a<T>) -> void {
@@ -39,6 +41,7 @@ const b = struct<T> {
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'b.method\n'
+// CHECK-NEXT:           | value: 'b.method\n'
 // CHECK-NEXT:     ResolvedSpecializedStructDecl structs_generic_mutual.b<i32>
 // CHECK-NEXT:       ResolvedMemberFunctionDecl method fn(*structs_generic_mutual.b<i32>{}, structs_generic_mutual.a<i32>{})->void
 // CHECK-NEXT:         ResolvedParamDecl:*structs_generic_mutual.b<i32>{} self
@@ -47,6 +50,7 @@ const b = struct<T> {
 // CHECK-NEXT:           ResolvedCallExpr:i32
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 'b.method\n'
+// CHECK-NEXT:             | value: 'b.method\n'
 
 fn main() -> void {
     let one = a<i32>{};

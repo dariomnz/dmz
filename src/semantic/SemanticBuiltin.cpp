@@ -9,6 +9,7 @@
 #include "parser/ParserSymbols.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
+#include "semantic/ComptimeValue.hpp"
 
 // #define DEBUG_SCOPES
 // #ifdef DEBUG
@@ -614,7 +615,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
             }
         }
 
-        call.set_constant_value(hasMethod ? 1 : 0);
+        call.set_constant_value(ComptimeValue((int64_t)(hasMethod ? 1 : 0)));
         auto retType = makePtr<ResolvedTypeBool>(call.location);
         call.type = retType->clone();
 
@@ -675,7 +676,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
         return ret;
     } else if (resolvedCallee.identifier == "@testNum") {
-        call.set_constant_value(m_tests.size());
+        call.set_constant_value(ComptimeValue((int64_t)m_tests.size()));
         auto ret = dynamic_cast<ResolvedTypeFunction *>(resolvedCallee.type.get());
         if (!ret) dmz_unreachable(call.location, "not function type " + resolvedCallee.type->to_str());
         return castPtr<ResolvedTypeFunction>(ret->clone());

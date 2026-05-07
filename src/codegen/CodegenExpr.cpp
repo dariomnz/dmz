@@ -12,7 +12,6 @@
 #include "Debug.hpp"
 #include "Utils.hpp"
 #include "codegen/Codegen.hpp"
-#include "semantic/Constexpr.hpp"
 #include "semantic/SemanticSymbols.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
 
@@ -24,7 +23,9 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     defer([&]() { unset_debug_location(); });
 
     if (auto val = expr.get_constant_value()) {
-        return llvm::ConstantInt::get(generate_type(*expr.type), *val);
+        if (auto value = val->toInt()) {
+            return llvm::ConstantInt::get(generate_type(*expr.type), *value);
+        }
     }
     if (auto *number = dynamic_cast<const ResolvedFloatLiteral *>(&expr)) {
         return llvm::ConstantFP::get(generate_type(*number->type), number->value);

@@ -34,6 +34,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedCallExpr:i32
 // CHECK-NEXT:       ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 'Num %d cnum %d\n'
+// CHECK-NEXT:       | value: 'Num %d cnum %d\n'
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 num
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 cnum
 // CHECK-NEXT:       | value: 100

@@ -23,6 +23,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 '1\n'
+// CHECK-NEXT:           | value: '1\n'
 // CHECK-NEXT:     ResolvedIfStmt
 // CHECK-NEXT:       ResolvedBinaryOperator:bool '=='
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 x
@@ -35,6 +36,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '2\n'
+// CHECK-NEXT:               | value: '2\n'
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:i32 
@@ -42,6 +44,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '3\n'
+// CHECK-NEXT:               | value: '3\n'
 // CHECK-NEXT:         ResolvedReturnStmt
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
@@ -50,6 +53,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:*u8 '3\n'
+// CHECK-NEXT:                 | value: '3\n'
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:i32 
@@ -57,6 +61,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:*u8 '2\n'
+// CHECK-NEXT:                 | value: '2\n'
 // CHECK-NEXT:           ResolvedDeferRefStmt
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedCallExpr:i32 
@@ -64,6 +69,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:                 ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:                 | value: 1
 // CHECK-NEXT:                 ResolvedStringLiteral:*u8 '1\n'
+// CHECK-NEXT:                 | value: '1\n'
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
@@ -72,6 +78,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '4\n'
+// CHECK-NEXT:               | value: '4\n'
 // CHECK-NEXT:         ResolvedDeferStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:i32 
@@ -79,6 +86,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '5\n'
+// CHECK-NEXT:               | value: '5\n'
 // CHECK-NEXT:         ResolvedDeferRefStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:i32 
@@ -86,6 +94,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '5\n'
+// CHECK-NEXT:               | value: '5\n'
 // CHECK-NEXT:         ResolvedDeferRefStmt
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedCallExpr:i32 
@@ -93,6 +102,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK-NEXT:               ResolvedStringLiteral:*u8 '4\n'
+// CHECK-NEXT:               | value: '4\n'
 // CHECK-NEXT:     ResolvedReturnStmt
 // CHECK-NEXT:       ResolvedDeferRefStmt
 // CHECK-NEXT:         ResolvedBlock
@@ -101,6 +111,7 @@ fn foo(x: i32) -> void {
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
 // CHECK-NEXT:             ResolvedStringLiteral:*u8 '1\n'
+// CHECK-NEXT:             | value: '1\n'
 
 extern fn dprintf(fd:i32, fmt:*u8, ...) -> i32;
 
@@ -119,6 +130,7 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'The last one\n'
+// CHECK-NEXT:           | value: 'The last one\n'
 // CHECK-NEXT:     ResolvedCallExpr:void 
 // CHECK-NEXT:       ResolvedDeclRefExpr:fn(i32)->void foo
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '0'
@@ -130,6 +142,7 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'Second-last\n'
+// CHECK-NEXT:           | value: 'Second-last\n'
 // CHECK-NEXT:     ResolvedCallExpr:void 
 // CHECK-NEXT:       ResolvedDeclRefExpr:fn(i32)->void foo
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
@@ -141,6 +154,7 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'Second-last\n'
+// CHECK-NEXT:           | value: 'Second-last\n'
 // CHECK-NEXT:     ResolvedDeferRefStmt
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedCallExpr:i32 
@@ -148,3 +162,4 @@ fn main() -> void {
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:           | value: 1
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'The last one\n'
+// CHECK-NEXT:           | value: 'The last one\n'

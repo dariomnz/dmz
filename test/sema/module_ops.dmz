@@ -35,4 +35,5 @@ pub const integer = import("module_ops_integer.dmz");
 // CHECK-NEXT:       ResolvedCallExpr:i32
 // CHECK-NEXT:         ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:         ResolvedStringLiteral:*u8 '%d\n'
+// CHECK-NEXT:         | value: '%d\n'
 // CHECK-NEXT:         ResolvedDeclRefExpr:i32 n

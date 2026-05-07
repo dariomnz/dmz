@@ -146,7 +146,7 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
     ptr<ResolvedBlock> resolvedFalseBlock;
 
     if (ifStmt.isInline) {
-        bool condVal = condition->get_constant_value().value() != 0;
+        bool condVal = ConstantExpressionEvaluator::to_bool(condition->get_constant_value()).value_or(false);
         if (condVal) {
             varOrReturn(trueBlock, resolve_block(*ifStmt.trueBlock));
             resolvedTrueBlock = std::move(trueBlock);
@@ -191,7 +191,7 @@ ptr<ResolvedType> Sema::determine_for_range_capture_type(const ResolvedRangeExpr
 
     bool startCanBeNegative = true;
     if (startValue) {
-        startCanBeNegative = startValue.value() < 0;
+        startCanBeNegative = startValue->getInt() < 0;
     } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(startType.get())) {
         if (numType->numberKind == ResolvedNumberKind::UInt) {
             startCanBeNegative = false;
@@ -200,7 +200,7 @@ ptr<ResolvedType> Sema::determine_for_range_capture_type(const ResolvedRangeExpr
 
     bool endCanBeNegative = true;
     if (endValue) {
-        endCanBeNegative = endValue.value() < 0;
+        endCanBeNegative = endValue->getInt() < 0;
     } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(endType.get())) {
         if (numType->numberKind == ResolvedNumberKind::UInt) {
             endCanBeNegative = false;
@@ -297,7 +297,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             ScopeRAII forIterationScope(*this);
             auto takenForIterationScope = forIterationScope.takeScope();
 
-            for (long long i = startValue.value(); i < endValue.value(); i++) {
+            for (long long i = startValue->getInt(); i < endValue->getInt(); i++) {
                 ScopeRAII iterationScope(*this);
                 auto takenIterationScope = iterationScope.takeScope();
 
@@ -305,7 +305,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 auto captureTypeExpr = makePtr<ResolvedTypeExpr>(forStmt.captures[0]->location, captureType->clone());
                 auto initializer = makePtr<ResolvedIntLiteral>(forStmt.captures[0]->location, (int)i);
                 initializer->type = captureType->clone();
-                initializer->set_constant_value(i);
+                initializer->set_constant_value(ComptimeValue((int64_t)i));
 
                 auto varDecl = makePtr<ResolvedVarDecl>(forStmt.captures[0]->location, nullptr, false,
                                                         forStmt.captures[0]->identifier, std::move(captureTypeExpr),
@@ -427,7 +427,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             auto startValue = rangeExpr->startExpr->get_constant_value();
             auto endValue = rangeExpr->endExpr->get_constant_value();
             if (startValue && endValue) {
-                auto currentSize = endValue.value() - startValue.value();
+                auto currentSize = endValue->getInt() - startValue->getInt();
                 if (size_of_forloop != -1) {
                     if (size_of_forloop != currentSize) {
                         error = true;
@@ -655,7 +655,7 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
                                        std::move(resolvedElseBlock), switchStmt.isInline);
 }
 
-ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::optional<int> constant_value,
+ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::optional<ComptimeValue> constant_value,
                                               bool isInline) {
     debug_func(caseStmt.location);
     std::vector<ptr<ResolvedExpr>> resolvedConditions;
@@ -666,7 +666,7 @@ ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::opt
         if (!resolvedCond->get_constant_value()) {
             return report(resolvedCond->location, "condition in case must be a constant value");
         }
-        if (isInline && resolvedCond->get_constant_value().value() == constant_value.value()) {
+        if (isInline && resolvedCond->get_constant_value() == constant_value) {
             caseMatchedInInline = true;
         }
         resolvedConditions.emplace_back(std::move(resolvedCond));

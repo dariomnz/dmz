@@ -158,7 +158,8 @@ llvm::Value *Codegen::generate_builtin_atomicCmpEx(const ResolvedCallExpr &call,
 llvm::Value *Codegen::generate_builtin_atomicRmw(const ResolvedCallExpr &call) {
     debug_func(call.location);
     llvm::Value *ptr = generate_expr(*call.arguments[0]);
-    int opVal = call.arguments[1]->get_constant_value().value_or(-1);
+    auto constValOpt = call.arguments[1]->get_constant_value();
+    int opVal = constValOpt.has_value() ? constValOpt->getInt() : -1;
     if (opVal < 0) {
         dmz_unreachable(call.location, "@atomicRmw: operator is not a constant");
     }
@@ -212,7 +213,7 @@ llvm::Value *Codegen::generate_builtin_sizeof(const ResolvedCallExpr &callExpr) 
 
 llvm::Value *Codegen::generate_builtin_hasmethod(const ResolvedCallExpr &callExpr) {
     if (auto constVal = callExpr.get_constant_value()) {
-        return llvm::ConstantInt::get(generate_type(*callExpr.type), *constVal);
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), constVal->getInt());
     } else {
         dmz_unreachable(callExpr.location, "this should not happend");
     }
@@ -220,7 +221,7 @@ llvm::Value *Codegen::generate_builtin_hasmethod(const ResolvedCallExpr &callExp
 
 llvm::Value *Codegen::generate_builtin_simdsize(const ResolvedCallExpr &callExpr) {
     if (auto constVal = callExpr.get_constant_value()) {
-        return llvm::ConstantInt::get(generate_type(*callExpr.type), *constVal);
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), constVal->getInt());
     } else {
         dmz_unreachable(callExpr.location, "this should not happend");
     }
@@ -228,7 +229,7 @@ llvm::Value *Codegen::generate_builtin_simdsize(const ResolvedCallExpr &callExpr
 
 llvm::Value *Codegen::generate_builtin_typeid(const ResolvedCallExpr &callExpr) {
     if (auto typeId = callExpr.get_constant_value()) {
-        return llvm::ConstantInt::get(generate_type(*callExpr.type), *typeId);
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), typeId->getInt());
     } else {
         dmz_unreachable(callExpr.location, "this should not happend");
     }
@@ -266,7 +267,8 @@ llvm::Value *Codegen::generate_builtin_typeinfo(const ResolvedCallExpr &callExpr
                                   makePtr<ResolvedTypeNumber>(callExpr.location, ResolvedNumberKind::UInt, 8));
     auto llvmSliceU8Type = static_cast<llvm::StructType *>(generate_type(sliceU8Type));
 
-    int tag = ConstantExpressionEvaluator{}.evaluate_type(*targetType).value_or(99);
+    auto constValOpt = ConstantExpressionEvaluator{}.evaluate_type(*targetType);
+    int tag = constValOpt.has_value() ? constValOpt->getInt() : 99;
     llvm::Constant *payload = nullptr;
     llvm::Type *payloadType = nullptr;
 
@@ -424,7 +426,7 @@ std::vector<const ResolvedTestDecl *> Codegen::get_tests() {
 
 llvm::Value *Codegen::generate_builtin_testnum(const ResolvedCallExpr &callExpr) {
     if (auto constVal = callExpr.get_constant_value()) {
-        return llvm::ConstantInt::get(generate_type(*callExpr.type), *constVal);
+        return llvm::ConstantInt::get(generate_type(*callExpr.type), constVal->getInt());
     } else {
         auto tests = get_tests();
         return llvm::ConstantInt::get(generate_type(*callExpr.type), tests.size());
@@ -436,14 +438,14 @@ llvm::Value *Codegen::generate_builtin_testname(const ResolvedCallExpr &callExpr
     if (callExpr.arguments.empty()) dmz_unreachable(callExpr.location, "expected argument");
     if (auto testNum = callExpr.arguments[0]->get_constant_value()) {
         auto tests = get_tests();
-        auto ptr = create_global_string(tests[*testNum]->identifier, "test.name." + std::to_string(*testNum));
+        auto ptr = create_global_string(tests[testNum->getInt()]->identifier, "test.name." + std::to_string(testNum->getInt()));
         auto slice =
-            allocate_stack_variable(callExpr.location, "test.name.slice." + std::to_string(*testNum), *callExpr.type);
+            allocate_stack_variable(callExpr.location, "test.name.slice." + std::to_string(testNum->getInt()), *callExpr.type);
         auto sliceType = generate_type(*callExpr.type);
         llvm::Value *slice_value = llvm::UndefValue::get(sliceType);
         slice_value = m_builder.CreateInsertValue(slice_value, ptr, 0);
         auto length = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()),
-                                             tests[*testNum]->identifier.size());
+                                             tests[testNum->getInt()]->identifier.size());
         slice_value = m_builder.CreateInsertValue(slice_value, length, 1);
         m_builder.CreateStore(slice_value, slice);
         return slice;
@@ -457,7 +459,7 @@ llvm::Value *Codegen::generate_builtin_testrun(const ResolvedCallExpr &callExpr)
     if (callExpr.arguments.empty()) dmz_unreachable(callExpr.location, "expected argument");
     if (auto testNum = callExpr.arguments[0]->get_constant_value()) {
         auto tests = get_tests();
-        auto test = tests[*testNum];
+        auto test = tests[testNum->getInt()];
         auto ref = makePtr<ResolvedDeclRefExpr>(callExpr.location, test->identifier, *test, test->type->clone());
         ResolvedCallExpr call(callExpr.location, callExpr.type->clone(), std::move(ref), {});
         return generate_call_expr(call);
@@ -499,7 +501,8 @@ llvm::Value *Codegen::generate_builtin_simdReduce(const ResolvedCallExpr &call) 
     debug_func(call.location);
     if (call.arguments.size() != 2) dmz_unreachable(call.location, "expected 2 arguments");
     llvm::Value *simdVal = generate_expr(*call.arguments[0]);
-    int opVal = call.arguments[1]->get_constant_value().value_or(-1);
+    auto constValOpt = call.arguments[1]->get_constant_value();
+    int opVal = constValOpt.has_value() ? constValOpt->getInt() : -1;
     if (opVal < 0) {
         dmz_unreachable(call.location, "@simdReduce: operator is not a constant");
     }

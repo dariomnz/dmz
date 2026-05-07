@@ -47,6 +47,7 @@ struct SourceLocation {
 
     static SourceLocation builtin() { return SourceLocation{"<builtin>", 0, 0, 1}; }
 
+    void dump() const;
     std::string to_string() const;
 
     friend std::ostream& operator<<(std::ostream& os, const SourceLocation& s);

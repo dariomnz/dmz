@@ -4,6 +4,7 @@
 #include "UtilsPtr.hpp"
 #include "lexer/Lexer.hpp"
 #include "parser/ParserSymbols.hpp"
+#include "semantic/ComptimeValue.hpp"
 #include "semantic/ResolvedScope.hpp"
 
 namespace DMZ {
@@ -32,7 +33,7 @@ struct ResolvedStmt {
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
-struct ResolvedExpr : public ConstantValueContainer<int64_t>, public ResolvedStmt {
+struct ResolvedExpr : public ConstantValueContainer<ComptimeValue>, public ResolvedStmt {
     ptr<ResolvedType> type;
 
     ResolvedExpr(SourceLocation location, ptr<ResolvedType> type) : ResolvedStmt(location), type(std::move(type)) {}
@@ -60,7 +61,7 @@ struct ResolvedTypeExpr : public ResolvedExpr {
     }
 };
 
-struct ResolvedDecl : public ConstantValueContainer<int64_t> {
+struct ResolvedDecl : public ConstantValueContainer<ComptimeValue> {
     SourceLocation location;
     std::string identifier;
     std::string symbolName;

@@ -12,6 +12,7 @@
 #include "parser/Parser.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
+#include "semantic/ComptimeValue.hpp"
 
 namespace DMZ {
 
@@ -550,11 +551,11 @@ bool Sema::resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl) {
                                                        makePtr<ResolvedTypeExpr>(field->location, std::move(type)),
                                                        idx++, std::move(default_initializer));
             if (retField->default_initializer) {
-                idx = retField->default_initializer->get_constant_value().value();
-                retField->set_constant_value(idx);
+                idx = retField->default_initializer->get_constant_value().value().getInt();
+                retField->set_constant_value(ComptimeValue((int64_t)idx));
                 idx++;
             } else {
-                retField->set_constant_value(retField->index);
+                retField->set_constant_value(ComptimeValue((int64_t)retField->index));
             }
 
             resolvedFields.emplace_back(std::move(retField));
