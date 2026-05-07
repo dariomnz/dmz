@@ -9,7 +9,7 @@ fn foo(arg: u8) -> void {
 fn main() -> void {
     foo(1);
     let x = 1;
-    foo(x);
+    foo(@intCast(x));
 }
 
 // CHECK: define void @__builtin_main() {

@@ -21,8 +21,8 @@ pub const MmapAllocator = struct {
         const raw_ptr = try std.syscall.mmap(
             null,
             total_size,
-            std.syscall.PROT.READ | std.syscall.PROT.WRITE,
-            std.syscall.MAP.PRIVATE | std.syscall.MAP.ANONYMOUS,
+            @intCast(std.syscall.PROT.READ | std.syscall.PROT.WRITE),
+            @intCast(std.syscall.MAP.PRIVATE | std.syscall.MAP.ANONYMOUS),
             -1,
             0,
         );

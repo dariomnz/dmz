@@ -110,11 +110,11 @@ pub const Syscall = enum {
 };
 
 pub fn read(fd: i32, buf: *u8, count: usize) -> isize {
-    return syscall3(.read, fd, buf, count);
+    return syscall3(.read, @intCast(fd), buf, count);
 }
 
 pub fn write(fd: i32, buf: *u8, count: usize) -> isize {
-    return syscall3(.write, fd, buf, count);
+    return syscall3(.write, @intCast(fd), buf, count);
 }
 
 pub fn open(name: *u8, flags: usize, mode: usize) -> isize {
@@ -122,11 +122,11 @@ pub fn open(name: *u8, flags: usize, mode: usize) -> isize {
 }
 
 pub fn close(fd: i32) -> isize {
-    return syscall1(.close, fd);
+    return syscall1(.close, @intCast(fd));
 }
 
 pub fn ioctl(fd: i32, request: usize, arg: *void) -> isize {
-    return syscall3(.ioctl, fd, request, arg);
+    return syscall3(.ioctl, @intCast(fd), request, arg);
 }
 
 pub const TimeSpec = struct {
@@ -144,7 +144,7 @@ pub const FutexOp = enum {
 };
 
 pub fn futex(uaddr: *i32, futex_op: FutexOp, val: i32) -> i64 {
-    return syscall3(.futex, uaddr, futex_op, val);
+    return syscall3(.futex, uaddr, futex_op, @intCast(val));
 }
 
 pub const PROT = struct {
@@ -161,9 +161,9 @@ pub const MAP = struct {
     const ANONYMOUS = 1 << 5;
 };
 
-pub fn mmap(addr: *void, length: usize, prot: usize, flags: usize, fd: i32, offset: isize) -> !*void {
-    const ret = syscall6(.mmap, addr, length, prot, flags, fd, offset);
-    if (ret < 0) try std.errno.syscallError(ret);
+pub fn mmap(addr: *void, length: usize, prot: usize, flags: usize, fd: i32, offset: usize) -> !*void {
+    const ret = syscall6(.mmap, addr, length, prot, flags, @intCast(fd), offset);
+    if (ret < 0) try std.errno.syscallError(@intCast(ret));
     return ret;
 }
 
@@ -172,5 +172,5 @@ pub fn munmap(addr: *void, length: usize) -> isize {
 }
 
 pub fn exit(code: i32) -> void {
-    syscall1(.exit, code);
+    syscall1(.exit, @intCast(code));
 }

@@ -42,19 +42,18 @@ pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     // const piv_idx = slice.len / 2;
 
     let piv = slice[piv_idx];
-    let i = -1;
+    let i: usize = 0;
 
     for (0..piv_idx) |j| {
         if (cmp(slice[j], piv)) {
-            i++;
             swap<T>(slice, i, j);
+            i++;
         }
     }
-    swap<T>(slice, i + 1, piv_idx);
+    swap<T>(slice, i, piv_idx);
 
-    let pivot_idx = i + 1;
-    quickSort<T>(slice[0..pivot_idx], cmp);
-    quickSort<T>(slice[(pivot_idx + 1)..slice.len], cmp);
+    quickSort<T>(slice[0..i], cmp);
+    quickSort<T>(slice[i..slice.len], cmp);
 }
 
 const std = import("std");
@@ -64,7 +63,9 @@ test "sort slice" {
     let v = init;
     let v2 = init;
     const sorted = struct {
-        pub fn comp(a: i32, b: i32) -> bool { return a < b; }
+        pub fn comp(a: i32, b: i32) -> bool {
+            return a < b;
+        }
     };
     bubbleSort<i32>(v[0..5], &sorted.comp);
     quickSort<i32>(v2[0..5], &sorted.comp);

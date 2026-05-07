@@ -32,7 +32,7 @@ struct ResolvedStmt {
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
-struct ResolvedExpr : public ConstantValueContainer<int>, public ResolvedStmt {
+struct ResolvedExpr : public ConstantValueContainer<int64_t>, public ResolvedStmt {
     ptr<ResolvedType> type;
 
     ResolvedExpr(SourceLocation location, ptr<ResolvedType> type) : ResolvedStmt(location), type(std::move(type)) {}
@@ -60,7 +60,7 @@ struct ResolvedTypeExpr : public ResolvedExpr {
     }
 };
 
-struct ResolvedDecl : public ConstantValueContainer<int> {
+struct ResolvedDecl : public ConstantValueContainer<int64_t> {
     SourceLocation location;
     std::string identifier;
     std::string symbolName;

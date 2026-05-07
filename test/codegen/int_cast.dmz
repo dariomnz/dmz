@@ -1,0 +1,36 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let a: i32 = -1;
+    let b: i8 = @intCast(a);
+    
+    // CHECK: %int.to.int = trunc i32 %0 to i8
+    // CHECK-NEXT: store i8 %int.to.int, ptr %b, align 1
+    printf("i32 255 to i8: %d\n", b); // Should be -1 (if signed) or 255 (if unsigned u8)
+    
+    let c: u8 = @intCast(a);
+    // CHECK: %int.to.uint = trunc i32 %3 to i8
+    // CHECK-NEXT: store i8 %int.to.uint, ptr %c, align 1
+    printf("i32 255 to u8: %u\n", c);
+    
+    let d: i64 = a;
+    // CHECK: %int.to.int1 = sext i32 %6 to i64
+    // CHECK-NEXT: store i64 %int.to.int1, ptr %d, align 4
+    printf("i32 255 to i64: %lld\n", d);
+    
+    let e: bool = true;
+    let f: i32 = @intCast(e);
+    // CHECK: %bool.to.int = zext i1 %9 to i32
+    // CHECK-NEXT: store i32 %bool.to.int, ptr %f, align 4
+    printf("bool true to i32: %d\n", f);
+    
+    let g: i32 = 0;
+    let h: bool = @intCast(g);
+    // CHECK: %int.to.int2 = trunc i32 %12 to i1
+    // CHECK-NEXT: store i1 %int.to.int2, ptr %h, align 1
+    if (!h) {
+        printf("i32 0 to bool: false\n");
+    }
+}

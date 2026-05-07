@@ -82,6 +82,7 @@ class Sema {
         {"@simdIota", nullptr},     {"@errorTrace", nullptr},   {"@testNum", nullptr},     {"@testRun", nullptr},
         {"@testName", nullptr},     {"@simdLoad", nullptr},     {"@simdStore", nullptr},   {"@simdSelect", nullptr},
         {"@simdReduce", nullptr},   {"@compileError", nullptr}, {"@asm", nullptr},         {"@ptrCast", nullptr},
+        {"@intCast", nullptr},      {"@floatCast", nullptr},
     };
 
    public:
@@ -210,6 +211,8 @@ class Sema {
     void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
 
+    ptr<ResolvedType> determine_for_range_capture_type(const ResolvedRangeExpr &rangeExpr,
+                                                      const SourceLocation &location);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
     bool perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };

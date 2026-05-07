@@ -178,6 +178,42 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
                                    std::move(resolvedFalseBlock), ifStmt.isInline);
 }
 
+ptr<ResolvedType> Sema::determine_for_range_capture_type(const ResolvedRangeExpr &rangeExpr,
+                                                         const SourceLocation &location) {
+    auto startValue = rangeExpr.startExpr->get_constant_value();
+    auto endValue = rangeExpr.endExpr->get_constant_value();
+    const auto &startType = rangeExpr.startExpr->type;
+    const auto &endType = rangeExpr.endExpr->type;
+
+    if (startType->equal(*endType)) {
+        return startType->clone();
+    }
+
+    bool startCanBeNegative = true;
+    if (startValue) {
+        startCanBeNegative = startValue.value() < 0;
+    } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(startType.get())) {
+        if (numType->numberKind == ResolvedNumberKind::UInt) {
+            startCanBeNegative = false;
+        }
+    }
+
+    bool endCanBeNegative = true;
+    if (endValue) {
+        endCanBeNegative = endValue.value() < 0;
+    } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(endType.get())) {
+        if (numType->numberKind == ResolvedNumberKind::UInt) {
+            endCanBeNegative = false;
+        }
+    }
+
+    if (!startCanBeNegative && !endCanBeNegative) {
+        return ResolvedTypeNumber::usize(location);
+    }
+
+    return ResolvedTypeNumber::isize(location);
+}
+
 ptr<ResolvedWhileStmt> Sema::resolve_while_stmt(const WhileStmt &whileStmt) {
     debug_func(whileStmt.location);
     varOrReturn(condition, resolve_expr(*whileStmt.condition));
@@ -265,7 +301,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 ScopeRAII iterationScope(*this);
                 auto takenIterationScope = iterationScope.takeScope();
 
-                auto captureType = ResolvedTypeNumber::isize(forStmt.captures[0]->location);
+                auto captureType = determine_for_range_capture_type(*rangeExpr, forStmt.captures[0]->location);
                 auto captureTypeExpr = makePtr<ResolvedTypeExpr>(forStmt.captures[0]->location, captureType->clone());
                 auto initializer = makePtr<ResolvedIntLiteral>(forStmt.captures[0]->location, (int)i);
                 initializer->type = captureType->clone();
@@ -403,7 +439,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
                 }
                 size_of_forloop = currentSize;
             }
-            captureType = ResolvedTypeNumber::isize(forStmt.captures[i]->location);
+            captureType = determine_for_range_capture_type(*rangeExpr, forStmt.captures[i]->location);
         } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
             captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
         } else {
@@ -568,6 +604,12 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
         bool caseMatchedInInline = false;
         for (auto &&cond : cas->conditions) {
             varOrReturn(tempCond, resolve_expr(*cond));
+            if (!perform_implicit_cast(tempCond, *condition->type)) return nullptr;
+            if (!condition->type->equal(*tempCond->type)) {
+                return report(tempCond->location, "condition in case type '" + tempCond->type->to_str() +
+                                                      "' doesn't match switch condition type '" +
+                                                      condition->type->to_str() + "'");
+            }
             tempCond->set_constant_value(cee.evaluate(*tempCond, false));
             if (!tempCond->get_constant_value()) {
                 return report(tempCond->location, "condition in case must be a constant value");

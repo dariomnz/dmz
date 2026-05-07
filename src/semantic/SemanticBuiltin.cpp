@@ -316,6 +316,28 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         it->second = &funcDecl;
         debug_msg("created @ptrCast");
         return &funcDecl;
+    } else if (fnName == "@intCast" || fnName == "@floatCast") {
+        // @intCast(val) -> TargetType  (target inferred from context)
+        // @floatCast(val) -> TargetType (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "val", ResolvedTypeExpr::fromType(makePtr<ResolvedTypeNumber>(loc, ResolvedNumberKind::Int, 32)),
+            false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        if (fnName == "@intCast") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+            debug_msg("created @intCast");
+            return &funcDecl;
+        } else if (fnName == "@floatCast") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+            debug_msg("created @floatCast");
+            return &funcDecl;
+        }
     }
     debug_msg("return null");
     return nullptr;
@@ -829,6 +851,46 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
 
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(ptrArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
+    } else if (resolvedCallee.identifier == "@intCast") {
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@intCast expects exactly 1 argument: (val)");
+        }
+        auto &valArg = resolvedArguments[0];
+
+        // Arg must be a number, bool, or enum
+        if (valArg->type->kind != ResolvedTypeKind::Number && valArg->type->kind != ResolvedTypeKind::Bool &&
+            valArg->type->kind != ResolvedTypeKind::Enum && valArg->type->kind != ResolvedTypeKind::Generic) {
+            return report(valArg->location, "@intCast: argument must be numeric, got '" + valArg->type->to_str() + "'");
+        }
+
+        // Return type is generic number for now, will be inferred in perform_implicit_cast
+        auto returnType = makePtr<ResolvedTypeGeneric>(call.location, nullptr);
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
+    } else if (resolvedCallee.identifier == "@floatCast") {
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@floatCast expects exactly 1 argument: (val)");
+        }
+        auto &valArg = resolvedArguments[0];
+
+        // Arg must be a number
+        if (valArg->type->kind != ResolvedTypeKind::Number && valArg->type->kind != ResolvedTypeKind::Generic) {
+            return report(valArg->location,
+                          "@floatCast: argument must be numeric, got '" + valArg->type->to_str() + "'");
+        }
+
+        // Return type is generic for now, will be inferred in perform_implicit_cast
+        auto returnType = makePtr<ResolvedTypeGeneric>(call.location, nullptr);
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valArg->type->clone());
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              std::move(returnType));
     }

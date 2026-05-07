@@ -37,7 +37,7 @@ fn main() -> void {
     let i = 0;
 
     while (num > 0) {
-        buffer[i] = (num % 10);
+        buffer[i] = @intCast(num % 10);
         i = i + 1;
         num = num / 10;
     }

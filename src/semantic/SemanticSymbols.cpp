@@ -20,7 +20,7 @@ std::ostream &operator<<(std::ostream &os, const ResolvedState &state) {
 }
 
 template <>
-void ConstantValueContainer<int>::dump_constant_value(size_t level) const {
+void ConstantValueContainer<int64_t>::dump_constant_value(size_t level) const {
     if (value) {
         std::cerr << indent(level) << "| value: " << *value << '\n';
     }

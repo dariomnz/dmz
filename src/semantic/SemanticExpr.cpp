@@ -617,6 +617,9 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
+    if (!perform_implicit_cast(resolvedLHS, *resolvedRHS->type)) return nullptr;
+    if (!perform_implicit_cast(resolvedRHS, *resolvedLHS->type)) return nullptr;
+
     auto lhsKind = resolvedLHS->type->kind;
     auto rhsKind = resolvedRHS->type->kind;
     if (lhsKind != ResolvedTypeKind::Number && lhsKind != ResolvedTypeKind::Bool &&
@@ -1233,6 +1236,7 @@ ptr<ResolvedOrElseErrorExpr> Sema::resolve_orelse_error_expr(const OrElseErrorEx
         return report(resolvedErr->location, "expect error union when using orelse");
     varOrReturn(resolvedOrelse, resolve_expr(*orelseExpr.orElseExpr));
     auto resolvedErrOptional = static_cast<const ResolvedTypeOptional *>(resolvedErr->type.get());
+    if (!perform_implicit_cast(resolvedOrelse, *resolvedErrOptional)) return nullptr;
     if (!resolvedErrOptional->optionalType->compare(*resolvedOrelse->type)) {
         return report(orelseExpr.location, "unexpected mismatch of types in orelse expresion '" +
                                                resolvedErrOptional->optionalType->to_str() + "' and '" +
@@ -1385,6 +1389,9 @@ ptr<ResolvedRangeExpr> Sema::resolve_range_expr(const RangeExpr &rangeExpr) {
     }
 
     endExpr->set_constant_value(cee.evaluate(*endExpr, false));
+
+    if (!perform_implicit_cast(startExpr, *endExpr->type)) return nullptr;
+    if (!perform_implicit_cast(endExpr, *startExpr->type)) return nullptr;
 
     return makePtr<ResolvedRangeExpr>(rangeExpr.location, std::move(startExpr), std::move(endExpr));
 }

@@ -40,8 +40,8 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %1, label %for.body, label %for.exit
 // CHECK-NEXT: 
 // CHECK-NEXT: for.body:                                         ; preds = %for.cond
-// CHECK-NEXT:   %2 = load i64, ptr %for.capture.x, align 4
-// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.8DD29067, i64 %2)
+// CHECK-NEXT:   %2 = load i32, ptr %for.capture.x, align 4
+// CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.8DD29067, i32 %2)
 // CHECK-NEXT:   br label %for.increment
 // CHECK-NEXT: 
 // CHECK-NEXT: for.increment:                                    ; preds = %for.body
@@ -64,9 +64,9 @@ fn main() -> void {
 // CHECK-NEXT:   br i1 %8, label %for.body2, label %for.exit4
 // CHECK-NEXT: 
 // CHECK-NEXT: for.body2:                                        ; preds = %for.cond1
-// CHECK-NEXT:   %9 = load i64, ptr %for.capture.x6, align 4
-// CHECK-NEXT:   %10 = load i64, ptr %for.capture.y, align 4
-// CHECK-NEXT:   %11 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.42ABC2A2, i64 %9, i64 %10)
+// CHECK-NEXT:   %9 = load i32, ptr %for.capture.x6, align 4
+// CHECK-NEXT:   %10 = load i32, ptr %for.capture.y, align 4
+// CHECK-NEXT:   %11 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.42ABC2A2, i32 %9, i32 %10)
 // CHECK-NEXT:   br label %for.increment3
 // CHECK-NEXT: 
 // CHECK-NEXT: for.increment3:                                   ; preds = %for.body2

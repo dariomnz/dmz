@@ -22,8 +22,8 @@ pub fn get() -> f64 {
         std.io.printf("Cannot gettimeofdat %d\n", ret);
         return 0.0;
     }
-    let sec:f64 = tv.tv_sec;
-    let usec:f64 = tv.tv_usec;
+    let sec:f64 = @floatCast(tv.tv_sec);
+    let usec:f64 = @floatCast(tv.tv_usec);
     return sec + usec * 0.000001;
 }
 

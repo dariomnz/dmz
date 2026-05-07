@@ -815,6 +815,11 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
     debug_func(expr->location << " " << expr->className() << " type " << expr->type->className() << " "
                               << expr->type->to_str() << " expectedType " << expectedType.className() << " "
                               << expectedType.to_str());
+
+    if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&expectedType)) {
+        return perform_implicit_cast(expr, *optType->optionalType);
+    }
+
     if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(expr.get())) {
         if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&expectedType)) {
             if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(sliceType->sliceType.get())) {
@@ -826,7 +831,8 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
     }
 
     if (auto intLit = dynamic_cast<ResolvedIntLiteral *>(expr.get())) {
-        if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&expectedType)) {
+        if (expectedType.kind == ResolvedTypeKind::Number) {
+            auto numType = dynamic_cast<const ResolvedTypeNumber *>(&expectedType);
             if (numType->numberKind == ResolvedNumberKind::Int || numType->numberKind == ResolvedNumberKind::UInt) {
                 intLit->type = numType->clone();
             }
@@ -906,8 +912,43 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                                "cannot ptr cast to non-pointer type '" + expectedType.to_str() + "'");
                         return false;
                     }
+                } else if (decl->identifier == "@intCast") {
+                    // Infer target numeric type from context
+                    if (!callExpr->arguments.empty() &&
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Number &&
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Bool &&
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Enum &&
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Generic) {
+                        report(callExpr->location, "cannot cast from non-numeric type '" +
+                                                       callExpr->arguments[0]->type->to_str() + "' into numeric");
+                        return false;
+                    }
+                    if (expectedType.kind == ResolvedTypeKind::Number || expectedType.kind == ResolvedTypeKind::Bool ||
+                        expectedType.kind == ResolvedTypeKind::Enum || expectedType.kind == ResolvedTypeKind::Generic) {
+                        callExpr->type = expectedType.clone();
+                    } else {
+                        report(callExpr->location,
+                               "cannot int cast to non-numeric type '" + expectedType.to_str() + "'");
+                        return false;
+                    }
+                } else if (decl->identifier == "@floatCast") {
+                    // Infer target numeric type from context
+                    if (expectedType.kind == ResolvedTypeKind::Number || expectedType.kind == ResolvedTypeKind::Generic) {
+                        callExpr->type = expectedType.clone();
+                    } else {
+                        report(callExpr->location, "cannot cast to non-numeric type '" + expectedType.to_str() +
+                                                       "' using @floatCast");
+                        return false;
+                    }
                 }
             }
+        }
+    }
+
+    if (auto unOp = dynamic_cast<ResolvedUnaryOperator *>(expr.get())) {
+        if (unOp->op == TokenType::op_minus) {
+            if (!perform_implicit_cast(unOp->operand, expectedType)) return false;
+            unOp->type = unOp->operand->type->clone();
         }
     }
 

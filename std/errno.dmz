@@ -134,7 +134,7 @@ const POSIX_errs = error {
     MEMORY_PAGE_POISONED,
 };
 
-pub fn syscallError(errno: i32) -> !void {
+pub fn syscallError(errno: isize) -> !void {
     let value = errno;
     if (value < 0) {
         value = -value;

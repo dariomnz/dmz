@@ -65,7 +65,7 @@ pub const Reader = struct {
             // std.io.print("pos {}\n", .{pos});
             if (pos >= 0) {
                 // Calculamos el final de la línea (sin incluir el \n)
-                const line_end = r.seek + pos;
+                const line_end = r.seek + @intCast(pos);
 
                 // Actualizamos el puntero de lectura para saltar el \n en la próxima llamada
                 r.seek = line_end + 1;
@@ -102,14 +102,14 @@ pub const Reader = struct {
             // Nota: Si refill hizo un rebase, start_pos ya no es válido.
             // Por eso, es mejor reajustar start_pos si r.seek volvió a 0.
             // if (r.seek == 0) {
-                // Este caso ocurre si defaultRebase se ejecutó durante el refill
-                // No podemos devolver un slice que apunte a memoria antigua.
-                // Para un Reader con buffer circular o rebase, readLine debería
-                // idealmente usar un ArrayList externo o garantizar que la línea
-                // no se mueva. 
-                // std.io.printf("StreamTooLong\n");
-                // return error.StreamTooLong;
-                // O manejar la relocalización
+            // Este caso ocurre si defaultRebase se ejecutó durante el refill
+            // No podemos devolver un slice que apunte a memoria antigua.
+            // Para un Reader con buffer circular o rebase, readLine debería
+            // idealmente usar un ArrayList externo o garantizar que la línea
+            // no se mueva. 
+            // std.io.printf("StreamTooLong\n");
+            // return error.StreamTooLong;
+            // O manejar la relocalización
             // }
         }
     }

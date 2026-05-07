@@ -1,0 +1,30 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+const MyEnum = enum {
+    A, B, C
+};
+
+fn main() -> void {
+    let a: i32 = 10;
+    let b: i64 = @intCast(a);
+    let c: u8 = @intCast(b);
+    
+    // CHECK: [[# @LINE + 1 ]]:18: error: initializer type mismatch expected 'i32' actual 'i64'
+    let d: i32 = b;
+    
+    let e: bool = true;
+    let f: i32 = @intCast(e);
+    
+    let g: i32 = e;
+    
+    let h: MyEnum = .A;
+    let i: i32 = @intCast(h);
+    
+    let j: i32 = h;
+    
+    let k: f32 = 1.0;
+    let l: f64 = @intCast(k);
+    
+    // CHECK: [[# @LINE + 1 ]]:18: error: initializer type mismatch expected 'f32' actual 'f64'
+    let m: f32 = l;
+}

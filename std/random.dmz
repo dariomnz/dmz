@@ -6,7 +6,7 @@ pub fn simpleRand() -> u32 {
 
 test "simple random" {
     const std = import("std");
-    const len = 100;
+    const len: u32 = 100;
     for (0..len) |i| {
         std.io.print("{} ", .{simpleRand() % len});
     }

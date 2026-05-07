@@ -10,7 +10,7 @@
 const std = import("std");
 
 fn hash_i32(value: i32) -> usize {
-    return value * 7 * 13 * 32;
+    return @intCast(value * 7 * 13 * 32);
 }
 
 fn eq_i32(lhs: i32, rhs: i32) -> bool {

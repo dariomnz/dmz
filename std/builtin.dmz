@@ -13,8 +13,9 @@ const ErrorTrace = struct {
 };
 
 fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
-    const file = std.io.file.open(file_path.ptr, std.io.file.O_RDONLY, 0);
-    if (file < 0) return;
+    const file = std.io.file.open(file_path.ptr, std.io.file.O_RDONLY, 0) catch {
+        return;
+    };
     defer std.io.file.close(file);
 
     const reader = std.io.file.reader.init(file);
@@ -27,7 +28,7 @@ fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
             return;
         };
         if (current_line == line) {
-            let start = 0;
+            let start: usize = 0;
             const isTerminal = std.terminal.isTerminal();
             if (isTerminal) std.io.print("{s}", .{std.terminal.COLORBLUE});
             start += try std.io.print(" {d}", .{line});
@@ -35,7 +36,7 @@ fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
             start += try std.io.print(" | ", .{});
 
             std.io.print("{s}\n", .{readline});
-            for (0..(start + col - 2)) |i| {
+            for (0..(start + @intCast(col) - 2)) |i| {
                 std.io.print(" ", .{});
             }
             std.io.print(" ^\n", .{});
@@ -91,7 +92,7 @@ fn getTestName(n: usize) -> []u8 {
 
 fn __builtin_main_test() -> void {
     const num_test = @testNum();
-    let result = 0;
+    let result: usize = 0;
     const isTerminal = std.terminal.isTerminal();
 
     for (0..num_test) |i| {

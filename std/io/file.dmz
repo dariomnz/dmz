@@ -6,30 +6,45 @@ pub const stderr: i32 = 2;
 
 pub const O_RDONLY = 0;
 
-pub fn open(name: *u8, flags: i32, mode: u32) -> i32 {
-    return std.syscall.open(name, flags, mode);
+pub fn open(name: *u8, flags: i32, mode: u32) -> !i32 {
+    const ret = std.syscall.open(name, @intCast(flags), mode);
+    if (ret < 0) {
+        try std.errno.syscallError(ret);
+    }
+    return @intCast(ret);
 }
-pub fn write(fd: i32, buffer: []u8) -> isize {
-    return std.syscall.write(fd, @ptrCast(buffer.ptr), buffer.len);
+
+pub fn write(fd: i32, buffer: []u8) -> !usize {
+    const ret = std.syscall.write(fd, @ptrCast(buffer.ptr), buffer.len);
+    if (ret < 0) {
+        try std.errno.syscallError(ret);
+    }
+    return @intCast(ret);
 }
-pub fn read(fd: i32, buffer: []u8) -> isize {
-    return std.syscall.read(fd, @ptrCast(buffer.ptr), buffer.len);
+
+pub fn read(fd: i32, buffer: []u8) -> !usize {
+    const ret = std.syscall.read(fd, @ptrCast(buffer.ptr), buffer.len);
+    if (ret < 0) {
+        try std.errno.syscallError(ret);
+    }
+    return @intCast(ret);
 }
-pub fn close(fd: i32) -> i32 {
-    return std.syscall.close(fd);
+
+pub fn close(fd: i32) -> !void {
+    const ret = std.syscall.close(fd);
+    if (ret < 0) {
+        try std.errno.syscallError(ret);
+    }
+    return;
 }
 
 pub fn writeAll(fd: i32, buffer: []u8) -> !usize {
-    let writed = 0;
+    let writed: usize = 0;
     let buf_slice = buffer;
     while (buf_slice.len > 0) {
-        const ret = write(fd, buf_slice);
-        if (ret < 0) {
-            try std.errno.syscallError(ret);
-        } else {
-            if (ret == 0) {
-                return writed;
-            }
+        const ret = try write(fd, buf_slice);
+        if (ret == 0) {
+            return writed;
         }
         buf_slice = buf_slice[ret..buf_slice.len];
         writed += ret;
@@ -38,13 +53,7 @@ pub fn writeAll(fd: i32, buffer: []u8) -> !usize {
 }
 
 pub fn readOne(fd: i32, buffer: []u8) -> !usize {
-    // std.io.printf("fd %d to readAll %ld\n", fd, buffer.len);
-    const readed = read(fd, buffer);
-    // std.io.printf("readed %d\n", readed);
-    if (readed < 0) {
-        try std.errno.syscallError(readed);
-    }
-    return readed;
+    return try read(fd, buffer);
 }
 
 pub const reader = struct {

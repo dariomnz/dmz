@@ -23,9 +23,9 @@ fn test_f32x8() -> void {
     let v: @simd<f32, 8> = @simdIota();
     for (0..8) |i| {
         const value = v[i];
-        let i_lower: f32 = i;
+        let i_lower: f32 = @floatCast(i);
         i_lower -= 0.01;
-        let i_upper: f32 = i;
+        let i_upper: f32 = @floatCast(i);
         i_upper += 0.01;
         if (value < i_lower || value > i_upper) {
             return;

@@ -63,6 +63,10 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_asm(call);
     } else if (builtin.identifier == "@ptrCast") {
         return generate_builtin_ptrCast(call);
+    } else if (builtin.identifier == "@intCast") {
+        return generate_builtin_intCast(call);
+    } else if (builtin.identifier == "@floatCast") {
+        return generate_builtin_floatCast(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -551,6 +555,20 @@ llvm::Value *Codegen::generate_builtin_ptrCast(const ResolvedCallExpr &call) {
     debug_func(call.location);
     if (call.arguments.empty()) dmz_unreachable(call.location, "@ptrCast expects 1 argument");
     return generate_expr(*call.arguments[0]);
+}
+
+llvm::Value *Codegen::generate_builtin_intCast(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "@intCast expects 1 argument");
+    auto val = generate_expr(*call.arguments[0]);
+    return cast_to(val, *call.arguments[0]->type, *call.type);
+}
+
+llvm::Value *Codegen::generate_builtin_floatCast(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "@floatCast expects 1 argument");
+    auto val = generate_expr(*call.arguments[0]);
+    return cast_to(val, *call.arguments[0]->type, *call.type);
 }
 
 llvm::Value *Codegen::generate_builtin_asm(const ResolvedCallExpr &call) {

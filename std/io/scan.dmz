@@ -76,7 +76,7 @@ pub fn scanInteger<T>(r: std.io.Reader) -> !T {
 }
 
 test "scanInteger cases" {
-    const cases = {
+    const cases: [8][]u8 = {
         "123",
         "-123",
         "0",
@@ -87,8 +87,8 @@ test "scanInteger cases" {
         "-987654321",
     };
     for (cases[0..8]) |case_str| {
-        const r = std.io.Reader.fixed(case_str.*[0..std.mem.strlen(case_str.*)]);
+        const r = std.io.Reader.fixed(case_str.*);
         const result = try scanInteger<i32>(r);
-        std.io.print("{} == {}\n", .{case_str, result});
+        std.io.print("{s} == {}\n", .{case_str.*, result});
     }
 }

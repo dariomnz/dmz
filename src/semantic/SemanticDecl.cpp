@@ -525,7 +525,7 @@ bool Sema::resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl) {
     std::vector<ptr<ResolvedFieldDecl>> resolvedFields;
     std::vector<std::string> resolvedFields_strs;
     int idx = 0;
-    ResolvedTypeNumber int_type{resolvedEnumDecl.location, ResolvedNumberKind::UInt, 32};
+    ResolvedTypeNumber int_type{resolvedEnumDecl.location, ResolvedNumberKind::Int, 32};
     for (auto &&decl : resolvedEnumDecl.enumDecl()->decls) {
         if (auto field = dynamic_cast<const FieldDecl *>(decl.get())) {
             auto type = makePtr<ResolvedTypeEnum>(field->location, &resolvedEnumDecl);

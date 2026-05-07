@@ -1,0 +1,29 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn main() -> void {
+    let a: i32 = 10;
+    let b: f32 = @floatCast(a);
+    let c: f64 = @floatCast(a);
+    
+    let d: f32 = 3.14;
+    let e: f64 = @floatCast(d);
+    
+    let f: i32 = @intCast(d);
+}
+
+// CHECK:         ResolvedVarDecl:f32 b
+// CHECK-NEXT:           ResolvedCallExpr:f32
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
+// CHECK:         ResolvedVarDecl:f64 c
+// CHECK-NEXT:           ResolvedCallExpr:f64
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
+// CHECK:         ResolvedVarDecl:f64 e
+// CHECK-NEXT:           ResolvedCallExpr:f64
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:f32 d
+// CHECK:         ResolvedVarDecl:i32 f
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:generic @intCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:f32 d

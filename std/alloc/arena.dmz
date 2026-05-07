@@ -4,7 +4,7 @@ pub const Arena = struct {
     buffer: []u8,
     offset: usize,
 
-    const alignment = 8;
+    const alignment: usize = 8;
 
     /// Se inicializa con un trozo de memoria ya existente
     pub fn init(buffer: []u8) -> Arena {

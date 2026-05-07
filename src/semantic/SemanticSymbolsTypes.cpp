@@ -62,12 +62,19 @@ bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     if (other.kind == ResolvedTypeKind::Pointer && isPlatformSize) {
         return debug_ret(true);
     }
-    if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Bool ||
-        other.kind == ResolvedTypeKind::Enum || other.kind == ResolvedTypeKind::Generic) {
-        // TODO think if is ok to ignore size
-        // return debug_ret(numberKind == numType->numberKind);
+    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::Enum) {
         return debug_ret(true);
     }
+
+    if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
+        if (numberKind == numType->numberKind) {
+            return debug_ret(numType->bitSize <= bitSize);
+        }
+        if (numberKind == ResolvedNumberKind::Int && numType->numberKind == ResolvedNumberKind::UInt) {
+            return debug_ret(numType->bitSize < bitSize);
+        }
+    }
+
     return debug_ret(false);
 }
 
@@ -127,15 +134,11 @@ bool ResolvedTypeBool::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Generic ||
-        other.kind == ResolvedTypeKind::Error || other.kind == ResolvedTypeKind::Pointer) {
+    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::Error ||
+        other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Pointer) {
         return debug_ret(true);
-    } else if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
-        return debug_ret(numType->numberKind == ResolvedNumberKind::Int ||
-                         numType->numberKind == ResolvedNumberKind::UInt);
-    } else {
-        return debug_ret(false);
     }
+    return debug_ret(ResolvedTypeNumber::compare(other));
 }
 
 ptr<ResolvedType> ResolvedTypeBool::clone() const {

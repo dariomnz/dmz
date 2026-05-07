@@ -4,7 +4,7 @@ export fn memset(s: *void, c: i32, n: usize) -> *void {
     let slice: []u8 = {};
     slice.ptr = @ptrCast(s);
     slice.len = n;
-    std.mem.set(slice, c);
+    std.mem.set<u8>(slice, @intCast(c));
     return s;
 }
 

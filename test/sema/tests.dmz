@@ -56,9 +56,9 @@ test "add test 2" {
 // CHECK:         ResolvedVarDecl:const []u8 test_name
 // CHECK-NEXT:           ResolvedCallExpr:[]u8
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(usize)->[]u8 getTestName
-// CHECK-NEXT:             ResolvedDeclRefExpr:isize i
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize i
 
 // CHECK:         ResolvedVarDecl:const !void test_result
 // CHECK-NEXT:           ResolvedCallExpr:!void
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(usize)->!void runTest
-// CHECK-NEXT:             ResolvedDeclRefExpr:isize i
+// CHECK-NEXT:             ResolvedDeclRefExpr:usize i

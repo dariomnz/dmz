@@ -32,7 +32,9 @@ pub fn strlen(str: *u8) -> usize {
     let slice: []u8 = {};
     slice.ptr = @ptrCast(str);
     slice.len = MAX_USIZE;
-    return indexOf<u8>(slice, '\0');
+    const index = indexOf<u8>(slice, '\0');
+    if (index == -1) return MAX_USIZE;
+    return @intCast(index);
 }
 
 pub fn indexOf<T>(slice: []T, scalar: T) -> isize {
@@ -41,7 +43,7 @@ pub fn indexOf<T>(slice: []T, scalar: T) -> isize {
 
 fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
     for (0..slice.len) |i| {
-        if (slice[i] == scalar) return i;
+        if (slice[i] == scalar) return @intCast(i);
     }
     return -1;
 }
@@ -57,7 +59,7 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     const alignment = @sizeof(@simd<T, simd_len>);
     const ptr_int: usize = slice.ptr;
     const remainder = ptr_int % alignment;
-    let offset = 0;
+    let offset: usize = 0;
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
         const index = indexOfScalar<T>(slice[0..offset], scalar);
@@ -74,14 +76,14 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
         const match_mask = data == scalar_vec;
 
         if (@simdReduce(match_mask, .Or)) {
-            const matches: @simd<u16, simd_len> = @simdSelect(index_vec, @simdSplat(simd_len), match_mask);
-            return i + @simdReduce(matches, .Min);
+            const matches: @simd<u16, simd_len> = @simdSelect(index_vec, @simdSplat(@intCast(simd_len)), match_mask);
+            return @intCast(i + @simdReduce(matches, .Min));
         }
         i += simd_len;
     }
 
     const index = indexOfScalar<T>(slice[i..slice.len], scalar);
-    if (index != -1) return i + index;
+    if (index != -1) return @intCast(i) + index;
 
     return -1;
 }
@@ -273,18 +275,18 @@ test "indexOfScalarSIMD i32" {
 test "indexOfScalar benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr: [size]u8 = {};
-    set(ptr[0..size], 123);
-    const scalar = 124;
+    set<u8>(ptr[0..size], 123);
+    const scalar: u8 = 124;
     ptr[size - 1] = scalar;
     const start = std.time.get();
     const index = indexOfScalarSIMD<u8>(ptr[0..size], scalar);
     const end = std.time.get();
-    const time_diff = (end - start) * 1000;
+    const time_diff = (end - start) * 1000.0;
     try std.testing.expect(index == size - 1);
     const start2 = std.time.get();
     const index2 = indexOfScalar<u8>(ptr[0..size], scalar);
     const end2 = std.time.get();
-    const time_diff2 = (end2 - start2) * 1000;
+    const time_diff2 = (end2 - start2) * 1000.0;
 
     std.io.print("indexOfScalarSIMD: {d}ms indexOfScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(index2 == size - 1);
@@ -295,18 +297,18 @@ test "copy: benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr1: [size]u8 = {};
     let ptr2: [size]u8 = {};
-    const scalar = 124;
+    const scalar: u8 = 124;
     ptr1[size - 1] = scalar;
 
     const start_simd = std.time.get();
     copySIMD<u8>(ptr2[0..size], ptr1[0..size]);
     const end_simd = std.time.get();
-    const time_diff_simd = (end_simd - start_simd) * 1000;
+    const time_diff_simd = (end_simd - start_simd) * 1000.0;
 
     const start_scalar = std.time.get();
     copyScalar<u8>(ptr2[0..size], ptr1[0..size]);
     const end_scalar = std.time.get();
-    const time_diff_scalar = (end_scalar - start_scalar) * 1000;
+    const time_diff_scalar = (end_scalar - start_scalar) * 1000.0;
     std.io.print(
         "copySIMD: {d}ms copyScalar: {d}ms factor: {d} \n",
         .{time_diff_simd, time_diff_scalar, time_diff_scalar / time_diff_simd},
@@ -315,12 +317,12 @@ test "copy: benchmark" {
     const start_back = std.time.get();
     copySIMDBackwards<u8>(ptr2[0..size], ptr1[0..size]);
     const end_back = std.time.get();
-    const time_diff_back = (end_back - start_back) * 1000;
+    const time_diff_back = (end_back - start_back) * 1000.0;
 
     const start_scalar_back = std.time.get();
     copyScalarBackwards<u8>(ptr2[0..size], ptr1[0..size]);
     const end_scalar_back = std.time.get();
-    const time_diff_scalar_back = (end_scalar_back - start_scalar_back) * 1000;
+    const time_diff_scalar_back = (end_scalar_back - start_scalar_back) * 1000.0;
 
     std.io.print(
         "copySIMDBackwards: {d}ms copyScalarBackwards: {d}ms factor: {d} \n",
@@ -349,12 +351,12 @@ test "copy: overlap backwards (dest > src)" {
 }
 
 test "copy: misaligned large buffers" {
-    const size = 1024;
+    const size: usize = 1024;
     let src: [size]u8 = {};
     let dest: [size]u8 = {};
 
     for (0..size) |i| 
-        src[i] = i % 256;
+        src[i] = @intCast(i % 256);
 
     // Test multiple offsets to trigger different alignment remainders
     let offset: usize = 0;
@@ -369,15 +371,15 @@ test "copy: misaligned large buffers" {
 test "set benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr: [size]u8 = {};
-    const scalar = 124;
+    const scalar: u8 = 124;
     const start = std.time.get();
     setSIMD<u8>(ptr[0..size], scalar);
     const end = std.time.get();
-    const time_diff = (end - start) * 1000;
+    const time_diff = (end - start) * 1000.0;
     const start2 = std.time.get();
     setScalar<u8>(ptr[0..size], scalar);
     const end2 = std.time.get();
-    const time_diff2 = (end2 - start2) * 1000;
+    const time_diff2 = (end2 - start2) * 1000.0;
 
     std.io.print("setSIMD: {d}ms setScalar: {d}ms factor: {d}\n", .{time_diff, time_diff2, time_diff2 / time_diff});
     try std.testing.expect(time_diff < time_diff2);

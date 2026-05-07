@@ -41,11 +41,11 @@ pub fn fmtType<T>(w: std.io.Writer, arg: T, spec: FormatOptions) -> !usize {
 
 pub fn fmtInteger<T>(w: std.io.Writer, n: T, spec: FormatOptions) -> !usize {
     if (spec.tag == FormatOptions.character) {
-        return w.writeChar(n);
+        return w.writeChar(@intCast(n));
     }
 
     let ret: usize = 0;
-    let base: T = 10;
+    let base: u8 = 10;
     let upper = false;
 
     switch (spec.tag) {
@@ -78,7 +78,7 @@ pub fn fmtInteger<T>(w: std.io.Writer, n: T, spec: FormatOptions) -> !usize {
     }
 
     while (divisor > 0) {
-        let val: u8 = (num / divisor) % base;
+        let val: u8 = @intCast((num / divisor) % base);
         let c: u8 = 0;
         if (val < 10) {
             c = val + '0';
@@ -110,7 +110,7 @@ pub fn fmtFloat<T>(w: std.io.Writer, f: T, spec: FormatOptions) -> !usize {
         val = -val;
     }
 
-    let parte_entera: usize = val;
+    let parte_entera: usize = @intCast(val);
     let divisor: usize = 1;
 
     if (parte_entera == 0) {
@@ -120,7 +120,7 @@ pub fn fmtFloat<T>(w: std.io.Writer, f: T, spec: FormatOptions) -> !usize {
             divisor *= 10;
         }
         while (divisor > 0) {
-            let digito: u8 = ((parte_entera / divisor) % 10) + '0';
+            let digito: u8 = @intCast((parte_entera / divisor) % 10) + '0';
             ret += try w.writeChar(digito);
             divisor /= 10;
         }
@@ -129,15 +129,15 @@ pub fn fmtFloat<T>(w: std.io.Writer, f: T, spec: FormatOptions) -> !usize {
     if (precision > 0) {
         ret += try w.writeChar('.');
 
-        let fraccion = val - parte_entera;
+        let fraccion = val - @floatCast(parte_entera);
 
         let i: usize = 0;
         while (i < precision) {
             fraccion *= 10.0;
-            let digito_int: u8 = fraccion;
+            let digito_int: u8 = @intCast(fraccion);
             ret += try w.writeChar(digito_int + '0');
 
-            fraccion -= digito_int;
+            fraccion -= @floatCast(digito_int);
             i += 1;
         }
     }
@@ -220,7 +220,7 @@ pub fn fmtError(w: std.io.Writer, e: err, spec: FormatOptions) -> !usize {
 
 pub fn fmtSimd<T>(w: std.io.Writer, v: T, spec: FormatOptions) -> !usize {
     let ret: usize = 0;
-    let current_element = 0;
+    let current_element: usize = 0;
     inline if (@typeid(v) == std.types.simd_t) {
         const typeinfo = @typeinfo(v).infoSimd;
         ret += try w.writeAll(typeinfo.type);
@@ -287,7 +287,7 @@ pub fn fmt<T>(w: std.io.Writer, format: []u8, args: T) -> !usize {
                 // skip '}'
             }
 
-            let current_arg = 0;
+            let current_arg: usize = 0;
             inline if (@typeid(args) == std.types.tuple_t) {
                 inline for (args) |arg| {
                     if (current_arg++ == arg_tracker) {
