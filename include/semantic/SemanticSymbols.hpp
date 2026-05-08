@@ -669,6 +669,16 @@ struct ResolvedCallExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
 };
+ 
+struct ResolvedComptimeExpr : public ResolvedExpr {
+    ptr<ResolvedExpr> expr;
+
+    ResolvedComptimeExpr(SourceLocation location, ptr<ResolvedExpr> expr)
+        : ResolvedExpr(location, expr->type->clone()), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0, bool onlySelf = false) const override;
+    DMZ_TYPE_NAME();
+};
 
 struct ResolvedDeclRefExpr : public ResolvedAssignableExpr {
     std::string identifier;

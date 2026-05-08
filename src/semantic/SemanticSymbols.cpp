@@ -120,6 +120,14 @@ void ResolvedCallExpr::dump(size_t level, bool onlySelf) const {
     for (auto &&arg : arguments) arg->dump(level + 1, onlySelf);
 }
 
+void ResolvedComptimeExpr::dump(size_t level, bool onlySelf) const {
+    std::cerr << indent(level) << "ResolvedComptimeExpr:" << type->to_str() << '\n';
+
+    if (onlySelf) return;
+    dump_constant_value(level);
+    expr->dump(level + 1, onlySelf);
+}
+
 void ResolvedBlock::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedBlock\n";
 

@@ -86,7 +86,7 @@ class Sema {
     };
 
    public:
-    explicit Sema(Driver &driver, ptr<ModuleDecl> ast) : m_driver(driver), m_ast(std::move(ast)) {}
+    explicit Sema(Driver &driver, ptr<ModuleDecl> ast) : m_driver(driver), m_ast(std::move(ast)) { cee.m_sema = this; }
 
     vec<ptr<ResolvedModuleDecl>> resolve_ast_decl(std::filesystem::path sourcePath, bool needMain);
     void add_pre_resolved_module(ptr<ResolvedModuleDecl> mod) { m_lazy_modules.emplace_back(std::move(mod)); }
@@ -137,6 +137,7 @@ class Sema {
     ptr<ResolvedGenericExpr> resolve_generic_expr(const GenericExpr &genericExpr);
     ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
+    ptr<ResolvedComptimeExpr> resolve_comptime_expr(const ComptimeExpr &comptimeExpr);
     ptr<ResolvedUnaryOperator> resolve_unary_operator(const UnaryOperator &unary, bool isType);
     ptr<ResolvedRefPtrExpr> resolve_ref_ptr_expr(const RefPtrExpr &refPtrExpr);
     ptr<ResolvedDerefPtrExpr> resolve_deref_ptr_expr(const DerefPtrExpr &derefPtrExpr);
@@ -198,7 +199,8 @@ class Sema {
     bool resolve_pending_body();
     ptr<ResolvedImportExpr> resolve_import_expr(const ImportExpr &importExpr);
     ptr<ResolvedSwitchStmt> resolve_switch_stmt(const SwitchStmt &switchStmt);
-    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<ComptimeValue> constant_value, bool isInline);
+    ptr<ResolvedCaseStmt> resolve_case_stmt(const CaseStmt &caseStmt, std::optional<ComptimeValue> constant_value,
+                                            bool isInline);
     bool resolve_func_body(ResolvedFunctionDecl &function, const Block &body);
     // void resolve_symbol_names(const std::vector<ptr<ResolvedModuleDecl>> &declarations);
     ResolvedBuiltinFunctionDecl *resolve_builtin_function_symbol(const DeclRefExpr &declRefExpr,
@@ -212,7 +214,7 @@ class Sema {
     void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
 
     ptr<ResolvedType> determine_for_range_capture_type(const ResolvedRangeExpr &rangeExpr,
-                                                      const SourceLocation &location);
+                                                       const SourceLocation &location);
     ptr<ResolvedRangeExpr> resolve_range_expr(const RangeExpr &rangeExpr);
     bool perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &expectedType);
 };

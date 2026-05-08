@@ -114,6 +114,21 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     if (auto *orelseErr = dynamic_cast<const ResolvedOrElseErrorExpr *>(&expr)) {
         return generate_orelse_error_expr(*orelseErr, keepPointer);
     }
+    if (auto *comptimeExpr = dynamic_cast<const ResolvedComptimeExpr *>(&expr)) {
+        if (auto val = comptimeExpr->get_constant_value()) {
+            if (val->isInt()) {
+                return llvm::ConstantInt::get(generate_type(*comptimeExpr->type), val->getInt());
+            } else if (val->isBool()) {
+                return m_builder.getInt1(val->getBool());
+            } else if (val->isFloat()) {
+                return llvm::ConstantFP::get(generate_type(*comptimeExpr->type), val->getFloat());
+            } else if (val->isString()) {
+                return create_global_string(val->getString(), "comptime.string");
+            }
+        }
+        // If it's a statement or void, it might not have a value we care about for codegen
+        return nullptr;
+    }
     expr.dump();
     dmz_unreachable(expr.location, "unexpected expression");
 }

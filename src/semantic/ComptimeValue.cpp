@@ -10,11 +10,7 @@ namespace DMZ {
 bool ComptimeValue::Array::operator==(const Array& other) const {
     if (elements.size() != other.elements.size()) return false;
     for (size_t i = 0; i < elements.size(); ++i) {
-        if (!elements[i] || !other.elements[i]) {
-            if (elements[i] != other.elements[i]) return false;
-            continue;
-        }
-        if (!(*elements[i] == *other.elements[i])) return false;
+        if (!(elements[i] == other.elements[i])) return false;
     }
     return true;
 }
@@ -24,11 +20,7 @@ bool ComptimeValue::Struct::operator==(const Struct& other) const {
     for (auto const& [key, val] : fields) {
         auto it = other.fields.find(key);
         if (it == other.fields.end()) return false;
-        if (!val || !it->second) {
-            if (val != it->second) return false;
-            continue;
-        }
-        if (!(*val == *it->second)) return false;
+        if (!(val == it->second)) return false;
     }
     return true;
 }

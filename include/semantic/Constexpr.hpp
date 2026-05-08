@@ -5,8 +5,10 @@
 
 namespace DMZ {
 
+class Sema;  // forward declaration
 class ConstantExpressionEvaluator {
    public:
+    Sema *m_sema;
     static std::optional<bool> to_bool(const std::optional<ComptimeValue> &d);
     std::optional<ComptimeValue> evaluate(const ResolvedExpr &expr, bool allowSideEffects = false);
     std::optional<ComptimeValue> evaluate_call_expr(const ResolvedCallExpr &expr, bool allowSideEffects = false);
@@ -16,8 +18,16 @@ class ConstantExpressionEvaluator {
     std::optional<ComptimeValue> evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre, bool allowSideEffects);
 
     std::optional<ComptimeValue> evaluate_decl(const ResolvedDecl &decl, bool allowSideEffects = false);
+    std::optional<ComptimeValue> evaluate_block(const ResolvedBlock &block, bool allowSideEffects = false);
+    std::optional<ComptimeValue> evaluate_stmt(const ResolvedStmt &stmt, bool allowSideEffects = false);
 
    private:
+    std::unordered_map<const ResolvedDecl *, ComptimeValue> m_env;
+    std::optional<ComptimeValue> m_returnValue;
+    bool m_shouldReturn = false;
+    bool m_shouldBreak = false;
+    bool m_shouldContinue = false;
+
     size_t m_depth = 0;
     static constexpr size_t MAX_RECURSION_DEPTH = 1000;
 };

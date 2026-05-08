@@ -384,6 +384,20 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
                                      std::move(resolvedArguments));
 }
 
+ptr<ResolvedComptimeExpr> Sema::resolve_comptime_expr(const ComptimeExpr &comptimeExpr) {
+    debug_func(comptimeExpr.location);
+    varOrReturn(resolvedExpr, resolve_expr(*comptimeExpr.expr));
+
+    auto resolvedComptimeExpr = makePtr<ResolvedComptimeExpr>(comptimeExpr.location, std::move(resolvedExpr));
+    resolvedComptimeExpr->set_constant_value(cee.evaluate(*resolvedComptimeExpr, true));
+
+    if (!resolvedComptimeExpr->get_constant_value().has_value()) {
+        return report(comptimeExpr.location, "expression cannot be evaluated at compile time");
+    }
+
+    return resolvedComptimeExpr;
+}
+
 ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr, bool isType) {
     debug_func((m_currentModule ? m_currentModule->module_path : "<no module>") << " " << expr.location);
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
@@ -428,6 +442,9 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr, bool isType) {
     }
     if (const auto *callExpr = dynamic_cast<const CallExpr *>(&expr)) {
         return resolve_call_expr(*callExpr);
+    }
+    if (const auto *comptimeExpr = dynamic_cast<const ComptimeExpr *>(&expr)) {
+        return resolve_comptime_expr(*comptimeExpr);
     }
     if (const auto *groupingExpr = dynamic_cast<const GroupingExpr *>(&expr)) {
         return resolve_grouping_expr(*groupingExpr);

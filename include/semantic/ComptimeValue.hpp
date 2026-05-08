@@ -15,11 +15,11 @@ struct ComptimeValue {
         bool operator==(const Void&) const = default;
     };
     struct Array {
-        std::vector<std::shared_ptr<ComptimeValue>> elements;
+        std::vector<ComptimeValue> elements;
         bool operator==(const Array& other) const;
     };
     struct Struct {
-        std::unordered_map<std::string, std::shared_ptr<ComptimeValue>> fields;
+        std::unordered_map<std::string, ComptimeValue> fields;
         bool operator==(const Struct& other) const;
     };
 

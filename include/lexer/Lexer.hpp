@@ -100,6 +100,7 @@ enum class TokenType {
     kw_continue,
     kw_packed,
     kw_pub,
+    kw_comptime,
     unknown,
     eof,
 };
@@ -168,6 +169,7 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"continue", TokenType::kw_continue},
     {"packed", TokenType::kw_packed},
     {"pub", TokenType::kw_pub},
+    {"comptime", TokenType::kw_comptime},
     // Types
     {"void", TokenType::ty_void},
     {"f16", TokenType::ty_f16},

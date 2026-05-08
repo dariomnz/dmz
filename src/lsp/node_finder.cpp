@@ -290,6 +290,8 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         if (is_at_location(importExpr->location, 10 + importExpr->moduleDecl.identifier.length())) {
             found_decl = &importExpr->moduleDecl;
         }
+    } else if (auto comptimeExpr = dynamic_cast<const ResolvedComptimeExpr*>(&expr)) {
+        find_in_expr(*comptimeExpr->expr);
     }
 
     if (found_decl || found_expr) return;

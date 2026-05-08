@@ -62,6 +62,7 @@ class Formatter {
     ptr<Node> fmt_try_error_expr(const TryErrorExpr& expr);
     ptr<Node> fmt_orelse_error_expr(const OrElseErrorExpr& expr);
     ptr<Node> fmt_generic_expr(const GenericExpr& expr);
+    ptr<Node> fmt_comptime_expr(const ComptimeExpr& expr);
 
     // Stmt
     ptr<Node> fmt_stmt(const Stmt& stmt);

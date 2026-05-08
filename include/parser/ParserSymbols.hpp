@@ -447,6 +447,15 @@ struct CallExpr : public Expr {
     std::string to_str() const override;
     DMZ_TYPE_NAME();
 };
+ 
+struct ComptimeExpr : public Expr {
+    ptr<Expr> expr;
+    ComptimeExpr(SourceLocation location, ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
 
 struct AssignableExpr : public Expr {
     AssignableExpr(SourceLocation location) : Expr(location) {}

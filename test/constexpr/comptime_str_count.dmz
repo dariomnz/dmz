@@ -1,0 +1,45 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn strCount(str: []u8, c: u8) -> i32 {
+    let count = 0;
+    for (str) |x| {
+        if (x.* == c) count++;
+    }
+    return count;
+}
+
+fn main() -> void {
+    const s: []u8 = "hello";
+    const x = comptime strCount(s, 'l');
+    const y = comptime strCount(s, 'x');
+    const s2: []u8 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean tortor libero, accumsan at consectetur quis, convallis id tortor. Ut sollicitudin, turpis quis posuere consectetur, justo nibh faucibus leo, et elementum ligula risus vel nisl. Fusce ut eros augue. Integer euismod ligula ac convallis maximus. Nulla lorem nisl, congue ut tellus a, dictum facilisis neque. Cras id libero augue. Vestibulum luctus tortor eget tellus aliquet feugiat. Aenean metus orci, fringilla sed euismod sit amet, cursus aliquet quam. Vestibulum commodo neque arcu, vel lobortis tellus tincidunt ac.";
+    const z = comptime strCount(s2, '.');
+}
+
+// CHECK:         ResolvedVarDecl:const i32 x
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 2
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn([]u8, u8)->i32 strCount
+// CHECK-NEXT:               ResolvedDeclRefExpr:[]u8 s
+// CHECK-NEXT:               | value: 'hello'
+// CHECK-NEXT:               ResolvedCharLiteral:u8 'l'
+// CHECK-NEXT:               | value: 108
+// CHECK:         ResolvedVarDecl:const i32 y
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 0
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn([]u8, u8)->i32 strCount
+// CHECK-NEXT:               ResolvedDeclRefExpr:[]u8 s
+// CHECK-NEXT:               | value: 'hello'
+// CHECK-NEXT:               ResolvedCharLiteral:u8 'x'
+// CHECK-NEXT:               | value: 120
+// CHECK:         ResolvedVarDecl:const i32 z
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 10
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn([]u8, u8)->i32 strCount
+// CHECK-NEXT:               ResolvedDeclRefExpr:[]u8 s2
+// CHECK-NEXT:               | value: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean tortor libero, accumsan at consectetur quis, convallis id tortor. Ut sollicitudin, turpis quis posuere consectetur, justo nibh faucibus leo, et elementum ligula risus vel nisl. Fusce ut eros augue. Integer euismod ligula ac convallis maximus. Nulla lorem nisl, congue ut tellus a, dictum facilisis neque. Cras id libero augue. Vestibulum luctus tortor eget tellus aliquet feugiat. Aenean metus orci, fringilla sed euismod sit amet, cursus aliquet quam. Vestibulum commodo neque arcu, vel lobortis tellus tincidunt ac.'
+// CHECK-NEXT:               ResolvedCharLiteral:u8 '.'
+// CHECK-NEXT:               | value: 46

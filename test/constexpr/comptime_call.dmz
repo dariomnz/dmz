@@ -1,0 +1,124 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+let global = 10;
+fn add(a: i32, b: i32) -> i32 {
+    global++;
+    return a + b + global;
+}
+
+fn add2(a: i32, b: i32) -> i32 {
+    if (a > 10) return 0;
+    else return add(a, b);
+}
+
+fn factorial(n: i32) -> i32 {
+    let res = 1;
+    let i = 1;
+    while (i <= n) {
+        res = res * i;
+        i = i + 1;
+    }
+    return res;
+}
+
+fn sum_range(n: i32) -> i32 {
+    let sum = 0;
+    for (0..n) |i| {
+        sum = sum + i;
+    }
+    return sum;
+}
+
+fn test_switch(n: i32) -> []u8 {
+    switch (n) {
+        case 1 => return "Is a one!";
+        case 2 => return "Is a two!";
+        else => return "Is not one or two!";
+    }
+}
+
+fn fib(n: i32) -> i32 {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+fn main() -> void {
+    const x = comptime add(1, 2);
+    const y = comptime add(20, 30);
+    const y2 = comptime add2(20, 30);
+    const z = comptime factorial(5);
+    const f20 = comptime fib(10);
+    const s = comptime sum_range(11);
+    const sw1 = comptime test_switch(1);
+    const sw2 = comptime test_switch(2);
+    const sw3 = comptime test_switch(5);
+}
+
+// CHECK:         ResolvedVarDecl:const i32 x
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 14
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32, i32)->i32 add
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:               | value: 1
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:               | value: 2
+// CHECK:         ResolvedVarDecl:const i32 y
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 61
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32, i32)->i32 add
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '20'
+// CHECK-NEXT:               | value: 20
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '30'
+// CHECK-NEXT:               | value: 30
+// CHECK:         ResolvedVarDecl:const i32 y2
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 0
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32, i32)->i32 add2
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '20'
+// CHECK-NEXT:               | value: 20
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '30'
+// CHECK-NEXT:               | value: 30
+// CHECK:         ResolvedVarDecl:const i32 z
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 120
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32 factorial
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:               | value: 5
+// CHECK:         ResolvedVarDecl:const i32 f20
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 55
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32 fib
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '10'
+// CHECK-NEXT:               | value: 10
+// CHECK:         ResolvedVarDecl:const i32 s
+// CHECK-NEXT:           ResolvedComptimeExpr:i32
+// CHECK-NEXT:           | value: 55
+// CHECK-NEXT:             ResolvedCallExpr:i32
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->i32 sum_range
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '11'
+// CHECK-NEXT:               | value: 11
+// CHECK:         ResolvedVarDecl:const []u8 sw1
+// CHECK-NEXT:           ResolvedComptimeExpr:[]u8
+// CHECK-NEXT:           | value: 'Is a one!'
+// CHECK-NEXT:             ResolvedCallExpr:[]u8
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->[]u8 test_switch
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:               | value: 1
+// CHECK:         ResolvedVarDecl:const []u8 sw2
+// CHECK-NEXT:           ResolvedComptimeExpr:[]u8
+// CHECK-NEXT:           | value: 'Is a two!'
+// CHECK-NEXT:             ResolvedCallExpr:[]u8
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->[]u8 test_switch
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:               | value: 2
+// CHECK:         ResolvedVarDecl:const []u8 sw3
+// CHECK-NEXT:           ResolvedComptimeExpr:[]u8
+// CHECK-NEXT:           | value: 'Is not one or two!'
+// CHECK-NEXT:             ResolvedCallExpr:[]u8
+// CHECK-NEXT:               ResolvedDeclRefExpr:fn(i32)->[]u8 test_switch
+// CHECK-NEXT:               ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:               | value: 5

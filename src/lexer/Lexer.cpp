@@ -103,6 +103,7 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         // CASE_TYPE(kw_static);
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
+        CASE_TYPE(kw_comptime);
         CASE_TYPE(caret);
         CASE_TYPE(op_shl);
         CASE_TYPE(op_shr);

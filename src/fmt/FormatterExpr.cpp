@@ -282,5 +282,13 @@ ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
     ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
     return ret;
 }
+
+ptr<Node> Formatter::fmt_comptime_expr(const ComptimeExpr& expr) {
+    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    ret->nodes.emplace_back(makePtr<Text>("comptime"));
+    ret->nodes.emplace_back(makePtr<Space>());
+    ret->nodes.emplace_back(fmt_expr(*expr.expr));
+    return ret;
+}
 }  // namespace fmt
 }  // namespace DMZ

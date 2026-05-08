@@ -450,6 +450,13 @@ void ArrayInstantiationExpr::dump(size_t level) const {
 
 std::string ArrayInstantiationExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
+void ComptimeExpr::dump(size_t level) const {
+    std::cerr << indent(level) << "ComptimeExpr\n";
+    expr->dump(level + 1);
+}
+
+std::string ComptimeExpr::to_str() const { return "comptime " + expr->to_str(); }
+
 void FieldInitStmt::dump(size_t level) const {
     std::cerr << indent(level) << "FieldInitStmt " << identifier << '\n';
     initializer->dump(level + 1);

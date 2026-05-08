@@ -281,6 +281,13 @@ ptr<Expr> Parser::parse_prefix_expr() {
     debug_func(m_nextToken.loc << " '" << m_nextToken.str << "'" << m_nextToken.type);
     Token tok = m_nextToken;
 
+    if (tok.type == TokenType::kw_comptime) {
+        SourceLocation loc = m_nextToken.loc;
+        eat_next_token();  // eat comptime
+        varOrReturn(expr, parse_prefix_expr());
+        return makePtr<ComptimeExpr>(loc, std::move(expr));
+    }
+
     if (tok.type == TokenType::bracket_l) {
         SourceLocation loc = m_nextToken.loc;
         eat_next_token();      // eat [

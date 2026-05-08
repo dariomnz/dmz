@@ -186,7 +186,7 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
     int trueBlock = insert_block(*stmt.trueBlock, exit);
     int entry = cfg.insert_new_block();
 
-    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, false);
     cfg.insert_edge(entry, trueBlock, ConstantExpressionEvaluator::to_bool(val) != false);
     cfg.insert_edge(entry, falseBlock, ConstantExpressionEvaluator::to_bool(val).value_or(false) == false);
 
@@ -196,7 +196,7 @@ int CFGBuilder::insert_if_stmt(const ResolvedIfStmt &stmt, int exit) {
 
 int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
     // TODO: revise
-    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, false);
     std::vector<int> casesBlocks(stmt.cases.size() + 1);
     for (size_t i = 0; i < stmt.cases.size(); i++) {
         casesBlocks[i] = insert_block(*stmt.cases[i]->block, exit);
@@ -208,7 +208,7 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
     int rechableIndex = -1;
     for (size_t i = 0; i < stmt.cases.size(); i++) {
         for (auto &&cond : stmt.cases[i]->conditions) {
-            std::optional<ComptimeValue> case_val = cee.evaluate(*cond, true);
+            std::optional<ComptimeValue> case_val = cee.evaluate(*cond, false);
             if (val && case_val && val->toInt() == case_val->toInt()) {
                 rechableIndex = i;
             }
@@ -221,7 +221,7 @@ int CFGBuilder::insert_switch_stmt(const ResolvedSwitchStmt &stmt, int exit) {
             canMatch = true; // condition not constant, anything can match
         } else {
             for (auto &&cond : stmt.cases[i]->conditions) {
-                std::optional<ComptimeValue> case_val = cee.evaluate(*cond, true);
+                std::optional<ComptimeValue> case_val = cee.evaluate(*cond, false);
                 if (!case_val || val->toInt() == case_val->toInt()) {
                     canMatch = true;
                     break;
@@ -248,7 +248,7 @@ int CFGBuilder::insert_while_stmt(const ResolvedWhileStmt &stmt, int exit) {
     int header = cfg.insert_new_block();
     cfg.insert_edge(latch, header, true);
 
-    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, true);
+    std::optional<ComptimeValue> val = cee.evaluate(*stmt.condition, false);
     cfg.insert_edge(header, body, ConstantExpressionEvaluator::to_bool(val) != false);
     cfg.insert_edge(header, exit, ConstantExpressionEvaluator::to_bool(val).value_or(false) == false);
 
