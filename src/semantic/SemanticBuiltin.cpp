@@ -348,6 +348,18 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
             debug_msg("created @floatCast");
             return &funcDecl;
         }
+    } else if (fnName == "@sqrt") {
+        // @sqrt(value) -> value  (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @sqrt");
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -930,6 +942,41 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
 
         // Return type is generic for now, will be inferred in perform_implicit_cast
         auto returnType = makePtr<ResolvedTypeGeneric>(call.location, nullptr);
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
+    } else if (resolvedCallee.identifier == "@sqrt") {
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@sqrt expects exactly 1 argument: (value)");
+        }
+        auto &valArg = resolvedArguments[0];
+
+        // Arg must be a float
+        bool isCorrectType = true;
+        ptr<ResolvedType> returnType = nullptr;
+        if (auto numType = dynamic_cast<ResolvedTypeNumber *>(valArg->type.get())) {
+            if (numType->numberKind != ResolvedNumberKind::Float) {
+                isCorrectType = false;
+            }
+            returnType = numType->clone();
+        } else if (auto simdType = dynamic_cast<ResolvedTypeSimd *>(valArg->type.get())) {
+            if (auto numType = dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get())) {
+                if (numType->numberKind != ResolvedNumberKind::Float) {
+                    isCorrectType = false;
+                }
+                returnType = simdType->clone();
+            } else {
+                isCorrectType = false;
+            }
+        }
+        if (!isCorrectType) {
+            return report(valArg->location,
+                          "@sqrt: argument must be floating or simd, got '" + valArg->type->to_str() + "'");
+        }
+
         call.type = returnType->clone();
 
         std::vector<ptr<ResolvedType>> paramsTypes;

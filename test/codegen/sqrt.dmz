@@ -1,0 +1,16 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e "Slice len 5: 'Hello'\nSlice2 len 1: 'H'\n")
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    const val1 = @sqrt(4.0);
+    const val2 = @sqrt(2.0);
+    const val3 = @sqrt(1.0);
+    const val4 = @sqrt(20.0);
+
+    const simd1: @simd<f32, 4> = @simdIota();
+    const simd2: @simd<f64, 4> = @simdSplat(5.0);
+
+    const val5 = @sqrt(simd1);
+    const val6 = @sqrt(simd2);
+}

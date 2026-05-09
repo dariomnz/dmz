@@ -191,6 +191,7 @@ class Codegen {
     llvm::Value *generate_builtin_ptrCast(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_intCast(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_floatCast(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_sqrt(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };
