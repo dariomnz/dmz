@@ -70,6 +70,8 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_generic_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const TupleInstantiationExpr*>(&expr)) {
         node = fmt_tuple_instantiation_expr(*cast_expr);
+    } else if (auto cast_expr = dynamic_cast<const ComptimeExpr*>(&expr)) {
+        node = fmt_comptime_expr(*cast_expr);
     } else {
         expr.dump();
         dmz_unreachable(expr.location, "TODO: " + std::string(expr.className()));

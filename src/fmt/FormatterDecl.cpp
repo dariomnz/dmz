@@ -219,6 +219,10 @@ ptr<Node> Formatter::fmt_param_decl(const ParamDecl& decl) {
     debug_func("");
 
     auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
+    if (decl.isComptime) {
+        ret->nodes.emplace_back(makePtr<Text>("comptime"));
+        ret->nodes.emplace_back(makePtr<Space>());
+    }
     ret->nodes.emplace_back(makePtr<Text>(decl.identifier));
     if (!decl.isVararg) {
         ret->nodes.emplace_back(makePtr<Text>(":"));
