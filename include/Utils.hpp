@@ -57,7 +57,14 @@ std::string get_file_line(const std::string& file_name, size_t line_num);
 
 [[noreturn]] void __internal_unreachable(const SourceLocation& loc, std::string msg, const char* source, int line);
 
-std::nullptr_t report(SourceLocation loc, std::string_view message, bool isWarning = false);
+enum class ReportLevel {
+    Error,
+    Warning,
+    Info,
+    Debug,
+};
+
+std::nullptr_t report(SourceLocation loc, std::string_view message, ReportLevel level = ReportLevel::Error);
 
 struct indent {
     size_t level;

@@ -10,6 +10,7 @@ class ConstantExpressionEvaluator {
    public:
     Sema *m_sema;
     static std::optional<bool> to_bool(const std::optional<ComptimeValue> &d);
+    bool should_report_error() const;
     std::optional<ComptimeValue> evaluate(const ResolvedExpr &expr, bool allowSideEffects = false);
     std::optional<ComptimeValue> evaluate_call_expr(const ResolvedCallExpr &expr, bool allowSideEffects = false);
     std::optional<ComptimeValue> evaluate_type(const ResolvedType &type);

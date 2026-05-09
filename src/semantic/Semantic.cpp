@@ -293,12 +293,27 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             arraySize = as->getInt();
         } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(arraySizeExpr.get())) {
             arraySize = intLit->value;
+        } else if (m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
+            // Allow non-constant size in generic functions
+            arraySize = 0;
+        } else if (auto dr = dynamic_cast<const ResolvedDeclRefExpr *>(arraySizeExpr.get())) {
+            bool isComptime = false;
+            if (auto param = dynamic_cast<const ResolvedParamDecl *>(&dr->decl)) {
+                isComptime = param->isComptime;
+            }
+
+            if (isComptime) {
+                // Allow non-constant size if it refers to a comptime parameter
+                arraySize = 0;
+            } else {
+                return report(arraySizeExpr->location, "cannot deduce array size");
+            }
         } else {
             debug_msg("arraySizeExpr: " << arraySizeExpr->location);
             return report(arraySizeExpr->location, "cannot deduce array size");
         }
 
-        ret = makePtr<ResolvedTypeArray>(type.location, std::move(arrayType), arraySize);
+        ret = makePtr<ResolvedTypeArray>(type.location, std::move(arrayType), std::move(arraySizeExpr), arraySize);
         retPtr = ret.get();
         return debug_ret(ret);
     }
@@ -466,7 +481,9 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         }
     }
     if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
-        ret = makePtr<ResolvedTypeArray>(arrType->location, re_resolve_type(*arrType->arrayType), arrType->arraySize);
+        auto cloned = castPtr<ResolvedTypeArray>(arrType->clone());
+        cloned->arrayType = re_resolve_type(*arrType->arrayType);
+        ret = std::move(cloned);
         retPtr = ret.get();
         return ret;
     }
@@ -498,7 +515,7 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::EnumDecl ||
         type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::ErrorGroup ||
         type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function ||
-        type.kind == ResolvedTypeKind::Module) {
+        type.kind == ResolvedTypeKind::Module || type.kind == ResolvedTypeKind::ComptimeValue) {
         ret = type.clone();
         retPtr = ret.get();
         return ret;
@@ -642,7 +659,7 @@ bool Sema::run_flow_sensitive_checks(const ResolvedFuncDecl &fn) {
     } else {
         dmz_unreachable(fn.location, "unexpected function");
     }
-    CFG cfg = CFGBuilder().build(*block);
+    CFG cfg = CFGBuilder(this).build(*block);
 
     bool error = false;
     error |= check_return_on_all_paths(fn, cfg);
@@ -933,11 +950,12 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                     }
                 } else if (decl->identifier == "@floatCast") {
                     // Infer target numeric type from context
-                    if (expectedType.kind == ResolvedTypeKind::Number || expectedType.kind == ResolvedTypeKind::Generic) {
+                    if (expectedType.kind == ResolvedTypeKind::Number ||
+                        expectedType.kind == ResolvedTypeKind::Generic) {
                         callExpr->type = expectedType.clone();
                     } else {
-                        report(callExpr->location, "cannot cast to non-numeric type '" + expectedType.to_str() +
-                                                       "' using @floatCast");
+                        report(callExpr->location,
+                               "cannot cast to non-numeric type '" + expectedType.to_str() + "' using @floatCast");
                         return false;
                     }
                 }

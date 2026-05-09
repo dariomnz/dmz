@@ -1,12 +1,12 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
 fn main() -> void {
-    // CHECK: [[# @LINE + 1 ]]:5: error: This is a compile-time error message.
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'This is a compile-time error message.'
     @compileError("This is a compile-time error message.");
 }
 
 fn foo() -> void {
     let x = 1 + 2;
-    // CHECK: [[# @LINE + 1 ]]:5: error: This is a test error.
+    // CHECK: [[# @LINE + 1 ]]:5: error: 'This is a test error.'
     @compileError("This is a test error.");
 }

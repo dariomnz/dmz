@@ -447,7 +447,7 @@ struct CallExpr : public Expr {
     std::string to_str() const override;
     DMZ_TYPE_NAME();
 };
- 
+
 struct ComptimeExpr : public Expr {
     ptr<Expr> expr;
     ComptimeExpr(SourceLocation location, ptr<Expr> expr) : Expr(location), expr(std::move(expr)) {}
@@ -577,13 +577,15 @@ struct DerefPtrExpr : public AssignableExpr {
 struct ParamDecl : public Decl {
     ptr<Expr> type;
     bool isMutable;
+    bool isComptime = false;
     bool isVararg = false;
 
     ParamDecl(SourceLocation location, std::string_view identifier, ptr<Expr> type, bool isMutable,
-              bool isVararg = false)
+              bool isComptime = false, bool isVararg = false)
         : Decl(location, true, std::move(identifier)),
           type(std::move(type)),
           isMutable(isMutable),
+          isComptime(isComptime),
           isVararg(isVararg) {}
 
     void dump(size_t level = 0) const override;

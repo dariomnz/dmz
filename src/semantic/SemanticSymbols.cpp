@@ -138,6 +138,9 @@ void ResolvedBlock::dump(size_t level, bool onlySelf) const {
 
 void ResolvedParamDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedParamDecl:";
+    if (isComptime) {
+        std::cerr << "comptime ";
+    }
     if (isVararg) {
         std::cerr << "vararg";
     } else {

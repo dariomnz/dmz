@@ -164,6 +164,25 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
         }
     }
 
+    for (size_t i = 0; i < funcDecl.params.size(); i++) {
+        if (funcDecl.params[i]->isComptime) {
+            if (i >= arguments.size()) {
+                return report(location,
+                              "missing argument for comptime parameter '" + funcDecl.params[i]->identifier + "'");
+            }
+            auto val = arguments[i]->get_constant_value();
+            if (!val) {
+                if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+                    return report(arguments[i]->location, "argument for comptime parameter '" +
+                                                              funcDecl.params[i]->identifier +
+                                                              "' must be a compile-time constant");
+                }
+            }
+            specializedTypes.emplace_back(makePtr<ResolvedTypeComptimeValue>(
+                arguments[i]->location, makePtr<ComptimeValue>(val.value_or(ComptimeValue()))));
+        }
+    }
+
     return makePtr<ResolvedTypeSpecialized>(location, std::move(specializedTypes));
 }
 
@@ -261,7 +280,7 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         return report(call.location, "calling non-function symbol");
     }
 
-    bool errGeneric = false;
+    bool errGeneric = fnType->is_generic();
     errGeneric |= fnType->returnType->is_generic();
     for (auto &&param : fnType->paramsTypes) {
         if (errGeneric) break;
@@ -392,7 +411,9 @@ ptr<ResolvedComptimeExpr> Sema::resolve_comptime_expr(const ComptimeExpr &compti
     resolvedComptimeExpr->set_constant_value(cee.evaluate(*resolvedComptimeExpr, true));
 
     if (!resolvedComptimeExpr->get_constant_value().has_value()) {
-        return report(comptimeExpr.location, "expression cannot be evaluated at compile time");
+        if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+            return report(comptimeExpr.location, "expression cannot be evaluated at compile time");
+        }
     }
 
     return resolvedComptimeExpr;
@@ -1158,7 +1179,8 @@ ptr<ResolvedExpr> Sema::resolve_array_instantiation(const ArrayInstantiationExpr
         }
     }
     if (type->kind != ResolvedTypeKind::DefaultInit) {
-        type = makePtr<ResolvedTypeArray>(SourceLocation{}, std::move(type), arrayInstantiation.initializers.size());
+        type = makePtr<ResolvedTypeArray>(SourceLocation{}, std::move(type), nullptr,
+                                          arrayInstantiation.initializers.size());
     }
     return makePtr<ResolvedArrayInstantiationExpr>(arrayInstantiation.location, std::move(type),
                                                    std::move(resolvedinitializers));

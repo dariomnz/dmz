@@ -29,12 +29,14 @@ enum class ResolvedTypeKind {
     Function,
     VarArg,
     DefaultInit,
+    ComptimeValue,
 };
 
 struct ResolvedType {
     ResolvedTypeKind kind;
     SourceLocation location;
-    ResolvedType(ResolvedTypeKind kind, SourceLocation location) : kind(kind), location(std::move(location)) {};
+
+    ResolvedType(ResolvedTypeKind kind, SourceLocation location) : kind(kind), location(std::move(location)) {}
     virtual ~ResolvedType() = default;
 
     virtual bool equal(const ResolvedType &other) const = 0;
@@ -317,13 +319,17 @@ struct ResolvedTypeRange : public ResolvedType {
     DMZ_TYPE_NAME();
 };
 
+struct ResolvedExpr;  // Forward declaration
 struct ResolvedTypeArray : public ResolvedType {
     ptr<ResolvedType> arrayType;
+    ptr<ResolvedExpr> arraySizeExpr;
     int arraySize;
-    ResolvedTypeArray(SourceLocation location, ptr<ResolvedType> arrayType, int arraySize)
+    ResolvedTypeArray(SourceLocation location, ptr<ResolvedType> arrayType, ptr<ResolvedExpr> arraySizeType,
+                      int arraySize)
         : ResolvedType(ResolvedTypeKind::Array, std::move(location)),
           arrayType(std::move(arrayType)),
-          arraySize(std::move(arraySize)) {}
+          arraySizeExpr(std::move(arraySizeType)),
+          arraySize(arraySize) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -334,7 +340,6 @@ struct ResolvedTypeArray : public ResolvedType {
     bool is_generic() const override;
 };
 
-struct ResolvedExpr;  // Forward declaration
 struct ResolvedTypeSimd : public ResolvedType {
     ptr<ResolvedType> simdType;
     ptr<ResolvedExpr> simdSizeExpr;
@@ -393,6 +398,20 @@ struct ResolvedTypeVarArg : public ResolvedType {
 struct ResolvedTypeDefaultInit : public ResolvedType {
     ResolvedTypeDefaultInit(SourceLocation location)
         : ResolvedType(ResolvedTypeKind::DefaultInit, std::move(location)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
+struct ComptimeValue;  // Forward declaration
+struct ResolvedTypeComptimeValue : public ResolvedType {
+    ptr<ComptimeValue> value;
+    ResolvedTypeComptimeValue(SourceLocation location, ptr<ComptimeValue> value)
+        : ResolvedType(ResolvedTypeKind::ComptimeValue, std::move(location)), value(std::move(value)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

@@ -52,7 +52,12 @@ llvm::FunctionType *Codegen::generate_function_type(const ResolvedTypeFunction &
     }
 
     bool isVararg = false;
-    for (auto &&param : fnType.paramsTypes) {
+    const ResolvedFuncDecl *fd = fnType.fnDecl;
+    for (size_t i = 0; i < fnType.paramsTypes.size(); i++) {
+        if (fd && i < fd->params.size() && fd->params[i]->isComptime) {
+            continue;
+        }
+        auto &&param = fnType.paramsTypes[i];
         if (param->kind == ResolvedTypeKind::VarArg) {
             isVararg = true;
             continue;
@@ -103,7 +108,11 @@ llvm::AttributeList Codegen::construct_attr_list(const ResolvedTypeFunction &fnT
         argsAttrSets.emplace_back(llvm::AttributeSet::get(*m_context, retAttrs));
     }
 
-    for (auto &&param : fnType.paramsTypes) {
+    for (size_t i = 0; i < fnType.paramsTypes.size(); i++) {
+        if (fnType.fnDecl && i < fnType.fnDecl->params.size() && fnType.fnDecl->params[i]->isComptime) {
+            continue;
+        }
+        auto &&param = fnType.paramsTypes[i];
         debug_msg("Param: " << param->to_str());
         llvm::AttrBuilder paramAttrs(*m_context);
         if (auto typePrt = dynamic_cast<ResolvedTypePointer *>(param.get())) {
@@ -182,7 +191,6 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         retVal = allocate_stack_variable(functionDecl.location, "retval", *fnType->returnType);
     }
     retBB = llvm::BasicBlock::Create(*m_context, "return");
-
     int idx = 0;
     for (auto &&arg : function->args()) {
         if (arg.hasStructRetAttr()) {
@@ -199,6 +207,10 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         }
 
         const auto *paramDecl = functionDecl.params[idx].get();
+        if (paramDecl->isComptime) {
+            ++idx;
+            continue;
+        }
         // arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;

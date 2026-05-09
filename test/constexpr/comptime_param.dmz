@@ -1,0 +1,74 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn add_comptime(comptime a: i32, b: i32, comptime c: i32) -> i32 {
+    return comptime add(a, c) + b;
+}
+
+// CHECK:     ResolvedSpecializedFunctionDecl add_comptime<comptime(11), comptime(30)> fn(i32, i32, i32)->i32
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 a
+// CHECK-NEXT:       ResolvedParamDecl:i32 b
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 c
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:             ResolvedComptimeExpr:i32
+// CHECK-NEXT:             | value: 41
+// CHECK-NEXT:               ResolvedCallExpr:i32
+// CHECK-NEXT:                 ResolvedDeclRefExpr:fn(i32, i32)->i32 add
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:                 | value: 11
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 c
+// CHECK-NEXT:                 | value: 30
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 b
+// CHECK:     ResolvedSpecializedFunctionDecl add_comptime<comptime(20), comptime(20)> fn(i32, i32, i32)->i32
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 a
+// CHECK-NEXT:       ResolvedParamDecl:i32 b
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 c
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:             ResolvedComptimeExpr:i32
+// CHECK-NEXT:             | value: 40
+// CHECK-NEXT:               ResolvedCallExpr:i32
+// CHECK-NEXT:                 ResolvedDeclRefExpr:fn(i32, i32)->i32 add
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 a
+// CHECK-NEXT:                 | value: 20
+// CHECK-NEXT:                 ResolvedDeclRefExpr:i32 c
+// CHECK-NEXT:                 | value: 20
+// CHECK-NEXT:             ResolvedDeclRefExpr:i32 b
+
+fn array_of_size(comptime n: i32) -> [n]i32 {
+    let arr: [n]i32 = {};
+    return arr;
+}
+
+// CHECK:     ResolvedSpecializedFunctionDecl array_of_size<comptime(5)> fn(i32)->[5]i32
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 n
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedDeclStmt [5]i32
+// CHECK-NEXT:           ResolvedVarDecl:[5]i32 arr
+// CHECK-NEXT:             ResolvedArrayInstantiationExpr:{}
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedDeclRefExpr:[5]i32 arr
+// CHECK:     ResolvedSpecializedFunctionDecl array_of_size<comptime(10)> fn(i32)->[10]i32
+// CHECK-NEXT:       ResolvedParamDecl:comptime i32 n
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedDeclStmt [10]i32
+// CHECK-NEXT:           ResolvedVarDecl:[10]i32 arr
+// CHECK-NEXT:             ResolvedArrayInstantiationExpr:{}
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedDeclRefExpr:[10]i32 arr
+fn main() -> void {
+    const a = 1;
+    const x = add_comptime(a + 10, 20, 30);
+
+    const y = add_comptime(20, 20, 20);
+
+    const arr1 = array_of_size(5);
+
+    const arr2 = array_of_size(10);
+}

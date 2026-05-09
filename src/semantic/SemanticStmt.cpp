@@ -109,7 +109,7 @@ ptr<ResolvedBlock> Sema::resolve_block(const Block &block) {
         if (error) continue;
 
         if (reportUnreachableCount == 1) {
-            report(stmt->location, "unreachable statement", true);
+            report(stmt->location, "unreachable statement", ReportLevel::Warning);
             ++reportUnreachableCount;
         }
 
@@ -139,7 +139,9 @@ ptr<ResolvedIfStmt> Sema::resolve_if_stmt(const IfStmt &ifStmt) {
 
     condition->set_constant_value(cee.evaluate(*condition, false));
     if (ifStmt.isInline && !condition->get_constant_value()) {
-        return report(condition->location, "inline if condition must be a constant value");
+        if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+            return report(condition->location, "inline if condition must be a constant value");
+        }
     }
 
     ptr<ResolvedBlock> resolvedTrueBlock;
@@ -594,7 +596,9 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
 
     condition->set_constant_value(cee.evaluate(*condition, false));
     if (switchStmt.isInline && !condition->get_constant_value()) {
-        return report(condition->location, "inline switch condition must be a constant value");
+        if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+            return report(condition->location, "inline switch condition must be a constant value");
+        }
     }
 
     bool caseMatched = false;
@@ -612,7 +616,9 @@ ptr<ResolvedSwitchStmt> Sema::resolve_switch_stmt(const SwitchStmt &switchStmt) 
             }
             tempCond->set_constant_value(cee.evaluate(*tempCond, false));
             if (!tempCond->get_constant_value()) {
-                return report(tempCond->location, "condition in case must be a constant value");
+                if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+                    return report(tempCond->location, "condition in case must be a constant value");
+                }
             }
             if (switchStmt.isInline && tempCond->get_constant_value() == condition->get_constant_value()) {
                 caseMatchedInInline = true;
@@ -664,7 +670,9 @@ ptr<ResolvedCaseStmt> Sema::resolve_case_stmt(const CaseStmt &caseStmt, std::opt
         varOrReturn(resolvedCond, resolve_expr(*cond));
         resolvedCond->set_constant_value(cee.evaluate(*resolvedCond, false));
         if (!resolvedCond->get_constant_value()) {
-            return report(resolvedCond->location, "condition in case must be a constant value");
+            if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+                return report(resolvedCond->location, "condition in case must be a constant value");
+            }
         }
         if (isInline && resolvedCond->get_constant_value() == constant_value) {
             caseMatchedInInline = true;

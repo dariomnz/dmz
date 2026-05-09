@@ -729,7 +729,19 @@ bool ResolvedTypeArray::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeArray::clone() const {
     debug_func("ResolvedTypeArray " << location);
-    return makePtr<ResolvedTypeArray>(location, arrayType->clone(), arraySize);
+    if (!arraySizeExpr) {
+        return makePtr<ResolvedTypeArray>(location, arrayType->clone(), nullptr, arraySize);
+    } else if (auto sizeExpr = dynamic_cast<const ResolvedDeclRefExpr *>(arraySizeExpr.get())) {
+        return makePtr<ResolvedTypeArray>(location, arrayType->clone(),
+                                          makePtr<ResolvedDeclRefExpr>(sizeExpr->location, sizeExpr->identifier,
+                                                                       sizeExpr->decl, sizeExpr->type->clone()),
+                                          arraySize);
+    } else if (auto sizeExpr = dynamic_cast<const ResolvedIntLiteral *>(arraySizeExpr.get())) {
+        return makePtr<ResolvedTypeArray>(location, arrayType->clone(),
+                                          makePtr<ResolvedIntLiteral>(sizeExpr->location, sizeExpr->value), arraySize);
+    } else {
+        dmz_unreachable(location, "TODO");
+    }
 }
 
 void ResolvedTypeArray::dump(size_t level) const {
@@ -738,7 +750,10 @@ void ResolvedTypeArray::dump(size_t level) const {
 
 std::string ResolvedTypeArray::to_str() const { return "[" + std::to_string(arraySize) + "]" + arrayType->to_str(); }
 
-bool ResolvedTypeArray::is_generic() const { return debug_ret(arrayType->is_generic()); }
+bool ResolvedTypeArray::is_generic() const {
+    if (arrayType->is_generic()) return true;
+    return arraySize == 0 && arraySizeExpr != nullptr;
+}
 
 bool ResolvedTypeSimd::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
@@ -916,4 +931,24 @@ void ResolvedTypeDefaultInit::dump(size_t level) const {
 }
 
 std::string ResolvedTypeDefaultInit::to_str() const { return "{}"; }
+
+bool ResolvedTypeComptimeValue::equal(const ResolvedType &other) const {
+    if (auto otherVal = dynamic_cast<const ResolvedTypeComptimeValue *>(&other)) {
+        return *value == *otherVal->value;
+    }
+    return false;
+}
+
+bool ResolvedTypeComptimeValue::compare(const ResolvedType &other) const { return equal(other); }
+
+ptr<ResolvedType> ResolvedTypeComptimeValue::clone() const {
+    return makePtr<ResolvedTypeComptimeValue>(location, makePtr<ComptimeValue>(*value));
+}
+
+void ResolvedTypeComptimeValue::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeComptimeValue " << to_str() << "\n";
+}
+
+std::string ResolvedTypeComptimeValue::to_str() const { return "comptime(" + value->to_str() + ")"; }
+
 }  // namespace DMZ

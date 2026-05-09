@@ -58,23 +58,40 @@ std::string get_file_line(const std::string& file_name, size_t line_num) {
     throw std::runtime_error(error_msg);
 }
 
-std::nullptr_t report(SourceLocation loc, std::string_view message, bool isWarning) {
+std::nullptr_t report(SourceLocation loc, std::string_view message, ReportLevel level) {
     static std::mutex reportMutex;
     std::unique_lock lock(reportMutex);
 
     bool is_terminal = isatty(STDERR_FILENO);
     const char* red = is_terminal ? "\033[1;31m" : "";
+    const char* green = is_terminal ? "\033[1;32m" : "";
     const char* yellow = is_terminal ? "\033[1;33m" : "";
+    const char* blue = is_terminal ? "\033[1;34m" : "";
     const char* reset = is_terminal ? "\033[0m" : "";
     const char* bold = is_terminal ? "\033[1m" : "";
+    const char* level_color;
+    const char* level_str;
 
     std::cerr << bold << loc << ":" << reset;
-    if (isWarning) {
-        std::cerr << yellow << " warning: " << reset;
-    } else {
-        std::cerr << red << " error: " << reset;
+    switch (level) {
+        case ReportLevel::Error:
+            level_color = red;
+            level_str = " error: ";
+            break;
+        case ReportLevel::Warning:
+            level_color = yellow;
+            level_str = " warning: ";
+            break;
+        case ReportLevel::Info:
+            level_color = green;
+            level_str = " info: ";
+            break;
+        case ReportLevel::Debug:
+            level_color = blue;
+            level_str = " debug: ";
+            break;
     }
-    std::cerr << bold << message << reset << '\n';
+    std::cerr << level_color << bold << level_str << reset << bold << message << reset << '\n';
 
     std::string line = get_file_line(loc.file_name, loc.line);
     if (!line.empty()) {
@@ -85,7 +102,7 @@ std::nullptr_t report(SourceLocation loc, std::string_view message, bool isWarni
                 (loc.col < line.size()) ? line.substr(loc.col, std::min(loc.len, line.size() - loc.col)) : "";
             std::string after =
                 (loc.col + error_part.size() < line.size()) ? line.substr(loc.col + error_part.size()) : "";
-            std::cerr << before << (isWarning ? yellow : red) << bold << error_part << reset << after << '\n';
+            std::cerr << before << level_color << bold << error_part << reset << after << '\n';
         } else {
             std::cerr << line << '\n';
         }
@@ -97,7 +114,7 @@ std::nullptr_t report(SourceLocation loc, std::string_view message, bool isWarni
             else
                 std::cerr << ' ';
         }
-        std::cerr << (isWarning ? yellow : red) << bold;
+        std::cerr << level_color << bold;
         for (size_t i = 0; i < loc.len; ++i) {
             std::cerr << '^';
         }

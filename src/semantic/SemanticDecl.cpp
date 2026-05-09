@@ -10,9 +10,9 @@
 #include "Utils.hpp"
 #include "driver/Driver.hpp"
 #include "parser/Parser.hpp"
+#include "semantic/ComptimeValue.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbolsTypes.hpp"
-#include "semantic/ComptimeValue.hpp"
 
 namespace DMZ {
 
@@ -32,7 +32,7 @@ ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
         }
     }
     return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(typeExpr), param.isMutable,
-                                      param.isVararg);
+                                      param.isComptime, param.isVararg);
 }
 
 ptr<ResolvedGenericTypeDecl> Sema::resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl) {
@@ -109,28 +109,66 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     std::optional<ScopeRAII> genericFunctionScope = std::nullopt;
     ptr<ResolvedScope> takenGenericScope = nullptr;
     std::vector<ptr<ResolvedGenericTypeDecl>> resolvedGenericTypeDecl;
-    if (auto func = dynamic_cast<const GenericFunctionDecl *>(&function)) {
+    bool hasComptimeParamAST = false;
+    for (auto &&p : function.params) {
+        if (p->isComptime) {
+            hasComptimeParamAST = true;
+            break;
+        }
+    }
+
+    if (dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST) {
         genericFunctionScope.emplace(*this);
         takenGenericScope = genericFunctionScope->takeScope();
-        if (func->genericTypes.size() != 0) {
-            resolvedGenericTypeDecl = resolve_generic_types_decl(func->genericTypes);
-            if (resolvedGenericTypeDecl.size() == 0) return nullptr;
+        if (auto func = dynamic_cast<const GenericFunctionDecl *>(&function)) {
+            if (func->genericTypes.size() != 0) {
+                resolvedGenericTypeDecl = resolve_generic_types_decl(func->genericTypes);
+                if (resolvedGenericTypeDecl.size() == 0) return nullptr;
+            }
         }
     }
 
     ScopeRAII functionScope(*this);
     auto takenScope = functionScope.takeScope();
 
+    std::vector<ptr<ResolvedParamDecl>> resolvedParams;
+    std::vector<ptr<ResolvedType>> resolvedParamsTypes;
+
+    bool haveVararg = false;
+    for (auto &&param : function.params) {
+        if (haveVararg) {
+            report(param->location, "vararg '...' can only be in the last argument");
+            return nullptr;
+        }
+
+        auto resolvedParam = resolve_param_decl(*param);
+        if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam)) return nullptr;
+
+        if (resolvedParam->isVararg) {
+            haveVararg = true;
+        }
+        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
+        resolvedParams.emplace_back(std::move(resolvedParam));
+    }
+
     auto returnType = resolve_type(*function.type);
 
-    if (!returnType)
-        return report(function.location, "function '" + function.identifier + "' has invalid '" +
-                                             function.type->to_str() + "' return type");
+    if (!returnType) {
+        if (dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST) {
+            returnType = makePtr<ResolvedTypeGeneric>(function.location, nullptr);
+        } else {
+            return report(function.location, "function '" + function.identifier + "' has invalid '" +
+                                                 function.type->to_str() + "' return type");
+        }
+    }
 
     auto resolvedReturnTypeExpr = resolve_expr(*function.type, true);
-    if (!resolvedReturnTypeExpr)
-        return report(function.location, "function '" + function.identifier + "' has invalid '" +
-                                             function.type->to_str() + "' return type");
+    if (!resolvedReturnTypeExpr) {
+        if (!(dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST)) {
+            return report(function.location, "function '" + function.identifier + "' has invalid '" +
+                                                 function.type->to_str() + "' return type");
+        }
+    }
 
     debug_msg("returnType: " << returnType->className() << " " << returnType->to_str());
 
@@ -142,24 +180,12 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             return report(function.location, "'main' function is expected to take no arguments");
     }
 
-    std::vector<ptr<ResolvedParamDecl>> resolvedParams;
-    std::vector<ptr<ResolvedType>> resolvedParamsTypes;
-
-    bool haveVararg = false;
-    for (auto &&param : function.params) {
-        auto resolvedParam = resolve_param_decl(*param);
-        if (haveVararg) {
-            report(resolvedParam->location, "vararg '...' can only be in the last argument");
-            return nullptr;
+    bool hasComptimeParam = false;
+    for (auto &&param : resolvedParams) {
+        if (param->isComptime) {
+            hasComptimeParam = true;
+            break;
         }
-
-        if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam)) return nullptr;
-
-        if (resolvedParam->isVararg) {
-            haveVararg = true;
-        }
-        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
-        resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
     auto fnType = makePtr<ResolvedTypeFunction>(function.location, nullptr, std::move(resolvedParamsTypes),
@@ -181,7 +207,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         }
-        if (resolvedGenericTypeDecl.size() != 0) {
+        if (resolvedGenericTypeDecl.size() != 0 || hasComptimeParam) {
             auto ret = makePtr<ResolvedGenericFunctionDecl>(
                 function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
                 std::move(resolvedReturnTypeExpr), std::move(takenScope), std::move(takenGenericScope), functionDecl,
@@ -210,9 +236,14 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
                                                                    ResolvedGenericFunctionDecl &funcDecl,
                                                                    const ResolvedTypeSpecialized &genericTypes) {
     debug_func(funcDecl.location);
-    if (funcDecl.genericTypeDecls.size() != genericTypes.specializedTypes.size()) {
+    size_t numComptime = 0;
+    for (auto &&p : funcDecl.params) {
+        if (p->isComptime) numComptime++;
+    }
+
+    if (funcDecl.genericTypeDecls.size() + numComptime != genericTypes.specializedTypes.size()) {
         return report(location, "unexpected number of specializations, expected " +
-                                    std::to_string(funcDecl.genericTypeDecls.size()) + " actual " +
+                                    std::to_string(funcDecl.genericTypeDecls.size() + numComptime) + " actual " +
                                     std::to_string(genericTypes.specializedTypes.size()));
     }
     for (auto &gt : genericTypes.specializedTypes) {
@@ -253,31 +284,46 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     ScopeRAII functionScope(*this);
     auto takenScope = functionScope.takeScope();
 
-    auto returnType = resolve_type(*funcDecl.functionDecl->type);
-
-    if (!returnType)
-        return report(funcDecl.location, "function '" + funcDecl.identifier + "' has invalid '" +
-                                             funcDecl.type->to_str() + "' return type");
-
     std::vector<ptr<ResolvedParamDecl>> resolvedParams;
     std::vector<ptr<ResolvedType>> resolvedParamsTypes;
 
     bool haveVararg = false;
+    size_t specIdx = funcDecl.genericTypeDecls.size();
     for (auto &&param : funcDecl.functionDecl->params) {
         auto resolvedParam = resolve_param_decl(*param);
+        if (!resolvedParam) return nullptr;
+
+        if (resolvedParam->isComptime) {
+            if (specIdx >= genericTypes.specializedTypes.size()) {
+                dmz_unreachable(funcDecl.location, "missing specialized comptime value");
+            }
+            auto comptimeType =
+                dynamic_cast<const ResolvedTypeComptimeValue *>(genericTypes.specializedTypes[specIdx++].get());
+            if (!comptimeType) {
+                dmz_unreachable(funcDecl.location, "expected comptime value in specialized types");
+            }
+            resolvedParam->set_constant_value(*comptimeType->value);
+        }
+        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
+
         if (haveVararg) {
             report(resolvedParam->location, "vararg '...' can only be in the last argument");
             return nullptr;
         }
 
-        if (!resolvedParam || !insert_decl_to_current_scope(*resolvedParam)) return nullptr;
+        if (!insert_decl_to_current_scope(*resolvedParam)) return nullptr;
 
         if (resolvedParam->isVararg) {
             haveVararg = true;
         }
-        resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
+
+    auto returnType = resolve_type(*funcDecl.functionDecl->type);
+
+    if (!returnType)
+        return report(funcDecl.location, "function '" + funcDecl.identifier + "' has invalid '" +
+                                             funcDecl.type->to_str() + "' return type");
 
     auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, nullptr, std::move(resolvedParamsTypes),
                                                 std::move(returnType));

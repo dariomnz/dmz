@@ -169,10 +169,15 @@ llvm::Value *Codegen::generate_call_expr(const ResolvedCallExpr &call) {
     }
 
     bool isVarArg = false;
+    const ResolvedFuncDecl *calleeDecl = fnType->fnDecl;
     for (size_t i = 0; i < call.arguments.size(); i++) {
+        if (calleeDecl && i < calleeDecl->params.size() && calleeDecl->params[i]->isComptime) {
+            continue;
+        }
+
         auto argExpr = generate_expr(*call.arguments[i], call.arguments[i]->type->generate_struct());
         // Only cast if is not vararg
-        if (!isVarArg && fnType->paramsTypes[i]->kind != ResolvedTypeKind::VarArg) {
+        if (!isVarArg && i < fnType->paramsTypes.size() && fnType->paramsTypes[i]->kind != ResolvedTypeKind::VarArg) {
             argExpr = cast_to(argExpr, *call.arguments[i]->type, *fnType->paramsTypes[i]);
         } else {
             isVarArg = true;
@@ -528,7 +533,7 @@ llvm::Value *Codegen::generate_decl_ref_expr(const ResolvedDeclRefExpr &dre, boo
     } else {
         val = m_declarations[&dre.decl];
         if (!val) {
-            dmz_unreachable(dre.decl.location, "not in declarations");
+            dmz_unreachable(dre.location, "'" + dre.decl.name() + "' not in declarations");
         }
     }
 

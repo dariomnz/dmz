@@ -279,7 +279,7 @@ std::vector<ptr<ResolvedModuleDecl>> Driver::semantic_pass(ptr<ModuleDecl> ast) 
                         if (!fn) continue;
 
                         std::cerr << fn->identifier << ':' << '\n';
-                        CFGBuilder().build(*fn->body).dump();
+                        CFGBuilder(&sema).build(*fn->body).dump();
                     }
                 }
             }

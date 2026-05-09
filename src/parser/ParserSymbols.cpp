@@ -186,6 +186,9 @@ std::string CallExpr::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl:";
+    if (isComptime) {
+        std::cerr << "comptime ";
+    }
     if (isVararg) {
         std::cerr << "vararg";
     } else {

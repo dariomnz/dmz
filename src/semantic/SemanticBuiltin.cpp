@@ -7,9 +7,9 @@
 #include "Utils.hpp"
 #include "codegen/CodegenUtils.hpp"
 #include "parser/ParserSymbols.hpp"
+#include "semantic/ComptimeValue.hpp"
 #include "semantic/Semantic.hpp"
 #include "semantic/SemanticSymbols.hpp"
-#include "semantic/ComptimeValue.hpp"
 
 // #define DEBUG_SCOPES
 // #ifdef DEBUG
@@ -273,17 +273,26 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
-    } else if (fnName == "@compileError") {
+    } else if (fnName == "@compileError" || fnName == "@compileLog") {
         auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);  // Placeholder for return type
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "message", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "message", makePtr<ResolvedTypeExpr>(loc, makePtr<ResolvedTypeVarArg>(loc)), false, true));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         auto fnType =
             makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeVoid>(loc));
-        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
-        it->second = &funcDecl;
-        return &funcDecl;
+        if (fnName == "@compileError") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+            debug_msg("created @compileError");
+            return &funcDecl;
+        } else if (fnName == "@compileLog") {
+            static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+            it->second = &funcDecl;
+            debug_msg("created @compileLog");
+            return &funcDecl;
+        }
     } else if (fnName == "@asm") {
         auto stringPtr = makePtr<ResolvedTypePointer>(loc, ResolvedTypeNumber::u8(loc));
         std::vector<ptr<ResolvedParamDecl>> params;
@@ -799,16 +808,49 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              call.type->clone());
     } else if (resolvedCallee.identifier == "@compileError") {
-        // @compileError("message")
-        if (resolvedArguments.size() != 1) {
-            return report(call.location, "@compileError expects exactly one argument.");
+        // @compileError(...) all args need to be comptime values
+        if (resolvedArguments.size() == 0) {
+            return report(call.location, "@compileError expects at least one argument.");
         }
-        auto &msgArg = resolvedArguments[0];
-        if (auto *strLit = dynamic_cast<ResolvedStringLiteral *>(msgArg.get())) {
-            return report(call.location, strLit->value);
-        } else {
-            return report(msgArg->location, "@compileError expects a string literal argument.");
+        std::stringstream errorMsg;
+        for (auto &arg : resolvedArguments) {
+            if (auto comptimeVal = arg->get_constant_value()) {
+                errorMsg << comptimeVal.value() << " ";
+            } else {
+                if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+                    return report(arg->location, "@compileError expects all arguments to be comptime values");
+                }
+            }
         }
+        if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+            return report(call.location, errorMsg.str(), ReportLevel::Error);
+        }
+        if (resolvedCallee.type->kind != ResolvedTypeKind::Function) {
+            dmz_unreachable(call.location, "@compileError expects a function type");
+        }
+        return castPtr<ResolvedTypeFunction>(resolvedCallee.type->clone());
+    } else if (resolvedCallee.identifier == "@compileLog") {
+        // @compileLog(...) all args need to be comptime values
+        if (resolvedArguments.size() == 0) {
+            return report(call.location, "@compileLog expects at least one argument.");
+        }
+        std::stringstream errorMsg;
+        for (auto &arg : resolvedArguments) {
+            if (auto comptimeVal = arg->get_constant_value()) {
+                errorMsg << comptimeVal.value() << " ";
+            } else {
+                if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+                    return report(arg->location, "@compileLog expects all arguments to be comptime values");
+                }
+            }
+        }
+        if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
+            report(call.location, errorMsg.str(), ReportLevel::Info);
+        }
+        if (resolvedCallee.type->kind != ResolvedTypeKind::Function) {
+            dmz_unreachable(call.location, "@compileLog expects a function type");
+        }
+        return castPtr<ResolvedTypeFunction>(resolvedCallee.type->clone());
     } else if (resolvedCallee.identifier == "@asm") {
         if (resolvedArguments.size() < 2)
             return report(call.location, "@asm expects at least 2 arguments: (AsmCode, Constraints, ...Args)");

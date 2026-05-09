@@ -81,8 +81,8 @@ class Sema {
         {"@typeinfo", nullptr},     {"@hasMethod", nullptr},    {"@simdSize", nullptr},    {"@simdSplat", nullptr},
         {"@simdIota", nullptr},     {"@errorTrace", nullptr},   {"@testNum", nullptr},     {"@testRun", nullptr},
         {"@testName", nullptr},     {"@simdLoad", nullptr},     {"@simdStore", nullptr},   {"@simdSelect", nullptr},
-        {"@simdReduce", nullptr},   {"@compileError", nullptr}, {"@asm", nullptr},         {"@ptrCast", nullptr},
-        {"@intCast", nullptr},      {"@floatCast", nullptr},
+        {"@simdReduce", nullptr},   {"@compileError", nullptr}, {"@compileLog", nullptr},  {"@asm", nullptr},
+        {"@ptrCast", nullptr},      {"@intCast", nullptr},      {"@floatCast", nullptr},
     };
 
    public:
@@ -94,6 +94,8 @@ class Sema {
     void queue_module(ptr<ModuleDecl> ast, std::filesystem::path sourcePath);
 
     vec<ptr<ResolvedModuleDecl>> take_resolved_modules() { return std::move(m_lazy_modules); }
+
+    ResolvedFuncDecl *getCurrentFunction() const { return m_currentFunction; }
 
    private:
     std::string resolve_decl_name(std::string_view identifier);

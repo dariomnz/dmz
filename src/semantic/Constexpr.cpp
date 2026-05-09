@@ -59,6 +59,21 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
                 return ComptimeValue((int64_t)field->index);
             }
         }
+
+        if (memberExpr->member.identifier == "len") {
+            auto baseVal = evaluate(*memberExpr->base, allowSideEffects);
+            if (baseVal && baseVal->isArray()) {
+                return ComptimeValue((int64_t)baseVal->getArray().elements.size());
+            } else if (baseVal && baseVal->isString()) {
+                return ComptimeValue((int64_t)baseVal->getString().size());
+            }
+        }
+        if (memberExpr->member.identifier == "ptr") {
+            auto baseVal = evaluate(*memberExpr->base, allowSideEffects);
+            if (baseVal && baseVal->isString()) {
+                return baseVal;
+            }
+        }
         return evaluate_decl(memberExpr->member, allowSideEffects);
     }
     if (const auto *callExpr = dynamic_cast<const ResolvedCallExpr *>(&expr)) {
@@ -345,13 +360,22 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_binary_operat
             dmz_unreachable(binop.location, "unexpected binary operator");
     }
 }
+bool ConstantExpressionEvaluator::should_report_error() const {
+    if (!m_sema) return true;
+    if (m_sema->getCurrentFunction() && dynamic_cast<ResolvedGenericFunctionDecl *>(m_sema->getCurrentFunction())) {
+        return false;
+    }
+    return true;
+}
 
 std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_decl_ref_expr(const ResolvedDeclRefExpr &dre,
                                                                                  bool allowSideEffects) {
     debug_func(dre.location << " " << dre.decl.identifier << " allowSideEffects: " << allowSideEffects);
     auto res = evaluate_decl(dre.decl, allowSideEffects);
     if (!res && allowSideEffects) {
-        report(dre.location, "declaration '" + dre.decl.identifier + "' cannot be evaluated at compile time");
+        if (should_report_error()) {
+            report(dre.location, "declaration '" + dre.decl.identifier + "' cannot be evaluated at compile time");
+        }
     }
     return res;
 }
@@ -387,9 +411,12 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_decl(const Re
         return val;
     } else if (const auto *field = dynamic_cast<const ResolvedFieldDecl *>(&decl)) {
         return field->get_constant_value();
+    } else if (const auto *param = dynamic_cast<const ResolvedParamDecl *>(&decl)) {
+        return param->get_constant_value();
     }
 
-    if (allowSideEffects) report(decl.location, "cannot evaluate declaration at compile time: " + decl.identifier);
+    if (allowSideEffects && should_report_error())
+        report(decl.location, "cannot evaluate declaration at compile time: " + decl.identifier);
     return std::nullopt;
 }
 

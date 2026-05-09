@@ -1,0 +1,40 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn strCount(str: []u8, c: u8) -> i32 {
+    let count = 0;
+    for (0..str.len) |i| {
+        if (str[i] == c) {
+            if (i+1 < str.len && str[i+1] == c) continue;
+            count++;
+        } 
+    }
+    return count;
+}
+
+fn checkFmt(fmtStr: []u8) -> bool {
+    const specCount = strCount(fmtStr, '{');
+    const closeCount = strCount(fmtStr, '}');
+    return specCount == closeCount;
+}
+
+fn print(comptime fmtStr: []u8) -> void {
+    // @compileLog(fmtStr);
+    inline if (comptime !checkFmt(fmtStr)) {
+        @compileError("Invalid format string:", fmtStr);
+    }
+    const fmt = fmtStr;
+    printf("%.*s\n", fmt.len, fmt.ptr);
+}
+
+extern fn printf(fmt:*u8,...)->i32;
+
+fn main() -> void {
+    print("{}");
+    print("Hello, world!\n");
+    print("{}{}");
+    print("{{}}");
+    print("{{");
+    // CHECK: 23:9: error: 'Invalid format string:' '{'
+    print("{");
+    // CHECK: 23:9: error: 'Invalid format string:' '{'
+}

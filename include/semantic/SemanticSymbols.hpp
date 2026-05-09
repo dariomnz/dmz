@@ -252,12 +252,14 @@ struct ResolvedSwitchStmt : public ResolvedStmt {
 
 struct ResolvedParamDecl : public ResolvedDecl {
     bool isVararg = false;
+    bool isComptime = false;
     ptr<ResolvedTypeExpr> resolvedTypeExpr;
 
     ResolvedParamDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedTypeExpr> typeExpr,
-                      bool isMutable, bool isVararg = false)
+                      bool isMutable, bool isComptime = false, bool isVararg = false)
         : ResolvedDecl(location, std::move(identifier), typeExpr->resolvedType->clone(), isMutable, false),
           isVararg(isVararg),
+          isComptime(isComptime),
           resolvedTypeExpr(std::move(typeExpr)) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
@@ -669,7 +671,7 @@ struct ResolvedCallExpr : public ResolvedExpr {
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
 };
- 
+
 struct ResolvedComptimeExpr : public ResolvedExpr {
     ptr<ResolvedExpr> expr;
 

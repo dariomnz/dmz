@@ -40,6 +40,6 @@
 - [x] compile without libc
 - [x] create export fn
 - [x] @ptrCast for ptrs
-- [ ] backwards for loops
+- [x] implement comptime to evaluate functions and in params
 - [ ] casting sistem with builtins
 - [ ] implement @alignof and @align for types

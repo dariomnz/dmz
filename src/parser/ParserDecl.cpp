@@ -106,7 +106,13 @@ ptr<ParamDecl> Parser::parse_param_decl() {
     if (m_nextToken.type == TokenType::dotdotdot) {
         auto identifier = m_nextToken.str;
         eat_next_token();  // eat '...'
-        return makePtr<ParamDecl>(location, std::move(identifier), makePtr<TypeVoid>(location), false, true);
+        return makePtr<ParamDecl>(location, std::move(identifier), makePtr<TypeVoid>(location), false, false, true);
+    }
+
+    bool isComptime = false;
+    if (m_nextToken.type == TokenType::kw_comptime) {
+        isComptime = true;
+        eat_next_token();  // eat comptime
     }
 
     matchOrReturn(TokenType::id, "expected parameter declaration");
@@ -119,7 +125,7 @@ ptr<ParamDecl> Parser::parse_param_decl() {
 
     varOrReturn(type, parse_type());
 
-    return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false);
+    return makePtr<ParamDecl>(location, std::move(identifier), std::move(type), false, isComptime);
 }
 
 ptr<VarDecl> Parser::parse_var_decl(bool isPublic, bool isConst, bool isGlobal) {

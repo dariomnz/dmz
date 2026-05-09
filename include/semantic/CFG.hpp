@@ -47,6 +47,7 @@ class CFGBuilder {
     std::stack<int> m_loopContinueStack;
 
    public:
+    CFGBuilder(Sema *sema) { cee.m_sema = sema; }
     CFG build(const ResolvedBlock &block);
 
    private:
