@@ -51,6 +51,7 @@ void Driver::display_help() {
     println("  -fmt                 format the dmz source file");
     println("  -quiet               suppress output for successful tests");
     println("  -fail-fast, -ff      terminate tests on first failure");
+    println("  -patch               patch failed tests by updating // CHECK lines");
     println("  -nolibc              do not link with libc");
 }
 
@@ -142,6 +143,8 @@ CompilerOptions CompilerOptions::parse_arguments(int argc, char **argv) {
                 options.failFast = true;
             } else if (arg == "-nolibc") {
                 options.noLibc = true;
+            } else if (arg == "-patch") {
+                options.patchTest = true;
             } else {
                 error("unexpected option '" + std::string(arg) + '\'');
             }
@@ -464,6 +467,7 @@ int Driver::main() {
         testOpts.parallel_jobs = m_options.parallelJobs;
         testOpts.quiet = m_options.quiet;
         testOpts.fail_fast = m_options.failFast;
+        testOpts.patch = m_options.patchTest;
         return run_tests(m_options.source.string(), testOpts);
     }
 

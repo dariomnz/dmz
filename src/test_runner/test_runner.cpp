@@ -284,8 +284,64 @@ static std::string process_line_vars(std::string pat, int line_num) {
     }
     return pat;
 }
+static void smart_patch(const fs::path& path, const std::string& output, const std::vector<CheckDirective>& checks) {
+    auto output_lines = split_lines(output);
+    std::vector<std::string> actual;
+    for (auto& l : output_lines) if (!l.empty()) actual.push_back(l);
 
-TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
+    std::ifstream file(path);
+    std::vector<std::string> file_lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        file_lines.push_back(line);
+    }
+    file.close();
+
+    std::vector<std::string> new_lines;
+    size_t o = 0, c_idx = 0;
+    for (int i = 0; i < (int)file_lines.size(); ++i) {
+        if (c_idx < checks.size() && checks[c_idx].line_num == i + 1) {
+            const auto& check = checks[c_idx++];
+            size_t m_pos, m_len;
+            if (check.kind == CheckKind::CheckNext) {
+                if (o < actual.size() && match_pattern(actual[o], check.pattern, m_pos, m_len)) {
+                    new_lines.push_back(file_lines[i]);
+                    o++;
+                } else {
+                    int look = 1;
+                    for (; look <= 10 && o + look < actual.size(); ++look) {
+                        if (match_pattern(actual[o + look], check.pattern, m_pos, m_len)) break;
+                    }
+                    if (o + look < actual.size()) {
+                        for (int k = 0; k < look; ++k) new_lines.push_back("// CHECK-NEXT: " + actual[o + k]);
+                        new_lines.push_back(file_lines[i]);
+                        o += look + 1;
+                    } else if (o < actual.size()) {
+                        std::string prefix = (file_lines[i].find("// CHECK:") != std::string::npos) ? "// CHECK: " : "// CHECK-NEXT: ";
+                        new_lines.push_back(prefix + actual[o++]);
+                    } else {
+                        new_lines.push_back(file_lines[i]);
+                    }
+                }
+            } else {
+                for (size_t k = o; k < actual.size(); ++k) {
+                    if (match_pattern(actual[k], check.pattern, m_pos, m_len)) {
+                        o = k + 1;
+                        break;
+                    }
+                }
+                new_lines.push_back(file_lines[i]);
+            }
+        } else {
+            new_lines.push_back(file_lines[i]);
+        }
+    }
+    std::ofstream out(path);
+    for (const auto& l : new_lines) out << l << "\n";
+}
+
+TestResult perform_test(const std::string& dmz_bin, const TestCase& tc, const TestOptions& options) {
     auto start = std::chrono::high_resolution_clock::now();
     try {
         if (tc.run_lines.empty()) {
@@ -350,6 +406,12 @@ TestResult perform_test(const std::string& dmz_bin, const TestCase& tc) {
             if (should_check) {
                 auto [passed, err_msg] = verify_checks(std::filesystem::canonical(tc.path), res.output, tc.checks);
                 if (!passed) {
+                    if (options.patch) {
+                        smart_patch(tc.path, res.output, tc.checks);
+                        auto end = std::chrono::high_resolution_clock::now();
+                        std::chrono::duration<double> elapsed = end - start;
+                        return {true, tc.path.string(), elapsed.count(), {}, "", ""};
+                    }
                     auto end = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> elapsed = end - start;
                     std::vector<std::string> errors;
@@ -460,7 +522,7 @@ int run_tests(std::string_view test_path, const TestOptions& options) {
                 test_idx = test_queue.front();
                 test_queue.pop();
             }
-            auto result = perform_test(dmz_bin, tests[test_idx]);
+            auto result = perform_test(dmz_bin, tests[test_idx], options);
             {
                 std::lock_guard<std::mutex> lock(output_mutex);
                 if (result.success) {

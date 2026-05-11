@@ -8,6 +8,7 @@ struct TestOptions {
     int parallel_jobs = 1;
     bool quiet = false;
     bool fail_fast = false;
+    bool patch = false;
     std::string binary_path;
 };
 
