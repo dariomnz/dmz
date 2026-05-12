@@ -33,6 +33,27 @@ pub const stdout = struct {
     }
 };
 
+pub const stderr = struct {
+    pub fn writer(buf: []u8) -> Writer {
+        let ret = Writer{
+            buffer: buf,
+            vtable_ptr: null,
+            vtable_flush: &stderr.flush,
+        };
+        return ret;
+    }
+
+    fn flush(ptr: *void, w: *Writer, data: []u8, splat: usize) -> !usize {
+        let flused = try file.writeAll(file.stderr, w.buffer[0..w.end]);
+        w.end = 0;
+
+        for (0..splat) |i| {
+            flused += try file.writeAll(file.stderr, data);
+        }
+        return flused;
+    }
+};
+
 pub const stdin = struct {
     pub fn reader(buf: []u8) -> Reader {
         let ret = Reader{

@@ -573,7 +573,11 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     } else {
         llvm::Constant *initializer = nullptr;
         if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
-            initializer = llvm::ConstantInt::get(generate_type(*stmt.type), constVal->getInt());
+            if (constVal->isInt()) {
+                initializer = llvm::ConstantInt::get(generate_type(*stmt.type), constVal->getInt());
+            } else if (constVal->isFloat()) {
+                initializer = llvm::ConstantFP::get(generate_type(*stmt.type), constVal->getFloat());
+            }
         }
         globalVar =
             new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,

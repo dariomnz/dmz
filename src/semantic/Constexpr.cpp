@@ -269,6 +269,57 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_unary_operato
     dmz_unreachable(unop.location, "unexpected unary operator");
 }
 
+template <typename T>
+ComptimeValue binop_value(SourceLocation loc, TokenType op, T val1, T val2) {
+    switch (op) {
+        case TokenType::asterisk:
+        case TokenType::op_asterisk_equal:
+            return ComptimeValue(val1 * val2);
+        case TokenType::op_div:
+        case TokenType::op_div_equal:
+            return ComptimeValue(val1 / val2);
+        case TokenType::op_plus:
+        case TokenType::op_plus_equal:
+            return ComptimeValue(val1 + val2);
+        case TokenType::op_minus:
+        case TokenType::op_minus_equal:
+            return ComptimeValue(val1 - val2);
+        case TokenType::op_less:
+            return ComptimeValue(val1 < val2);
+        case TokenType::op_less_eq:
+            return ComptimeValue(val1 <= val2);
+        case TokenType::op_more:
+            return ComptimeValue(val1 > val2);
+        case TokenType::op_more_eq:
+            return ComptimeValue(val1 >= val2);
+        case TokenType::op_equal:
+            return ComptimeValue(val1 == val2);
+        case TokenType::op_not_equal:
+            return ComptimeValue(val1 != val2);
+        default:
+            break;
+    }
+    if constexpr (std::is_integral_v<T>) {
+        switch (op) {
+            case TokenType::op_percent:
+                return ComptimeValue(val1 % val2);
+            case TokenType::amp:
+                return ComptimeValue(val1 & val2);
+            case TokenType::pipe:
+                return ComptimeValue(val1 | val2);
+            case TokenType::caret:
+                return ComptimeValue(val1 ^ val2);
+            case TokenType::op_shl:
+                return ComptimeValue(val1 << val2);
+            case TokenType::op_shr:
+                return ComptimeValue(val1 >> val2);
+            default:
+                break;
+        }
+    }
+    dmz_unreachable(loc, "unexpected binary operator");
+}
+
 std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_binary_operator(const ResolvedBinaryOperator &binop,
                                                                                    bool allowSideEffects) {
     debug_func(binop.location << " " << binop.op << " " << binop.lhs->className() << " " << binop.rhs->className()
@@ -300,66 +351,34 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_binary_operat
         if (allowSideEffects) report(binop.lhs->location, "left operand of binary operator cannot be evaluated");
         return std::nullopt;
     }
-    auto lhsInt = lhs->toInt();
-    if (!lhsInt.has_value()) {
-        if (allowSideEffects) report(binop.lhs->location, "left operand of binary operator is not an integer");
-        return std::nullopt;
-    }
 
     std::optional<ComptimeValue> rhs = evaluate(*binop.rhs, allowSideEffects);
     if (!rhs) {
         if (allowSideEffects) report(binop.rhs->location, "right operand of binary operator cannot be evaluated");
         return std::nullopt;
     }
-    auto rhsInt = rhs->toInt();
-    if (!rhsInt.has_value()) {
-        if (allowSideEffects) report(binop.rhs->location, "right operand of binary operator is not an integer");
-        return std::nullopt;
-    }
-
-    int64_t val1 = lhsInt.value();
-    int64_t val2 = rhsInt.value();
-    switch (binop.op) {
-        case TokenType::asterisk:
-        case TokenType::op_asterisk_equal:
-            return ComptimeValue(val1 * val2);
-        case TokenType::op_div:
-        case TokenType::op_div_equal:
-            return ComptimeValue(val1 / val2);
-        case TokenType::op_percent:
-            return ComptimeValue(val1 % val2);
-        case TokenType::op_plus:
-        case TokenType::op_plus_equal:
-            return ComptimeValue(val1 + val2);
-        case TokenType::op_minus:
-        case TokenType::op_minus_equal:
-            return ComptimeValue(val1 - val2);
-        case TokenType::op_less:
-            return ComptimeValue(val1 < val2);
-        case TokenType::op_less_eq:
-            return ComptimeValue(val1 <= val2);
-        case TokenType::op_more:
-            return ComptimeValue(val1 > val2);
-        case TokenType::op_more_eq:
-            return ComptimeValue(val1 >= val2);
-        case TokenType::op_equal:
-            return ComptimeValue(val1 == val2);
-        case TokenType::op_not_equal:
-            return ComptimeValue(val1 != val2);
-        case TokenType::amp:
-            return ComptimeValue(val1 & val2);
-        case TokenType::pipe:
-            return ComptimeValue(val1 | val2);
-        case TokenType::caret:
-            return ComptimeValue(val1 ^ val2);
-        case TokenType::op_shl:
-            return ComptimeValue(val1 << val2);
-        case TokenType::op_shr:
-            return ComptimeValue(val1 >> val2);
-        default:
-            dmz_unreachable(binop.location, "unexpected binary operator");
+    bool isFloatOp = lhs->isFloat() || rhs->isFloat();
+    if (isFloatOp) {
+        double val1 = lhs->getFloat();
+        double val2 = rhs->getFloat();
+        return binop_value<double>(binop.location, binop.op, val1, val2);
+    } else {
+        auto lhsInt = lhs->toInt();
+        if (!lhsInt.has_value()) {
+            if (allowSideEffects) report(binop.lhs->location, "left operand of binary operator is not an integer");
+            return std::nullopt;
+        }
+        auto rhsInt = rhs->toInt();
+        if (!rhsInt.has_value()) {
+            if (allowSideEffects) report(binop.rhs->location, "right operand of binary operator is not an integer");
+            return std::nullopt;
+        }
+        int64_t val1 = lhsInt.value();
+        int64_t val2 = rhsInt.value();
+        return binop_value<int64_t>(binop.location, binop.op, val1, val2);
     }
 }
+
 bool ConstantExpressionEvaluator::should_report_error() const {
     if (!m_sema) return true;
     if (m_sema->getCurrentFunction() && dynamic_cast<ResolvedGenericFunctionDecl *>(m_sema->getCurrentFunction())) {
