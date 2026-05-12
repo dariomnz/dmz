@@ -399,8 +399,19 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
         }
     }
 
-    return makePtr<ResolvedCallExpr>(call.location, fnType->returnType->clone(), std::move(resolvedCallee),
-                                     std::move(resolvedArguments));
+    auto resolvedCallExpr = makePtr<ResolvedCallExpr>(call.location, fnType->returnType->clone(),
+                                                      std::move(resolvedCallee), std::move(resolvedArguments));
+
+    if (fnType->returnType->kind == ResolvedTypeKind::Type) {
+        auto val = cee.evaluate(*resolvedCallExpr, true);
+        if (val) {
+            resolvedCallExpr->set_constant_value(val);
+        } else {
+            return report(call.location, "expression must be a compile-time constant because it returns a 'type'");
+        }
+    }
+
+    return resolvedCallExpr;
 }
 
 ptr<ResolvedComptimeExpr> Sema::resolve_comptime_expr(const ComptimeExpr &comptimeExpr) {
@@ -662,13 +673,15 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     auto rhsKind = resolvedRHS->type->kind;
     if (lhsKind != ResolvedTypeKind::Number && lhsKind != ResolvedTypeKind::Bool &&
         lhsKind != ResolvedTypeKind::Error && lhsKind != ResolvedTypeKind::Pointer &&
-        lhsKind != ResolvedTypeKind::Simd && lhsKind != ResolvedTypeKind::Generic) {
+        lhsKind != ResolvedTypeKind::Simd && lhsKind != ResolvedTypeKind::Generic &&
+        lhsKind != ResolvedTypeKind::AnyType) {
         return report(resolvedLHS->location,
                       '\'' + resolvedLHS->type->to_str() + "' cannot be used as LHS operand to binary operator");
     }
     if (rhsKind != ResolvedTypeKind::Number && rhsKind != ResolvedTypeKind::Bool &&
         rhsKind != ResolvedTypeKind::Error && rhsKind != ResolvedTypeKind::Pointer &&
-        rhsKind != ResolvedTypeKind::Simd && rhsKind != ResolvedTypeKind::Generic) {
+        rhsKind != ResolvedTypeKind::Simd && rhsKind != ResolvedTypeKind::Generic &&
+        rhsKind != ResolvedTypeKind::AnyType) {
         return report(resolvedRHS->location,
                       '\'' + resolvedRHS->type->to_str() + "' cannot be used as RHS operand to binary operator");
     }
@@ -768,6 +781,18 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
         if (baseType->kind == ResolvedTypeKind::Pointer) {
             return report(memberExpr.location, "unable to access member of a ptr of a ptr '" +
                                                    resolvedBase->type->to_str() + "', deref with ptr.*");
+        }
+    }
+
+    ptr<ResolvedType> representedType = nullptr;
+    if (baseType->kind == ResolvedTypeKind::Type) {
+        auto cv = resolvedBase->get_constant_value();
+        if (!cv) {
+            return report(memberExpr.location, "expected type constant expression");
+        }
+        if (cv && cv->isType()) {
+            representedType = cv->getType();
+            baseType = representedType.get();
         }
     }
 
@@ -938,12 +963,32 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
     varOrReturn(resolvedBase, resolve_expr(*structInstantiation.base));
 
-    if (resolvedBase->type->kind == ResolvedTypeKind::UnionDecl ||
-        resolvedBase->type->kind == ResolvedTypeKind::Union) {
+    ptr<ResolvedType> instType = nullptr;
+    if (resolvedBase->type->kind == ResolvedTypeKind::Type) {
+        if (auto typeExpr = dynamic_cast<const ResolvedTypeExpr *>(resolvedBase.get())) {
+            instType = typeExpr->resolvedType->clone();
+        } else {
+            auto cv = resolvedBase->get_constant_value();
+            if (!cv) {
+                return report(structInstantiation.location, "expected type constant expression");
+            }
+            if (cv && cv->isType()) {
+                instType = cv->getType();
+            }
+        }
+    } else {
+        instType = resolvedBase->type->clone();
+    }
+
+    if (!instType) {
+        return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
+    }
+
+    if (instType->kind == ResolvedTypeKind::UnionDecl || instType->kind == ResolvedTypeKind::Union) {
         ResolvedUnionDecl *un = nullptr;
-        if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(resolvedBase->type.get())) {
+        if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(instType.get())) {
             un = unionDecl->unionDecl();
-        } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(resolvedBase->type.get())) {
+        } else if (auto unionType = dynamic_cast<ResolvedTypeUnion *>(instType.get())) {
             un = unionType->unionDecl();
         } else {
             dmz_unreachable(structInstantiation.location, "TODO: this should not happend");
@@ -987,10 +1032,10 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
         return makePtr<ResolvedUnionInstantiationExpr>(structInstantiation.location, *un, std::move(init));
     }
 
-    if (resolvedBase->type->kind != ResolvedTypeKind::StructDecl) {
+    if (instType->kind != ResolvedTypeKind::StructDecl) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }
-    auto auxstruType = dynamic_cast<const ResolvedTypeStructDecl *>(resolvedBase->type.get());
+    auto auxstruType = dynamic_cast<const ResolvedTypeStructDecl *>(instType.get());
     if (!auxstruType) {
         return report(structInstantiation.base->location, "expected a struct in a struct instantiation");
     }

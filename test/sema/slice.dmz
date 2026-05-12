@@ -10,6 +10,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt *u8
 // CHECK-NEXT:         ResolvedVarDecl:const *u8 str
+// CHECK-NEXT:         | value: 'Hello, World\n'
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'Hello, World\n'
 // CHECK-NEXT:           | value: 'Hello, World\n'
 // CHECK-NEXT:       ResolvedDeclStmt []u8

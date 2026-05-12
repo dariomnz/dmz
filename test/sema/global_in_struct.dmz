@@ -17,8 +17,12 @@ fn main() -> void {
     A.foo();
 }
 
-// CHECK:     ResolvedVarDecl:const global_in_struct.A A
+// CHECK: ResolvedModuleDecl global_in_struct
+// CHECK-NEXT:   ResolvedDeclStmt global_in_struct.A
+// CHECK-NEXT:     ResolvedVarDecl:const global_in_struct.A A
+// CHECK-NEXT:     | value: global_in_struct.A
 // CHECK-NEXT:       ResolvedTypeExpr:global_in_struct.A
+// CHECK-NEXT:       | value: global_in_struct.A
 // CHECK-NEXT:         ResolvedTypeStructDecl global_in_struct.A
 // CHECK-NEXT:       ResolvedTypeStructDecl global_in_struct.A
 // CHECK-NEXT:         ResolvedStructDecl global_in_struct.A
@@ -38,7 +42,9 @@ fn main() -> void {
 // CHECK-NEXT:                   ResolvedDeclRefExpr:global_in_struct.A.B{} x
 // CHECK-NEXT:           ResolvedDeclStmt global_in_struct.A.B
 // CHECK-NEXT:             ResolvedVarDecl:const global_in_struct.A.B B
+// CHECK-NEXT:             | value: global_in_struct.A.B
 // CHECK-NEXT:               ResolvedTypeExpr:global_in_struct.A.B
+// CHECK-NEXT:               | value: global_in_struct.A.B
 // CHECK-NEXT:                 ResolvedTypeStructDecl global_in_struct.A.B
 // CHECK-NEXT:               ResolvedTypeStructDecl global_in_struct.A.B
 // CHECK-NEXT:                 ResolvedStructDecl global_in_struct.A.B

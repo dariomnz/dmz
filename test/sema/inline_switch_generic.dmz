@@ -21,6 +21,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt i32
 // CHECK-NEXT:       ResolvedVarDecl:const i32 x
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedInlineSwitchStmt

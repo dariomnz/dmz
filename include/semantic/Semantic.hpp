@@ -9,6 +9,25 @@
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
+struct StructCacheKey {
+    const StructDecl *decl = nullptr;
+    ResolvedDecl *context = nullptr;
+    bool operator==(const StructCacheKey &) const = default;
+};
+}  // namespace DMZ
+
+namespace std {
+template <>
+struct hash<DMZ::StructCacheKey> {
+    size_t operator()(const DMZ::StructCacheKey &k) const {
+        size_t h1 = std::hash<const DMZ::StructDecl *>{}(k.decl);
+        size_t h2 = std::hash<DMZ::ResolvedDecl *>{}(k.context);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    }
+};
+}  // namespace std
+
+namespace DMZ {
 
 class Driver;
 class Sema {
@@ -73,7 +92,8 @@ class Sema {
     std::unordered_set<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
-    std::unordered_map<const StructDecl *, ResolvedStructDecl *> m_resolvedStructs;
+    std::unordered_map<StructCacheKey, ResolvedStructDecl *> m_resolvedStructs;
+    std::unordered_map<const StructDecl *, int> m_structInstanceCounts;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
         {"@call", nullptr},         {"@atomicLoad", nullptr},   {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},

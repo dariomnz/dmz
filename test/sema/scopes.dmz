@@ -18,6 +18,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:i32 x
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedCallExpr:void
@@ -26,6 +27,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt
 // CHECK-NEXT:         ResolvedVarDecl:i32 y
+// CHECK-NEXT:           | value: 2
 // CHECK-NEXT:           ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:           | value: 2
 // CHECK-NEXT:       ResolvedCallExpr:void

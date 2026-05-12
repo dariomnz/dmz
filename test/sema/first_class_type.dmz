@@ -1,0 +1,47 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn identity(comptime T: type, x: T) -> T {
+    return x;
+}
+
+fn main() -> void {
+    const t1: type = i32;
+    const t2: type = f32;
+
+    const t3 = identity(i32, 5);
+
+    let x: t1 = 5;
+
+    let y: t2 = 5.0;
+}
+
+// CHECK:         ResolvedVarDecl:const type t1
+// CHECK-NEXT:         | value: i32
+// CHECK-NEXT:           ResolvedTypeExpr:type
+// CHECK-NEXT:           | value: i32
+// CHECK-NEXT:             ResolvedTypeNumber i32
+
+// CHECK:         ResolvedVarDecl:const type t2
+// CHECK-NEXT:         | value: f32
+// CHECK-NEXT:           ResolvedTypeExpr:type
+// CHECK-NEXT:           | value: f32
+// CHECK-NEXT:             ResolvedTypeNumber f32
+
+// CHECK:         ResolvedVarDecl:const i32 t3
+// CHECK-NEXT:           ResolvedCallExpr:i32
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(type, i32)->i32 identity
+// CHECK-NEXT:             ResolvedTypeExpr:type
+// CHECK-NEXT:             | value: i32
+// CHECK-NEXT:               ResolvedTypeNumber i32
+// CHECK-NEXT:             ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:             | value: 5
+
+// CHECK:         ResolvedVarDecl:i32 x
+// CHECK-NEXT:         | value: 5
+// CHECK-NEXT:           ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:           | value: 5
+
+// CHECK:         ResolvedVarDecl:f32 y
+// CHECK-NEXT:         | value: 5
+// CHECK-NEXT:           ResolvedFloatLiteral:f32 '5.000000'
+// CHECK-NEXT:           | value: 5.000000

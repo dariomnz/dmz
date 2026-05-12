@@ -223,7 +223,7 @@ pub fn fmtSimd<T>(w: std.io.Writer, v: T, spec: FormatOptions) -> !usize {
     let current_element: usize = 0;
     inline if (@typeid(v) == std.types.simd_t) {
         const typeinfo = @typeinfo(v).infoSimd;
-        ret += try w.writeAll(typeinfo.type);
+        ret += try w.writeAll(typeinfo.name);
         ret += try w.writeChar('(');
         while (current_element < typeinfo.len) {
             if (current_element > 0) {

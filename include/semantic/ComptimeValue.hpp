@@ -1,14 +1,17 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
+#include "UtilsPtr.hpp"
+
 namespace DMZ {
+
+struct ResolvedType;  // Forward declaration
 
 struct ComptimeValue {
     struct Void {
@@ -23,7 +26,7 @@ struct ComptimeValue {
         bool operator==(const Struct& other) const;
     };
 
-    using ValueVariant = std::variant<Void, int64_t, double, bool, std::string, Array, Struct>;
+    using ValueVariant = std::variant<Void, int64_t, double, bool, std::string, Array, Struct, ptr<ResolvedType>>;
 
     ValueVariant value;
 
@@ -35,6 +38,12 @@ struct ComptimeValue {
     ComptimeValue(const char* s) : value(std::string(s)) {}
     ComptimeValue(Array a) : value(std::move(a)) {}
     ComptimeValue(Struct s) : value(std::move(s)) {}
+    ComptimeValue(ptr<ResolvedType> t) : value(std::move(t)) {}
+
+    ComptimeValue(const ComptimeValue& other);
+    ComptimeValue& operator=(const ComptimeValue& other);
+    ComptimeValue(ComptimeValue&& other) noexcept = default;
+    ComptimeValue& operator=(ComptimeValue&& other) noexcept = default;
 
     bool operator==(const ComptimeValue& other) const;
 
@@ -45,6 +54,7 @@ struct ComptimeValue {
     bool isString() const { return std::holds_alternative<std::string>(value); }
     bool isArray() const { return std::holds_alternative<Array>(value); }
     bool isStruct() const { return std::holds_alternative<Struct>(value); }
+    bool isType() const { return std::holds_alternative<ptr<ResolvedType>>(value); }
 
     int64_t getInt() const { return std::get<int64_t>(value); }
     double getFloat() const { return std::get<double>(value); }
@@ -52,6 +62,7 @@ struct ComptimeValue {
     const std::string& getString() const { return std::get<std::string>(value); }
     const Array& getArray() const { return std::get<Array>(value); }
     const Struct& getStruct() const { return std::get<Struct>(value); }
+    ptr<ResolvedType> getType() const;
 
     // Conversion to int64_t for backward compatibility where possible
     std::optional<int64_t> toInt() const {

@@ -35,6 +35,7 @@ fn main() -> void {
 }
 
 // CHECK:   ResolvedVarDecl:i32 x
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT: ResolvedDeclStmt i32
@@ -45,6 +46,7 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 
 // CHECK:      ResolvedVarDecl:*u8 str1
+// CHECK-NEXT:         | value: 'something\n'
 // CHECK-NEXT:        ResolvedStringLiteral:*u8 'something\n'
 // CHECK-NEXT:        | value: 'something\n'
 // CHECK-NEXT:    ResolvedDeclStmt *u8
@@ -53,10 +55,12 @@ fn main() -> void {
 // CHECK-NEXT:          ResolvedDeclRefExpr:fn()->*u8 str
 
 // CHECK:   ResolvedVarDecl:bool bool1
+// CHECK-NEXT:         | value: true
 // CHECK-NEXT:     ResolvedBoolLiteral:bool 'true'
 // CHECK-NEXT:     | value: true
 // CHECK-NEXT: ResolvedDeclStmt bool
 // CHECK-NEXT:   ResolvedVarDecl:bool bool2
+// CHECK-NEXT:         | value: false
 // CHECK-NEXT:     ResolvedBoolLiteral:bool 'false'
 // CHECK-NEXT:     | value: false
 // CHECK-NEXT: ResolvedDeclStmt bool

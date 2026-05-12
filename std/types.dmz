@@ -51,6 +51,6 @@ pub const TypeInfoNumber = struct {
 };
 
 pub const TypeInfoSimd = struct {
-    type: []u8,
+    name: []u8,
     len: u32,
 };

@@ -26,9 +26,12 @@ ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
     }
 
     if (!param.isVararg) {
-        if (!typeExpr || typeExpr->type->kind == ResolvedTypeKind::Void) {
+        if (!typeExpr || typeExpr->resolvedType->kind == ResolvedTypeKind::Void) {
             return report(param.location,
                           "parameter '" + param.identifier + "' has invalid '" + param.type->to_str() + "' type");
+        }
+        if (typeExpr->resolvedType->kind == ResolvedTypeKind::Type && !param.isComptime) {
+            return report(param.location, "parameter of type 'type' must be 'comptime'");
         }
     }
     return makePtr<ResolvedParamDecl>(param.location, param.identifier, std::move(typeExpr), param.isMutable,
@@ -109,15 +112,15 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     std::optional<ScopeRAII> genericFunctionScope = std::nullopt;
     ptr<ResolvedScope> takenGenericScope = nullptr;
     std::vector<ptr<ResolvedGenericTypeDecl>> resolvedGenericTypeDecl;
-    bool hasComptimeParamAST = false;
+    bool isGenericAST = false;
     for (auto &&p : function.params) {
-        if (p->isComptime) {
-            hasComptimeParamAST = true;
+        if (p->isComptime || dynamic_cast<const TypeAnyType *>(p->type.get())) {
+            isGenericAST = true;
             break;
         }
     }
 
-    if (dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST) {
+    if (dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST) {
         genericFunctionScope.emplace(*this);
         takenGenericScope = genericFunctionScope->takeScope();
         if (auto func = dynamic_cast<const GenericFunctionDecl *>(&function)) {
@@ -147,14 +150,37 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         if (resolvedParam->isVararg) {
             haveVararg = true;
         }
+
+        if (resolvedParam->isComptime && resolvedParam->type->kind == ResolvedTypeKind::Type) {
+            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, resolvedParam->identifier);
+            auto genericType = makePtr<ResolvedTypeGeneric>(resolvedParam->location, genTypeDecl.get());
+            resolvedParam->type = genericType->clone();
+            resolvedParam->set_constant_value(ComptimeValue(genericType->clone()));
+            // Also need to store the genTypeDecl somewhere so it doesn't get destroyed.
+            // For now, let's just add it to the list of generic type decls of the function.
+            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+        } else if (resolvedParam->type->kind == ResolvedTypeKind::AnyType) {
+            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, "anytype");
+            auto genericType = makePtr<ResolvedTypeGeneric>(resolvedParam->location, genTypeDecl.get());
+            resolvedParam->type = genericType->clone();
+            resolvedParam->resolvedTypeExpr->resolvedType = genericType->clone();
+            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+        }
+
         resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
     auto returnType = resolve_type(*function.type);
+    if (returnType && returnType->kind == ResolvedTypeKind::AnyType) {
+        auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(function.type->location, "anytype");
+        auto genericType = makePtr<ResolvedTypeGeneric>(function.type->location, genTypeDecl.get());
+        returnType = genericType->clone();
+        resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+    }
 
     if (!returnType) {
-        if (dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST) {
+        if (dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST) {
             returnType = makePtr<ResolvedTypeGeneric>(function.location, nullptr);
         } else {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
@@ -164,7 +190,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
 
     auto resolvedReturnTypeExpr = resolve_expr(*function.type, true);
     if (!resolvedReturnTypeExpr) {
-        if (!(dynamic_cast<const GenericFunctionDecl *>(&function) || hasComptimeParamAST)) {
+        if (!(dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST)) {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                                  function.type->to_str() + "' return type");
         }
@@ -289,9 +315,16 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
 
     bool haveVararg = false;
     size_t specIdx = funcDecl.genericTypeDecls.size();
-    for (auto &&param : funcDecl.functionDecl->params) {
+    for (size_t i = 0; i < funcDecl.functionDecl->params.size(); i++) {
+        auto &&param = funcDecl.functionDecl->params[i];
         auto resolvedParam = resolve_param_decl(*param);
         if (!resolvedParam) return nullptr;
+
+        // If it was anytype, replace with the generic type from the template
+        if (resolvedParam->type->kind == ResolvedTypeKind::AnyType) {
+            resolvedParam->type = funcDecl.params[i]->type->clone();
+            resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
+        }
 
         if (resolvedParam->isComptime) {
             if (specIdx >= genericTypes.specializedTypes.size()) {
@@ -304,6 +337,12 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
             }
             resolvedParam->set_constant_value(*comptimeType->value);
         }
+
+        debug_msg("Specialize param " << resolvedParam->identifier << " type " << resolvedParam->type->to_str());
+        resolvedParam->type = re_resolve_type(*resolvedParam->type);
+        debug_msg("Specialize param " << resolvedParam->identifier << " specialized type "
+                                      << resolvedParam->type->to_str());
+        resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
         resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
 
         if (haveVararg) {
@@ -425,9 +464,17 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
                           "variable '" + varDecl.identifier + "' has invalid '" + varDecl.type->to_str() + "' type");
         }
     }
+    if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::AnyType) {
+        return report(varDecl.location,
+                      "variable '" + varDecl.identifier +
+                          "' cannot have 'anytype' type, 'anytype' is only allowed in function parameters");
+    }
     if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::Void) {
         return report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +
                                             resolvedvarType->resolvedType->to_str() + "' type");
+    }
+    if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::Type && varDecl.isMutable) {
+        return report(varDecl.location, "variable of type 'type' must be 'const'");
     }
 
     auto ret = makePtr<ResolvedVarDecl>(varDecl.location, &varDecl, varDecl.isPublic, varDecl.identifier,
@@ -504,7 +551,11 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
             type = varDecl.type.get();
         }
 
-        resolvedInitializer->set_constant_value(cee.evaluate(*resolvedInitializer, false));
+        auto val = cee.evaluate(*resolvedInitializer, false);
+        resolvedInitializer->set_constant_value(val);
+        if (val) {
+            varDecl.set_constant_value(val);
+        }
     }
 
     if (type->kind == ResolvedTypeKind::Void) {
@@ -624,9 +675,8 @@ bool Sema::resolve_enum_members(ResolvedEnumDecl &resolvedEnumDecl) {
 
 ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) {
     debug_func(structDecl.location);
-    if (m_resolvedStructs.contains(&structDecl))
-        return report(structDecl.location, "struct '" + structDecl.identifier + "' is already declared");
     std::unordered_set<std::string> identifiers;
+    auto count = m_structInstanceCounts[&structDecl]++;
 
     std::optional<ScopeRAII> genericStructScope = std::nullopt;
     ptr<ResolvedScope> takenGenericScope = nullptr;
@@ -640,26 +690,25 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
     ScopeRAII fieldScope(*this);
     auto takenFieldScope = fieldScope.takeScope();
     ptr<ResolvedStructDecl> resStructDecl;
+    std::string structName = resolve_decl_name(structDecl.identifier);
+    if (count > 0) structName += "." + std::to_string(count);
     if (dynamic_cast<const GenericStructDecl *>(&structDecl)) {
         auto resGenStructDecl = makePtr<ResolvedGenericStructDecl>(
-            structDecl.location, structDecl.isPublic, resolve_decl_name(structDecl.identifier), &structDecl,
-            structDecl.isPacked, vec<ptr<ResolvedFieldDecl>>{}, vec<ptr<ResolvedFunctionDecl>>{},
-            std::move(takenFieldScope), std::move(takenGenericScope), std::move(resolvedGenericTypesDecl));
+            structDecl.location, structDecl.isPublic, structName, &structDecl, structDecl.isPacked,
+            vec<ptr<ResolvedFieldDecl>>{}, vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope),
+            std::move(takenGenericScope), std::move(resolvedGenericTypesDecl));
         if (resGenStructDecl->genericScope) resGenStructDecl->genericScope->currentStruct = resGenStructDecl.get();
         resStructDecl = std::move(resGenStructDecl);
     } else if (auto unionDecl = dynamic_cast<const UnionDecl *>(&structDecl)) {
-        resStructDecl = makePtr<ResolvedUnionDecl>(unionDecl->location, unionDecl->isPublic,
-                                                   resolve_decl_name(unionDecl->identifier), unionDecl,
+        resStructDecl = makePtr<ResolvedUnionDecl>(unionDecl->location, unionDecl->isPublic, structName, unionDecl,
                                                    unionDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
                                                    vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     } else if (auto enumDecl = dynamic_cast<const EnumDecl *>(&structDecl)) {
-        resStructDecl =
-            makePtr<ResolvedEnumDecl>(enumDecl->location, enumDecl->isPublic, resolve_decl_name(enumDecl->identifier),
-                                      enumDecl, enumDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
-                                      vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
+        resStructDecl = makePtr<ResolvedEnumDecl>(enumDecl->location, enumDecl->isPublic, structName, enumDecl,
+                                                  enumDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
+                                                  vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     } else {
-        resStructDecl = makePtr<ResolvedStructDecl>(structDecl.location, structDecl.isPublic,
-                                                    resolve_decl_name(structDecl.identifier), &structDecl,
+        resStructDecl = makePtr<ResolvedStructDecl>(structDecl.location, structDecl.isPublic, structName, &structDecl,
                                                     structDecl.isPacked, vec<ptr<ResolvedFieldDecl>>{},
                                                     vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));
     }
@@ -673,7 +722,6 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
             return report(decl->location, "member '" + decl->identifier + "' is already declared");
     }
 
-    m_resolvedStructs.emplace(&structDecl, resStructDecl.get());
     return resStructDecl;
 }
 

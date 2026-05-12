@@ -3,7 +3,7 @@
 fn main() -> void {
     const a = 1;
     const b = 2;
-    
+
     const c = a << b;
     const d = a >> b;
     const e = a & b;
@@ -13,6 +13,7 @@ fn main() -> void {
 }
 
 // CHECK:         ResolvedVarDecl:const i32 c
+// CHECK-NEXT:         | value: 4
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '<<'
 // CHECK-NEXT:           | value: 4
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
@@ -21,6 +22,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 
 // CHECK:         ResolvedVarDecl:const i32 d
+// CHECK-NEXT:         | value: 0
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '>>'
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
@@ -29,6 +31,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 
 // CHECK:         ResolvedVarDecl:const i32 e
+// CHECK-NEXT:         | value: 0
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '&'
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
@@ -37,6 +40,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 
 // CHECK:         ResolvedVarDecl:const i32 f
+// CHECK-NEXT:         | value: 3
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '|'
 // CHECK-NEXT:           | value: 3
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
@@ -45,6 +49,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 
 // CHECK:         ResolvedVarDecl:const i32 g
+// CHECK-NEXT:         | value: 3
 // CHECK-NEXT:           ResolvedBinaryOperator:i32 '^'
 // CHECK-NEXT:           | value: 3
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
@@ -53,6 +58,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 
 // CHECK:         ResolvedVarDecl:const i32 h
+// CHECK-NEXT:         | value: -2
 // CHECK-NEXT:           ResolvedUnaryOperator:i32 '~'
 // CHECK-NEXT:           | value: -2
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a

@@ -107,6 +107,9 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
     if (const auto *comptimeExpr = dynamic_cast<const ResolvedComptimeExpr *>(&expr)) {
         return evaluate(*comptimeExpr->expr, true);
     }
+    if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
+        return ComptimeValue(typeExpr->resolvedType->clone());
+    }
     return expr.get_constant_value();
 }
 
@@ -128,14 +131,26 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             return expr.get_constant_value();
         } else if (builtin->identifier == "@typeid") {
             auto &typeArg = expr.arguments[0];
-            return evaluate_type(*typeArg->type);
+            const ResolvedType *targetType = typeArg->type.get();
+            if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
+                targetType = typeExpr->resolvedType.get();
+            }
+            return evaluate_type(*targetType);
         } else if (builtin->identifier == "@sizeof") {
             auto &typeArg = expr.arguments[0];
-            return ComptimeValue((int64_t)std::max(CodegenUtils::typeBitSize(*typeArg->type) / 8, 1));
+            const ResolvedType *targetType = typeArg->type.get();
+            if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
+                targetType = typeExpr->resolvedType.get();
+            }
+            return ComptimeValue((int64_t)std::max(CodegenUtils::typeBitSize(*targetType) / 8, 1));
         } else if (builtin->identifier == "@simdSize") {
             auto &typeArg = expr.arguments[0];
+            const ResolvedType *targetType = typeArg->type.get();
+            if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
+                targetType = typeExpr->resolvedType.get();
+            }
             int bit_simd_size = CodegenUtils::target_simd_size();
-            int bit_type_size = CodegenUtils::typeBitSize(*typeArg->type);
+            int bit_type_size = CodegenUtils::typeBitSize(*targetType);
             return ComptimeValue((int64_t)(bit_simd_size / bit_type_size));
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {

@@ -211,8 +211,18 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         retPtr = ret.get();
         return debug_ret(ret);
     }
+    if (dynamic_cast<const TypeAnyType *>(&type)) {
+        ret = makePtr<ResolvedTypeAnyType>(type.location);
+        retPtr = ret.get();
+        return debug_ret(ret);
+    }
     if (dynamic_cast<const TypeBool *>(&type)) {
         ret = makePtr<ResolvedTypeBool>(type.location);
+        retPtr = ret.get();
+        return debug_ret(ret);
+    }
+    if (dynamic_cast<const TypeType *>(&type)) {
+        ret = makePtr<ResolvedTypeType>(type.location);
         retPtr = ret.get();
         return debug_ret(ret);
     }
@@ -348,6 +358,26 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
             } else if (auto struType = dynamic_cast<ResolvedTypeStruct *>(decl->type.get())) {
                 ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
+            } else if (decl->type->kind == ResolvedTypeKind::Type) {
+                auto constVal = decl->get_constant_value();
+                if (!constVal) {
+                    if (auto declStmt = dynamic_cast<ResolvedDeclStmt *>(decl)) {
+                        constVal = declStmt->varDecl->get_constant_value();
+                    }
+                }
+
+                if (constVal && constVal->isType()) {
+                    ret = constVal->getType()->clone();
+                    if (auto struType = dynamic_cast<ResolvedTypeStructDecl *>(ret.get())) {
+                        ret = makePtr<ResolvedTypeStruct>(type.location, struType->decl);
+                    } else if (auto unionType = dynamic_cast<ResolvedTypeUnionDecl *>(ret.get())) {
+                        ret = makePtr<ResolvedTypeUnion>(type.location, unionType->unionDecl());
+                    } else if (auto enumType = dynamic_cast<ResolvedTypeEnumDecl *>(ret.get())) {
+                        ret = makePtr<ResolvedTypeEnum>(type.location, enumType->enumDecl());
+                    }
+                } else {
+                    ret = decl->type->clone();
+                }
             } else {
                 ret = decl->type->clone();
             }
@@ -394,14 +424,19 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     if (const auto *stru = dynamic_cast<const StructDecl *>(&type)) {
         ptr<ResolvedStructDecl> ownedStructDecl = nullptr;
         ResolvedStructDecl *res = nullptr;
-        auto it = m_resolvedStructs.find(stru);
+        ResolvedDecl *context = m_currentFunction;
+        if (!context) context = m_currentStruct;
+
+        auto it = m_resolvedStructs.find({stru, context});
         if (it != m_resolvedStructs.end()) {
             res = it->second;
         } else {
             varOrReturn(structDecl, resolve_struct_decl(*stru));
             res = structDecl.get();
             ownedStructDecl = std::move(structDecl);
+            m_resolvedStructs[{stru, context}] = res;
         }
+
         ptr<ResolvedTypeStructDecl> retTypeStruct;
         if (auto unionDecl = dynamic_cast<ResolvedUnionDecl *>(res)) {
             retTypeStruct = makePtr<ResolvedTypeUnionDecl>(type.location, unionDecl);
@@ -515,7 +550,8 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
         type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::EnumDecl ||
         type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::ErrorGroup ||
         type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function ||
-        type.kind == ResolvedTypeKind::Module || type.kind == ResolvedTypeKind::ComptimeValue) {
+        type.kind == ResolvedTypeKind::Module || type.kind == ResolvedTypeKind::ComptimeValue ||
+        type.kind == ResolvedTypeKind::Type || type.kind == ResolvedTypeKind::AnyType) {
         ret = type.clone();
         retPtr = ret.get();
         return ret;
@@ -860,6 +896,33 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
         if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&expectedType)) {
             if (numType->numberKind == ResolvedNumberKind::Float) {
                 floatLit->type = numType->clone();
+            }
+        }
+    }
+
+    if (expectedType.kind == ResolvedTypeKind::Type) {
+        if (dynamic_cast<ResolvedTypeExpr *>(expr.get())) {
+            expr->type = makePtr<ResolvedTypeType>(expr->location);
+            return true;
+        }
+        if (expr->type->kind == ResolvedTypeKind::StructDecl || expr->type->kind == ResolvedTypeKind::UnionDecl ||
+            expr->type->kind == ResolvedTypeKind::EnumDecl || expr->type->kind == ResolvedTypeKind::Struct ||
+            expr->type->kind == ResolvedTypeKind::Union || expr->type->kind == ResolvedTypeKind::Enum) {
+            auto resolvedType = expr->type->clone();
+            expr = makePtr<ResolvedTypeExpr>(expr->location, std::move(resolvedType), std::move(expr));
+            expr->type = makePtr<ResolvedTypeType>(expr->location);
+            return true;
+        }
+    }
+
+    if (expectedType.kind == ResolvedTypeKind::StructDecl || expectedType.kind == ResolvedTypeKind::UnionDecl ||
+        expectedType.kind == ResolvedTypeKind::EnumDecl) {
+        if (expr->type->kind == ResolvedTypeKind::Type) {
+            if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(expr.get())) {
+                if (typeExpr->resolvedType->equal(expectedType)) {
+                    expr->type = expectedType.clone();
+                    return true;
+                }
             }
         }
     }

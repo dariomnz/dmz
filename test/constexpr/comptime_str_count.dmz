@@ -17,6 +17,7 @@ fn main() -> void {
 }
 
 // CHECK:         ResolvedVarDecl:const i32 x
+// CHECK-NEXT:         | value: 2
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 2
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -26,6 +27,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedCharLiteral:u8 'l'
 // CHECK-NEXT:               | value: 108
 // CHECK:         ResolvedVarDecl:const i32 y
+// CHECK-NEXT:         | value: 0
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -35,6 +37,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedCharLiteral:u8 'x'
 // CHECK-NEXT:               | value: 120
 // CHECK:         ResolvedVarDecl:const i32 z
+// CHECK-NEXT:         | value: 10
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 10
 // CHECK-NEXT:             ResolvedCallExpr:i32

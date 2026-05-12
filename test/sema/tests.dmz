@@ -48,6 +48,7 @@ test "add test 2" {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt usize
 // CHECK-NEXT:         ResolvedVarDecl:const usize num_test
+// CHECK-NEXT:         | value: 2
 // CHECK-NEXT:           ResolvedCallExpr:usize
 // CHECK-NEXT:           | value: 2
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn()->usize @testNum

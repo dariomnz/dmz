@@ -24,9 +24,19 @@ ptr<Expr> Parser::parse_primary() {
         eat_next_token();  // eat bool
         return literal;
     }
+    if (m_nextToken.type == TokenType::ty_type) {
+        auto literal = makePtr<TypeType>(location);
+        eat_next_token();  // eat type
+        return literal;
+    }
     if (m_nextToken.type == TokenType::ty_err) {
         auto literal = makePtr<TypeError>(location);
         eat_next_token();  // eat err
+        return literal;
+    }
+    if (m_nextToken.type == TokenType::ty_anytype) {
+        auto literal = makePtr<TypeAnyType>(location);
+        eat_next_token();  // eat anytype
         return literal;
     }
     if (m_nextToken.type == TokenType::ty_iN || m_nextToken.type == TokenType::ty_uN ||

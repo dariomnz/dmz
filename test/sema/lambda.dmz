@@ -3,18 +3,20 @@
 fn main() -> void {
     const x = 10;
     const y = 20;
-    
+
     const f = struct {
         pub fn call(a: i32) -> i32 {
             return x + y + a;
         }
     };
-    
+
     const res = f.call(10);
 }
 // CHECK: ResolvedDeclStmt lambda.structL7C14.f
 // CHECK-NEXT: ResolvedVarDecl:const lambda.structL7C14.f f
+// CHECK-NEXT:         | value: lambda.structL7C14.f
 // CHECK-NEXT:   ResolvedTypeExpr:lambda.structL7C14.f
+// CHECK-NEXT:           | value: lambda.structL7C14.f
 // CHECK-NEXT:     ResolvedTypeStructDecl lambda.structL7C14.f
 // CHECK-NEXT:   ResolvedTypeStructDecl lambda.structL7C14.f
 // CHECK-NEXT:     ResolvedStructDecl lambda.structL7C14.f
@@ -34,5 +36,6 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedCallExpr:i32
 // CHECK-NEXT:     ResolvedMemberExpr:fn(i32)->i32 call
 // CHECK-NEXT:       ResolvedDeclRefExpr:lambda.structL7C14.f f
+// CHECK-NEXT:               | value: lambda.structL7C14.f
 // CHECK-NEXT:     ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:     | value: 10

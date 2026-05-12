@@ -96,6 +96,14 @@ struct TypeVoid : public Type {
     DMZ_TYPE_NAME();
 };
 
+struct TypeType : public Type {
+    TypeType(SourceLocation location) : Type(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
 struct TypeNumber : public Type {
     std::string name;
     TypeNumber(SourceLocation location, std::string_view name) : Type(location), name(name) {}
@@ -115,6 +123,14 @@ struct TypeBool : public Type {
 
 struct TypeError : public Type {
     TypeError(SourceLocation location) : Type(location) {}
+
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
+struct TypeAnyType : public Type {
+    TypeAnyType(SourceLocation location) : Type(location) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

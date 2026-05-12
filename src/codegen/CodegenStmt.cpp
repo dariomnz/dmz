@@ -266,7 +266,7 @@ llvm::Value *Codegen::generate_decl_stmt(const ResolvedDeclStmt &stmt) {
     debug_func(stmt.type->to_str());
 
     if (stmt.type->kind == ResolvedTypeKind::Module || stmt.type->kind == ResolvedTypeKind::Function ||
-        stmt.type->kind == ResolvedTypeKind::StructDecl) {
+        stmt.type->kind == ResolvedTypeKind::StructDecl || stmt.type->kind == ResolvedTypeKind::Type) {
         return nullptr;
     }
 

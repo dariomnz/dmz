@@ -24,6 +24,10 @@ void TypeVoid::dump(size_t level) const { std::cerr << indent(level) << "TypeVoi
 
 std::string TypeVoid::to_str() const { return "void"; }
 
+void TypeType::dump(size_t level) const { std::cerr << indent(level) << "TypeType " << to_str() << '\n'; }
+
+std::string TypeType::to_str() const { return "type"; }
+
 void TypeNumber::dump(size_t level) const { std::cerr << indent(level) << "TypeNumber " << to_str() << '\n'; }
 
 std::string TypeNumber::to_str() const { return name; }
@@ -32,9 +36,13 @@ void TypeBool::dump(size_t level) const { std::cerr << indent(level) << "TypeBoo
 
 std::string TypeBool::to_str() const { return "bool"; }
 
-void TypeError::dump(size_t level) const { std::cerr << indent(level) << "TypeError " << to_str() << '\n'; }
+void TypeError::dump(size_t level) const { std::cerr << indent(level) << "TypeError\n"; }
 
 std::string TypeError::to_str() const { return "err"; }
+
+void TypeAnyType::dump(size_t level) const { std::cerr << indent(level) << "TypeAnyType\n"; }
+
+std::string TypeAnyType::to_str() const { return "anytype"; }
 
 void TypeOptional::dump(size_t level) const { std::cerr << indent(level) << "TypeOptional " << to_str() << '\n'; }
 

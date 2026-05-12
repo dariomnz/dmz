@@ -104,6 +104,8 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_packed);
         CASE_TYPE(kw_pub);
         CASE_TYPE(kw_comptime);
+        CASE_TYPE(ty_type);
+        CASE_TYPE(ty_anytype);
         CASE_TYPE(caret);
         CASE_TYPE(op_shl);
         CASE_TYPE(op_shr);

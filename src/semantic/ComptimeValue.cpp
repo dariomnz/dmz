@@ -4,8 +4,36 @@
 #include <sstream>
 
 #include "Utils.hpp"
+#include "semantic/SemanticSymbols.hpp"
+#include "semantic/SemanticSymbolsTypes.hpp"
 
 namespace DMZ {
+
+ComptimeValue::ComptimeValue(const ComptimeValue& other) {
+    std::visit(
+        [this](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ptr<ResolvedType>>) {
+                if (arg)
+                    this->value = arg->clone();
+                else
+                    this->value = ptr<ResolvedType>(nullptr);
+            } else {
+                this->value = arg;
+            }
+        },
+        other.value);
+}
+
+ComptimeValue& ComptimeValue::operator=(const ComptimeValue& other) {
+    if (this != &other) {
+        ComptimeValue temp(other);
+        std::swap(value, temp.value);
+    }
+    return *this;
+}
+
+ptr<ResolvedType> ComptimeValue::getType() const { return std::get<ptr<ResolvedType>>(value)->clone(); }
 
 bool ComptimeValue::Array::operator==(const Array& other) const {
     if (elements.size() != other.elements.size()) return false;
@@ -73,6 +101,8 @@ std::ostream& operator<<(std::ostream& os, const ComptimeValue& cv) {
         os << "array";
     else if (cv.isStruct())
         os << "struct";
+    else if (cv.isType())
+        os << cv.getType()->to_str();
     else
         os << "unknown";
     return os;

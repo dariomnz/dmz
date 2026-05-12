@@ -1,0 +1,88 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn print_any(x: anytype) -> void {
+}
+// CHECK:  ResolvedGenericFunctionDecl print_any fn(anytype)->void
+// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:    ResolvedParamDecl:anytype x
+// CHECK-NEXT:    ResolvedBlock
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<i32> fn(i32)->void
+// CHECK-NEXT:      ResolvedParamDecl:i32 x
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<bool> fn(bool)->void
+// CHECK-NEXT:      ResolvedParamDecl:bool x
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<*u8> fn(*u8)->void
+// CHECK-NEXT:      ResolvedParamDecl:*u8 x
+// CHECK-NEXT:      ResolvedBlock
+
+fn add_any(x: anytype, comptime y: anytype) -> void {
+    const res = x + y;
+}
+// CHECK:  ResolvedGenericFunctionDecl add_any fn(anytype, anytype)->void
+// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:    ResolvedParamDecl:anytype x
+// CHECK-NEXT:    ResolvedParamDecl:comptime anytype y
+// CHECK-NEXT:    ResolvedBlock
+// CHECK-NEXT:      ResolvedDeclStmt anytype
+// CHECK-NEXT:        ResolvedVarDecl:const anytype res
+// CHECK-NEXT:          ResolvedBinaryOperator:anytype '+'
+// CHECK-NEXT:            ResolvedDeclRefExpr:anytype x
+// CHECK-NEXT:            ResolvedDeclRefExpr:anytype y
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any<i32, i32, comptime(2)> fn(i32, i32)->void
+// CHECK-NEXT:      ResolvedParamDecl:i32 x
+// CHECK-NEXT:      ResolvedParamDecl:comptime i32 y
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedDeclStmt i32
+// CHECK-NEXT:          ResolvedVarDecl:const i32 res
+// CHECK-NEXT:            ResolvedBinaryOperator:i32 '+'
+// CHECK-NEXT:              ResolvedDeclRefExpr:i32 x
+// CHECK-NEXT:              ResolvedDeclRefExpr:i32 y
+// CHECK-NEXT:              | value: 2
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any<f64, f64, comptime(2.5)> fn(f64, f64)->void
+// CHECK-NEXT:      ResolvedParamDecl:f64 x
+// CHECK-NEXT:      ResolvedParamDecl:comptime f64 y
+// CHECK-NEXT:      ResolvedBlock
+// CHECK-NEXT:        ResolvedDeclStmt f64
+// CHECK-NEXT:          ResolvedVarDecl:const f64 res
+// CHECK-NEXT:            ResolvedBinaryOperator:f64 '+'
+// CHECK-NEXT:              ResolvedDeclRefExpr:f64 x
+// CHECK-NEXT:              ResolvedDeclRefExpr:f64 y
+// CHECK-NEXT:              | value: 2.5
+
+fn main() -> void {
+    print_any(5);
+    print_any(true);
+    print_any("hello");
+
+    add_any(1, 2);
+    add_any(1.5, 2.5);
+}
+
+// CHECK:  ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:    ResolvedBlock
+// CHECK-NEXT:      ResolvedCallExpr:void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(i32)->void print_any
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '5'
+// CHECK-NEXT:        | value: 5
+// CHECK-NEXT:      ResolvedCallExpr:void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(bool)->void print_any
+// CHECK-NEXT:        ResolvedBoolLiteral:bool 'true'
+// CHECK-NEXT:        | value: true
+// CHECK-NEXT:      ResolvedCallExpr:void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(*u8)->void print_any
+// CHECK-NEXT:        ResolvedStringLiteral:*u8 'hello'
+// CHECK-NEXT:        | value: 'hello'
+// CHECK-NEXT:      ResolvedCallExpr:void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(i32, i32)->void add_any
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '1'
+// CHECK-NEXT:        | value: 1
+// CHECK-NEXT:        ResolvedIntLiteral:i32 '2'
+// CHECK-NEXT:        | value: 2
+// CHECK-NEXT:      ResolvedCallExpr:void
+// CHECK-NEXT:        ResolvedDeclRefExpr:fn(f64, f64)->void add_any
+// CHECK-NEXT:        ResolvedFloatLiteral:f64 '1.500000'
+// CHECK-NEXT:        | value: 1.500000
+// CHECK-NEXT:        ResolvedFloatLiteral:f64 '2.500000'
+// CHECK-NEXT:        | value: 2.500000

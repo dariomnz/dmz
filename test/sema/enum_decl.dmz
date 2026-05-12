@@ -13,7 +13,9 @@ fn main() -> void {
 
 }
 // CHECK: ResolvedVarDecl:const enum_decl.Token Token
+// CHECK-NEXT:     | value: enum_decl.Token
 // CHECK-NEXT:   ResolvedTypeExpr:enum_decl.Token
+// CHECK-NEXT:   | value: enum_decl.Token
 // CHECK-NEXT:     ResolvedTypeEnumDecl enum_decl.Token
 // CHECK-NEXT:   ResolvedTypeEnumDecl enum_decl.Token
 // CHECK-NEXT:     ResolvedEnumDecl enum_decl.Token
@@ -27,17 +29,26 @@ fn main() -> void {
 // CHECK-NEXT:         | value: 3
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val4
 // CHECK-NEXT:       | value: 4
-// CHECK: ResolvedDeclStmt enum_decl.Token{}
+// CHECK:   ResolvedFunctionDecl main fn()->void
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT: ResolvedDeclStmt enum_decl.Token{}
 // CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t2
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val2
 // CHECK-NEXT:    | value: 1
 // CHECK-NEXT:      ResolvedDeclRefExpr:enum_decl.Token Token
+// CHECK-NEXT:      | value: enum_decl.Token
 // CHECK-NEXT:ResolvedDeclStmt enum_decl.Token{}
 // CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t3
+// CHECK-NEXT:         | value: 3
 // CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val3
 // CHECK-NEXT:    | value: 3
 // CHECK-NEXT:      ResolvedDeclRefExpr:enum_decl.Token Token
+// CHECK-NEXT:      | value: enum_decl.Token
 // CHECK-NEXT:ResolvedDeclStmt enum_decl.Token{}
 // CHECK-NEXT:  ResolvedVarDecl:enum_decl.Token{} t4
+// CHECK-NEXT:         | value: 4
 // CHECK-NEXT:    ResolvedMemberExpr:enum_decl.Token{} val4
 // CHECK-NEXT:    | value: 4
+// CHECK-NEXT:      ResolvedDeclRefExpr:enum_decl.Token Token
+// CHECK-NEXT:      | value: enum_decl.Token

@@ -6,8 +6,7 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 fn add2(a: i32, b: i32) -> i32 {
-    if (a > 10) return 0;
-    else return add(a, b);
+    if (a > 10) return 0; else return add(a, b);
 }
 
 fn factorial(n: i32) -> i32 {
@@ -54,6 +53,7 @@ fn main() -> void {
 }
 
 // CHECK:         ResolvedVarDecl:const i32 x
+// CHECK-NEXT:         | value: 14
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 14
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -63,6 +63,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:               | value: 2
 // CHECK:         ResolvedVarDecl:const i32 y
+// CHECK-NEXT:         | value: 61
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 61
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -72,6 +73,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '30'
 // CHECK-NEXT:               | value: 30
 // CHECK:         ResolvedVarDecl:const i32 y2
+// CHECK-NEXT:         | value: 0
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 0
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -81,6 +83,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '30'
 // CHECK-NEXT:               | value: 30
 // CHECK:         ResolvedVarDecl:const i32 z
+// CHECK-NEXT:         | value: 120
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 120
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -88,6 +91,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '5'
 // CHECK-NEXT:               | value: 5
 // CHECK:         ResolvedVarDecl:const i32 f20
+// CHECK-NEXT:         | value: 55
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 55
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -95,6 +99,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '10'
 // CHECK-NEXT:               | value: 10
 // CHECK:         ResolvedVarDecl:const i32 s
+// CHECK-NEXT:         | value: 55
 // CHECK-NEXT:           ResolvedComptimeExpr:i32
 // CHECK-NEXT:           | value: 55
 // CHECK-NEXT:             ResolvedCallExpr:i32
@@ -102,6 +107,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '11'
 // CHECK-NEXT:               | value: 11
 // CHECK:         ResolvedVarDecl:const []u8 sw1
+// CHECK-NEXT:         | value: 'Is a one!'
 // CHECK-NEXT:           ResolvedComptimeExpr:[]u8
 // CHECK-NEXT:           | value: 'Is a one!'
 // CHECK-NEXT:             ResolvedCallExpr:[]u8
@@ -109,6 +115,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:               | value: 1
 // CHECK:         ResolvedVarDecl:const []u8 sw2
+// CHECK-NEXT:         | value: 'Is a two!'
 // CHECK-NEXT:           ResolvedComptimeExpr:[]u8
 // CHECK-NEXT:           | value: 'Is a two!'
 // CHECK-NEXT:             ResolvedCallExpr:[]u8
@@ -116,6 +123,7 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:               | value: 2
 // CHECK:         ResolvedVarDecl:const []u8 sw3
+// CHECK-NEXT:         | value: 'Is not one or two!'
 // CHECK-NEXT:           ResolvedComptimeExpr:[]u8
 // CHECK-NEXT:           | value: 'Is not one or two!'
 // CHECK-NEXT:             ResolvedCallExpr:[]u8

@@ -64,6 +64,7 @@ enum class TokenType {
     ty_iN,
     ty_uN,
     ty_bool,
+    ty_type,
     ty_err,
     ty_usize,
     ty_isize,
@@ -101,6 +102,7 @@ enum class TokenType {
     kw_packed,
     kw_pub,
     kw_comptime,
+    ty_anytype,
     unknown,
     eof,
 };
@@ -178,12 +180,14 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"usize", TokenType::ty_usize},
     {"isize", TokenType::ty_isize},
     {"bool", TokenType::ty_bool},
+    {"type", TokenType::ty_type},
     {"err", TokenType::ty_err},
     {"true", TokenType::kw_true},
     {"false", TokenType::kw_false},
     {"null", TokenType::kw_null},
     {"@simd", TokenType::kw_simd},
     {"@This", TokenType::kw_this},
+    {"anytype", TokenType::ty_anytype},
 };
 
 struct Token {

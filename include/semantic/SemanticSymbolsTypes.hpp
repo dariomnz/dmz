@@ -6,6 +6,7 @@
 namespace DMZ {
 
 enum class ResolvedTypeKind {
+    Type,
     Void,
     Number,
     Bool,
@@ -30,6 +31,7 @@ enum class ResolvedTypeKind {
     VarArg,
     DefaultInit,
     ComptimeValue,
+    AnyType,
 };
 
 struct ResolvedType {
@@ -45,13 +47,24 @@ struct ResolvedType {
     virtual void dump(size_t level = 0) const = 0;
     virtual std::string to_str() const = 0;
 
-    virtual bool is_generic() const;
+    virtual bool is_generic() const { return false; };
     bool generate_struct() const;
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
 struct ResolvedTypeVoid : public ResolvedType {
     ResolvedTypeVoid(SourceLocation location) : ResolvedType(ResolvedTypeKind::Void, std::move(location)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+};
+
+struct ResolvedTypeType : public ResolvedType {
+    ResolvedTypeType(SourceLocation location) : ResolvedType(ResolvedTypeKind::Type, std::move(location)) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -419,5 +432,17 @@ struct ResolvedTypeComptimeValue : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     DMZ_TYPE_NAME();
+};
+
+struct ResolvedTypeAnyType : public ResolvedType {
+    ResolvedTypeAnyType(SourceLocation location) : ResolvedType(ResolvedTypeKind::AnyType, std::move(location)) {}
+
+    bool equal(const ResolvedType &other) const override;
+    bool compare(const ResolvedType &other) const override;
+    ptr<ResolvedType> clone() const override;
+    void dump(size_t level = 0) const override;
+    std::string to_str() const override;
+    DMZ_TYPE_NAME();
+    bool is_generic() const override { return true; }
 };
 }  // namespace DMZ

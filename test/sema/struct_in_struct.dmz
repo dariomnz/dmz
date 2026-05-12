@@ -1,14 +1,14 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
-extern fn printf(fmt:*u8, ...) -> i32;
+extern fn printf(fmt: *u8, ...) -> i32;
 
 const A = struct {
     pub fn foo() -> void {
         const B = struct {
             C: i32,
         };
-            
-        let x = B{ C: 1 };
+
+        let x = B{C: 1};
         printf("x.C %d\n", x.C);
     }
 };
@@ -21,7 +21,9 @@ fn main() -> void {
 // CHECK-NEXT:            ResolvedBlock
 // CHECK-NEXT:              ResolvedDeclStmt struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                ResolvedVarDecl:const struct_in_struct.A.structL7C18.B B
+// CHECK-NEXT:                 | value: struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                  ResolvedTypeExpr:struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                   | value: struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                    ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                  ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                    ResolvedStructDecl struct_in_struct.A.structL7C18.B

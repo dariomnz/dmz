@@ -4,6 +4,7 @@ fn main() -> void {
     let t = @typeid(a);
 }
 // CHECK:   ResolvedVarDecl:i32 t
+// CHECK-NEXT:         | value: 1
 // CHECK-NEXT:     ResolvedCallExpr:i32
 // CHECK-NEXT:     | value: 1
 // CHECK-NEXT:       ResolvedDeclRefExpr:i32 @typeid

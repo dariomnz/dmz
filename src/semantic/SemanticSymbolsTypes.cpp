@@ -11,8 +11,6 @@
 struct ResolvedExpr;
 namespace DMZ {
 
-bool ResolvedType::is_generic() const { return false; }
-
 bool ResolvedType::generate_struct() const {
     return kind == ResolvedTypeKind::Struct || kind == ResolvedTypeKind::StructDecl ||
            kind == ResolvedTypeKind::Union || kind == ResolvedTypeKind::UnionDecl ||
@@ -31,7 +29,8 @@ bool ResolvedTypeVoid::equal(const ResolvedType &other) const {
 bool ResolvedTypeVoid::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeVoid " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -46,6 +45,30 @@ void ResolvedTypeVoid::dump(size_t level) const {
 
 std::string ResolvedTypeVoid::to_str() const { return "void"; }
 
+bool ResolvedTypeType::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeType " << to_str() << " " << other.to_str() << " " << location);
+    return debug_ret(other.kind == ResolvedTypeKind::Type);
+}
+
+bool ResolvedTypeType::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeType " << to_str() << " " << other.to_str() << " " << location);
+    if (equal(other)) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
+    return debug_ret(false);
+}
+
+ptr<ResolvedType> ResolvedTypeType::clone() const {
+    debug_func("ResolvedTypeType " << location);
+    return makePtr<ResolvedTypeType>(location);
+}
+
+void ResolvedTypeType::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeType " << to_str() << "\n";
+}
+
+std::string ResolvedTypeType::to_str() const { return "type"; }
+
 bool ResolvedTypeNumber::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << to_str() << " " << other.to_str() << " " << location);
     if (auto numType = dynamic_cast<const ResolvedTypeNumber *>(&other)) {
@@ -58,11 +81,12 @@ bool ResolvedTypeNumber::equal(const ResolvedType &other) const {
 bool ResolvedTypeNumber::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeNumber " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::Pointer && isPlatformSize) {
         return debug_ret(true);
     }
-    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::Enum) {
+    if (other.kind == ResolvedTypeKind::Enum) {
         return debug_ret(true);
     }
 
@@ -133,9 +157,10 @@ bool ResolvedTypeBool::equal(const ResolvedType &other) const {
 bool ResolvedTypeBool::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeBool " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic || other.kind == ResolvedTypeKind::Error ||
-        other.kind == ResolvedTypeKind::Number || other.kind == ResolvedTypeKind::Pointer) {
+    if (other.kind == ResolvedTypeKind::Error || other.kind == ResolvedTypeKind::Number ||
+        other.kind == ResolvedTypeKind::Pointer) {
         return debug_ret(true);
     }
     return debug_ret(ResolvedTypeNumber::compare(other));
@@ -164,7 +189,7 @@ bool ResolvedTypeStructDecl::equal(const ResolvedType &other) const {
 bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStructDecl " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     if (auto strType = dynamic_cast<const ResolvedTypeStructDecl *>(&other)) {
         if (dynamic_cast<const ResolvedGenericStructDecl *>(decl) ||
             dynamic_cast<const ResolvedGenericStructDecl *>(strType->decl)) {
@@ -216,7 +241,8 @@ bool ResolvedTypeStruct::equal(const ResolvedType &other) const {
 bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStruct " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     if (auto strType = dynamic_cast<const ResolvedTypeStruct *>(&other)) {
         if (dynamic_cast<const ResolvedGenericStructDecl *>(decl) ||
             dynamic_cast<const ResolvedGenericStructDecl *>(strType->decl)) {
@@ -272,7 +298,7 @@ bool ResolvedTypeUnionDecl::equal(const ResolvedType &other) const {
 bool ResolvedTypeUnionDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeUnionDecl " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -308,7 +334,8 @@ bool ResolvedTypeUnion::equal(const ResolvedType &other) const {
 bool ResolvedTypeUnion::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeUnion " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -345,7 +372,7 @@ bool ResolvedTypeEnumDecl::equal(const ResolvedType &other) const {
 bool ResolvedTypeEnumDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeEnumDecl " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -381,9 +408,8 @@ bool ResolvedTypeEnum::equal(const ResolvedType &other) const {
 bool ResolvedTypeEnum::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeEnum " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic ||
-        other.kind == ResolvedTypeKind::Number)
-        return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Number) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -500,6 +526,8 @@ bool ResolvedTypeError::equal(const ResolvedType &other) const {
 bool ResolvedTypeError::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeError " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -526,6 +554,7 @@ bool ResolvedTypeErrorGroup::equal(const ResolvedType &other) const {
 bool ResolvedTypeErrorGroup::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeErrorGroup " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -576,8 +605,8 @@ bool ResolvedTypeOptional::equal(const ResolvedType &other) const {
 
 bool ResolvedTypeOptional::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeOptional " << to_str() << " " << other.to_str() << " " << location);
-    if (other.kind == ResolvedTypeKind::Error) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Error) return debug_ret(true);
     if (equal(other)) return debug_ret(true);
 
     if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&other)) {
@@ -616,7 +645,8 @@ bool ResolvedTypePointer::equal(const ResolvedType &other) const {
 bool ResolvedTypePointer::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypePointer " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
 
     if (dynamic_cast<const ResolvedTypeError *>(&other)) {
         if (auto numType = dynamic_cast<ResolvedTypeNumber *>(pointerType.get())) {
@@ -662,7 +692,8 @@ bool ResolvedTypeSlice::equal(const ResolvedType &other) const {
 bool ResolvedTypeSlice::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSlice " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
+    if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
 
     if (auto ptrType = dynamic_cast<const ResolvedTypeSlice *>(&other)) {
         if (sliceType->compare(*ptrType->sliceType)) return debug_ret(true);
@@ -722,8 +753,8 @@ bool ResolvedTypeArray::equal(const ResolvedType &other) const {
 bool ResolvedTypeArray::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeArray " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
     if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -769,8 +800,8 @@ bool ResolvedTypeSimd::equal(const ResolvedType &other) const {
 bool ResolvedTypeSimd::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeSimd " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
-    if (other.kind == ResolvedTypeKind::DefaultInit || other.kind == ResolvedTypeKind::Generic) return debug_ret(true);
     if (other.is_generic()) return debug_ret(true);
+    if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
     return debug_ret(false);
 }
 
@@ -950,5 +981,15 @@ void ResolvedTypeComptimeValue::dump(size_t level) const {
 }
 
 std::string ResolvedTypeComptimeValue::to_str() const { return "comptime(" + value->to_str() + ")"; }
+
+bool ResolvedTypeAnyType::equal(const ResolvedType &other) const { return other.kind == ResolvedTypeKind::AnyType; }
+
+bool ResolvedTypeAnyType::compare(const ResolvedType &) const { return true; }
+
+ptr<ResolvedType> ResolvedTypeAnyType::clone() const { return makePtr<ResolvedTypeAnyType>(location); }
+
+void ResolvedTypeAnyType::dump(size_t level) const { std::cerr << indent(level) << "ResolvedTypeAnyType\n"; }
+
+std::string ResolvedTypeAnyType::to_str() const { return "anytype"; }
 
 }  // namespace DMZ

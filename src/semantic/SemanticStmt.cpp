@@ -518,6 +518,7 @@ bool Sema::resolve_decl_stmt_initialize(ResolvedDeclStmt &declStmt) {
         declStmt.state = ResolvedState::Error;
         return debug_ret(false);
     }
+    declStmt.set_constant_value(declStmt.varDecl->get_constant_value());
     declStmt.type = declStmt.varDecl->type->clone();
     declStmt.state = ResolvedState::FullyResolved;
     declStmt.initialized = true;
