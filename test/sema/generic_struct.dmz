@@ -25,6 +25,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:generic_struct.Point<i32>{} p1
+// CHECK-NEXT:       | value: {x: 1, y: 2}
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.Point<i32>{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
@@ -34,6 +35,7 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:generic_struct.Point<i32>{} p
+// CHECK-NEXT:       | value: {x: 1, y: 2}
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.Point<i32>{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'

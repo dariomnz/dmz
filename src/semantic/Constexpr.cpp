@@ -74,6 +74,17 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
                 return baseVal;
             }
         }
+        {
+            auto baseVal = evaluate(*memberExpr->base, allowSideEffects);
+            if (baseVal && baseVal->isStruct()) {
+                const auto &fields = baseVal->getStruct().fields;
+                for (auto &&[key, val] : fields) {
+                    if (key == memberExpr->member.identifier) {
+                        return val;
+                    }
+                }
+            }
+        }
         return evaluate_decl(memberExpr->member, allowSideEffects);
     }
     if (const auto *callExpr = dynamic_cast<const ResolvedCallExpr *>(&expr)) {
@@ -109,6 +120,15 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
     }
     if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
         return ComptimeValue(typeExpr->resolvedType->clone());
+    }
+    if (const auto *structInst = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
+        ComptimeValue::Struct structVal;
+        for (auto &&init : structInst->fieldInitializers) {
+            auto fieldVal = evaluate(*init->initializer, allowSideEffects);
+            if (!fieldVal) return std::nullopt;
+            structVal.fields.emplace_back(init->field.identifier, *fieldVal);
+        }
+        return ComptimeValue(std::move(structVal));
     }
     return expr.get_constant_value();
 }

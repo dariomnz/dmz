@@ -1,0 +1,20 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+fn make_point(a: i32, b: i32) -> Point {
+    return Point{x: a, y: b};
+}
+
+fn main() -> void {
+    const p = comptime make_point(10, 20);
+    const px = comptime p.x;
+    const py = comptime p.y;
+}
+
+// CHECK: | value: {x: 10, y: 20}
+// CHECK: | value: 10
+// CHECK: | value: 20

@@ -32,6 +32,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:struct_with_struct_field.Color{} x
+// CHECK-NEXT:       | value: {r: 0, g: 1, b: 2, p: {x: 7, y: 36}}
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:struct_with_struct_field.Color{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '0'

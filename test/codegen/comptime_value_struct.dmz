@@ -1,0 +1,21 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '20\n')
+
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void { printf("%d\n", n); }
+
+fn make_point(a: i32, b: i32) -> Point {
+    return Point{x: a, y: b};
+}
+
+fn main() -> void {
+    const p = comptime make_point(10, 20);
+    println(p.y);
+}
+
+// CHECK: call void @comptime_value_struct.println(i32 20)

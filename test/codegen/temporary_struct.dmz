@@ -22,25 +22,16 @@ fn foo() -> void {
 }
 // CHECK: define void @temporary_struct.foo() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S2 = alloca %temporary_struct.S2, align 8
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S = alloca %temporary_struct.S, align 8
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S21 = alloca %temporary_struct.S2, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S2, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S, i8 0, i64 16, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S21, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   store %temporary_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.temporary_struct.S2, align 4
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %temporary_struct.S2, ptr %tmp.struct.temporary_struct.S2, i32 0, i32 2
-// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
-// CHECK-NEXT:   call void @temporary_struct.println(i32 %1)
-// CHECK-NEXT:   store %temporary_struct.S2 { i32 2, i32 3, i32 4 }, ptr %tmp.struct.temporary_struct.S21, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 0
-// CHECK-NEXT:   store i32 1, ptr %2, align 4
-// CHECK-NEXT:   %3 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 1
-// CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %3, ptr align 4 %tmp.struct.temporary_struct.S21, i64 12, i1 false)
-// CHECK-NEXT:   %4 = getelementptr inbounds nuw %temporary_struct.S, ptr %tmp.struct.temporary_struct.S, i32 0, i32 1
-// CHECK-NEXT:   %5 = getelementptr inbounds nuw %temporary_struct.S2, ptr %4, i32 0, i32 1
-// CHECK-NEXT:   %6 = load i32, ptr %5, align 4
-// CHECK-NEXT:   call void @temporary_struct.println(i32 %6)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 3)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 3)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+// CHECK: define void @temporary_struct.bar() {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   call void @temporary_struct.println(i32 1)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 2)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 3)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -51,24 +42,9 @@ fn bar() -> void {
 }
 // CHECK: define void @temporary_struct.bar() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S2 = alloca %temporary_struct.S2, align 8
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S21 = alloca %temporary_struct.S2, align 8
-// CHECK-NEXT:   %tmp.struct.temporary_struct.S22 = alloca %temporary_struct.S2, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S2, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S21, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.temporary_struct.S22, i8 0, i64 12, i1 false)
-// CHECK-NEXT:   store %temporary_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.temporary_struct.S2, align 4
-// CHECK-NEXT:   %0 = getelementptr inbounds nuw %temporary_struct.S2, ptr %tmp.struct.temporary_struct.S2, i32 0, i32 0
-// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
-// CHECK-NEXT:   call void @temporary_struct.println(i32 %1)
-// CHECK-NEXT:   store %temporary_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.temporary_struct.S21, align 4
-// CHECK-NEXT:   %2 = getelementptr inbounds nuw %temporary_struct.S2, ptr %tmp.struct.temporary_struct.S21, i32 0, i32 1
-// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
-// CHECK-NEXT:   call void @temporary_struct.println(i32 %3)
-// CHECK-NEXT:   store %temporary_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.temporary_struct.S22, align 4
-// CHECK-NEXT:   %4 = getelementptr inbounds nuw %temporary_struct.S2, ptr %tmp.struct.temporary_struct.S22, i32 0, i32 2
-// CHECK-NEXT:   %5 = load i32, ptr %4, align 4
-// CHECK-NEXT:   call void @temporary_struct.println(i32 %5)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 1)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 2)
+// CHECK-NEXT:   call void @temporary_struct.println(i32 3)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 

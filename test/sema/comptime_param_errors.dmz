@@ -1,0 +1,10 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn needs_comptime(comptime x: i32) -> void {
+}
+
+fn main() -> void {
+    let runtime_val: i32 = 42;
+    // CHECK: [[# @LINE + 1 ]]:20: error: argument for comptime parameter 'x' must be a compile-time constant
+    needs_comptime(runtime_val);
+}

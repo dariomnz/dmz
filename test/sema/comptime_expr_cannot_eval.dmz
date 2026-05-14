@@ -1,0 +1,8 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+extern fn external_func(x: i32) -> i32;
+
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:15: error: expression cannot be evaluated at compile time
+    const x = comptime external_func(10);
+}

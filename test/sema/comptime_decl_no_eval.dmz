@@ -1,0 +1,10 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn foo(x: i32) -> i32 {
+    // CHECK: [[# @LINE + 1 ]]:21: error: declaration 'x' cannot be evaluated at compile time
+    return comptime x + 1;
+}
+
+fn main() -> void {
+    const y = foo(10);
+}

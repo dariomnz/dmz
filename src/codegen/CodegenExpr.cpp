@@ -126,8 +126,8 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
                 return create_global_string(val->getString(), "comptime.string");
             }
         }
-        // If it's a statement or void, it might not have a value we care about for codegen
-        return nullptr;
+        // Fall back to generating the inner expression (e.g. for struct values)
+        return generate_expr(*comptimeExpr->expr, keepPointer);
     }
     expr.dump();
     dmz_unreachable(expr.location, "unexpected expression");

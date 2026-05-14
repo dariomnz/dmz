@@ -30,6 +30,7 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedDeclStmt global_in_struct.A.B{}
 // CHECK-NEXT:                 ResolvedVarDecl:global_in_struct.A.B{} x
+// CHECK-NEXT:                 | value: {C: 1}
 // CHECK-NEXT:                   ResolvedStructInstantiationExpr:global_in_struct.A.B{}
 // CHECK-NEXT:                     ResolvedFieldInitStmt:i32 C
 // CHECK-NEXT:                       ResolvedIntLiteral:i32 '1'

@@ -1,0 +1,30 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '10\n20\n')
+
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void { printf("%d\n", n); }
+
+fn get_x(comptime p: Point) -> i32 {
+    return p.x;
+}
+
+fn get_y(comptime p: Point) -> i32 {
+    return p.y;
+}
+
+fn main() -> void {
+    const x = get_x(Point{x: 10, y: 20});
+    println(x);
+    const y = get_y(Point{x: 10, y: 20});
+    println(y);
+}
+
+// CHECK: get_x<comptime({x: 10, y: 20})>
+// CHECK: store i32 10
+// CHECK: get_y<comptime({x: 10, y: 20})>
+// CHECK: store i32 20

@@ -1,0 +1,26 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+const Inner = struct {
+    val: i32,
+};
+
+const Outer = struct {
+    inner: Inner,
+    name: i32,
+};
+
+fn make_outer(a: i32, b: i32) -> Outer {
+    return Outer{inner: Inner{val: a}, name: b};
+}
+
+fn main() -> void {
+    const o = comptime make_outer(10, 20);
+    const iv = comptime o.inner.val;
+    const nm = comptime o.name;
+}
+
+// CHECK: | value: {inner: {val: 10}, name: 20}
+// CHECK: ResolvedVarDecl:const i32 iv
+// CHECK-NEXT:       | value: 10
+// CHECK: ResolvedVarDecl:const i32 nm
+// CHECK-NEXT:       | value: 20

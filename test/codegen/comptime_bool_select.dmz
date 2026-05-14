@@ -1,0 +1,20 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e '10\n20\n')
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn println(n: i32) -> void { printf("%d\n", n); }
+
+fn select(comptime use_first: bool, a: i32, b: i32) -> i32 {
+    if (use_first) { return a; } else { return b; }
+}
+// CHECK: define i32 @"comptime_bool_select.select<comptime(true)>"(i32 %0, i32 %1) {
+// CHECK:   br i1 true, label %if.true, label %if.false
+// CHECK: define i32 @"comptime_bool_select.select<comptime(false)>"(i32 %0, i32 %1) {
+// CHECK:   br i1 false, label %if.true, label %if.false
+
+fn main() -> void {
+    const x = select(true, 10, 20);
+    println(x);
+    const y = select(false, 10, 20);
+    println(y);
+}

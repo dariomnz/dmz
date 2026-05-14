@@ -8,6 +8,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt tuple.i32.i32.i32{}
 // CHECK-NEXT:         ResolvedVarDecl:tuple.i32.i32.i32{} t
+// CHECK-NEXT:         | value: {elem0: 1, elem1: 2, elem2: 3}
 // CHECK-NEXT:           ResolvedTupleInstantiationExpr:tuple.i32.i32.i32{}
 // CHECK-NEXT:             ResolvedFieldInitStmt:i32 elem0
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '1'

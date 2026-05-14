@@ -1,0 +1,9 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+fn needs_comptime(comptime x: i32, y: i32) -> void {
+}
+
+fn main() -> void {
+    // CHECK: [[# @LINE + 1 ]]:19: error: missing argument for comptime parameter 'x'
+    needs_comptime();
+}

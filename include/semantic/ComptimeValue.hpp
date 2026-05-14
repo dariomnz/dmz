@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -22,7 +21,7 @@ struct ComptimeValue {
         bool operator==(const Array& other) const;
     };
     struct Struct {
-        std::unordered_map<std::string, ComptimeValue> fields;
+        std::vector<std::pair<std::string, ComptimeValue>> fields;
         bool operator==(const Struct& other) const;
     };
 

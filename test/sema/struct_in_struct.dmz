@@ -30,6 +30,7 @@ fn main() -> void {
 // CHECK-NEXT:                      ResolvedFieldDecl:i32 C
 // CHECK-NEXT:              ResolvedDeclStmt struct_in_struct.A.structL7C18.B{}
 // CHECK-NEXT:                ResolvedVarDecl:struct_in_struct.A.structL7C18.B{} x
+// CHECK-NEXT:                | value: {C: 1}
 // CHECK-NEXT:                  ResolvedStructInstantiationExpr:struct_in_struct.A.structL7C18.B{}
 // CHECK-NEXT:                    ResolvedFieldInitStmt:i32 C
 // CHECK-NEXT:                      ResolvedIntLiteral:i32 '1'

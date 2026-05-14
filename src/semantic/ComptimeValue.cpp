@@ -45,10 +45,9 @@ bool ComptimeValue::Array::operator==(const Array& other) const {
 
 bool ComptimeValue::Struct::operator==(const Struct& other) const {
     if (fields.size() != other.fields.size()) return false;
-    for (auto const& [key, val] : fields) {
-        auto it = other.fields.find(key);
-        if (it == other.fields.end()) return false;
-        if (!(val == it->second)) return false;
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (fields[i].first != other.fields[i].first) return false;
+        if (!(fields[i].second == other.fields[i].second)) return false;
     }
     return true;
 }
@@ -97,10 +96,25 @@ std::ostream& operator<<(std::ostream& os, const ComptimeValue& cv) {
         os << (cv.getBool() ? "true" : "false");
     else if (cv.isString())
         os << '\'' << str_to_source(cv.getString()) << '\'';
-    else if (cv.isArray())
-        os << "array";
-    else if (cv.isStruct())
-        os << "struct";
+    else if (cv.isArray()) {
+        os << '{';
+        bool first = true;
+        for (auto &&elem : cv.getArray().elements) {
+            if (!first) os << ", ";
+            os << elem;
+            first = false;
+        }
+        os << '}';
+    } else if (cv.isStruct()) {
+        os << '{';
+        bool first = true;
+        for (auto &&[key, val] : cv.getStruct().fields) {
+            if (!first) os << ", ";
+            os << key << ": " << val;
+            first = false;
+        }
+        os << '}';
+    }
     else if (cv.isType())
         os << cv.getType()->to_str();
     else

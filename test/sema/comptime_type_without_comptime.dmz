@@ -1,0 +1,5 @@
+// RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
+
+// CHECK: [[# @LINE + 1 ]]:12: error: parameter of type 'type' must be 'comptime'
+fn invalid(T: type) -> void {
+}

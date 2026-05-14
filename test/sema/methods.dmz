@@ -38,6 +38,7 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
 // CHECK-NEXT:       ResolvedVarDecl:methods.Color{} c
+// CHECK-NEXT:       | value: {r: 1, g: 2, b: 3}
 // CHECK-NEXT:         ResolvedStructInstantiationExpr:methods.Color{}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 r
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
