@@ -191,7 +191,7 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
         retVal = allocate_stack_variable(functionDecl.location, "retval", *fnType->returnType);
     }
     retBB = llvm::BasicBlock::Create(*m_context, "return");
-    int idx = 0;
+    size_t idx = 0;
     for (auto &&arg : function->args()) {
         if (arg.hasStructRetAttr()) {
             arg.setName("ret");
@@ -206,11 +206,11 @@ void Codegen::generate_function_body(const ResolvedFuncDecl &functionDecl) {
             continue;
         }
 
-        const auto *paramDecl = functionDecl.params[idx].get();
-        if (paramDecl->isComptime) {
+        while (idx < functionDecl.params.size() && functionDecl.params[idx]->isComptime) {
             ++idx;
-            continue;
         }
+
+        const auto *paramDecl = functionDecl.params[idx].get();
         // arg.setName(paramDecl->identifier);
 
         llvm::Value *declVal = &arg;
