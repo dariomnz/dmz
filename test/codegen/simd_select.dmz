@@ -13,11 +13,11 @@ pub fn main() -> void {
     const size = 4;
 
     const a_data: [size]f64 = {10.5, 2.0, 30.1, 4.4};
-    const a: @simd<f64, size> = @simdLoad(&a_data[0]);
+    const a: @simd(f64, size) = @simdLoad(&a_data[0]);
     const b_data: [size]f64 = {5.0, 8.8, 15.0, 20.2};
-    const b: @simd<f64, size> = @simdLoad(&b_data[0]);
+    const b: @simd(f64, size) = @simdLoad(&b_data[0]);
 
-    const mask: @simd<bool, size> = a > b;
+    const mask: @simd(bool, size) = a > b;
 
     const result = @simdSelect(a, b, mask);
 

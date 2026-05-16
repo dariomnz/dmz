@@ -167,17 +167,6 @@ struct TypeArray : public Type {
     DMZ_TYPE_NAME();
 };
 
-struct TypeSimd : public Type {
-    ptr<Expr> simdType;
-    ptr<Expr> simdSize;
-    TypeSimd(SourceLocation location, ptr<Expr> simdType, ptr<Expr> simdSize)
-        : Type(location), simdType(std::move(simdType)), simdSize(std::move(simdSize)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
 struct TypeFunction : public Type {
     std::vector<ptr<Expr>> paramsTypes;
     ptr<Expr> returnType;

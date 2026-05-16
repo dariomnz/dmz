@@ -71,7 +71,6 @@ enum class TokenType {
     kw_true,
     kw_false,
     kw_null,
-    kw_simd,
     kw_this,
     kw_fn,
     kw_if,
@@ -185,7 +184,6 @@ const static std::unordered_map<std::string, TokenType> keywords = {
     {"true", TokenType::kw_true},
     {"false", TokenType::kw_false},
     {"null", TokenType::kw_null},
-    {"@simd", TokenType::kw_simd},
     {"@This", TokenType::kw_this},
     {"anytype", TokenType::ty_anytype},
 };

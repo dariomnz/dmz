@@ -56,10 +56,6 @@ void TypeArray::dump(size_t level) const { std::cerr << indent(level) << "TypeAr
 
 std::string TypeArray::to_str() const { return "[" + arraySize->to_str() + "]" + arrayType->to_str(); }
 
-void TypeSimd::dump(size_t level) const { std::cerr << indent(level) << "TypeSimd " << to_str() << '\n'; }
-
-std::string TypeSimd::to_str() const { return "@simd<" + simdType->to_str() + ", " + simdSize->to_str() + ">"; }
-
 void TypeFunction::dump(size_t level) const { std::cerr << indent(level) << "TypeFunction " << to_str() << '\n'; }
 
 std::string TypeFunction::to_str() const {

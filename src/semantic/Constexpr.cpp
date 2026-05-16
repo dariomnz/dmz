@@ -200,18 +200,69 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             return expr.get_constant_value();
         } else if (builtin->identifier == "@typeid") {
             auto &typeArg = expr.arguments[0];
-            const ResolvedType *targetType = typeArg->type.get();
+            ptr<ResolvedType> targetType = typeArg->type->clone();
             if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
-                targetType = typeExpr->resolvedType.get();
+                targetType = typeExpr->resolvedType->clone();
+            }
+            if (dynamic_cast<const ResolvedTypeType *>(targetType.get())) {
+                if (auto comptimeVal = typeArg->get_constant_value()) {
+                    if (!comptimeVal->isType()) {
+                        dmz_unreachable(typeArg->location, "need to have const value");
+                    }
+                    targetType = comptimeVal->getType()->clone();
+                } else {
+                    dmz_unreachable(typeArg->location, "need to have const value");
+                }
             }
             return evaluate_type(*targetType);
         } else if (builtin->identifier == "@sizeof") {
             auto &typeArg = expr.arguments[0];
-            const ResolvedType *targetType = typeArg->type.get();
+            ptr<ResolvedType> targetType = typeArg->type->clone();
             if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
-                targetType = typeExpr->resolvedType.get();
+                targetType = typeExpr->resolvedType->clone();
+            }
+            if (dynamic_cast<const ResolvedTypeType *>(targetType.get())) {
+                if (auto comptimeVal = typeArg->get_constant_value()) {
+                    if (!comptimeVal->isType()) {
+                        dmz_unreachable(typeArg->location, "need to have const value");
+                    }
+                    targetType = comptimeVal->getType()->clone();
+                } else {
+                    dmz_unreachable(typeArg->location, "need to have const value");
+                }
             }
             return ComptimeValue((int64_t)std::max(CodegenUtils::typeBitSize(*targetType) / 8, 1));
+        } else if (builtin->identifier == "@simd") {
+            auto &typeArg = expr.arguments[0];
+            ptr<ResolvedType> targetType;
+            if (auto constVal = typeArg->get_constant_value()) {
+                if (!constVal->isType()) {
+                    report(typeArg->location, "cannot deduce vector type, expected constant type");
+                    return std::nullopt;
+                }
+                targetType = constVal->getType();
+            } else {
+                report(typeArg->location, "cannot deduce vector type, expected constant type");
+                return std::nullopt;
+            }
+            auto &sizeArg = expr.arguments[1];
+            int64_t vectorSize;
+            if (auto constVal = sizeArg->get_constant_value()) {
+                if (!constVal->isInt()) {
+                    report(sizeArg->location, "cannot deduce vector size, expected constant integer");
+                    return std::nullopt;
+                }
+                vectorSize = constVal->getInt();
+            } else {
+                report(sizeArg->location, "cannot deduce vector size, expected constant integer");
+                return std::nullopt;
+            }
+
+            if (vectorSize <= 0) {
+                report(expr.location, "vector size must be greater than 0");
+                return std::nullopt;
+            }
+            return ComptimeValue(makePtr<ResolvedTypeSimd>(expr.location, std::move(targetType), vectorSize));
         } else if (builtin->identifier == "@simdSize") {
             auto &typeArg = expr.arguments[0];
             ptr<ResolvedType> targetType = typeArg->type->clone();

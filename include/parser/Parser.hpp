@@ -162,6 +162,5 @@ class Parser {
     ptr<Comment> parse_comment();
     ptr<EmptyLine> parse_empty_line();
     ptr<TestDecl> parse_test_decl();
-    ptr<TypeSimd> parse_simd_type();
 };
 }  // namespace DMZ

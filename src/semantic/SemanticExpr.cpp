@@ -628,13 +628,6 @@ ptr<ResolvedTypeExpr> Sema::resolve_type_expr(const Expr &expr) {
             resolvedExpr = makePtr<ResolvedTypeArrayExpr>(typeArray->location, resolvedType->clone(),
                                                           std::move(arrayType), std::move(arraySize));
         }
-        if (auto typeVec = dynamic_cast<const TypeSimd *>(typeExpr)) {
-            debug_msg("TypeSimd" << expr.location);
-            varOrReturn(simdType, resolve_type_expr(*typeVec->simdType));
-            varOrReturn(simdSize, resolve_expr(*typeVec->simdSize));
-            resolvedExpr = makePtr<ResolvedTypeSimdExpr>(typeVec->location, resolvedType->clone(), std::move(simdType),
-                                                         std::move(simdSize));
-        }
         if (auto typeFunc = dynamic_cast<const TypeFunction *>(typeExpr)) {
             debug_msg("TypeFunction" << expr.location);
             vec<ptr<ResolvedTypeExpr>> argTypes;

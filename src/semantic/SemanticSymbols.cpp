@@ -630,13 +630,6 @@ void ResolvedTypeArrayExpr::dump(size_t level, bool onlySelf) const {
     sizeExpr->dump(level + 1, onlySelf);
 }
 
-void ResolvedTypeSimdExpr::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedTypeSimdExpr:" << type->to_str() << '\n';
-    if (onlySelf) return;
-    simdType->dump(level + 1, onlySelf);
-    sizeExpr->dump(level + 1, onlySelf);
-}
-
 void ResolvedAutoMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedAutoMemberExpr ." << field << " " << type->to_str() << '\n';
     if (onlySelf) return;

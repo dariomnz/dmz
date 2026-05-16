@@ -163,6 +163,22 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@simd") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "type", ResolvedTypeExpr::fromType(makePtr<ResolvedTypeType>(loc)), false, true));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "size", ResolvedTypeExpr::fromType(makePtr<ResolvedTypeAnyType>(loc)), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeType>(loc));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @simd");
+        return &funcDecl;
     } else if (fnName == "@simdSize") {
         std::vector<ptr<ResolvedParamDecl>> params;
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "type", genericTypeExpr(), false));
@@ -178,18 +194,16 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
-        auto fnType =
-            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
-                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), 0));
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
     } else if (fnName == "@simdIota") {
         std::vector<ptr<ResolvedParamDecl>> params;
         std::vector<ptr<ResolvedType>> paramsTypes;
-        auto fnType =
-            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
-                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), 0));
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
@@ -239,9 +253,8 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "ptr", genericTypeExpr(), false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
-        auto fnType =
-            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
-                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), 0));
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
@@ -266,9 +279,8 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());
         paramsTypes.emplace_back(params[2]->type->clone());
-        auto fnType =
-            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
-                                          makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), nullptr, 0));
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), 0));
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
@@ -684,6 +696,8 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
         if (!ensure_fully_resolved(*structTypeExpr->type)) return nullptr;
         return ret;
+    } else if (resolvedCallee.identifier == "@simd") {
+        return castPtr<ResolvedTypeFunction>(resolvedCallee.getFnType()->clone());
     } else if (resolvedCallee.identifier == "@simdSize") {
         auto &typeExpr = resolvedArguments[0];
         auto retType = ResolvedTypeNumber::usize(call.location);
@@ -696,7 +710,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         return ret;
     } else if (resolvedCallee.identifier == "@simdSplat") {
         auto &value = resolvedArguments[0];
-        auto retType = makePtr<ResolvedTypeSimd>(call.location, value->type->clone(), nullptr, 0);
+        auto retType = makePtr<ResolvedTypeSimd>(call.location, value->type->clone(), 0);
         call.type = retType->clone();
 
         std::vector<ptr<ResolvedType>> params;
@@ -704,7 +718,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
         return ret;
     } else if (resolvedCallee.identifier == "@simdIota") {
-        auto retType = makePtr<ResolvedTypeSimd>(call.location, ResolvedTypeNumber::usize(call.location), nullptr, 0);
+        auto retType = makePtr<ResolvedTypeSimd>(call.location, ResolvedTypeNumber::usize(call.location), 0);
         call.type = retType->clone();
 
         std::vector<ptr<ResolvedType>> params;
@@ -797,8 +811,8 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
 
         if (!perform_implicit_cast(bParam, *simdType)) return nullptr;
 
-        auto maskType = makePtr<ResolvedTypeSimd>(call.location, makePtr<ResolvedTypeBool>(call.location), nullptr,
-                                                  simdType->simdSize);
+        auto maskType =
+            makePtr<ResolvedTypeSimd>(call.location, makePtr<ResolvedTypeBool>(call.location), simdType->simdSize);
         if (!perform_implicit_cast(maskParam, *maskType)) return nullptr;
 
         call.type = simdType->clone();

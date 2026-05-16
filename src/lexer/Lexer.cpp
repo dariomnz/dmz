@@ -74,7 +74,6 @@ std::ostream& operator<<(std::ostream& os, const TokenType& t) {
         CASE_TYPE(kw_false);
         CASE_TYPE(kw_null);
         CASE_TYPE(kw_this);
-        CASE_TYPE(kw_simd);
         CASE_TYPE(kw_if);
         CASE_TYPE(kw_else);
         CASE_TYPE(kw_let);
@@ -154,7 +153,8 @@ static inline bool isAlpha(const std::string_view& c) {
 }
 static inline bool isDigit(const std::string_view& c) { return c.size() > 0 && '0' <= c[0] && c[0] <= '9'; }
 static inline bool isHexDigit(const std::string_view& c) {
-    return c.size() > 0 && (('0' <= c[0] && c[0] <= '9') || ('a' <= c[0] && c[0] <= 'f') || ('A' <= c[0] && c[0] <= 'F'));
+    return c.size() > 0 &&
+           (('0' <= c[0] && c[0] <= '9') || ('a' <= c[0] && c[0] <= 'f') || ('A' <= c[0] && c[0] <= 'F'));
 }
 static inline bool isBinDigit(const std::string_view& c) { return c.size() > 0 && ('0' == c[0] || '1' == c[0]); }
 

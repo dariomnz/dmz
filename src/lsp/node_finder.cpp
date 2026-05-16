@@ -237,10 +237,6 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         find_in_expr(*ae->arrayType);
         if (found_decl) return;
         find_in_expr(*ae->sizeExpr);
-    } else if (const auto* se = dynamic_cast<const ResolvedTypeSimdExpr*>(&expr)) {
-        find_in_expr(*se->simdType);
-        if (found_decl) return;
-        find_in_expr(*se->sizeExpr);
     } else if (auto* fnSig = dynamic_cast<const ResolvedTypeFunctionExpr*>(&expr)) {
         find_in_expr(*fnSig->resolvedReturnTypeExpr);
         if (found_decl) return;

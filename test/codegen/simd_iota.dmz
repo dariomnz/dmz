@@ -8,7 +8,7 @@ fn main() -> void {
 }
 
 fn test_i32x4() -> void {
-    let v: @simd<i32, 4> = @simdIota();
+    let v: @simd(i32, 4) = @simdIota();
     for (0..4) |i| {
         const value = v[i];
         if (value != i) {
@@ -20,7 +20,7 @@ fn test_i32x4() -> void {
 }
 
 fn test_f32x8() -> void {
-    let v: @simd<f32, 8> = @simdIota();
+    let v: @simd(f32, 8) = @simdIota();
     for (0..8) |i| {
         const value = v[i];
         let i_lower: f32 = @floatCast(i);

@@ -819,19 +819,7 @@ bool ResolvedTypeSimd::compare(const ResolvedType &other) const {
 
 ptr<ResolvedType> ResolvedTypeSimd::clone() const {
     debug_func("ResolvedTypeSimd " << location);
-    if (!simdSizeExpr) {
-        return makePtr<ResolvedTypeSimd>(location, simdType->clone(), nullptr, simdSize);
-    } else if (auto sizeExpr = dynamic_cast<const ResolvedDeclRefExpr *>(simdSizeExpr.get())) {
-        return makePtr<ResolvedTypeSimd>(location, simdType->clone(),
-                                         makePtr<ResolvedDeclRefExpr>(sizeExpr->location, sizeExpr->identifier,
-                                                                      sizeExpr->decl, sizeExpr->type->clone()),
-                                         simdSize);
-    } else if (auto sizeExpr = dynamic_cast<const ResolvedIntLiteral *>(simdSizeExpr.get())) {
-        return makePtr<ResolvedTypeSimd>(location, simdType->clone(),
-                                         makePtr<ResolvedIntLiteral>(sizeExpr->location, sizeExpr->value), simdSize);
-    } else {
-        dmz_unreachable(location, "TODO");
-    }
+    return makePtr<ResolvedTypeSimd>(location, simdType->clone(), simdSize);
 }
 
 void ResolvedTypeSimd::dump(size_t level) const {

@@ -47,9 +47,6 @@ ptr<Expr> Parser::parse_primary() {
         eat_next_token();  // eat number
         return literal;
     }
-    if (m_nextToken.type == TokenType::kw_simd) {
-        return parse_simd_type();
-    }
     if (m_nextToken.type == TokenType::kw_fn && peek_token().type == TokenType::par_l) {
         eat_next_token();  // eat fn
         bool haveTrailingComma;
@@ -214,9 +211,11 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
     if (m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
         bool haveTrailingComma;
-        varOrReturn(argumentList, parse_list_with_trailing_comma<Expr>(
-                                      {TokenType::par_l, "expected '('"}, [this]() { return parse_expr(); },
-                                      {TokenType::par_r, "expected ')'"}, haveTrailingComma));
+        varOrReturn(argumentList, with_no_restrictions<ptr<vec<ptr<Expr>>>>([&]() {
+                        return parse_list_with_trailing_comma<Expr>(
+                            {TokenType::par_l, "expected '('"}, [this]() { return parse_expr(); },
+                            {TokenType::par_r, "expected ')'"}, haveTrailingComma);
+                    }));
 
         expr = makePtr<CallExpr>(location, std::move(expr), std::move(*argumentList), haveTrailingComma);
         return parse_postfix_expr(std::move(expr));
@@ -489,27 +488,4 @@ ptr<ImportExpr> Parser::parse_import_expr() {
 
     return makePtr<ImportExpr>(location, identifier);
 }
-
-ptr<TypeSimd> Parser::parse_simd_type() {
-    debug_func("");
-    SourceLocation location = m_nextToken.loc;
-    matchOrReturn(TokenType::kw_simd, "expected @simd");
-    eat_next_token();  // eat @simd
-
-    matchOrReturn(TokenType::op_less, "expected '<' after @simd");
-    eat_next_token();  // eat <
-
-    varOrReturn(type, parse_type());
-
-    matchOrReturn(TokenType::comma, "expected ',' after vector type");
-    eat_next_token();  // eat ,
-
-    varOrReturn(size, with_no_restrictions<ptr<Expr>>([&]() { return parse_primary(); }));
-
-    matchOrReturn(TokenType::op_more, "expected '>' after vector size");
-    eat_next_token();  // eat >
-
-    return makePtr<TypeSimd>(location, std::move(type), std::move(size));
-}
-
 }  // namespace DMZ

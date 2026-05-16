@@ -355,13 +355,10 @@ struct ResolvedTypeArray : public ResolvedType {
 
 struct ResolvedTypeSimd : public ResolvedType {
     ptr<ResolvedType> simdType;
-    ptr<ResolvedExpr> simdSizeExpr;
     int simdSize;
-    ResolvedTypeSimd(SourceLocation location, ptr<ResolvedType> vectorType, ptr<ResolvedExpr> simdSizeExpr,
-                     int vectorSize)
+    ResolvedTypeSimd(SourceLocation location, ptr<ResolvedType> vectorType, int vectorSize)
         : ResolvedType(ResolvedTypeKind::Simd, std::move(location)),
           simdType(std::move(vectorType)),
-          simdSizeExpr(std::move(simdSizeExpr)),
           simdSize(vectorSize) {}
 
     bool equal(const ResolvedType &other) const override;

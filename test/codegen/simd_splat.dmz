@@ -9,7 +9,7 @@ fn main() -> void {
 }
 
 fn test_i32x4() -> void {
-    let v: @simd<i32, 4> = @simdSplat(10);
+    let v: @simd(i32, 4) = @simdSplat(10);
     for (0..4) |i| {
         const value = v[i];
         if (value != 10) {
@@ -21,7 +21,7 @@ fn test_i32x4() -> void {
 }
 
 fn test_f32x8() -> void {
-    let v: @simd<f32, 8> = @simdSplat(1.5);
+    let v: @simd(f32, 8) = @simdSplat(1.5);
     for (0..8) |i| {
         const value = v[i];
         if (value != 1.5) {
@@ -33,7 +33,7 @@ fn test_f32x8() -> void {
 }
 
 fn test_add_splats() -> void {
-    let v: @simd<i32, 4> = @simdSplat(1) + @simdSplat(2);
+    let v: @simd(i32, 4) = @simdSplat(1) + @simdSplat(2);
     for (0..4) |i| {
         const value = v[i];
         if (value != 3) {

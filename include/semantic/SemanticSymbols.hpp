@@ -650,17 +650,6 @@ struct ResolvedTypeArrayExpr : public ResolvedAssignableExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedTypeSimdExpr : public ResolvedExpr {
-    ptr<ResolvedTypeExpr> simdType;
-    ptr<ResolvedExpr> sizeExpr;
-    ResolvedTypeSimdExpr(SourceLocation location, ptr<ResolvedType> type, ptr<ResolvedTypeExpr> simdType,
-                         ptr<ResolvedExpr> sizeExpr)
-        : ResolvedExpr(location, std::move(type)), simdType(std::move(simdType)), sizeExpr(std::move(sizeExpr)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-};
-
 struct ResolvedCallExpr : public ResolvedExpr {
     ptr<ResolvedExpr> callee;
     std::vector<ptr<ResolvedExpr>> arguments;

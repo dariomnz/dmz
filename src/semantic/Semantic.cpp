@@ -398,9 +398,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         decl->dump();
         dmz_unreachable(decl->location, "TODO");
     }
-    if (auto vecType = dynamic_cast<const TypeSimd *>(&type)) {
-        return resolve_simd_type(*vecType);
-    }
     if (auto genType = dynamic_cast<const GenericExpr *>(&type)) {
         varOrReturn(specExpr, resolve_generic_expr(*genType));
         if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(specExpr->type.get())) {
@@ -560,27 +557,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     type.dump();
     dmz_unreachable(type.location, "TODO");
     (void)retPtr;
-}
-
-ptr<ResolvedType> Sema::resolve_simd_type(const TypeSimd &simdType) {
-    debug_func(simdType.location);
-    varOrReturn(resType, resolve_type(*simdType.simdType));
-
-    varOrReturn(sizeExpr, resolve_expr(*simdType.simdSize));
-    int vectorSize = 0;
-    if (auto as = sizeExpr->get_constant_value()) {
-        vectorSize = as->getInt();
-    } else if (auto intLit = dynamic_cast<const ResolvedIntLiteral *>(sizeExpr.get())) {
-        vectorSize = intLit->value;
-    } else {
-        return report(sizeExpr->location, "cannot deduce vector size, expected constant integer");
-    }
-
-    if (vectorSize <= 0) {
-        return report(simdType.location, "vector size must be greater than 0");
-    }
-
-    return makePtr<ResolvedTypeSimd>(simdType.location, std::move(resType), std::move(sizeExpr), vectorSize);
 }
 
 ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {

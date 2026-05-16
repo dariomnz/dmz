@@ -278,10 +278,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             debug_msg("ResolvedTypeArrayExpr");
             traverse_expr(*ae->arrayType);
             traverse_expr(*ae->sizeExpr);
-        } else if (auto* se = dynamic_cast<const ResolvedTypeSimdExpr*>(&expr)) {
-            debug_msg("ResolvedTypeSimdExpr");
-            traverse_expr(*se->simdType);
-            traverse_expr(*se->sizeExpr);
         } else if (auto* fnSig = dynamic_cast<const ResolvedTypeFunctionExpr*>(&expr)) {
             debug_msg("ResolvedFuncSigType");
             traverse_expr(*fnSig->resolvedReturnTypeExpr);

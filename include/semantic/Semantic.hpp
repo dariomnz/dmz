@@ -76,14 +76,14 @@ class Sema {
     std::unordered_map<const StructDecl *, int> m_structInstanceCounts;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
-        {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr},  {"@atomicCmpExW", nullptr},
-        {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},       {"@typeof", nullptr},
-        {"@typeid", nullptr},       {"@typeinfo", nullptr},   {"@hasMethod", nullptr},    {"@simdSize", nullptr},
-        {"@simdSplat", nullptr},    {"@simdIota", nullptr},   {"@errorTrace", nullptr},   {"@testNum", nullptr},
-        {"@testRun", nullptr},      {"@testName", nullptr},   {"@simdLoad", nullptr},     {"@simdStore", nullptr},
-        {"@simdSelect", nullptr},   {"@simdReduce", nullptr}, {"@compileError", nullptr}, {"@compileLog", nullptr},
-        {"@asm", nullptr},          {"@ptrCast", nullptr},    {"@intCast", nullptr},      {"@floatCast", nullptr},
-        {"@sqrt", nullptr},
+        {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},
+        {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},      {"@typeof", nullptr},
+        {"@typeid", nullptr},       {"@typeinfo", nullptr},   {"@hasMethod", nullptr},   {"@simd", nullptr},
+        {"@simdSize", nullptr},     {"@simdSplat", nullptr},  {"@simdIota", nullptr},    {"@errorTrace", nullptr},
+        {"@testNum", nullptr},      {"@testRun", nullptr},    {"@testName", nullptr},    {"@simdLoad", nullptr},
+        {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@compileError", nullptr},
+        {"@compileLog", nullptr},   {"@asm", nullptr},        {"@ptrCast", nullptr},     {"@intCast", nullptr},
+        {"@floatCast", nullptr},    {"@sqrt", nullptr},
     };
 
    public:
@@ -111,7 +111,6 @@ class Sema {
     bool insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl);
 
     ptr<ResolvedType> resolve_type(const Expr &parsedType);
-    ptr<ResolvedType> resolve_simd_type(const TypeSimd &simdType);
     ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericExpr &parsedType);
     ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
     ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);

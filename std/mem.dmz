@@ -56,7 +56,7 @@ fn indexOfScalarSIMD(comptime T: type, slice: []T, scalar: T) -> isize {
     }
     // First consume the firsts elements to avoid alignment issues
     // call indexOfScalar<T>() to consume until aligment
-    const alignment = @sizeof(@simd<T, simd_len>);
+    const alignment = @sizeof(@simd(T, simd_len));
     const ptr_int: usize = slice.ptr;
     const remainder = ptr_int % alignment;
     let offset: usize = 0;
@@ -66,17 +66,17 @@ fn indexOfScalarSIMD(comptime T: type, slice: []T, scalar: T) -> isize {
         if (index != -1) return index;
     }
 
-    const scalar_vec: @simd<T, simd_len> = @simdSplat(scalar);
+    const scalar_vec: @simd(T, simd_len) = @simdSplat(scalar);
 
-    const index_vec: @simd<u16, simd_len> = @simdIota();
+    const index_vec: @simd(u16, simd_len) = @simdIota();
     let i: usize = offset;
     while (i <= slice.len - simd_len) {
         const slice_ptr = &slice[i];
-        const data: @simd<T, simd_len> = @simdLoad(slice_ptr);
+        const data: @simd(T, simd_len) = @simdLoad(slice_ptr);
         const match_mask = data == scalar_vec;
 
         if (@simdReduce(match_mask, .Or)) {
-            const matches: @simd<u16, simd_len> = @simdSelect(index_vec, @simdSplat(@intCast(simd_len)), match_mask);
+            const matches: @simd(u16, simd_len) = @simdSelect(index_vec, @simdSplat(@intCast(simd_len)), match_mask);
             return @intCast(i + @simdReduce(matches, .Min));
         }
         i += simd_len;
@@ -142,7 +142,7 @@ fn copySIMD(comptime T:type, dest: []T, src: []T) -> void {
         return;
     }
 
-    const alignment = @sizeof(@simd<T, simd_len>);
+    const alignment = @sizeof(@simd(T, simd_len));
     const dest_ptr_int: usize = dest.ptr;
     const remainder = dest_ptr_int % alignment;
 
@@ -157,7 +157,7 @@ fn copySIMD(comptime T:type, dest: []T, src: []T) -> void {
         const src_ptr = &src[i];
         const dest_ptr = &dest[i];
 
-        const data: @simd<T, simd_len> = @simdLoad(src_ptr);
+        const data: @simd(T, simd_len) = @simdLoad(src_ptr);
         @simdStore(data, dest_ptr);
 
         i += simd_len;
@@ -178,7 +178,7 @@ fn copySIMDBackwards(comptime T: type, dest: []T, src: []T) -> void {
     // Alinear el final del puntero de destino para el copiado hacia atrás
     let end_ptr_int: usize = dest.ptr;
     end_ptr_int += (len * @sizeof(T));
-    const alignment = @sizeof(@simd<T, simd_len>);
+    const alignment = @sizeof(@simd(T, simd_len));
     const remainder = end_ptr_int % alignment;
 
     const tail_count = remainder / @sizeof(T);
@@ -189,7 +189,7 @@ fn copySIMDBackwards(comptime T: type, dest: []T, src: []T) -> void {
     let i: usize = len - tail_count;
     while (i >= simd_len) {
         const start = i - simd_len;
-        const data: @simd<T, simd_len> = @simdLoad(&src[start]);
+        const data: @simd(T, simd_len) = @simdLoad(&src[start]);
         @simdStore(data, &dest[start]);
 
         i -= simd_len;
@@ -222,7 +222,7 @@ fn setSIMD(comptime T: type, dest: []T, value: T) -> void {
         return;
     }
 
-    const alignment = @sizeof(@simd<T, simd_len>);
+    const alignment = @sizeof(@simd(T, simd_len));
     const dest_ptr_int: usize = dest.ptr;
     const remainder = dest_ptr_int % alignment;
 
@@ -233,7 +233,7 @@ fn setSIMD(comptime T: type, dest: []T, value: T) -> void {
         setScalar(T, dest[0..offset], value);
     }
 
-    const value_vec: @simd<T, simd_len> = @simdSplat(value);
+    const value_vec: @simd(T, simd_len) = @simdSplat(value);
 
     let i: usize = offset;
     while (i <= len - simd_len) {
