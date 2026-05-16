@@ -1,0 +1,38 @@
+const std = import("std");
+
+pub const Vec3 = @simd<f64, 3>;
+
+pub fn x(v: Vec3) -> f64 {
+    return v[0];
+}
+pub fn y(v: Vec3) -> f64 {
+    return v[1];
+}
+pub fn z(v: Vec3) -> f64 {
+    return v[2];
+}
+
+pub fn length(v: Vec3) -> f64 {
+    return @sqrt(lenghtSquared(v));
+}
+
+pub fn lenghtSquared(v: Vec3) -> f64 {
+    return @simdReduce(v * v, .Add);
+}
+
+pub fn fmt(w: std.io.Writer, v: Vec3) -> void {
+    std.fmt.fmt(w, "{} {} {}", .{v[0], v[1], v[2]});
+}
+
+pub fn dot(u: Vec3, v: Vec3) -> f64 {
+    return @simdReduce(u * v, .Add);
+}
+
+pub fn cross(u: Vec3, v: Vec3) -> Vec3 {
+    const ret = {u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]};
+    return @simdLoad(&ret[0]);
+}
+
+pub fn unitVec(v: Vec3) -> Vec3 {
+    return v / @simdSplat(length(v));
+}

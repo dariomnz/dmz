@@ -1,0 +1,40 @@
+const std = import("std");
+const vec = import("vec.dmz");
+const color = import("color.dmz");
+
+const Vec3 = vec.Vec3;
+const Color = color.Color;
+
+const aspectRatio = 16.0 / 9.0;
+
+fn main() -> void {
+    const width = 256;
+    const height = 256;
+
+
+    const eBuf: [0]u8 = {};
+    const e = std.io.stderr.writer(eBuf[0..0]);
+    defer e.flush();
+
+    const wBuf: [4096]u8 = {};
+    const w = std.io.stdout.writer(wBuf[0..@sizeof(wBuf)]);
+    defer w.flush();
+    
+    std.fmt.fmt(w, "P3\n{d} {d}\n255\n", .{width, height});
+
+    for (0..height) |j| {
+        std.fmt.fmt(e, "\rScanlines remaining: {d}\033[K", .{height - j});
+
+        for (0..width) |i| {
+            const fi: f64 = @floatCast(i);
+            const fj: f64 = @floatCast(j);
+            const r: f64 = fi / @floatCast(width - 1);
+            const g: f64 = fj / @floatCast(height - 1);
+
+            const pixel: Color = color.init(r, g, 0.0);
+            color.fmt(w, pixel);
+        }
+    }
+    std.fmt.fmt(e, "\rDone.\033[K\n", .{});
+    std.fmt.fmt(e, "Aspect ratio: {}\n", .{aspectRatio});
+}

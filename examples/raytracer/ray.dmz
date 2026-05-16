@@ -1,0 +1,19 @@
+
+const vec = import("vec.dmz");
+const Vec3 = vec.Vec3;
+
+const Ray = struct {
+    orig: Vec3,
+    dir: Vec3,
+
+    pub fn init(origin: Vec3, direction: Vec3) -> @This {
+        return @This{
+            orig: origin,
+            dir: direction,
+        };
+    }
+
+    pub fn at(self: *@This, t: f64) -> Vec3 {
+        return self.orig + @simdSplat(t) * self.dir;
+    }
+};
