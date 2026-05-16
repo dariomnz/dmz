@@ -190,13 +190,6 @@ bool ResolvedTypeStructDecl::compare(const ResolvedType &other) const {
     debug_func("ResolvedTypeStructDecl " << to_str() << " " << other.to_str() << " " << location);
     if (equal(other)) return debug_ret(true);
     if (other.is_generic()) return debug_ret(true);
-    if (auto strType = dynamic_cast<const ResolvedTypeStructDecl *>(&other)) {
-        if (dynamic_cast<const ResolvedGenericStructDecl *>(decl) ||
-            dynamic_cast<const ResolvedGenericStructDecl *>(strType->decl)) {
-            return debug_ret(true);
-        }
-    }
-
     return debug_ret(false);
 }
 
@@ -217,12 +210,6 @@ std::string ResolvedTypeStructDecl::to_str() const {
 }
 
 bool ResolvedTypeStructDecl::is_generic() const {
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
-        return debug_ret(true);
-    }
-    if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
-        return debug_ret(spec->specializedTypes->is_generic());
-    }
     if (decl->isGenericVisiting) return debug_ret(false);
     decl->isGenericVisiting = true;
     for (auto &&field : decl->fields) {
@@ -249,12 +236,6 @@ bool ResolvedTypeStruct::compare(const ResolvedType &other) const {
     if (equal(other)) return debug_ret(true);
     if (other.is_generic()) return debug_ret(true);
     if (other.kind == ResolvedTypeKind::DefaultInit) return debug_ret(true);
-    if (auto strType = dynamic_cast<const ResolvedTypeStruct *>(&other)) {
-        if (dynamic_cast<const ResolvedGenericStructDecl *>(decl) ||
-            dynamic_cast<const ResolvedGenericStructDecl *>(strType->decl)) {
-            return debug_ret(true);
-        }
-    }
     return debug_ret(false);
 }
 
@@ -273,12 +254,6 @@ std::string ResolvedTypeStruct::to_str() const {
 }
 
 bool ResolvedTypeStruct::is_generic() const {
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(decl)) {
-        return debug_ret(true);
-    }
-    if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
-        return debug_ret(spec->specializedTypes->is_generic());
-    }
     if (decl->isGenericVisiting) return debug_ret(false);
     decl->isGenericVisiting = true;
     for (auto &&field : decl->fields) {

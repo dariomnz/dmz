@@ -122,9 +122,6 @@ class Sema {
     ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation &location,
                                                                  ResolvedGenericFunctionDecl &funcDecl,
                                                                  const ResolvedTypeSpecialized &specializedTypes);
-    ResolvedSpecializedStructDecl *specialize_generic_struct(const SourceLocation &location,
-                                                             ResolvedGenericStructDecl &struDecl,
-                                                             const ResolvedTypeSpecialized &specializedTypes);
     ptr<ResolvedFuncDecl> resolve_function_decl(const FuncDecl &function);
     ptr<ResolvedFunctionDecl> resolve_member_function_decl(const ResolvedDecl &parentDecl, const FuncDecl &function);
     ptr<ResolvedParamDecl> resolve_param_decl(const ParamDecl &param);
@@ -206,10 +203,6 @@ class Sema {
     ptr<ResolvedTypeFunction> resolve_builtin_function_expr(ResolvedExpr &callee,
                                                             ResolvedBuiltinFunctionDecl &resolvedCallee,
                                                             std::vector<ptr<ResolvedExpr>> &resolvedArguments);
-    bool resolve_builtin_function(const ResolvedFunctionDecl &fnDecl);
-    void resolve_builtin_test_num(const ResolvedFunctionDecl &fnDecl);
-    void resolve_builtin_test_name(const ResolvedFunctionDecl &fnDecl);
-    void resolve_builtin_test_run(const ResolvedFunctionDecl &fnDecl);
 
     ptr<ResolvedType> determine_for_range_capture_type(const ResolvedRangeExpr &rangeExpr,
                                                        const SourceLocation &location);

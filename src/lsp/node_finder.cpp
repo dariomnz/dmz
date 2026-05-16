@@ -73,12 +73,6 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
         }
     } else if (const auto* sd = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
         if (sd->isTuple) return;
-        if (const auto* genStru = dynamic_cast<const ResolvedGenericStructDecl*>(sd)) {
-            for (const auto& gt : genStru->genericTypeDecls) {
-                find_in_decl(*gt);
-                if (found_decl) return;
-            }
-        }
         for (const auto& field : sd->fields) {
             find_in_decl(*field);
             if (found_decl) return;

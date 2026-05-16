@@ -131,7 +131,6 @@ void Codegen::generate_decl(const ResolvedDecl &decl) {
     m_resolvedDecls.insert(&decl);
 
     if (auto sd = dynamic_cast<const ResolvedStructDecl *>(&decl)) {
-        if (dynamic_cast<const ResolvedGenericStructDecl *>(&decl)) return;
         generate_struct_decl(*sd);
         m_pendingDecls.insert(&decl);
     } else if (auto ud = dynamic_cast<const ResolvedUnionDecl *>(&decl)) {

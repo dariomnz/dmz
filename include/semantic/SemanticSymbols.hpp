@@ -453,26 +453,6 @@ struct ResolvedStructDecl : public ResolvedDecl {
     void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
 };
 
-// Forward declaration
-struct ResolvedGenericStructDecl;
-struct ResolvedSpecializedStructDecl : public ResolvedStructDecl {
-    ResolvedGenericStructDecl *genStruct;
-    ptr<ResolvedTypeSpecialized> specializedTypes;  // The types used for specialization
-    ResolvedSpecializedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
-                                  const StructDecl *structDecl, bool isPacked,
-                                  std::vector<ptr<ResolvedFieldDecl>> fields,
-                                  std::vector<ptr<ResolvedFunctionDecl>> functions, ptr<ResolvedScope> scope,
-                                  ResolvedGenericStructDecl *genStruct, ptr<ResolvedTypeSpecialized> specializedTypes)
-        : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
-                             std::move(functions), std::move(scope)),
-          genStruct(genStruct),
-          specializedTypes(std::move(specializedTypes)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-    std::string name() const override;
-};
-
 struct ResolvedUnionDecl : public ResolvedStructDecl {
     ptr<ResolvedFieldDecl> tag;
 
@@ -506,27 +486,6 @@ struct ResolvedEnumDecl : public ResolvedStructDecl {
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
-};
-
-struct ResolvedGenericStructDecl : public ResolvedStructDecl {
-    std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};       // The types used for lookup
-    std::vector<ptr<ResolvedSpecializedStructDecl>> specializations = {};  // List of specializations
-    ptr<ResolvedScope> genericScope;
-
-    ResolvedGenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
-                              const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,
-                              std::vector<ptr<ResolvedFunctionDecl>> functions, ptr<ResolvedScope> scope,
-                              ptr<ResolvedScope> genericScope,
-                              std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls)
-        : ResolvedStructDecl(location, isPublic, identifier, structDecl, isPacked, std::move(fields),
-                             std::move(functions), std::move(scope)),
-          genericTypeDecls(std::move(genericTypeDecls)),
-          genericScope(std::move(genericScope)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-    void dump_dependencies(size_t level = 0, bool dot_format = false) const override;
-    std::string name() const override;
 };
 
 struct ResolvedIntLiteral : public ResolvedExpr {

@@ -281,9 +281,6 @@ llvm::StructType *Codegen::get_struct_decl(const ResolvedStructDecl &structDecl)
 
 llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        return nullptr;
-    }
     auto structType = llvm::StructType::create(*m_context, generate_decl_name(structDecl));
     debug_msg(Dumper([&]() { structType->print(llvm::errs()); }));
 
@@ -296,9 +293,6 @@ llvm::StructType *Codegen::generate_struct_decl(const ResolvedStructDecl &struct
 
 void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        return;
-    }
     auto *type = static_cast<llvm::StructType *>(generate_type(*structDecl.type));
 
     if (!type->isOpaque()) {
@@ -320,9 +314,6 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 
 void Codegen::generate_struct_functions(const ResolvedStructDecl &structDecl) {
     debug_func(structDecl.name());
-    if (dynamic_cast<const ResolvedGenericStructDecl *>(&structDecl)) {
-        return;
-    }
     for (auto &&func : structDecl.functions) {
         generate_function_body(*func);
     }

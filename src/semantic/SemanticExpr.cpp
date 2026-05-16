@@ -818,10 +818,6 @@ ptr<ResolvedMemberExpr> Sema::resolve_member_expr(const MemberExpr &memberExpr) 
             if (m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
                 skip = true;
             }
-            if (m_currentStruct && dynamic_cast<ResolvedGenericStructDecl *>(m_currentStruct)) {
-                skip = true;
-            }
-
             if (!skip) {
                 return report(memberExpr.location,
                               "cannot use generic struct '" + baseType->to_str() + "' without specialization");
@@ -1082,10 +1078,6 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
 
     // Lazy: ensure struct members are resolved before accessing fields
     if (!ensure_struct_members_resolved(*st)) return nullptr;
-
-    if (dynamic_cast<ResolvedGenericStructDecl *>(st) && !dynamic_cast<ResolvedGenericStructDecl *>(m_currentStruct)) {
-        return report(structInstantiation.location, "'" + st->name() + "' is a generic and need specialization");
-    }
 
     std::vector<ptr<ResolvedFieldInitStmt>> resolvedFieldInits;
     std::unordered_map<std::string, const ResolvedFieldInitStmt *> inits;

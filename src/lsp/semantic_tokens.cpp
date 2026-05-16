@@ -61,11 +61,6 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
     if (decl.location.file_name == m_target_file) {
         if (auto* structDecl = dynamic_cast<const ResolvedStructDecl*>(&decl)) {
             if (structDecl->isTuple) return;
-            if (auto* genStruct = dynamic_cast<const ResolvedGenericStructDecl*>(&decl)) {
-                for (const auto& genDecl : genStruct->genericTypeDecls) {
-                    traverse_decl(*genDecl);
-                }
-            }
             for (const auto& field : structDecl->fields) {
                 traverse_decl(*field);
             }

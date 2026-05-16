@@ -429,39 +429,6 @@ void ResolvedEnumDecl::dump(size_t level, bool onlySelf) const {
     for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
 }
 
-void ResolvedGenericStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedGenericStructDecl " << (isPacked ? "packed " : "") << type->to_str() << '\n';
-    for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
-
-    if (onlySelf) return;
-    for (auto &&field : fields) field->dump(level + 1, onlySelf);
-    for (auto &&function : functions) function->dump(level + 1, onlySelf);
-    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
-    for (auto &&spec : specializations) spec->dump(level + 1, onlySelf);
-}
-
-void ResolvedGenericStructDecl::dump_dependencies(size_t level, bool dot_format) const {
-    ResolvedDecl::dump_dependencies(level, dot_format);
-    for (auto &&function : functions) function->dump_dependencies(level + 1, dot_format);
-    for (auto &&spec : specializations) spec->dump_dependencies(level + 1, dot_format);
-}
-
-std::string ResolvedGenericStructDecl::name() const {
-    return ResolvedDecl::name() + ResolvedGenericTypeDecl::generic_types_to_str(genericTypeDecls);
-}
-
-void ResolvedSpecializedStructDecl::dump(size_t level, bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedSpecializedStructDecl " << (isPacked ? "packed " : "") << type->to_str()
-              << '\n';
-
-    if (onlySelf) return;
-    for (auto &&field : fields) field->dump(level + 1, onlySelf);
-    for (auto &&function : functions) function->dump(level + 1, onlySelf);
-    for (auto &&decl : otherDecls) decl->dump(level + 1, onlySelf);
-}
-
-std::string ResolvedSpecializedStructDecl::name() const { return ResolvedDecl::name() + specializedTypes->to_str(); }
-
 void ResolvedMemberExpr::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedMemberExpr:" << type->to_str() << " " << member.identifier << '\n';
     if (onlySelf) return;
