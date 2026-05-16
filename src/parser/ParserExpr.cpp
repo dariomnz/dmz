@@ -211,13 +211,7 @@ ptr<Expr> Parser::parse_postfix_expr(ptr<Expr> expr) {
         return makePtr<RangeExpr>(expr->location, std::move(expr), std::move(endRange));
     }
 
-    if (m_nextToken.type == TokenType::op_less && nextToken_is_generic()) {
-        varOrReturn(genericExpr, parse_generic_expr(expr));
-        expr = std::move(genericExpr);
-        return parse_postfix_expr(std::move(expr));
-    }
-
-    if (!(restrictions & OnlyTypeExpr) && m_nextToken.type == TokenType::par_l) {
+    if (m_nextToken.type == TokenType::par_l) {
         SourceLocation location = m_nextToken.loc;
         bool haveTrailingComma;
         varOrReturn(argumentList, parse_list_with_trailing_comma<Expr>(

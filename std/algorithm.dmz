@@ -1,4 +1,4 @@
-pub fn bubbleSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
+pub fn bubbleSort(comptime T: type, slice: []T, cmp: *fn(T, T)->bool) -> void {
     if (slice.len == 0) {
         return;
     }
@@ -14,13 +14,13 @@ pub fn bubbleSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     }
 }
 
-fn swap<T>(slice: []T, a: usize, b: usize) -> void {
+fn swap(comptime T: type, slice: []T, a: usize, b: usize) -> void {
     let temp = slice[a];
     slice[a] = slice[b];
     slice[b] = temp;
 }
 
-pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
+pub fn quickSort(comptime T: type, slice: []T, cmp: *fn(T, T)->bool) -> void {
     if (slice.len < 2) {
         return;
     }
@@ -28,15 +28,15 @@ pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
     const last = slice.len - 1;
 
     if (cmp(slice[mid], slice[0])) {
-        swap<T>(slice, 0, mid);
+        swap(T, slice, 0, mid);
     }
     if (cmp(slice[last], slice[0])) {
-        swap<T>(slice, 0, last);
+        swap(T, slice, 0, last);
     }
     if (cmp(slice[last], slice[mid])) {
-        swap<T>(slice, mid, last);
+        swap(T, slice, mid, last);
     }
-    swap<T>(slice, mid, last);
+    swap(T, slice, mid, last);
 
     const piv_idx = slice.len - 1;
     // const piv_idx = slice.len / 2;
@@ -46,14 +46,14 @@ pub fn quickSort<T>(slice: []T, cmp: *fn(T, T)->bool) -> void {
 
     for (0..piv_idx) |j| {
         if (cmp(slice[j], piv)) {
-            swap<T>(slice, i, j);
+            swap(T, slice, i, j);
             i++;
         }
     }
-    swap<T>(slice, i, piv_idx);
+    swap(T, slice, i, piv_idx);
 
-    quickSort<T>(slice[0..i], cmp);
-    quickSort<T>(slice[i..slice.len], cmp);
+    quickSort(T, slice[0..i], cmp);
+    quickSort(T, slice[i..slice.len], cmp);
 }
 
 const std = import("std");
@@ -67,13 +67,13 @@ test "sort slice" {
             return a < b;
         }
     };
-    bubbleSort<i32>(v[0..5], &sorted.comp);
-    quickSort<i32>(v2[0..5], &sorted.comp);
+    bubbleSort(i32, v[0..5], &sorted.comp);
+    quickSort(i32, v2[0..5], &sorted.comp);
 
     let expected = {1, 2, 3, 4, 5};
     std.io.print("init {}\n", init[0..5]);
     std.io.print("v    {}\n", v[0..5]);
     std.io.print("v2   {}\n", v2[0..5]);
-    try std.testing.expectEqualSlice<i32>(v[0..5], expected[0..5]);
-    try std.testing.expectEqualSlice<i32>(v2[0..5], expected[0..5]);
+    try std.testing.expectEqualSlice(i32, v[0..5], expected[0..5]);
+    try std.testing.expectEqualSlice(i32, v2[0..5], expected[0..5]);
 }

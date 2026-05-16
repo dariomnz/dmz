@@ -4,13 +4,13 @@ pub fn expect(v: i1) -> !void {
     }
 }
 
-pub fn expectEqual<T>(a: T, b: T) -> !void {
+pub fn expectEqual(comptime T: type, a: T, b: T) -> !void {
     if (a != b) {
         return error.NOT_EQUAL;
     }
 }
 
-pub fn expectEqualSlice<T>(a: []T, b: []T) -> !void {
+pub fn expectEqualSlice(comptime T: type, a: []T, b: []T) -> !void {
     if (a.len != b.len) {
         return error.DIFFERENT_LENGHT;
     }

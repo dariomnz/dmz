@@ -39,23 +39,12 @@ fn main() -> void {
 // CHECK-NEXT:   %5 = getelementptr [5 x i8], ptr %array, i32 0, i32 3
 // CHECK-NEXT:   store i8 %4, ptr %5, align 1
 // CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %array)
-// CHECK-NEXT:   %7 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 0
-// CHECK-NEXT:   store i8 72, ptr %7, align 1
-// CHECK-NEXT:   %8 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 1
-// CHECK-NEXT:   store i8 101, ptr %8, align 1
-// CHECK-NEXT:   %9 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 2
-// CHECK-NEXT:   store i8 108, ptr %9, align 1
-// CHECK-NEXT:   %10 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 3
-// CHECK-NEXT:   store i8 108, ptr %10, align 1
-// CHECK-NEXT:   %11 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 4
-// CHECK-NEXT:   store i8 111, ptr %11, align 1
-// CHECK-NEXT:   %12 = getelementptr [6 x i8], ptr %"array.[6]u8.tmp", i32 0, i32 5
-// CHECK-NEXT:   store i8 0, ptr %12, align 1
+// CHECK-NEXT:   store [6 x i8] c"Hello\00", ptr %"array.[6]u8.tmp", align 1
 // CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %hello_array, ptr align 1 %"array.[6]u8.tmp", i64 6, i1 false)
-// CHECK-NEXT:   %13 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %hello_array)
+// CHECK-NEXT:   %7 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %hello_array)
 // CHECK-NEXT:   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %hello_array2, ptr align 1 %hello_array, i64 6, i1 false)
-// CHECK-NEXT:   %14 = getelementptr [6 x i8], ptr %hello_array2, i32 0, i32 0
-// CHECK-NEXT:   store i8 71, ptr %14, align 1
-// CHECK-NEXT:   %15 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %hello_array2)
+// CHECK-NEXT:   %8 = getelementptr [6 x i8], ptr %hello_array2, i32 0, i32 0
+// CHECK-NEXT:   store i8 71, ptr %8, align 1
+// CHECK-NEXT:   %9 = call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.5E374F75, ptr %hello_array2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

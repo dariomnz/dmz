@@ -1,6 +1,6 @@
 const std = import("std");
 
-pub fn scanInteger<T>(r: std.io.Reader) -> !T {
+pub fn scanInteger(comptime T: type, r: std.io.Reader) -> !T {
     let result: T = 0;
     let started = false;
     let negative = false;
@@ -88,7 +88,7 @@ test "scanInteger cases" {
     };
     for (cases[0..8]) |case_str| {
         const r = std.io.Reader.fixed(case_str.*);
-        const result = try scanInteger<i32>(r);
+        const result = try scanInteger(i32, r);
         std.io.print("{s} == {}\n", .{case_str.*, result});
     }
 }

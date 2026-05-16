@@ -444,6 +444,8 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             captureType = determine_for_range_capture_type(*rangeExpr, forStmt.captures[i]->location);
         } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
             captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
+        } else if (resolvedCond->type->kind == ResolvedTypeKind::Generic) {
+            captureType = resolvedCond->type->clone();
         } else {
             return report(resolvedCond->location,
                           "not supported type of condition '" + resolvedCond->type->to_str() + "'");
@@ -478,26 +480,6 @@ ptr<ResolvedDeclStmt> Sema::resolve_decl_stmt(const DeclStmt &declStmt) {
 
     if (!insert_decl_to_current_scope(*resolvedVarDecl)) return nullptr;
 
-    if (declStmt.varDecl->initializer) {
-        if (dynamic_cast<const StructDecl *>(declStmt.varDecl->initializer.get()) ||
-            dynamic_cast<const UnionDecl *>(declStmt.varDecl->initializer.get())) {
-            resolvedVarDecl->type = resolve_type(*declStmt.varDecl->initializer);
-
-            // give it the name of the variable if it's currently anonymous.
-            if (auto *structType = dynamic_cast<ResolvedTypeStructDecl *>(resolvedVarDecl->type.get())) {
-                if (structType->decl->identifier.find("structL") != std::string::npos ||
-                    structType->decl->identifier.find("unionL") != std::string::npos ||
-                    structType->decl->identifier.find("enumL") != std::string::npos) {
-                    if (m_currentFunction == nullptr) {
-                        structType->decl->identifier = resolve_decl_name(resolvedVarDecl->identifier);
-                    } else {
-                        structType->decl->identifier += "." + resolvedVarDecl->identifier;
-                    }
-                    structType->decl->isPublic = resolvedVarDecl->isPublic;
-                }
-            }
-        }
-    }
     auto ret = makePtr<ResolvedDeclStmt>(declStmt.location, nullptr, std::move(resolvedVarDecl));
     ret->varDecl->parentDeclStmt = ret.get();
     ret->symbolName = resolve_decl_name(ret->identifier);

@@ -111,12 +111,9 @@ class Parser {
     explicit Parser(Driver &driver, Lexer &lexer) : m_driver(driver), m_lexer(lexer) { eat_next_token(); }
 
    private:
-    bool nextToken_is_generic();
-    ptr<FuncDecl> parse_function_decl(Type* parentDecl = nullptr);
+    ptr<FuncDecl> parse_function_decl(Type *parentDecl = nullptr);
     // ptr<Type> parse_type();
-    ptr<GenericExpr> parse_generic_expr(ptr<Expr> &prevExpr);
-    ptr<GenericTypeDecl> parse_generic_type_decl();
-    std::vector<ptr<GenericTypeDecl>> parse_generic_types_decl();
+
     ptr<Block> parse_block(bool oneStmt = false);
     ptr<ReturnStmt> parse_return_stmt();
     ptr<Stmt> parse_statement();

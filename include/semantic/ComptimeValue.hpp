@@ -20,12 +20,23 @@ struct ComptimeValue {
         std::vector<ComptimeValue> elements;
         bool operator==(const Array& other) const;
     };
+    struct Slice {
+        std::vector<ComptimeValue> elements;
+        bool operator==(const Slice& other) const;
+    };
     struct Struct {
         std::vector<std::pair<std::string, ComptimeValue>> fields;
         bool operator==(const Struct& other) const;
     };
+    struct Union {
+        int64_t activeTag;
+        std::string activeFieldName;
+        ptr<ComptimeValue> payload;
+        bool operator==(const Union& other) const;
+    };
 
-    using ValueVariant = std::variant<Void, int64_t, double, bool, std::string, Array, Struct, ptr<ResolvedType>>;
+    using ValueVariant =
+        std::variant<Void, int64_t, double, bool, std::string, Array, Slice, Struct, Union, ptr<ResolvedType>>;
 
     ValueVariant value;
 
@@ -36,7 +47,9 @@ struct ComptimeValue {
     ComptimeValue(std::string s) : value(std::move(s)) {}
     ComptimeValue(const char* s) : value(std::string(s)) {}
     ComptimeValue(Array a) : value(std::move(a)) {}
+    ComptimeValue(Slice s) : value(std::move(s)) {}
     ComptimeValue(Struct s) : value(std::move(s)) {}
+    ComptimeValue(Union u) : value(std::move(u)) {}
     ComptimeValue(ptr<ResolvedType> t) : value(std::move(t)) {}
 
     ComptimeValue(const ComptimeValue& other);
@@ -52,7 +65,9 @@ struct ComptimeValue {
     bool isBool() const { return std::holds_alternative<bool>(value); }
     bool isString() const { return std::holds_alternative<std::string>(value); }
     bool isArray() const { return std::holds_alternative<Array>(value); }
+    bool isSlice() const { return std::holds_alternative<Slice>(value); }
     bool isStruct() const { return std::holds_alternative<Struct>(value); }
+    bool isUnion() const { return std::holds_alternative<Union>(value); }
     bool isType() const { return std::holds_alternative<ptr<ResolvedType>>(value); }
 
     int64_t getInt() const { return std::get<int64_t>(value); }
@@ -60,7 +75,10 @@ struct ComptimeValue {
     bool getBool() const { return std::get<bool>(value); }
     const std::string& getString() const { return std::get<std::string>(value); }
     const Array& getArray() const { return std::get<Array>(value); }
+    const Slice& getSlice() const { return std::get<Slice>(value); }
     const Struct& getStruct() const { return std::get<Struct>(value); }
+    Union& getUnion() { return std::get<Union>(value); }
+    const Union& getUnion() const { return std::get<Union>(value); }
     ptr<ResolvedType> getType() const;
 
     // Conversion to int64_t for backward compatibility where possible

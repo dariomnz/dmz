@@ -1,10 +1,10 @@
 // RUN: dmz %s -run 2>&1 | filecheck %s
 
 // CHECK: t.int_val == 5: 1
-// CHECK-NEXT: int_val
-// CHECK-NEXT: str_val
+// CHECK-NEXT: int_val 5
+// CHECK-NEXT: str_val hello
 // CHECK-NEXT: t2.str_val[0] == 'h': 1
-// CHECK-NEXT: struct_val
+// CHECK-NEXT: struct_val 1 2
 // CHECK-NEXT: t3.struct_val.a == 1: 1
 // CHECK-NEXT: t3.struct_val.b == 2: 1
 
@@ -22,9 +22,9 @@ const Token = union {
 
     pub fn print(self: *@This) -> void {
         switch (self.tag) {
-            case Token.int_val => printf("int_val\n");
-            case Token.str_val => printf("str_val\n");
-            case Token.struct_val => printf("struct_val\n");
+            case Token.int_val => printf("int_val %d\n", self.int_val);
+            case Token.str_val => printf("str_val %s\n", self.str_val);
+            case Token.struct_val => printf("struct_val %d %d\n", self.struct_val.a, self.struct_val.b);
             else => printf("unknown\n");
         }
     }

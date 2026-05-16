@@ -49,7 +49,7 @@ pub const Arena = struct {
         }
 
         const new_ptr = try self.malloc(new_size);
-        std.mem.copy(new_ptr[0..new_size], ptr[0..ptr.len]);
+        std.mem.copy(u8, new_ptr[0..new_size], ptr[0..ptr.len]);
 
         return new_ptr;
     }
@@ -74,20 +74,20 @@ test "arrena allocator" {
     const buffer: [1024]u8 = {};
     const arena = Arena.init(buffer[0..1024]);
     const allocator = arena.allocator();
-    const ptr = try allocator.malloc<u8>(1024);
+    const ptr = try allocator.malloc(u8, 1024);
     try std.testing.expect(ptr.len == 1024);
-    allocator.free(ptr);
+    allocator.free(u8, ptr);
 }
 
 test "arena realloc" {
     const buffer: [1024]u8 = {};
     const arena = Arena.init(buffer[0..1024]);
     const allocator = arena.allocator();
-    let ptr = try allocator.malloc<u8>(10);
+    let ptr = try allocator.malloc(u8, 10);
     try std.testing.expect(ptr.len == 10);
     try std.testing.expect(arena.offset == 10);
-    ptr = try allocator.realloc(ptr, 1024);
+    ptr = try allocator.realloc(u8, ptr, 1024);
     try std.testing.expect(ptr.len == 1024);
     try std.testing.expect(arena.offset == 1024);
-    allocator.free(ptr);
+    allocator.free(u8, ptr);
 }

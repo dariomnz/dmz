@@ -250,12 +250,17 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             traverse_expr(*group->expr);
         } else if (auto* arrayAt = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
             debug_msg("ResolvedArrayAtExpr");
-            traverse_expr(*arrayAt->array);
-            traverse_expr(*arrayAt->index);
+            if (arrayAt->array) traverse_expr(*arrayAt->array);
+            if (arrayAt->index) traverse_expr(*arrayAt->index);
         } else if (auto* typeExpr = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
             debug_msg("ResolvedTypeExpr");
             if (typeExpr->typeExpr) {
                 traverse_expr(*typeExpr->typeExpr);
+            }
+            if (auto* type = dynamic_cast<const ResolvedTypeStructDecl*>(typeExpr->resolvedType.get())) {
+                if (type->ownedDecl) {
+                    traverse_decl(*type->ownedDecl);
+                }
             }
             //  else if (typeExpr->location.file_name == m_target_file) {
             //     add_token(typeExpr->location, typeExpr->resolvedType->to_str(), SemanticTokenType::Type);

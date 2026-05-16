@@ -21,12 +21,12 @@ fn array(comptime T: type, comptime size: i32) -> type {
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedReturnStmt
 // CHECK-NEXT:        ResolvedTypeExpr:type
-// CHECK-NEXT:        | value: comptime_param_struct.structL6C11.2
-// CHECK-NEXT:          ResolvedTypeStructDecl comptime_param_struct.structL6C11.2
-// CHECK-NEXT:            ResolvedStructDecl comptime_param_struct.structL6C11.2
+// CHECK-NEXT:        | value: comptime_param_struct.struct.array(T)
+// CHECK-NEXT:          ResolvedTypeStructDecl comptime_param_struct.struct.array(T)
+// CHECK-NEXT:            ResolvedStructDecl comptime_param_struct.struct.array(T)
 // CHECK-NEXT:              ResolvedFieldDecl:[0]T data
-// CHECK-NEXT:              ResolvedMemberFunctionDecl print fn(*comptime_param_struct.structL6C11.2{})->void
-// CHECK-NEXT:                ResolvedParamDecl:*comptime_param_struct.structL6C11.2{} self
+// CHECK-NEXT:              ResolvedMemberFunctionDecl print fn(*comptime_param_struct.struct.array(T){})->void
+// CHECK-NEXT:                ResolvedParamDecl:*comptime_param_struct.struct.array(T){} self
 // CHECK-NEXT:                ResolvedBlock
 // CHECK-NEXT:                  ResolvedForStmt
 // CHECK-NEXT:                    ResolvedRangeExpr
@@ -41,25 +41,25 @@ fn array(comptime T: type, comptime size: i32) -> type {
 // CHECK-NEXT:                        | value: '%d '
 // CHECK-NEXT:                        ResolvedArrayAtExpr:T
 // CHECK-NEXT:                          ResolvedMemberExpr:[0]T data
-// CHECK-NEXT:                            ResolvedDerefPtrExpr:comptime_param_struct.structL6C11.2{}
-// CHECK-NEXT:                              ResolvedDeclRefExpr:*comptime_param_struct.structL6C11.2{} self
+// CHECK-NEXT:                            ResolvedDerefPtrExpr:comptime_param_struct.struct.array(T){}
+// CHECK-NEXT:                              ResolvedDeclRefExpr:*comptime_param_struct.struct.array(T){} self
 // CHECK-NEXT:                          ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:                  ResolvedCallExpr:i32
 // CHECK-NEXT:                    ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:                    ResolvedStringLiteral:*u8 '\n'
 // CHECK-NEXT:                    | value: '\n'
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl array<i32, comptime(i32), comptime(3)> fn(type, i32)->type
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl array(i32, 3) fn(type, i32)->type
 // CHECK-NEXT:      ResolvedParamDecl:comptime type T
 // CHECK-NEXT:      ResolvedParamDecl:comptime i32 size
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
 // CHECK-NEXT:          ResolvedTypeExpr:type
-// CHECK-NEXT:          | value: comptime_param_struct.structL6C11
-// CHECK-NEXT:            ResolvedTypeStructDecl comptime_param_struct.structL6C11
-// CHECK-NEXT:              ResolvedStructDecl comptime_param_struct.structL6C11
+// CHECK-NEXT:          | value: comptime_param_struct.struct.array(i32, 3)
+// CHECK-NEXT:            ResolvedTypeStructDecl comptime_param_struct.struct.array(i32, 3)
+// CHECK-NEXT:              ResolvedStructDecl comptime_param_struct.struct.array(i32, 3)
 // CHECK-NEXT:                ResolvedFieldDecl:[3]i32 data
-// CHECK-NEXT:                ResolvedMemberFunctionDecl print fn(*comptime_param_struct.structL6C11{})->void
-// CHECK-NEXT:                  ResolvedParamDecl:*comptime_param_struct.structL6C11{} self
+// CHECK-NEXT:                ResolvedMemberFunctionDecl print fn(*comptime_param_struct.struct.array(i32, 3){})->void
+// CHECK-NEXT:                  ResolvedParamDecl:*comptime_param_struct.struct.array(i32, 3){} self
 // CHECK-NEXT:                  ResolvedBlock
 // CHECK-NEXT:                    ResolvedForStmt
 // CHECK-NEXT:                      ResolvedRangeExpr
@@ -75,25 +75,25 @@ fn array(comptime T: type, comptime size: i32) -> type {
 // CHECK-NEXT:                          | value: '%d '
 // CHECK-NEXT:                          ResolvedArrayAtExpr:i32
 // CHECK-NEXT:                            ResolvedMemberExpr:[3]i32 data
-// CHECK-NEXT:                              ResolvedDerefPtrExpr:comptime_param_struct.structL6C11{}
-// CHECK-NEXT:                                ResolvedDeclRefExpr:*comptime_param_struct.structL6C11{} self
+// CHECK-NEXT:                              ResolvedDerefPtrExpr:comptime_param_struct.struct.array(i32, 3){}
+// CHECK-NEXT:                                ResolvedDeclRefExpr:*comptime_param_struct.struct.array(i32, 3){} self
 // CHECK-NEXT:                            ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:                    ResolvedCallExpr:i32
 // CHECK-NEXT:                      ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:                      ResolvedStringLiteral:*u8 '\n'
 // CHECK-NEXT:                      | value: '\n'
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl array<i32, comptime(i32), comptime(5)> fn(type, i32)->type
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl array(i32, 5) fn(type, i32)->type
 // CHECK-NEXT:      ResolvedParamDecl:comptime type T
 // CHECK-NEXT:      ResolvedParamDecl:comptime i32 size
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
 // CHECK-NEXT:          ResolvedTypeExpr:type
-// CHECK-NEXT:          | value: comptime_param_struct.structL6C11.1
-// CHECK-NEXT:            ResolvedTypeStructDecl comptime_param_struct.structL6C11.1
-// CHECK-NEXT:              ResolvedStructDecl comptime_param_struct.structL6C11.1
+// CHECK-NEXT:          | value: comptime_param_struct.struct.array(i32, 5)
+// CHECK-NEXT:            ResolvedTypeStructDecl comptime_param_struct.struct.array(i32, 5)
+// CHECK-NEXT:              ResolvedStructDecl comptime_param_struct.struct.array(i32, 5)
 // CHECK-NEXT:                ResolvedFieldDecl:[5]i32 data
-// CHECK-NEXT:                ResolvedMemberFunctionDecl print fn(*comptime_param_struct.structL6C11.1{})->void
-// CHECK-NEXT:                  ResolvedParamDecl:*comptime_param_struct.structL6C11.1{} self
+// CHECK-NEXT:                ResolvedMemberFunctionDecl print fn(*comptime_param_struct.struct.array(i32, 5){})->void
+// CHECK-NEXT:                  ResolvedParamDecl:*comptime_param_struct.struct.array(i32, 5){} self
 // CHECK-NEXT:                  ResolvedBlock
 // CHECK-NEXT:                    ResolvedForStmt
 // CHECK-NEXT:                      ResolvedRangeExpr
@@ -109,8 +109,8 @@ fn array(comptime T: type, comptime size: i32) -> type {
 // CHECK-NEXT:                          | value: '%d '
 // CHECK-NEXT:                          ResolvedArrayAtExpr:i32
 // CHECK-NEXT:                            ResolvedMemberExpr:[5]i32 data
-// CHECK-NEXT:                              ResolvedDerefPtrExpr:comptime_param_struct.structL6C11.1{}
-// CHECK-NEXT:                                ResolvedDeclRefExpr:*comptime_param_struct.structL6C11.1{} self
+// CHECK-NEXT:                              ResolvedDerefPtrExpr:comptime_param_struct.struct.array(i32, 5){}
+// CHECK-NEXT:                                ResolvedDeclRefExpr:*comptime_param_struct.struct.array(i32, 5){} self
 // CHECK-NEXT:                            ResolvedDeclRefExpr:i32 i
 // CHECK-NEXT:                    ResolvedCallExpr:i32
 // CHECK-NEXT:                      ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
@@ -131,9 +131,10 @@ fn main() -> void {
 
 // CHECK:  ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:    ResolvedBlock
-// CHECK-NEXT:      ResolvedDeclStmt comptime_param_struct.structL6C11{}
-// CHECK-NEXT:        ResolvedVarDecl:const comptime_param_struct.structL6C11{} v3
-// CHECK-NEXT:          ResolvedStructInstantiationExpr:comptime_param_struct.structL6C11{}
+// CHECK-NEXT:      ResolvedDeclStmt comptime_param_struct.struct.array(i32, 3){}
+// CHECK-NEXT:        ResolvedVarDecl:const comptime_param_struct.struct.array(i32, 3){} v3
+// CHECK-NEXT:         | value: {data: {1, 2, 3}}
+// CHECK-NEXT:          ResolvedStructInstantiationExpr:comptime_param_struct.struct.array(i32, 3){}
 // CHECK-NEXT:            ResolvedFieldInitStmt:[3]i32 data
 // CHECK-NEXT:              ResolvedArrayInstantiationExpr:[3]i32
 // CHECK-NEXT:                ResolvedIntLiteral:i32 '1'
@@ -145,18 +146,23 @@ fn main() -> void {
 // CHECK-NEXT:      ResolvedAssignment
 // CHECK-NEXT:        ResolvedArrayAtExpr:i32
 // CHECK-NEXT:          ResolvedMemberExpr:[3]i32 data
-// CHECK-NEXT:            ResolvedDeclRefExpr:comptime_param_struct.structL6C11{} v3
+// CHECK-NEXT:           | value: {1, 2, 3}
+// CHECK-NEXT:            ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 3){} v3
+// CHECK-NEXT:             | value: {data: {1, 2, 3}}
 // CHECK-NEXT:          ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:        ResolvedIntLiteral:i32 '123'
 // CHECK-NEXT:        | value: 123
 // CHECK-NEXT:      ResolvedCallExpr:void
-// CHECK-NEXT:        ResolvedMemberExpr:fn(*comptime_param_struct.structL6C11{})->void print
-// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.structL6C11{} v3
-// CHECK-NEXT:        ResolvedRefPtrExpr:*comptime_param_struct.structL6C11{}
-// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.structL6C11{} v3
-// CHECK-NEXT:      ResolvedDeclStmt comptime_param_struct.structL6C11.1{}
-// CHECK-NEXT:        ResolvedVarDecl:const comptime_param_struct.structL6C11.1{} v5
-// CHECK-NEXT:          ResolvedStructInstantiationExpr:comptime_param_struct.structL6C11.1{}
+// CHECK-NEXT:        ResolvedMemberExpr:fn(*comptime_param_struct.struct.array(i32, 3){})->void print
+// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 3){} v3
+// CHECK-NEXT:           | value: {data: {1, 2, 3}}
+// CHECK-NEXT:        ResolvedRefPtrExpr:*comptime_param_struct.struct.array(i32, 3){}
+// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 3){} v3
+// CHECK-NEXT:           | value: {data: {1, 2, 3}}
+// CHECK-NEXT:      ResolvedDeclStmt comptime_param_struct.struct.array(i32, 5){}
+// CHECK-NEXT:        ResolvedVarDecl:const comptime_param_struct.struct.array(i32, 5){} v5
+// CHECK-NEXT:         | value: {data: {1, 2, 3, 4, 5}}
+// CHECK-NEXT:          ResolvedStructInstantiationExpr:comptime_param_struct.struct.array(i32, 5){}
 // CHECK-NEXT:            ResolvedFieldInitStmt:[5]i32 data
 // CHECK-NEXT:              ResolvedArrayInstantiationExpr:[5]i32
 // CHECK-NEXT:                ResolvedIntLiteral:i32 '1'
@@ -172,12 +178,15 @@ fn main() -> void {
 // CHECK-NEXT:      ResolvedAssignment
 // CHECK-NEXT:        ResolvedArrayAtExpr:i32
 // CHECK-NEXT:          ResolvedMemberExpr:[5]i32 data
-// CHECK-NEXT:            ResolvedDeclRefExpr:comptime_param_struct.structL6C11.1{} v5
+// CHECK-NEXT:           | value: {1, 2, 3, 4, 5}
+// CHECK-NEXT:            ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 5){} v5
+// CHECK-NEXT:             | value: {data: {1, 2, 3, 4, 5}}
 // CHECK-NEXT:          ResolvedIntLiteral:i32 '0'
 // CHECK-NEXT:        ResolvedIntLiteral:i32 '123'
 // CHECK-NEXT:        | value: 123
 // CHECK-NEXT:      ResolvedCallExpr:void
-// CHECK-NEXT:        ResolvedMemberExpr:fn(*comptime_param_struct.structL6C11.1{})->void print
-// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.structL6C11.1{} v5
-// CHECK-NEXT:        ResolvedRefPtrExpr:*comptime_param_struct.structL6C11.1{}
-// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.structL6C11.1{} v5
+// CHECK-NEXT:        ResolvedMemberExpr:fn(*comptime_param_struct.struct.array(i32, 5){})->void print
+// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 5){} v5
+// CHECK-NEXT:           | value: {data: {1, 2, 3, 4, 5}}
+// CHECK-NEXT:        ResolvedRefPtrExpr:*comptime_param_struct.struct.array(i32, 5){}
+// CHECK-NEXT:          ResolvedDeclRefExpr:comptime_param_struct.struct.array(i32, 5){} v5

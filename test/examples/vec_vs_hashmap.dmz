@@ -20,11 +20,11 @@ fn eq_i32(lhs: i32, rhs: i32) -> bool {
 fn main() -> void {
     let libc_alloc = std.mem.LibcAllocator.init();
     let allocator = libc_alloc.Allocator();
-    
+
     const iters = 100000;
     {
         const start_allocated = libc_alloc.allocated;
-        let v = std.vec<i32>.init(allocator);
+        let v = std.Vec(i32).init(allocator);
         defer v.deinit();
 
         const start_vector = std.time.get();
@@ -37,7 +37,7 @@ fn main() -> void {
     }
     {
         const start_allocated = libc_alloc.allocated;
-        let hm = std.HashMap<i32, i32>.init(allocator, 10, &hash_i32, &eq_i32);
+        let hm = std.HashMap(i32, i32).init(allocator, 10, &hash_i32, &eq_i32);
         defer hm.deinit();
 
         const start_hashmap = std.time.get();
@@ -50,7 +50,7 @@ fn main() -> void {
     }
     {
         const start_allocated = libc_alloc.allocated;
-        let l = std.list.SimplyLinkedList<i32>.init(allocator);
+        let l = std.list.SimplyLinkedList(i32).init(allocator);
         defer l.deinit();
 
         const start_list = std.time.get();

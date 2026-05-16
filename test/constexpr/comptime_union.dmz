@@ -1,0 +1,16 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+const Token = union {
+    int_val: i32,
+    str_val: *u8,
+};
+
+fn main() -> void {
+    const t = comptime Token{int_val: 42};
+    const tag = comptime t.tag;
+    const val = comptime t.int_val;
+}
+
+// CHECK: | value: #int_val{42}
+// CHECK: | value: 0
+// CHECK: | value: 42

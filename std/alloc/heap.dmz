@@ -62,7 +62,7 @@ pub const MmapAllocator = struct {
 
         const old_ptr: *u8 = ptr.ptr;
         const new_ptr = try self.malloc(new_size);
-        std.mem.copy<u8>(new_ptr[0..new_size], old_ptr[0..old_user_size]);
+        std.mem.copy(u8, new_ptr[0..new_size], old_ptr[0..old_user_size]);
 
         self.free(ptr);
         return new_ptr;
@@ -84,14 +84,14 @@ test "MmapAllocator basic" {
     let allocator = MmapAllocator.init();
     const alloc = allocator.allocator();
     {
-        let x = try alloc.malloc<u8>(10);
-        defer alloc.free(x);
+        let x = try alloc.malloc(i8, 10);
+        defer alloc.free(i8, x);
 
         x[3] = 123;
 
         std.io.print("x: {}, allocator.allocated_bytes: {}\n", .{x, allocator.allocated_bytes});
 
-        try std.testing.expectEqual(123, x[3]);
+        try std.testing.expectEqual(i8, x[3], 123);
     }
     std.io.print("allocator.allocated_bytes: {}\n", .{allocator.allocated_bytes});
 }

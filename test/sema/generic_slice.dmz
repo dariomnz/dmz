@@ -1,23 +1,23 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
-fn foo<T>(slice: T) -> void {
+fn foo(slice: anytype) -> void {
     slice.len;
 }
 
 fn main() -> void {
     let a: [3]i32 = {1, 2, 3};
     let s: []i32 = a[0..2];
-    foo<s>(s);
+    foo(s);
 }
 
 // CHECK: ResolvedModuleDecl generic_slice
-// CHECK-NEXT:   ResolvedGenericFunctionDecl foo fn(T)->void
-// CHECK-NEXT:     ResolvedGenericTypeDecl T
-// CHECK-NEXT:     ResolvedParamDecl:T slice
+// CHECK-NEXT:   ResolvedGenericFunctionDecl foo fn(anytype)->void
+// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:     ResolvedParamDecl:anytype slice
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedMemberExpr:generic len
-// CHECK-NEXT:         ResolvedDeclRefExpr:T slice
-// CHECK-NEXT:     ResolvedSpecializedFunctionDecl foo<[]i32> fn([]i32)->void
+// CHECK-NEXT:         ResolvedDeclRefExpr:anytype slice
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl foo([]i32) fn([]i32)->void
 // CHECK-NEXT:       ResolvedParamDecl:[]i32 slice
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedMemberExpr:u64 len
@@ -26,6 +26,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedDeclStmt [3]i32
 // CHECK-NEXT:         ResolvedVarDecl:[3]i32 a
+// CHECK-NEXT:         | value: {1, 2, 3}
 // CHECK-NEXT:           ResolvedArrayInstantiationExpr:[3]i32
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -43,7 +44,5 @@ fn main() -> void {
 // CHECK-NEXT:               ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:               | value: 2
 // CHECK-NEXT:       ResolvedCallExpr:void
-// CHECK-NEXT:         ResolvedGenericExpr:fn([]i32)->void foo
-// CHECK-NEXT:           ResolvedDeclRefExpr:fn(T)->void foo
-// CHECK-NEXT:           ResolvedTypeSpecialized <[]i32>
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn([]i32)->void foo
 // CHECK-NEXT:         ResolvedDeclRefExpr:[]i32 s

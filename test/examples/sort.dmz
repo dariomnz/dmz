@@ -13,6 +13,8 @@ fn checkSorted(slice: []i32, cmp: *fn(i32, i32)->bool) -> !void {
     }
 }
 
+const vec = std.Vec(i32);
+
 fn main() -> void {
     const buff_size = 16 * 1024;
     const buffer: [buff_size]u8 = {};
@@ -29,7 +31,7 @@ fn main() -> void {
     const iters = 1000;
     {
         const start_allocated = arena.offset;
-        let v = std.vec<i32>.init(allocator);
+        let v = vec.init(allocator);
         defer v.deinit();
 
         const start_vector = std.time.get();
@@ -42,7 +44,7 @@ fn main() -> void {
         // CHECK: Allocated in vector = 4096
         {
             const start_sort = std.time.get();
-            std.algorithm.bubbleSort<i32>(v.slice(), comp);
+            std.algorithm.bubbleSort(i32, v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Vector = {}\n", v.slice()[0..100]);
             // CHECK: Vector = [len: 100, 
@@ -51,7 +53,7 @@ fn main() -> void {
         }
         {
             const start_sort = std.time.get();
-            std.algorithm.bubbleSort<i32>(v.slice(), comp);
+            std.algorithm.bubbleSort(i32, v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Time taken in sort vector {}: {} ms\n", .{v.size(), (end_sort - start_sort) * 1000.0});
             try checkSorted(v.slice(), comp);
@@ -59,7 +61,7 @@ fn main() -> void {
     }
     {
         const start_allocated = arena.offset;
-        let v = std.vec<i32>.init(allocator);
+        let v = vec.init(allocator);
         defer v.deinit();
 
         const start_vector = std.time.get();
@@ -72,7 +74,7 @@ fn main() -> void {
         // CHECK: Allocated in vector = 4096
         {
             const start_sort = std.time.get();
-            std.algorithm.quickSort<i32>(v.slice(), comp);
+            std.algorithm.quickSort(i32, v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Vector = {}\n", v.slice()[0..100]);
             // CHECK: Vector = [len: 100, 
@@ -81,7 +83,7 @@ fn main() -> void {
         }
         {
             const start_sort = std.time.get();
-            std.algorithm.quickSort<i32>(v.slice(), comp);
+            std.algorithm.quickSort(i32, v.slice(), comp);
             const end_sort = std.time.get();
             std.io.print("Time taken in sort vector {}: {} ms\n", .{v.size(), (end_sort - start_sort) * 1000.0});
             try checkSorted(v.slice(), comp);

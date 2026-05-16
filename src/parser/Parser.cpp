@@ -33,34 +33,6 @@ std::pair<ptr<ModuleDecl>, bool> Parser::parse_source_file() {
     return {std::move(mod), !m_incompleteAST};
 }
 
-ptr<GenericExpr> Parser::parse_generic_expr(ptr<Expr> &prevExpr) {
-    debug_func("");
-    if (m_nextToken.type != TokenType::op_less) {
-        return nullptr;
-    }
-    auto location = m_nextToken.loc;
-    matchOrReturn(TokenType::op_less, "expected '<'");
-    eat_next_token();  // eat openingToken
-
-    std::vector<ptr<Expr>> typesDeclList;
-    while (true) {
-        if (m_nextToken.type == TokenType::op_more) break;
-
-        varOrReturn(init, parse_type());
-        typesDeclList.emplace_back(std::move(init));
-
-        if (m_nextToken.type != TokenType::comma) break;
-        eat_next_token();  // eat ','
-    }
-
-    matchOrReturn(TokenType::op_more, "expected '>'");
-    eat_next_token();  // eat closingToken
-
-    if (typesDeclList.size() == 0) return nullptr;
-
-    return makePtr<GenericExpr>(location, std::move(prevExpr), std::move(typesDeclList));
-}
-
 void Parser::synchronize_on(std::unordered_set<TokenType> types) {
     debug_func("");
     m_incompleteAST = true;
@@ -129,9 +101,6 @@ ptr<std::vector<ptr<T>>> Parser::parse_list_with_trailing_comma(std::pair<TokenT
     return makePtr<std::vector<ptr<T>>>(std::move(list));
 }
 // Specialize
-template ptr<std::vector<ptr<GenericTypeDecl>>> Parser::parse_list_with_trailing_comma(
-    std::pair<TokenType, const char *>, std::function<ptr<GenericTypeDecl>()>, std::pair<TokenType, const char *>,
-    bool &);
 template ptr<std::vector<ptr<ParamDecl>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
                                                                                  std::function<ptr<ParamDecl>()>,
                                                                                  std::pair<TokenType, const char *>,
@@ -150,37 +119,6 @@ template ptr<std::vector<ptr<ErrorDecl>>> Parser::parse_list_with_trailing_comma
 template ptr<std::vector<ptr<Expr>>> Parser::parse_list_with_trailing_comma(std::pair<TokenType, const char *>,
                                                                             std::function<ptr<Expr>()>,
                                                                             std::pair<TokenType, const char *>, bool &);
-
-bool Parser::nextToken_is_generic() {
-    bool ret = false;
-    debug_func(" ret: " << (ret ? "true" : "false"));
-    std::unordered_set<TokenType> postGenericToken = {
-        TokenType::dot,       TokenType::block_l,   TokenType::par_l, TokenType::par_r,
-        TokenType::semicolon, TokenType::op_assign, TokenType::comma, TokenType::op_more,
-    };
-    if (m_nextToken.type == TokenType::op_less) {
-        int blocks = 0;
-        int actual_jump = 0;
-        while (true) {
-            TokenType type = peek_token(actual_jump).type;
-
-            if (type == TokenType::op_less) {
-                ++blocks;
-            } else if (type == TokenType::op_more) {
-                if (blocks == 0) break;
-                --blocks;
-            } else if (type == TokenType::eof || type == TokenType::block_l || type == TokenType::semicolon) {
-                ret = false;
-                return ret;
-            }
-            actual_jump++;
-        }
-        ret = postGenericToken.count(peek_token(actual_jump + 1).type) == 1;
-        return ret;
-    }
-    ret = false;
-    return ret;
-}
 
 ptr<Comment> Parser::parse_comment() {
     debug_func("");

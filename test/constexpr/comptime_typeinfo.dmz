@@ -1,0 +1,44 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+const Point = struct {
+    x: i32,
+    y: i32,
+    fn print() -> void {
+    }
+};
+
+fn main() -> void {
+    const intInfo = comptime @typeinfo(i32);
+    const intTag = comptime intInfo.tag;
+    const intBits = comptime intInfo.infoInt.bits;
+
+    const floatInfo = comptime @typeinfo(f32);
+    const floatTag = comptime floatInfo.tag;
+    const floatBits = comptime floatInfo.infoFloat.bits;
+
+    const boolInfo = comptime @typeinfo(bool);
+    const boolTag = comptime boolInfo.tag;
+
+    const ptInfo = comptime @typeinfo(Point);
+    const ptInfoStruct = comptime ptInfo.infoStruct;
+    const ptTag = comptime ptInfo.tag;
+    const ptFields = comptime ptInfo.infoStruct.fields;
+    const ptFieldsLen = comptime ptInfo.infoStruct.fields.len;
+    const ptMethods = comptime ptInfo.infoStruct.methods;
+    const ptMethodsLen = comptime ptInfo.infoStruct.methods.len;
+}
+
+// CHECK: | value: #infoInt{{bits: 32}}
+// CHECK: | value: 1
+// CHECK: | value: 32
+// CHECK: | value: #infoFloat{{bits: 32}}
+// CHECK: | value: 3
+// CHECK: | value: 32
+// CHECK: | value: #infoBool{void}
+// CHECK: | value: 4
+// CHECK: | value: #infoStruct{{name: 'comptime_typeinfo.Point', fields: ['x', 'y'], methods: ['print']}}
+// CHECK: | value: 5
+// CHECK: | value: ['x', 'y']
+// CHECK: | value: 2
+// CHECK: | value: ['print']
+// CHECK: | value: 1

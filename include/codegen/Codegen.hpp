@@ -164,6 +164,12 @@ class Codegen {
     void generate_error_trace_clear(llvm::Value *idx = nullptr);
     llvm::Value *generate_builtin_error_trace();
 
+    llvm::Value *generate_comptimeValue(const SourceLocation &location, const ComptimeValue &comptimeValue,
+                                        const ResolvedType &type);
+    llvm::Value *generate_aggregate_initialization(const SourceLocation &location, const ResolvedType &type,
+                                                   std::string_view tmpName,
+                                                   const std::vector<std::pair<int, llvm::Value *>> &initializers);
+
     vec<const ResolvedTestDecl *> cached_tests;
     vec<const ResolvedTestDecl *> get_tests();
 

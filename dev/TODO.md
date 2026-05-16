@@ -41,5 +41,6 @@
 - [x] create export fn
 - [x] @ptrCast for ptrs
 - [x] implement comptime to evaluate functions and in params
+- [x] implement @type inference 
 - [ ] casting sistem with builtins
 - [ ] implement @alignof and @align for types

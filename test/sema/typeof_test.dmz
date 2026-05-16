@@ -1,0 +1,28 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+fn main() -> void {
+    let a: i32 = 1;
+    let b: @typeof(a) = 2;
+    // CHECK: ResolvedVarDecl:i32 b
+    let c: @typeof(i64) = 3;
+    // CHECK: ResolvedVarDecl:i64 c
+    
+    printf("b: %d, c: %ld\n", b, c);
+
+    let p: Point = Point{x: 10, y: 20};
+    let p2: @typeof(p) = Point{x: 30, y: 40};
+    // CHECK: ResolvedVarDecl:typeof_test.Point{} p2
+    printf("p2: %d, %d\n", p2.x, p2.y);
+
+    let ptr: *i32 = &a;
+    let ptr2: @typeof(ptr) = &b;
+    // CHECK: ResolvedVarDecl:*i32 ptr2
+    printf("ptr2: %d\n", ptr2.*);
+}

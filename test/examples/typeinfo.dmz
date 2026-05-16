@@ -1,6 +1,6 @@
 // RUN: dmz %s -run | filecheck %s
 
-const types = import("../../std/types.dmz");
+const types = import("std").types;
 
 extern fn printf(fmt: *u8, ...) -> i32;
 const MyStruct = struct {
@@ -13,9 +13,9 @@ const MyStruct = struct {
     }
 };
 
-fn print<T>() -> void {
+fn print(comptime T: type) -> void {
     const info = @typeinfo(T);
-    switch (info.tag) {
+    inline switch (info.tag) {
         case types.TypeInfo.infoInt => printf("int: bits %d\n", info.infoInt.bits);
         case types.TypeInfo.infoUint => printf("uint: bits %d\n", info.infoUint.bits);
         case types.TypeInfo.infoStruct => {
@@ -32,9 +32,9 @@ fn print<T>() -> void {
 }
 
 pub fn main() -> void {
-    print<i32>();
-    print<u8>();
-    print<MyStruct>();
+    print(i32);
+    print(u8);
+    print(MyStruct);
 }
 // CHECK: int: bits 32
 // CHECK-NEXT: uint: bits 8

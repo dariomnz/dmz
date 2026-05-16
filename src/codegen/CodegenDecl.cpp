@@ -308,6 +308,9 @@ void Codegen::generate_struct_fields(const ResolvedStructDecl &structDecl) {
 
     std::vector<llvm::Type *> fieldTypes;
     for (auto &&field : structDecl.fields) {
+        if (field->type->kind == ResolvedTypeKind::Type) {
+            continue;
+        }
         llvm::Type *t = generate_type(*field->type, true);
         fieldTypes.emplace_back(t);
     }

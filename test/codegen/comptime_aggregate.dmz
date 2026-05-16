@@ -1,0 +1,28 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+// RUN: diff <(dmz %s -run 2>&1) <(echo -n -e 'n: 1 2 3\narr: 10 20 30\n')
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+const Point = struct {
+    x: i32,
+    y: i32,
+};
+
+const Nested = struct {
+    p: Point,
+    z: i32,
+};
+
+fn main() -> void {
+    const p = Point{x: 1, y: 2};
+    // CHECK: store %comptime_aggregate.Point { i32 1, i32 2 }, ptr %tmp.struct.comptime_aggregate.Point, align 4
+    const n = Nested{p: p, z: 3};
+    // CHECK: store %comptime_aggregate.Point { i32 1, i32 2 }, ptr %tmp.struct.comptime_aggregate.Point1, align 4
+    printf("n: %d %d %d\n", n.p.x, n.p.y, n.z);
+    // CHECK: call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.CEFD6E7C, i32 1, i32 2, i32 3)
+
+    const arr: [3]i32 = {10, 20, 30};
+    // CHECK: store [3 x i32] [i32 10, i32 20, i32 30], ptr %"array.[3]i32.tmp", align 4
+    printf("arr: %d %d %d\n", arr[0], arr[1], arr[2]);
+    // CHECK: call i32 (ptr, ...) @printf(ptr byref(i8) @string.literal.259D756E, i32 10, i32 20, i32 30)
+}

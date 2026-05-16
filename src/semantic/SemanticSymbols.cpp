@@ -47,14 +47,14 @@ std::string ResolvedGenericTypeDecl::generic_types_to_str(
     const std::vector<ptr<ResolvedGenericTypeDecl>> &genericTypeDecls) {
     if (genericTypeDecls.size() == 0) return "";
     std::stringstream out;
-    out << "<";
+    out << "(";
     for (size_t i = 0; i < genericTypeDecls.size(); i++) {
         out << genericTypeDecls[i]->identifier;
         if (i != genericTypeDecls.size() - 1) {
             out << ", ";
         }
     }
-    out << ">";
+    out << ")";
     return out.str();
 }
 

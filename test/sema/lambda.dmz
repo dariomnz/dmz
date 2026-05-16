@@ -18,7 +18,6 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedTypeExpr:lambda.structL7C14.f
 // CHECK-NEXT:           | value: lambda.structL7C14.f
 // CHECK-NEXT:     ResolvedTypeStructDecl lambda.structL7C14.f
-// CHECK-NEXT:   ResolvedTypeStructDecl lambda.structL7C14.f
 // CHECK-NEXT:     ResolvedStructDecl lambda.structL7C14.f
 // CHECK-NEXT:       ResolvedStaticMemberFunctionDecl call fn(i32)->i32
 // CHECK-NEXT:         ResolvedParamDecl:i32 a

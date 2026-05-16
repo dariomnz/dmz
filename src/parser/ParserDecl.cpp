@@ -6,38 +6,15 @@
 
 #include "parser/Parser.hpp"
 #include "parser/ParserSymbols.hpp"
-#include "sys/mman.h"
+
 namespace DMZ {
-
-ptr<GenericTypeDecl> Parser::parse_generic_type_decl() {
-    debug_func("");
-    matchOrReturn(TokenType::id, "expected identifier");
-    auto location = m_nextToken.loc;
-    auto identifier = m_nextToken.str;
-    eat_next_token();  // eat id
-    return makePtr<GenericTypeDecl>(location, identifier);
-}
-
-std::vector<ptr<GenericTypeDecl>> Parser::parse_generic_types_decl() {
-    debug_func("");
-    if (m_nextToken.type != TokenType::op_less) {
-        return {};
-    }
-    bool haveTrailingComma;
-    auto typesDeclList = (parse_list_with_trailing_comma<GenericTypeDecl>(
-        {TokenType::op_less, "expected '<'"}, [this]() { return parse_generic_type_decl(); },
-        {TokenType::op_more, "expected '>'"}, haveTrailingComma));
-    if (!typesDeclList) return {};
-
-    return std::move(*typesDeclList);
-}
 
 // <functionDecl>
 //  ::= 'extern'? 'fn' <identifier> '(' ')' '->' <type> <block>
 ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
     debug_func("parentDecl " << parentDecl);
     SourceLocation loc = m_nextToken.loc;
-    SourceLocation structLocation;
+
     bool isPublic = false;
     bool isExtern = false;
     bool isExport = false;
@@ -62,10 +39,9 @@ ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
     matchOrReturn(TokenType::id, "expected identifier");
 
     auto functionIdentifier = m_nextToken.str;
-    structLocation = m_nextToken.loc;
+
     eat_next_token();  // eat identifier
 
-    auto genericTypes = parse_generic_types_decl();
     bool haveTrailingComma;
     varOrReturn(parameterList, parse_list_with_trailing_comma<ParamDecl>(
                                    {TokenType::par_l, "expected '('"}, [this]() { return parse_param_decl(); },
@@ -87,14 +63,8 @@ ptr<FuncDecl> Parser::parse_function_decl(Type* parentDecl) {
     matchOrReturn(TokenType::block_l, "expected function body");
     varOrReturn(block, parse_block());
 
-    if (genericTypes.size() != 0) {
-        return makePtr<GenericFunctionDecl>(loc, isPublic, functionIdentifier, std::move(type),
-                                            std::move(*parameterList), std::move(block), std::move(genericTypes),
-                                            parentDecl);
-    } else {
-        return makePtr<FunctionDecl>(loc, isPublic, functionIdentifier, std::move(type), std::move(*parameterList),
-                                     std::move(block), isExport, parentDecl);
-    }
+    return makePtr<FunctionDecl>(loc, isPublic, functionIdentifier, std::move(type), std::move(*parameterList),
+                                 std::move(block), isExport, parentDecl);
 }
 
 // <paramDecl>
@@ -205,26 +175,13 @@ ptr<StructDecl> Parser::parse_aggregate_decl(TokenType kindToken) {
 
     std::string identifier = typeNameStr + "L" + std::to_string(location.line) + "C" + std::to_string(location.col);
 
-    std::vector<ptr<GenericTypeDecl>> genericTypes;
-    if (kindToken != TokenType::kw_union) {
-        genericTypes = parse_generic_types_decl();
-        if (kindToken == TokenType::kw_enum && !genericTypes.empty()) {
-            return report(m_nextToken.loc, "enums cannot be generic");
-        }
-    }
-
     matchOrReturn(TokenType::block_l, "expected '{'");
     eat_next_token();  // eat openingToken
 
     std::vector<ptr<Decl>> declList;
     ptr<StructDecl> aggregate;
     if (kindToken == TokenType::kw_struct) {
-        if (genericTypes.size() != 0) {
-            aggregate = makePtr<GenericStructDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>(),
-                                                   std::move(genericTypes));
-        } else {
-            aggregate = makePtr<StructDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>());
-        }
+        aggregate = makePtr<StructDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>());
     } else if (kindToken == TokenType::kw_union) {
         aggregate = makePtr<UnionDecl>(location, isPublic, identifier, isPacked, std::vector<ptr<Decl>>());
     } else {

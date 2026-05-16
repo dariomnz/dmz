@@ -208,7 +208,16 @@ llvm::Value *Codegen::generate_builtin_atomicRmw(const ResolvedCallExpr &call) {
 }
 
 llvm::Value *Codegen::generate_builtin_sizeof(const ResolvedCallExpr &callExpr) {
-    auto type = generate_type(*callExpr.arguments[0]->type);
+    llvm::Type *type = nullptr;
+    if (auto comptimeVal = callExpr.arguments[0]->get_constant_value()) {
+        if (comptimeVal->isType()) {
+            type = generate_type(*comptimeVal->getType());
+        } else {
+            dmz_unreachable(callExpr.location, "this should not happend: " + comptimeVal->to_str());
+        }
+    } else {
+        type = generate_type(*callExpr.arguments[0]->type);
+    }
     auto size = llvm::ConstantExpr::getSizeOf(type);
     return size;
 }

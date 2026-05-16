@@ -7,9 +7,9 @@ fn println(n: i32) -> void { printf("%d\n", n); }
 fn select(comptime use_first: bool, a: i32, b: i32) -> i32 {
     if (use_first) { return a; } else { return b; }
 }
-// CHECK: define i32 @"comptime_bool_select.select<comptime(true)>"(i32 %0, i32 %1) {
+// CHECK: define i32 @"comptime_bool_select.select(true)"(i32 %0, i32 %1) {
 // CHECK:   br i1 true, label %if.true, label %if.false
-// CHECK: define i32 @"comptime_bool_select.select<comptime(false)>"(i32 %0, i32 %1) {
+// CHECK: define i32 @"comptime_bool_select.select(false)"(i32 %0, i32 %1) {
 // CHECK:   br i1 false, label %if.true, label %if.false
 
 fn main() -> void {

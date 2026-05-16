@@ -6,13 +6,13 @@ fn print_any(x: anytype) -> void {
 // CHECK-NEXT:    ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:    ResolvedParamDecl:anytype x
 // CHECK-NEXT:    ResolvedBlock
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<i32> fn(i32)->void
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any(i32) fn(i32)->void
 // CHECK-NEXT:      ResolvedParamDecl:i32 x
 // CHECK-NEXT:      ResolvedBlock
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<bool> fn(bool)->void
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any(bool) fn(bool)->void
 // CHECK-NEXT:      ResolvedParamDecl:bool x
 // CHECK-NEXT:      ResolvedBlock
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any<*u8> fn(*u8)->void
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any(*u8) fn(*u8)->void
 // CHECK-NEXT:      ResolvedParamDecl:*u8 x
 // CHECK-NEXT:      ResolvedBlock
 
@@ -30,7 +30,7 @@ fn add_any(x: anytype, comptime y: anytype) -> void {
 // CHECK-NEXT:          ResolvedBinaryOperator:anytype '+'
 // CHECK-NEXT:            ResolvedDeclRefExpr:anytype x
 // CHECK-NEXT:            ResolvedDeclRefExpr:anytype y
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any<i32, i32, comptime(2)> fn(i32, i32)->void
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any(i32, i32, 2) fn(i32, i32)->void
 // CHECK-NEXT:      ResolvedParamDecl:i32 x
 // CHECK-NEXT:      ResolvedParamDecl:comptime i32 y
 // CHECK-NEXT:      ResolvedBlock
@@ -40,7 +40,7 @@ fn add_any(x: anytype, comptime y: anytype) -> void {
 // CHECK-NEXT:              ResolvedDeclRefExpr:i32 x
 // CHECK-NEXT:              ResolvedDeclRefExpr:i32 y
 // CHECK-NEXT:              | value: 2
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any<f64, f64, comptime(2.5)> fn(f64, f64)->void
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl add_any(f64, f64, 2.5) fn(f64, f64)->void
 // CHECK-NEXT:      ResolvedParamDecl:f64 x
 // CHECK-NEXT:      ResolvedParamDecl:comptime f64 y
 // CHECK-NEXT:      ResolvedBlock

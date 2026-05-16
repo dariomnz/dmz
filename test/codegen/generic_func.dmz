@@ -3,11 +3,11 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-fn print<T>(param:T) -> void {
+fn print(param:anytype) -> void {
     printf("One integer %d\n", param);
 }
 
-// CHECK: define void @"generic_func.print<i32>"(i32 %0) {
+// CHECK: define void @"generic_func.print(i32)"(i32 %0) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %param = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 4, i1 false)
@@ -17,7 +17,7 @@ fn print<T>(param:T) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 // CHECK-NEXT: 
-// CHECK-NEXT: define void @"generic_func.print<i64>"(i64 %0) {
+// CHECK-NEXT: define void @"generic_func.print(i64)"(i64 %0) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %param = alloca i64, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %param, i8 0, i64 8, i1 false)
@@ -27,11 +27,11 @@ fn print<T>(param:T) -> void {
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
-fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
+fn foo(param1:anytype, param2:anytype, param3:anytype) -> void {
     printf("Integers %d %d %d\n", param1, param2, param3);
 }
 
-// CHECK: define void @"generic_func.foo<i16, i32, i64>"(i16 %0, i32 %1, i64 %2) {
+// CHECK: define void @"generic_func.foo(i16, i32, i64)"(i16 %0, i32 %1, i64 %2) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %param1 = alloca i16, align 2
 // CHECK-NEXT:   %param2 = alloca i32, align 4
@@ -50,15 +50,20 @@ fn foo<T, F, G>(param1:T, param2:F, param3:G) -> void {
 // CHECK-NEXT: }
 
 fn main() -> void {
-    print<i32>(1);
-    print<i64>(2);
-    foo<i16, i32, i64>(123, 1234, 12345);
+    const a1: i32 = 1;
+    print(a1);
+    const a2: i64 = 2;
+    print(a2);
+    const a3: i16 = 123;
+    const a4: i32 = 1234;
+    const a5: i64 = 12345;
+    foo(a3, a4, a5);
 }
 
 // CHECK: define void @__builtin_main() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   call void @"generic_func.print<i32>"(i32 1)
-// CHECK-NEXT:   call void @"generic_func.print<i64>"(i64 2)
-// CHECK-NEXT:   call void @"generic_func.foo<i16, i32, i64>"(i16 123, i32 1234, i64 12345)
+// CHECK:   call void @"generic_func.print(i32)"(i32 1)
+// CHECK:   call void @"generic_func.print(i64)"(i64 2)
+// CHECK:   call void @"generic_func.foo(i16, i32, i64)"(i16 123, i32 1234, i64 12345)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }

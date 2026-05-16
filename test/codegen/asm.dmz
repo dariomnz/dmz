@@ -10,6 +10,6 @@ fn main() -> void {
 
     let res: u64 = @asm("syscall", "={rax},{rax},{rdi},{rsi},{rdx}", nr_write, stdout, msg, len);
 
-    // CHECK: %1 = call i64 asm sideeffect "syscall", "={rax},{rax},{rdi},{rsi},{rdx}"(i64 1, i64 1, ptr %0, i64 17)
+    // CHECK: call i64 asm sideeffect "syscall", "={rax},{rax},{rdi},{rsi},{rdx}"(i64 1, i64 1, ptr @string.literal.45A787B4, i64 17)
     printf("result %d\n", res);
 }

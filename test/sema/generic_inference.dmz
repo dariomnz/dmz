@@ -1,15 +1,15 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
-fn id<T>(val: T) -> T {
+fn id(comptime T: type, val: T) -> T {
     return val;
 }
 
 fn main() -> void {
-    let a = id(10);
-    let b = id(true);
+    let a = id(i32, 10);
+    let b = id(bool, true);
 }
 
 // CHECK: ResolvedCallExpr:i32
-// CHECK-NEXT:   ResolvedDeclRefExpr:fn(i32)->i32 id
+// CHECK-NEXT:   ResolvedDeclRefExpr:fn(type, i32)->i32 id
 // CHECK: ResolvedCallExpr:bool
-// CHECK-NEXT:   ResolvedDeclRefExpr:fn(bool)->bool id
+// CHECK-NEXT:   ResolvedDeclRefExpr:fn(type, bool)->bool id

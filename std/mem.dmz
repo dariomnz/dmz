@@ -6,7 +6,7 @@ pub const Arena = import("alloc/arena.dmz").Arena;
 pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
 
-pub fn bytesAsSlice<T>(bytes: []u8) -> ![]T {
+pub fn bytesAsSlice(comptime T:type, bytes: []u8) -> ![]T {
     const byte_count = bytes.len;
     const t_count = byte_count / @sizeof(T);
 
@@ -20,7 +20,7 @@ pub fn bytesAsSlice<T>(bytes: []u8) -> ![]T {
     return newSlice;
 }
 
-pub fn sliceAsBytes<T>(slice: []T) -> []u8 {
+pub fn sliceAsBytes(comptime T:type, slice: []T) -> []u8 {
     let bytes: []u8 = {};
     bytes.ptr = @ptrCast(slice.ptr);
     bytes.len = slice.len * @sizeof(T);
@@ -32,27 +32,27 @@ pub fn strlen(str: *u8) -> usize {
     let slice: []u8 = {};
     slice.ptr = @ptrCast(str);
     slice.len = MAX_USIZE;
-    const index = indexOf<u8>(slice, '\0');
+    const index = indexOf(u8, slice, '\0');
     if (index == -1) return MAX_USIZE;
     return @intCast(index);
 }
 
-pub fn indexOf<T>(slice: []T, scalar: T) -> isize {
-    return indexOfScalarSIMD<T>(slice, scalar);
+pub fn indexOf(comptime T: type, slice: []T, scalar: T) -> isize {
+    return indexOfScalarSIMD(T, slice, scalar);
 }
 
-fn indexOfScalar<T>(slice: []T, scalar: T) -> isize {
+fn indexOfScalar(comptime T: type, slice: []T, scalar: T) -> isize {
     for (0..slice.len) |i| {
         if (slice[i] == scalar) return @intCast(i);
     }
     return -1;
 }
 
-fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
+fn indexOfScalarSIMD(comptime T: type, slice: []T, scalar: T) -> isize {
     const simd_len = @simdSize(T);
 
     if (slice.len < simd_len) {
-        return indexOfScalar<T>(slice, scalar);
+        return indexOfScalar(T, slice, scalar);
     }
     // First consume the firsts elements to avoid alignment issues
     // call indexOfScalar<T>() to consume until aligment
@@ -62,7 +62,7 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
     let offset: usize = 0;
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
-        const index = indexOfScalar<T>(slice[0..offset], scalar);
+        const index = indexOfScalar(T, slice[0..offset], scalar);
         if (index != -1) return index;
     }
 
@@ -82,13 +82,13 @@ fn indexOfScalarSIMD<T>(slice: []T, scalar: T) -> isize {
         i += simd_len;
     }
 
-    const index = indexOfScalar<T>(slice[i..slice.len], scalar);
+    const index = indexOfScalar(T, slice[i..slice.len], scalar);
     if (index != -1) return @intCast(i) + index;
 
     return -1;
 }
 
-pub fn copy<T>(dest: []T, src: []T) -> void {
+pub fn copy(comptime T: type, dest: []T, src: []T) -> void {
     let len = src.len;
     if (dest.len < src.len) len = dest.len;
     if (len == 0) return;
@@ -101,22 +101,22 @@ pub fn copy<T>(dest: []T, src: []T) -> void {
     inline if (typeid == std.types.bool_t || typeid == std.types.pointer_t || typeid == std.types.int_t || typeid == std.types.uint_t ||
         typeid == std.types.float_t) {
         if (backwards) {
-            copySIMDBackwards<T>(dest[0..len], src[0..len]);
+            copySIMDBackwards(T, dest[0..len], src[0..len]);
         } else {
-            copySIMD<T>(dest[0..len], src[0..len]);
+            copySIMD(T, dest[0..len], src[0..len]);
         }
     } else {
         if (backwards) {
-            copySIMDBackwards<u8>(std.mem.sliceAsBytes<T>(dest[0..len]), std.mem.sliceAsBytes<T>(src[0..len]));
+            copySIMDBackwards(u8, std.mem.sliceAsBytes(T, dest[0..len]), std.mem.sliceAsBytes(T, src[0..len]));
         } else {
-            copySIMD<u8>(std.mem.sliceAsBytes<T>(dest[0..len]), std.mem.sliceAsBytes<T>(src[0..len]));
+            copySIMD(u8, std.mem.sliceAsBytes(T, dest[0..len]), std.mem.sliceAsBytes(T, src[0..len]));
         }
     }
 
 }
 
 // Need same len
-fn copyScalar<T>(dest: []T, src: []T) -> void {
+fn copyScalar(comptime T: type, dest: []T, src: []T) -> void {
     let len: usize = src.len;
 
     for (0..len) |i| {
@@ -125,7 +125,7 @@ fn copyScalar<T>(dest: []T, src: []T) -> void {
 }
 
 // Need same len
-fn copyScalarBackwards<T>(dest: []T, src: []T) -> void {
+fn copyScalarBackwards(comptime T: type, dest: []T, src: []T) -> void {
     let len: usize = src.len;
     for ((len - 1)..-1) |i| {
         dest[i] = src[i];
@@ -133,12 +133,12 @@ fn copyScalarBackwards<T>(dest: []T, src: []T) -> void {
 }
 
 // Need same len
-fn copySIMD<T>(dest: []T, src: []T) -> void {
+fn copySIMD(comptime T:type, dest: []T, src: []T) -> void {
     let len = src.len;
 
     const simd_len = @simdSize(T);
     if (len < simd_len) {
-        copyScalar<T>(dest, src);
+        copyScalar(T, dest, src);
         return;
     }
 
@@ -149,7 +149,7 @@ fn copySIMD<T>(dest: []T, src: []T) -> void {
     let offset: usize = 0;
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
-        copyScalar<T>(dest[0..offset], src[0..offset]);
+        copyScalar(T, dest[0..offset], src[0..offset]);
     }
 
     let i: usize = offset;
@@ -163,15 +163,15 @@ fn copySIMD<T>(dest: []T, src: []T) -> void {
         i += simd_len;
     }
 
-    copyScalar<T>(dest[i..len], src[i..len]);
+    copyScalar(T, dest[i..len], src[i..len]);
 }
 
-fn copySIMDBackwards<T>(dest: []T, src: []T) -> void {
+fn copySIMDBackwards(comptime T: type, dest: []T, src: []T) -> void {
     const len = src.len;
 
     const simd_len = @simdSize(T);
     if (len < simd_len) {
-        copyScalarBackwards<T>(dest, src);
+        copyScalarBackwards(T, dest, src);
         return;
     }
 
@@ -183,7 +183,7 @@ fn copySIMDBackwards<T>(dest: []T, src: []T) -> void {
 
     const tail_count = remainder / @sizeof(T);
     if (tail_count > 0) {
-        copyScalarBackwards<T>(dest[(len - tail_count)..len], src[(len - tail_count)..len]);
+        copyScalarBackwards(T, dest[(len - tail_count)..len], src[(len - tail_count)..len]);
     }
 
     let i: usize = len - tail_count;
@@ -196,29 +196,29 @@ fn copySIMDBackwards<T>(dest: []T, src: []T) -> void {
     }
 
     if (i > 0) {
-        copyScalarBackwards<T>(dest[0..i], src[0..i]);
+        copyScalarBackwards(T, dest[0..i], src[0..i]);
     }
 }
 
-pub fn set<T>(dest: []T, value: T) -> void {
-    setSIMD<T>(dest, value);
+pub fn set(comptime T:type, dest: []T, value: T) -> void {
+    setSIMD(T, dest, value);
 }
 
-fn setScalar<T>(dest: []T, value: T) -> void {
+fn setScalar(comptime T: type, dest: []T, value: T) -> void {
     if (dest.len == 0) return;
     for (0..dest.len) |i| {
         dest[i] = value;
     }
 }
 
-fn setSIMD<T>(dest: []T, value: T) -> void {
+fn setSIMD(comptime T: type, dest: []T, value: T) -> void {
     let len = dest.len;
     if (len == 0) return;
 
     const simd_len = @simdSize(T);
 
     if (len < simd_len) {
-        setScalar<T>(dest, value);
+        setScalar(T, dest, value);
         return;
     }
 
@@ -230,7 +230,7 @@ fn setSIMD<T>(dest: []T, value: T) -> void {
     if (remainder != 0) {
         offset = (alignment - remainder) / @sizeof(T);
         if (offset > len) offset = len;
-        setScalar<T>(dest[0..offset], value);
+        setScalar(T, dest[0..offset], value);
     }
 
     const value_vec: @simd<T, simd_len> = @simdSplat(value);
@@ -243,7 +243,7 @@ fn setSIMD<T>(dest: []T, value: T) -> void {
     }
 
     if (i < len) {
-        setScalar<T>(dest[i..len], value);
+        setScalar(T, dest[i..len], value);
     }
 }
 
@@ -251,7 +251,7 @@ const std = import("std");
 test "indexOfScalarSIMD string" {
     const slice: []u8 = "hello world! hello world! hello world! hello world! 88";
     const scalar = '8';
-    const index = indexOfScalarSIMD<u8>(slice, scalar);
+    const index = indexOfScalarSIMD(u8, slice, scalar);
 
     try std.testing.expect(index == 52);
 }
@@ -259,7 +259,7 @@ test "indexOfScalarSIMD string" {
 test "indexOfScalarSIMD f64" {
     const slice: [5]f64 = {1.0, 2.0, 3.0, 4.0, 5.0};
     const scalar = 3.0;
-    const index = indexOfScalarSIMD<f64>(slice[0..5], scalar);
+    const index = indexOfScalarSIMD(f64, slice[0..5], scalar);
 
     try std.testing.expect(index == 2);
 }
@@ -267,7 +267,7 @@ test "indexOfScalarSIMD f64" {
 test "indexOfScalarSIMD i32" {
     const slice: [16]i32 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     const scalar = 14;
-    const index = indexOfScalarSIMD<i32>(slice[0..16], scalar);
+    const index = indexOfScalarSIMD(i32, slice[0..16], scalar);
 
     try std.testing.expect(index == 13);
 }
@@ -275,16 +275,16 @@ test "indexOfScalarSIMD i32" {
 test "indexOfScalar benchmark" {
     const size = 1024 * 1024 * 2;
     let ptr: [size]u8 = {};
-    set<u8>(ptr[0..size], 123);
+    set(u8, ptr[0..size], 123);
     const scalar: u8 = 124;
     ptr[size - 1] = scalar;
     const start = std.time.get();
-    const index = indexOfScalarSIMD<u8>(ptr[0..size], scalar);
+    const index = indexOfScalarSIMD(u8, ptr[0..size], scalar);
     const end = std.time.get();
     const time_diff = (end - start) * 1000.0;
     try std.testing.expect(index == size - 1);
     const start2 = std.time.get();
-    const index2 = indexOfScalar<u8>(ptr[0..size], scalar);
+    const index2 = indexOfScalar(u8, ptr[0..size], scalar);
     const end2 = std.time.get();
     const time_diff2 = (end2 - start2) * 1000.0;
 
@@ -301,12 +301,12 @@ test "copy: benchmark" {
     ptr1[size - 1] = scalar;
 
     const start_simd = std.time.get();
-    copySIMD<u8>(ptr2[0..size], ptr1[0..size]);
+    copySIMD(u8, ptr2[0..size], ptr1[0..size]);
     const end_simd = std.time.get();
     const time_diff_simd = (end_simd - start_simd) * 1000.0;
 
     const start_scalar = std.time.get();
-    copyScalar<u8>(ptr2[0..size], ptr1[0..size]);
+    copyScalar(u8, ptr2[0..size], ptr1[0..size]);
     const end_scalar = std.time.get();
     const time_diff_scalar = (end_scalar - start_scalar) * 1000.0;
     std.io.print(
@@ -315,12 +315,12 @@ test "copy: benchmark" {
     );
     try std.testing.expect(time_diff_simd < time_diff_scalar);
     const start_back = std.time.get();
-    copySIMDBackwards<u8>(ptr2[0..size], ptr1[0..size]);
+    copySIMDBackwards(u8, ptr2[0..size], ptr1[0..size]);
     const end_back = std.time.get();
     const time_diff_back = (end_back - start_back) * 1000.0;
 
     const start_scalar_back = std.time.get();
-    copyScalarBackwards<u8>(ptr2[0..size], ptr1[0..size]);
+    copyScalarBackwards(u8, ptr2[0..size], ptr1[0..size]);
     const end_scalar_back = std.time.get();
     const time_diff_scalar_back = (end_scalar_back - start_scalar_back) * 1000.0;
 
@@ -334,8 +334,8 @@ test "copy: benchmark" {
 test "copy: basic integrity" {
     let src: [8]u8 = {1, 2, 3, 4, 5, 6, 7, 8};
     let dest: [8]u8 = {};
-    copy<u8>(dest[0..8], src[0..8]);
-    try std.testing.expectEqualSlice(src[0..8], dest[0..8]);
+    copy(u8, dest[0..8], src[0..8]);
+    try std.testing.expectEqualSlice(u8, src[0..8], dest[0..8]);
 }
 
 test "copy: overlap backwards (dest > src)" {
@@ -345,9 +345,9 @@ test "copy: overlap backwards (dest > src)" {
     let buf: [6]u8 = {1, 2, 3, 4, 5, 6};
     let expected: [6]u8 = {1, 2, 1, 2, 3, 4};
 
-    copy<u8>(buf[2..6], buf[0..4]);
+    copy(u8, buf[2..6], buf[0..4]);
 
-    try std.testing.expectEqualSlice(expected[0..6], buf[0..6]);
+    try std.testing.expectEqualSlice(u8, expected[0..6], buf[0..6]);
 }
 
 test "copy: misaligned large buffers" {
@@ -361,9 +361,9 @@ test "copy: misaligned large buffers" {
     // Test multiple offsets to trigger different alignment remainders
     let offset: usize = 0;
     while (offset < 16) {
-        set<u8>(dest[0..size], 0);
-        copy<u8>(dest[offset..size], src[offset..size]);
-        try std.testing.expectEqualSlice(src[offset..size], dest[offset..size]);
+        set(u8, dest[0..size], 0);
+        copy(u8, dest[offset..size], src[offset..size]);
+        try std.testing.expectEqualSlice(u8, src[offset..size], dest[offset..size]);
         offset += 1;
     }
 }
@@ -373,11 +373,11 @@ test "set benchmark" {
     let ptr: [size]u8 = {};
     const scalar: u8 = 124;
     const start = std.time.get();
-    setSIMD<u8>(ptr[0..size], scalar);
+    setSIMD(u8, ptr[0..size], scalar);
     const end = std.time.get();
     const time_diff = (end - start) * 1000.0;
     const start2 = std.time.get();
-    setScalar<u8>(ptr[0..size], scalar);
+    setScalar(u8, ptr[0..size], scalar);
     const end2 = std.time.get();
     const time_diff2 = (end2 - start2) * 1000.0;
 

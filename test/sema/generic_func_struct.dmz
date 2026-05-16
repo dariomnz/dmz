@@ -2,39 +2,57 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-const Point = struct<T> {
-    x: T,
-    y: T,
-};
-// CHECK: ResolvedGenericStructDecl generic_func_struct.Point<T>
-// CHECK-NEXT:   ResolvedGenericTypeDecl T
-// CHECK-NEXT:   ResolvedFieldDecl:T x
-// CHECK-NEXT:   ResolvedFieldDecl:T y
-// CHECK-NEXT:   ResolvedSpecializedStructDecl generic_func_struct.Point<i32>
-// CHECK-NEXT:     ResolvedFieldDecl:i32 x
-// CHECK-NEXT:     ResolvedFieldDecl:i32 y
+fn Point(comptime T: type) -> type {
+    return struct {
+        x: T,
+        y: T,
+    };
+}
+// CHECK:   ResolvedGenericFunctionDecl Point fn(T)->type
+// CHECK-NEXT:     ResolvedGenericTypeDecl T
+// CHECK-NEXT:     ResolvedParamDecl:comptime T T
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedReturnStmt
+// CHECK-NEXT:         ResolvedTypeExpr:type
+// CHECK-NEXT:         | value: generic_func_struct.struct.Point(T)
+// CHECK-NEXT:           ResolvedTypeStructDecl generic_func_struct.struct.Point(T)
+// CHECK-NEXT:             ResolvedStructDecl generic_func_struct.struct.Point(T)
+// CHECK-NEXT:               ResolvedFieldDecl:T x
+// CHECK-NEXT:               ResolvedFieldDecl:T y
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl Point(i32) fn(type)->type
+// CHECK-NEXT:       ResolvedParamDecl:comptime type T
+// CHECK-NEXT:       ResolvedBlock
+// CHECK-NEXT:         ResolvedReturnStmt
+// CHECK-NEXT:           ResolvedTypeExpr:type
+// CHECK-NEXT:           | value: generic_func_struct.struct.Point(i32)
+// CHECK-NEXT:             ResolvedTypeStructDecl generic_func_struct.struct.Point(i32)
+// CHECK-NEXT:               ResolvedStructDecl generic_func_struct.struct.Point(i32)
+// CHECK-NEXT:                 ResolvedFieldDecl:i32 x
+// CHECK-NEXT:                 ResolvedFieldDecl:i32 y
 
-fn foo<T>() -> Point<T> {
-    return Point<T>{
+fn foo(comptime T: type) -> Point(T) {
+    return Point(T){
         x: 1,
         y: 2,
     };
 }
-// CHECK: ResolvedGenericFunctionDecl foo fn()->generic_func_struct.Point<T>{}
+// CHECK: ResolvedGenericFunctionDecl foo fn(T)->generic_func_struct.struct.Point(T){}
 // CHECK-NEXT:    ResolvedGenericTypeDecl T
+// CHECK-NEXT:    ResolvedParamDecl:comptime T T
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedReturnStmt
-// CHECK-NEXT:        ResolvedStructInstantiationExpr:generic_func_struct.Point<T>{}
+// CHECK-NEXT:        ResolvedStructInstantiationExpr:generic_func_struct.struct.Point(T){}
 // CHECK-NEXT:          ResolvedFieldInitStmt:T x
 // CHECK-NEXT:            ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:            | value: 1
 // CHECK-NEXT:          ResolvedFieldInitStmt:T y
 // CHECK-NEXT:            ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:            | value: 2
-// CHECK-NEXT:    ResolvedSpecializedFunctionDecl foo<i32> fn()->generic_func_struct.Point<i32>{}
+// CHECK-NEXT:    ResolvedSpecializedFunctionDecl foo(i32) fn(type)->generic_func_struct.struct.Point(i32){}
+// CHECK-NEXT:      ResolvedParamDecl:comptime type T
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedReturnStmt
-// CHECK-NEXT:          ResolvedStructInstantiationExpr:generic_func_struct.Point<i32>{}
+// CHECK-NEXT:          ResolvedStructInstantiationExpr:generic_func_struct.struct.Point(i32){}
 // CHECK-NEXT:            ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:              ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:              | value: 1
@@ -43,11 +61,12 @@ fn foo<T>() -> Point<T> {
 // CHECK-NEXT:              | value: 2
 
 fn main() -> void {
-    foo<i32>();
+    foo(i32);
 }
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
-// CHECK-NEXT:     ResolvedCallExpr:generic_func_struct.Point<i32>{}
-// CHECK-NEXT:       ResolvedGenericExpr:fn()->generic_func_struct.Point<i32>{} foo
-// CHECK-NEXT:         ResolvedDeclRefExpr:fn()->generic_func_struct.Point<T>{} foo
-// CHECK-NEXT:         ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:     ResolvedCallExpr:generic_func_struct.struct.Point(i32){}
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(type)->generic_func_struct.struct.Point(i32){} foo
+// CHECK-NEXT:         ResolvedTypeExpr:type
+// CHECK-NEXT:         | value: i32
+// CHECK-NEXT:           ResolvedTypeNumber i32

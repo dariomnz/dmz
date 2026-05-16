@@ -13,6 +13,7 @@ pub const function_t = 11;
 pub const error_t = 12;
 pub const optional_t = 13;
 pub const simd_t = 14;
+pub const union_t = 15;
 
 pub const TypeInfo = union {
     infoVoid: void,
@@ -24,8 +25,7 @@ pub const TypeInfo = union {
     infoTuple: TypeInfoStruct,
     // TODO: infoPointer
     infoPointer: void,
-    // TODO: infoSlice
-    infoSlice: void,
+    infoSlice: TypeInfoSlice,
     // TODO: infoRange
     infoRange: void,
     // TODO: infoArray
@@ -37,7 +37,8 @@ pub const TypeInfo = union {
     // TODO: infoOptional
     infoOptional: void,
     infoSimd: TypeInfoSimd,
-
+    // TODO: infoUnion
+    infoUnion: void,
 };
 
 pub const TypeInfoStruct = struct {
@@ -53,4 +54,8 @@ pub const TypeInfoNumber = struct {
 pub const TypeInfoSimd = struct {
     name: []u8,
     len: u32,
+};
+
+pub const TypeInfoSlice = struct {
+    inner: type,
 };

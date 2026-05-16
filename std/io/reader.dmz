@@ -22,7 +22,7 @@ pub const Reader = struct {
     pub fn defaultRebase(ptr: *void, r: *@This, capacity: usize) -> !void {
         if (r.seek < r.end) {
             const data = r.buffer[r.seek..r.end];
-            std.mem.copy<u8>(r.buffer, data);
+            std.mem.copy(u8, r.buffer, data);
         }
         r.end = r.end - r.seek;
         r.seek = 0;
@@ -61,7 +61,7 @@ pub const Reader = struct {
             // Buscamos el delimitador en la parte del buffer que ya tenemos cargada
             const current_data = r.buffer[r.seek..r.end];
 
-            const pos: isize = std.mem.indexOf<u8>(current_data, '\n');
+            const pos: isize = std.mem.indexOf(u8, current_data, '\n');
             // std.io.print("pos {}\n", .{pos});
             if (pos >= 0) {
                 // Calculamos el final de la línea (sin incluir el \n)

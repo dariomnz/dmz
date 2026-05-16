@@ -3,7 +3,7 @@
 fn add_comptime(comptime a: i32, comptime b: i32) -> i32 {
     return a + b;
 }
-// CHECK:     ResolvedSpecializedFunctionDecl add_comptime<comptime(10), comptime(30)> fn(i32, i32)->i32
+// CHECK:     ResolvedSpecializedFunctionDecl add_comptime(10, 30) fn(i32, i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:comptime i32 a
 // CHECK-NEXT:       ResolvedParamDecl:comptime i32 b
 // CHECK-NEXT:       ResolvedBlock
@@ -18,7 +18,7 @@ fn add_comptime(comptime a: i32, comptime b: i32) -> i32 {
 fn mul_comptime_mixed(comptime factor: i32, x: i32) -> i32 {
     return factor * x;
 }
-// CHECK:     ResolvedSpecializedFunctionDecl mul_comptime_mixed<comptime(5)> fn(i32, i32)->i32
+// CHECK:     ResolvedSpecializedFunctionDecl mul_comptime_mixed(5) fn(i32, i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:comptime i32 factor
 // CHECK-NEXT:       ResolvedParamDecl:i32 x
 // CHECK-NEXT:       ResolvedBlock

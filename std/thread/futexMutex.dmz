@@ -81,5 +81,5 @@ test "thread futex mutex" {
         try threads[i].join();
     }
 
-    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+    try std.testing.expectEqual(i32, NUM_HILOS * INCREMENTOS, contador);
 }

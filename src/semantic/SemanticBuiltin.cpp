@@ -119,6 +119,18 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@typeof") {
+        auto genericType = makePtr<ResolvedTypeGeneric>(loc, nullptr);
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(
+            makePtr<ResolvedParamDecl>(loc, "expr", ResolvedTypeExpr::fromType(genericType->clone()), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto fnType =
+            makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), makePtr<ResolvedTypeType>(loc));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     } else if (fnName == "@typeid") {
         std::vector<ptr<ResolvedParamDecl>> params;
         params.emplace_back(makePtr<ResolvedParamDecl>(loc, "expr", genericTypeExpr(), false));
@@ -565,6 +577,33 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         auto ret = makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
         if (!ensure_fully_resolved(*typeExpr->type)) return nullptr;
         return ret;
+    } else if (resolvedCallee.identifier == "@typeof") {
+        if (resolvedArguments.empty()) return report(call.location, "expected argument for @typeof");
+        auto &arg = resolvedArguments[0];
+        ptr<ResolvedType> resultType = nullptr;
+        if (arg->type->kind == ResolvedTypeKind::Type) {
+            if (auto comptimeVal = arg->get_constant_value()) {
+                if (comptimeVal->isType()) {
+                    resultType = comptimeVal->getType();
+                }
+            }
+            if (!resultType) {
+                if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(arg.get())) {
+                    resultType = typeExpr->resolvedType->clone();
+                }
+            }
+        } else {
+            resultType = arg->type->clone();
+        }
+
+        if (!resultType) return report(arg->location, "could not determine type");
+
+        call.type = makePtr<ResolvedTypeType>(call.location);
+        call.set_constant_value(ComptimeValue(resultType->clone()));
+
+        std::vector<ptr<ResolvedType>> params;
+        params.emplace_back(arg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(params), call.type->clone());
     } else if (resolvedCallee.identifier == "@typeid") {
         auto &expr = resolvedArguments[0];
         auto retType = makePtr<ResolvedTypeNumber>(call.location, ResolvedNumberKind::Int, 32);
@@ -596,8 +635,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         if (!typeInfoDecl) {
             return report(call.location, "could not find " + targetUnionName + " in types.dmz");
         }
-        auto returnType = makePtr<ResolvedTypePointer>(
-            call.location, makePtr<ResolvedTypeUnion>(call.location, typeInfoDecl->unionDecl()));
+        auto returnType = makePtr<ResolvedTypeUnion>(call.location, typeInfoDecl->unionDecl());
         call.type = returnType->clone();
 
         std::vector<ptr<ResolvedType>> params;

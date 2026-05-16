@@ -16,7 +16,6 @@ fn main() -> void {
 // CHECK-NEXT:     | value: enum_decl.Token
 // CHECK-NEXT:   ResolvedTypeExpr:enum_decl.Token
 // CHECK-NEXT:   | value: enum_decl.Token
-// CHECK-NEXT:     ResolvedTypeEnumDecl enum_decl.Token
 // CHECK-NEXT:   ResolvedTypeEnumDecl enum_decl.Token
 // CHECK-NEXT:     ResolvedEnumDecl enum_decl.Token
 // CHECK-NEXT:       ResolvedFieldDecl:enum_decl.Token{} val1

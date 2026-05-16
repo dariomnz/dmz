@@ -262,9 +262,19 @@ void LSPServer::on_hover(const std::string& id, const std::string& params) {
         ss << "\\n```\"}}";
         std::cerr << "[LSP] Sending hover response: " << ss.str() << std::endl;
         send_response(id, ss.str());
-    } else {
-        send_response(id, "null");
+        return;
+    } else if (finder.found_expr) {
+        if (auto comptimeVal = finder.found_expr->get_constant_value()) {
+            std::stringstream ss;
+            ss << "{\"contents\":{\"kind\":\"markdown\",\"value\":\"```dmz\\n";
+            ss << escape_json(comptimeVal->to_str()) << "\\n```\"}}";
+            std::cerr << "[LSP] Sending hover response: " << ss.str() << std::endl;
+            send_response(id, ss.str());
+            return;
+        }
+        std::cerr << "[LSP] Found expression, but could not evaluate to constant value" << std::endl;
     }
+    send_response(id, "null");
 }
 
 void LSPServer::on_semantic_tokens(const std::string& id, const std::string& params) {

@@ -4,7 +4,7 @@ fn add(a: i32, b: i32) -> i32 {
     return a + b;
 }
 
-fn callAdd<T>(tuple: T) -> i32 {
+fn callAdd(tuple: anytype) -> i32 {
     return @call(&add, tuple);
 }
 

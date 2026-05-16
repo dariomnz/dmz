@@ -64,6 +64,8 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
             auto baseVal = evaluate(*memberExpr->base, allowSideEffects);
             if (baseVal && baseVal->isArray()) {
                 return ComptimeValue((int64_t)baseVal->getArray().elements.size());
+            } else if (baseVal && baseVal->isSlice()) {
+                return ComptimeValue((int64_t)baseVal->getSlice().elements.size());
             } else if (baseVal && baseVal->isString()) {
                 return ComptimeValue((int64_t)baseVal->getString().size());
             }
@@ -83,6 +85,14 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
                         return val;
                     }
                 }
+            }
+            if (baseVal && baseVal->isUnion()) {
+                if (memberExpr->member.identifier == "tag") {
+                    return ComptimeValue(baseVal->getUnion().activeTag);
+                }
+                auto &unionPayload = baseVal->getUnion().payload;
+                if (unionPayload) return *unionPayload;
+                return ComptimeValue();
             }
         }
         return evaluate_decl(memberExpr->member, allowSideEffects);
@@ -121,6 +131,13 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
     if (const auto *typeExpr = dynamic_cast<const ResolvedTypeExpr *>(&expr)) {
         return ComptimeValue(typeExpr->resolvedType->clone());
     }
+    if (const auto *unionInst = dynamic_cast<const ResolvedUnionInstantiationExpr *>(&expr)) {
+        auto fieldVal = evaluate(*unionInst->fieldInitializer->initializer, allowSideEffects);
+        if (!fieldVal) return std::nullopt;
+        int64_t tag = unionInst->fieldInitializer->field.index;
+        auto fieldName = unionInst->fieldInitializer->field.identifier;
+        return ComptimeValue(ComptimeValue::Union{tag, fieldName, makePtr<ComptimeValue>(std::move(*fieldVal))});
+    }
     if (const auto *structInst = dynamic_cast<const ResolvedStructInstantiationExpr *>(&expr)) {
         ComptimeValue::Struct structVal;
         for (auto &&init : structInst->fieldInitializers) {
@@ -129,6 +146,17 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
             structVal.fields.emplace_back(init->field.identifier, *fieldVal);
         }
         return ComptimeValue(std::move(structVal));
+    }
+    if (const auto *arrayInst = dynamic_cast<const ResolvedArrayInstantiationExpr *>(&expr)) {
+        if (!arrayInst->initializers.empty()) {
+            ComptimeValue::Array arrayVal;
+            for (auto &&init : arrayInst->initializers) {
+                auto fieldVal = evaluate(*init, allowSideEffects);
+                if (!fieldVal) return std::nullopt;
+                arrayVal.elements.emplace_back(std::move(*fieldVal));
+            }
+            return ComptimeValue(std::move(arrayVal));
+        }
     }
     return expr.get_constant_value();
 }
@@ -144,6 +172,27 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
         resolvedDecl = &memberExpr->member;
     } else if (auto declRef = dynamic_cast<ResolvedDeclRefExpr *>(expr.callee.get())) {
         resolvedDecl = &declRef->decl;
+    }
+
+    if (!resolvedDecl) {
+        return std::nullopt;
+    }
+
+    while (auto varDecl = dynamic_cast<const ResolvedVarDecl *>(resolvedDecl)) {
+        if (varDecl->isMutable) break;
+        if (varDecl->initializer) {
+            if (auto dre = dynamic_cast<const ResolvedDeclRefExpr *>(varDecl->initializer.get())) {
+                resolvedDecl = &dre->decl;
+
+            } else if (auto me = dynamic_cast<const ResolvedMemberExpr *>(varDecl->initializer.get())) {
+                resolvedDecl = &me->member;
+
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
     }
 
     if (auto builtin = dynamic_cast<const ResolvedBuiltinFunctionDecl *>(resolvedDecl)) {
@@ -165,13 +214,113 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             return ComptimeValue((int64_t)std::max(CodegenUtils::typeBitSize(*targetType) / 8, 1));
         } else if (builtin->identifier == "@simdSize") {
             auto &typeArg = expr.arguments[0];
-            const ResolvedType *targetType = typeArg->type.get();
+            ptr<ResolvedType> targetType = typeArg->type->clone();
             if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
-                targetType = typeExpr->resolvedType.get();
+                targetType = typeExpr->resolvedType->clone();
+            }
+            if (dynamic_cast<const ResolvedTypeType *>(targetType.get())) {
+                if (auto val = typeArg->get_constant_value()) {
+                    if (val && val->isType()) {
+                        targetType = val->getType()->clone();
+                    }
+                } else {
+                    dmz_unreachable(typeArg->location, "need to have const value");
+                }
             }
             int bit_simd_size = CodegenUtils::target_simd_size();
             int bit_type_size = CodegenUtils::typeBitSize(*targetType);
             return ComptimeValue((int64_t)(bit_simd_size / bit_type_size));
+        } else if (builtin->identifier == "@typeinfo") {
+            auto &typeArg = expr.arguments[0];
+            ptr<ResolvedType> targetType = typeArg->type->clone();
+            if (auto typeExpr = dynamic_cast<ResolvedTypeExpr *>(typeArg.get())) {
+                targetType = typeExpr->resolvedType->clone();
+            }
+            if (dynamic_cast<const ResolvedTypeType *>(targetType.get())) {
+                if (auto comptimeVal = typeArg->get_constant_value()) {
+                    if (!comptimeVal->isType()) {
+                        dmz_unreachable(typeArg->location, "need to have const value");
+                    }
+                    targetType = comptimeVal->getType()->clone();
+                } else {
+                    dmz_unreachable(typeArg->location, "need to have const value");
+                }
+            }
+
+            int tag = evaluate_type(*targetType)->getInt();
+            std::string fieldName;
+            if (auto unionType = dynamic_cast<const ResolvedTypeUnion *>(expr.type.get())) {
+                auto *unionDecl = unionType->unionDecl();
+                if (m_sema && !m_sema->ensure_struct_members_resolved(*unionDecl)) return std::nullopt;
+                if (tag >= 0 && tag < (int)unionDecl->fields.size()) {
+                    fieldName = unionDecl->fields[tag]->identifier;
+                }
+            } else {
+                dmz_unreachable(expr.location, "need to have union type");
+            }
+
+            ComptimeValue payload;
+
+            switch (targetType->kind) {
+                case ResolvedTypeKind::Number: {
+                    auto &nt = static_cast<const ResolvedTypeNumber &>(*targetType);
+                    ComptimeValue::Struct numberPayload;
+                    numberPayload.fields.emplace_back("bits", ComptimeValue((int64_t)nt.bitSize));
+                    payload = ComptimeValue(std::move(numberPayload));
+                    break;
+                }
+                case ResolvedTypeKind::StructDecl:
+                case ResolvedTypeKind::Struct: {
+                    ResolvedStructDecl *structDecl = nullptr;
+                    if (auto sd = dynamic_cast<const ResolvedTypeStructDecl *>(targetType.get()))
+                        structDecl = sd->decl;
+                    else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType.get()))
+                        structDecl = sd->decl;
+                    if (structDecl) {
+                        if (m_sema) {
+                            if (!m_sema->ensure_struct_members_resolved(*structDecl)) return std::nullopt;
+                            if (!m_sema->ensure_struct_funcs_resolved(*structDecl)) return std::nullopt;
+                        }
+
+                        ComptimeValue::Struct structPayload;
+                        structPayload.fields.emplace_back("name", ComptimeValue(structDecl->name()));
+
+                        ComptimeValue::Slice fieldSlice;
+                        for (auto &fieldName : structDecl->fields_strs) {
+                            fieldSlice.elements.emplace_back(fieldName);
+                        }
+                        structPayload.fields.emplace_back("fields", ComptimeValue(std::move(fieldSlice)));
+
+                        ComptimeValue::Slice methodSlice;
+                        for (auto &methodName : structDecl->functions_strs) {
+                            methodSlice.elements.emplace_back(methodName);
+                        }
+                        structPayload.fields.emplace_back("methods", ComptimeValue(std::move(methodSlice)));
+
+                        payload = ComptimeValue(std::move(structPayload));
+                    }
+                    break;
+                }
+                case ResolvedTypeKind::Slice: {
+                    auto &st = static_cast<const ResolvedTypeSlice &>(*targetType);
+                    ComptimeValue::Struct slicePayload;
+                    slicePayload.fields.emplace_back("inner", ComptimeValue(st.sliceType->clone()));
+                    payload = ComptimeValue(std::move(slicePayload));
+                    break;
+                }
+                case ResolvedTypeKind::Simd: {
+                    auto &st = static_cast<const ResolvedTypeSimd &>(*targetType);
+                    ComptimeValue::Struct simdPayload;
+                    simdPayload.fields.emplace_back("name", ComptimeValue(st.to_str()));
+                    simdPayload.fields.emplace_back("len", ComptimeValue((int64_t)st.simdSize));
+                    payload = ComptimeValue(std::move(simdPayload));
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            return ComptimeValue(ComptimeValue::Union{tag, fieldName, makePtr<ComptimeValue>(std::move(payload))});
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;
@@ -185,12 +334,32 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                 return std::nullopt;
             }
         }
-
+        debug_msg(expr.location << func->className() << " " << func->name()
+                                << " allowSideEffects: " << allowSideEffects);
         std::vector<ComptimeValue> argValues;
         for (auto &&arg : expr.arguments) {
             auto val = evaluate(*arg, allowSideEffects);
             if (!val) return std::nullopt;
             argValues.push_back(*val);
+            debug_msg("arg: " << *val);
+        }
+
+        // Check cache
+        auto it = m_callCache.find(func);
+        if (it != m_callCache.end()) {
+            if (it->second.args.size() == argValues.size()) {
+                bool match = true;
+                for (size_t i = 0; i < argValues.size(); ++i) {
+                    if (!(it->second.args[i] == argValues[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    debug_msg("CACHE HIT! " << func->name() << " " << it->second.result);
+                    return it->second.result;
+                }
+            }
         }
 
         auto oldEnv = m_env;
@@ -211,6 +380,11 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
         m_env = oldEnv;
         m_shouldReturn = oldShouldReturn;
         m_returnValue = oldReturnValue;
+
+        if (result) {
+            debug_msg(" NEW RESULT! " << func->name() << " " << *result);
+            m_callCache.emplace(func, CallCacheEntry{func, std::move(argValues), *result});
+        }
 
         return result;
     }
@@ -258,6 +432,9 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_type(const Re
             return ComptimeValue((int64_t)13);
         case ResolvedTypeKind::Simd:
             return ComptimeValue((int64_t)14);
+        case ResolvedTypeKind::UnionDecl:
+        case ResolvedTypeKind::Union:
+            return ComptimeValue((int64_t)15);
         default:
             break;
     }

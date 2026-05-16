@@ -23,9 +23,7 @@ llvm::Value *Codegen::generate_expr(const ResolvedExpr &expr, bool keepPointer) 
     defer([&]() { unset_debug_location(); });
 
     if (auto val = expr.get_constant_value()) {
-        if (auto value = val->toInt()) {
-            return llvm::ConstantInt::get(generate_type(*expr.type), *value);
-        }
+        if (!val->isVoid()) return generate_comptimeValue(expr.location, *val, *expr.type);
     }
     if (auto *number = dynamic_cast<const ResolvedFloatLiteral *>(&expr)) {
         return llvm::ConstantFP::get(generate_type(*number->type), number->value);
@@ -680,41 +678,14 @@ llvm::Value *Codegen::generate_temporary_struct(const ResolvedStructInstantiatio
     } else {
         tmpName += sie.type->to_str();
     }
-    llvm::Value *tmp = allocate_stack_variable(sie.location, tmpName, *sie.type);
 
-    llvm::Type *structType = generate_type(*sie.type, true);
-    llvm::Value *structVal = llvm::ConstantAggregateZero::get(structType);
-    bool canOptimize = true;
-    if (sie.fieldInitializers.size() == 0) canOptimize = false;
-    for (auto &&initStmt : sie.fieldInitializers) {
-        if (store_value_generate_memcpy(*initStmt->initializer->type) || !initStmt->initializer->isLiteral()) {
-            canOptimize = false;
-            break;
-        }
-    }
-
-    std::unordered_map<const ResolvedFieldDecl *, llvm::Value *> initializerVals;
+    std::vector<std::pair<int, llvm::Value *>> initializers;
     for (auto &&initStmt : sie.fieldInitializers) {
         if (initStmt->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
-        initializerVals[&initStmt->field] = generate_expr(*initStmt->initializer);
-        if (canOptimize) {
-            structVal = m_builder.CreateInsertValue(structVal, initializerVals[&initStmt->field],
-                                                    (unsigned)initStmt->field.index);
-        }
+        initializers.emplace_back(initStmt->field.index, generate_expr(*initStmt->initializer));
     }
 
-    if (canOptimize) {
-        m_builder.CreateStore(structVal, tmp);
-    } else {
-        for (size_t i = 0; i < sie.structDecl.fields.size(); i++) {
-            auto &field = sie.structDecl.fields[i];
-            if (sie.fieldInitializers[i]->initializer->type->kind == ResolvedTypeKind::DefaultInit) continue;
-            llvm::Value *dst = m_builder.CreateStructGEP(generate_type(*sie.type), tmp, i);
-            store_value(initializerVals[field.get()], dst, *field->type, *field->type);
-        }
-    }
-
-    return tmp;
+    return generate_aggregate_initialization(sie.location, *sie.type, tmpName, initializers);
 }
 
 llvm::Value *Codegen::generate_temporary_union(const ResolvedUnionInstantiationExpr &uie) {
@@ -754,17 +725,14 @@ llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationE
         dmz_unreachable(aie.location, "unexpected type in array instantiation");
     }
     std::string varName = "array." + typeArray->to_str() + ".tmp";
-    llvm::Value *tmp = allocate_stack_variable(aie.location, varName, *typeArray);
 
-    size_t idx = 0;
+    std::vector<std::pair<int, llvm::Value *>> initializers;
+    int idx = 0;
     for (auto &&initExpr : aie.initializers) {
-        auto var = generate_expr(*initExpr);
-        llvm::Value *dst =
-            m_builder.CreateGEP(generate_type(*typeArray), tmp, {m_builder.getInt32(0), m_builder.getInt32(idx++)});
-        store_value(var, dst, *typeArray->arrayType, *typeArray->arrayType);
+        initializers.emplace_back(idx++, generate_expr(*initExpr));
     }
 
-    return tmp;
+    return generate_aggregate_initialization(aie.location, *aie.type, varName, initializers);
 }
 
 llvm::Value *Codegen::generate_error_in_place_expr(const ResolvedErrorInPlaceExpr &errorInPlaceExpr) {
@@ -993,7 +961,11 @@ llvm::Value *Codegen::generate_slice_expr(const ResolvedType &type, const Resolv
     if (from.type->kind == ResolvedTypeKind::Array) {
         // ptr = ptr;
     } else if (from.type->kind == ResolvedTypeKind::Pointer) {
-        ptr = load_value(ptr, *from.type);
+        if (auto val = from.get_constant_value()) {
+            ptr = generate_comptimeValue(from.location, *val, *from.type);
+        } else {
+            ptr = load_value(ptr, *from.type);
+        }
     } else if (from.type->kind == ResolvedTypeKind::Slice) {
         ptr = m_builder.CreateStructGEP(generate_type(*from.type), ptr, 0);
         ptr = load_value(ptr, ResolvedTypePointer{type.location, makePtr<ResolvedTypeVoid>(type.location)});

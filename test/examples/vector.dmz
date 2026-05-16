@@ -7,7 +7,7 @@
 
 const std = import("std");
 
-fn printVector<T>(v: *std.vec<T>) -> void {
+fn printVector(comptime T: type, v: *std.Vec(T)) -> void {
     std.io.printf("vector [");
     let slice = v.slice();
     for (0..slice.len, slice) |i, val| {
@@ -22,17 +22,17 @@ fn printVector<T>(v: *std.vec<T>) -> void {
 fn main() -> void {
     let libc_alloc = std.mem.LibcAllocator.init();
     let allocator = libc_alloc.Allocator();
-    let v = std.vec<i32>.init(allocator);
+    let v = std.Vec(i32).init(allocator);
     defer v.deinit();
 
-    printVector<i32>(&v);
+    printVector(i32, &v);
 
     let i = 0;
     while (i < 10) {
         try v.add(i);
         i = i + 1;
     }
-    printVector<i32>(&v);
+    printVector(i32, &v);
 
     i = 0;
     while (i < 4) {
@@ -40,5 +40,5 @@ fn main() -> void {
         i = i + 1;
     }
 
-    printVector<i32>(&v);
+    printVector(i32, &v);
 }

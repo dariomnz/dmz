@@ -23,6 +23,12 @@ class ConstantExpressionEvaluator {
     std::optional<ComptimeValue> evaluate_stmt(const ResolvedStmt &stmt, bool allowSideEffects = false);
 
    private:
+    struct CallCacheEntry {
+        const ResolvedDecl *func;
+        std::vector<ComptimeValue> args;
+        ComptimeValue result;
+    };
+    std::unordered_map<const ResolvedDecl *, CallCacheEntry> m_callCache;
     std::unordered_map<const ResolvedDecl *, ComptimeValue> m_env;
     std::optional<ComptimeValue> m_returnValue;
     bool m_shouldReturn = false;

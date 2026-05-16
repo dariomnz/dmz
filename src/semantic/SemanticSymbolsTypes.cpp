@@ -223,9 +223,15 @@ bool ResolvedTypeStructDecl::is_generic() const {
     if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
         return debug_ret(spec->specializedTypes->is_generic());
     }
+    if (decl->isGenericVisiting) return debug_ret(false);
+    decl->isGenericVisiting = true;
     for (auto &&field : decl->fields) {
-        if (field->type->is_generic()) return debug_ret(true);
+        if (field->type->is_generic()) {
+            decl->isGenericVisiting = false;
+            return debug_ret(true);
+        }
     }
+    decl->isGenericVisiting = false;
     return debug_ret(false);
 }
 
@@ -273,9 +279,15 @@ bool ResolvedTypeStruct::is_generic() const {
     if (auto *spec = dynamic_cast<const ResolvedSpecializedStructDecl *>(decl)) {
         return debug_ret(spec->specializedTypes->is_generic());
     }
+    if (decl->isGenericVisiting) return debug_ret(false);
+    decl->isGenericVisiting = true;
     for (auto &&field : decl->fields) {
-        if (field->type->is_generic()) return debug_ret(true);
+        if (field->type->is_generic()) {
+            decl->isGenericVisiting = false;
+            return debug_ret(true);
+        }
     }
+    decl->isGenericVisiting = false;
     return debug_ret(false);
 }
 
@@ -494,14 +506,14 @@ void ResolvedTypeSpecialized::dump(size_t level) const {
 std::string ResolvedTypeSpecialized::to_str() const {
     if (specializedTypes.size() == 0) return "";
     std::stringstream out;
-    out << "<";
+    out << "(";
     for (size_t i = 0; i < specializedTypes.size(); i++) {
         out << specializedTypes[i]->to_str();
         if (i != specializedTypes.size() - 1) {
             out << ", ";
         }
     }
-    out << ">";
+    out << ")";
     return out.str();
 }
 
@@ -827,7 +839,7 @@ void ResolvedTypeSimd::dump(size_t level) const {
 }
 
 std::string ResolvedTypeSimd::to_str() const {
-    return "@simd<" + simdType->to_str() + ", " + std::to_string(simdSize) + ">";
+    return "@simd(" + simdType->to_str() + ", " + std::to_string(simdSize) + ")";
 }
 
 bool ResolvedTypeSimd::is_generic() const { return debug_ret(simdType->is_generic()); }
@@ -980,7 +992,7 @@ void ResolvedTypeComptimeValue::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeComptimeValue " << to_str() << "\n";
 }
 
-std::string ResolvedTypeComptimeValue::to_str() const { return "comptime(" + value->to_str() + ")"; }
+std::string ResolvedTypeComptimeValue::to_str() const { return value->to_str(); }
 
 bool ResolvedTypeAnyType::equal(const ResolvedType &other) const { return other.kind == ResolvedTypeKind::AnyType; }
 

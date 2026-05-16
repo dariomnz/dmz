@@ -9,25 +9,6 @@
 #include "semantic/SemanticSymbols.hpp"
 
 namespace DMZ {
-struct StructCacheKey {
-    const StructDecl *decl = nullptr;
-    ResolvedDecl *context = nullptr;
-    bool operator==(const StructCacheKey &) const = default;
-};
-}  // namespace DMZ
-
-namespace std {
-template <>
-struct hash<DMZ::StructCacheKey> {
-    size_t operator()(const DMZ::StructCacheKey &k) const {
-        size_t h1 = std::hash<const DMZ::StructDecl *>{}(k.decl);
-        size_t h2 = std::hash<DMZ::ResolvedDecl *>{}(k.context);
-        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
-    }
-};
-}  // namespace std
-
-namespace DMZ {
 
 class Driver;
 class Sema {
@@ -92,17 +73,17 @@ class Sema {
     std::unordered_set<ResolvedDecl *> m_pending_decls;
 
     std::unordered_map<std::string, ResolvedStructDecl *> m_instantiatedTuples;
-    std::unordered_map<StructCacheKey, ResolvedStructDecl *> m_resolvedStructs;
     std::unordered_map<const StructDecl *, int> m_structInstanceCounts;
 
     std::unordered_map<std::string, ResolvedBuiltinFunctionDecl *> m_funcBuiltins = {
-        {"@call", nullptr},         {"@atomicLoad", nullptr},   {"@atomicStore", nullptr}, {"@atomicCmpExW", nullptr},
-        {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},    {"@sizeof", nullptr},      {"@typeid", nullptr},
-        {"@typeinfo", nullptr},     {"@hasMethod", nullptr},    {"@simdSize", nullptr},    {"@simdSplat", nullptr},
-        {"@simdIota", nullptr},     {"@errorTrace", nullptr},   {"@testNum", nullptr},     {"@testRun", nullptr},
-        {"@testName", nullptr},     {"@simdLoad", nullptr},     {"@simdStore", nullptr},   {"@simdSelect", nullptr},
-        {"@simdReduce", nullptr},   {"@compileError", nullptr}, {"@compileLog", nullptr},  {"@asm", nullptr},
-        {"@ptrCast", nullptr},      {"@intCast", nullptr},      {"@floatCast", nullptr},   {"@sqrt", nullptr},
+        {"@call", nullptr},         {"@atomicLoad", nullptr}, {"@atomicStore", nullptr},  {"@atomicCmpExW", nullptr},
+        {"@atomicCmpExS", nullptr}, {"@atomicRmw", nullptr},  {"@sizeof", nullptr},       {"@typeof", nullptr},
+        {"@typeid", nullptr},       {"@typeinfo", nullptr},   {"@hasMethod", nullptr},    {"@simdSize", nullptr},
+        {"@simdSplat", nullptr},    {"@simdIota", nullptr},   {"@errorTrace", nullptr},   {"@testNum", nullptr},
+        {"@testRun", nullptr},      {"@testName", nullptr},   {"@simdLoad", nullptr},     {"@simdStore", nullptr},
+        {"@simdSelect", nullptr},   {"@simdReduce", nullptr}, {"@compileError", nullptr}, {"@compileLog", nullptr},
+        {"@asm", nullptr},          {"@ptrCast", nullptr},    {"@intCast", nullptr},      {"@floatCast", nullptr},
+        {"@sqrt", nullptr},
     };
 
    public:
@@ -138,9 +119,10 @@ class Sema {
         const std::vector<ptr<GenericTypeDecl>> &genericTypesDecl);
     ptr<ResolvedTypeSpecialized> infer_generic_types(const SourceLocation &location,
                                                      ResolvedGenericFunctionDecl &funcDecl,
-                                                     const std::vector<ptr<ResolvedExpr>> &arguments);
+                                                     std::vector<ptr<ResolvedExpr>> &arguments);
     bool internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> &inferredTypes,
-                             const ResolvedType &paramType, const ResolvedType &argType);
+                             const ResolvedType &paramType, const ResolvedType &argType,
+                             ptr<ResolvedExpr> *argExpr = nullptr);
 
     ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation &location,
                                                                  ResolvedGenericFunctionDecl &funcDecl,

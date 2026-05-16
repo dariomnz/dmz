@@ -47,7 +47,7 @@ test "thread mutex" {
         try threads[i].join();
     }
 
-    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+    try std.testing.expectEqual(i32, NUM_HILOS * INCREMENTOS, contador);
 }
 
 test "thread atomic" {
@@ -75,5 +75,5 @@ test "thread atomic" {
         try threads[i].join();
     }
 
-    try std.testing.expectEqual(NUM_HILOS * INCREMENTOS, contador);
+    try std.testing.expectEqual(i32, NUM_HILOS * INCREMENTOS, contador);
 }

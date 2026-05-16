@@ -1,6 +1,6 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
-pub fn foo<T>(arg: T) -> !usize {
+pub fn foo(arg: anytype) -> !usize {
     const t = @typeid(arg);
     inline switch (t) {
         case 1 => return 1;
@@ -13,9 +13,9 @@ fn main() -> void {
     foo(123);
 }
 // CHECK: ResolvedModuleDecl inline_switch_return
-// CHECK-NEXT: ResolvedGenericFunctionDecl foo fn(T)->!usize
-// CHECK-NEXT:      ResolvedGenericTypeDecl T
-// CHECK-NEXT:      ResolvedParamDecl:T arg
+// CHECK-NEXT: ResolvedGenericFunctionDecl foo fn(anytype)->!usize
+// CHECK-NEXT:      ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:      ResolvedParamDecl:anytype arg
 // CHECK-NEXT:      ResolvedBlock
 // CHECK-NEXT:        ResolvedDeclStmt i32
 // CHECK-NEXT:          ResolvedVarDecl:const i32 t
@@ -23,7 +23,7 @@ fn main() -> void {
 // CHECK-NEXT:            ResolvedCallExpr:i32
 // CHECK-NEXT:            | value: 99
 // CHECK-NEXT:              ResolvedDeclRefExpr:i32 @typeid
-// CHECK-NEXT:              ResolvedDeclRefExpr:T arg
+// CHECK-NEXT:              ResolvedDeclRefExpr:anytype arg
 // CHECK-NEXT:        ResolvedInlineSwitchStmt
 // CHECK-NEXT:          ResolvedDeclRefExpr:i32 t
 // CHECK-NEXT:          | value: 99
@@ -40,7 +40,7 @@ fn main() -> void {
 // CHECK-NEXT:              ResolvedReturnStmt
 // CHECK-NEXT:                ResolvedIntLiteral:usize '0'
 // CHECK-NEXT:                | value: 0
-// CHECK-NEXT:      ResolvedSpecializedFunctionDecl foo<i32> fn(i32)->!usize
+// CHECK-NEXT:      ResolvedSpecializedFunctionDecl foo(i32) fn(i32)->!usize
 // CHECK-NEXT:        ResolvedParamDecl:i32 arg
 // CHECK-NEXT:        ResolvedBlock
 // CHECK-NEXT:          ResolvedDeclStmt i32

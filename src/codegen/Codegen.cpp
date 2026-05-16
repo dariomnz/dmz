@@ -348,6 +348,9 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         std::vector<llvm::Metadata *> Elements;
         uint64_t offset = 0;
         for (auto &&field : decl->fields) {
+            if (field->type->kind == ResolvedTypeKind::Type) {
+                continue;
+            }
             auto llvmMemberType = generate_type(*field->type, true);
             auto fieldBitSize = m_module->getDataLayout().getTypeSizeInBits(llvmMemberType);
             auto fieldAlingSize = m_module->getDataLayout().getPrefTypeAlign(llvmMemberType).value() * 8;
@@ -371,6 +374,9 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
         Elements.emplace_back(generate_debug_type(*typeFn->returnType));
 
         for (auto &&param : typeFn->paramsTypes) {
+            if (param->kind == ResolvedTypeKind::Type) {
+                continue;
+            }
             Elements.emplace_back(generate_debug_type(*param));
         }
 
@@ -544,7 +550,8 @@ llvm::DIType *Codegen::generate_debug_type(const ResolvedType &type) {
 
         std::vector<llvm::Metadata *> Enumerators;
         for (auto &&field : decl->fields) {
-            Enumerators.push_back(m_debugBuilder.createEnumerator(field->name(), field->get_constant_value()->getInt()));
+            Enumerators.push_back(
+                m_debugBuilder.createEnumerator(field->name(), field->get_constant_value()->getInt()));
         }
 
         auto finalType = m_debugBuilder.createEnumerationType(
@@ -935,5 +942,203 @@ llvm::GlobalVariable *Codegen::create_global_string(const std::string &str, cons
     auto strVal = m_builder.CreateGlobalString(str, uniqueName, 0, m_module.get());
     m_globalStrings[str] = strVal;
     return strVal;
+}
+
+llvm::Value *Codegen::generate_comptimeValue(const SourceLocation &location, const ComptimeValue &comptimeValue,
+                                             const ResolvedType &type) {
+    debug_func("generate_comptimeValue");
+    if (comptimeValue.isArray()) {
+        auto &elements = comptimeValue.getArray().elements;
+        auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&type);
+        if (!arrayType)
+            dmz_unreachable(location, "expected array type for array comptime value actual '" + type.to_str() + "'");
+        auto &elType = *arrayType->arrayType;
+        std::vector<std::pair<int, llvm::Value *>> initializers;
+        for (size_t i = 0; i < elements.size(); i++) {
+            initializers.emplace_back(i, generate_comptimeValue(location, elements[i], elType));
+        }
+        return generate_aggregate_initialization(location, type, "array." + type.to_str() + ".tmp", initializers);
+    }
+    if (comptimeValue.isSlice()) {
+        auto &elements = comptimeValue.getSlice().elements;
+        auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type);
+        if (!sliceType)
+            dmz_unreachable(location, "expected slice type for slice comptime value actual '" + type.to_str() + "'");
+        auto &elType = *sliceType->sliceType;
+        auto llvmElType = generate_type(elType);
+        auto llvmElStructTy = llvm::dyn_cast<llvm::StructType>(llvmElType);
+
+        auto sliceTy = generate_type(type);
+        auto nullSlice = llvm::ConstantAggregateZero::get(sliceTy);
+        auto slice = allocate_stack_variable(location, "comptime.slice", type);
+
+        if (elements.empty()) {
+            m_builder.CreateStore(nullSlice, slice);
+            return slice;
+        }
+
+        std::vector<llvm::Constant *> elementVals;
+        bool allConstant = true;
+        for (auto &elem : elements) {
+            llvm::Constant *c = nullptr;
+            if (elem.isString() && llvmElStructTy) {
+                auto ptr = create_global_string(elem.getString(), "comptime.slice.elem");
+                auto len =
+                    llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), elem.getString().size());
+                c = llvm::ConstantStruct::get(llvmElStructTy, {ptr, len});
+            } else {
+                c = llvm::dyn_cast<llvm::Constant>(generate_comptimeValue(location, elem, elType));
+            }
+            if (!c) {
+                allConstant = false;
+                break;
+            }
+            elementVals.push_back(c);
+        }
+
+        if (allConstant) {
+            auto arrayTy = llvm::ArrayType::get(llvmElType, elementVals.size());
+            auto arrayInit = llvm::ConstantArray::get(arrayTy, elementVals);
+            auto arrayGV = new llvm::GlobalVariable(*m_module, arrayTy, true, llvm::GlobalValue::PrivateLinkage,
+                                                    arrayInit, "comptime.slice.data");
+            auto sliceVal = m_builder.CreateInsertValue(nullSlice, arrayGV, 0);
+            auto lenVal = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), elementVals.size());
+            sliceVal = m_builder.CreateInsertValue(sliceVal, lenVal, 1);
+            m_builder.CreateStore(sliceVal, slice);
+        } else {
+            m_builder.CreateStore(nullSlice, slice);
+        }
+        return slice;
+    }
+    if (comptimeValue.isStruct()) {
+        auto &fields = comptimeValue.getStruct().fields;
+        ResolvedStructDecl *structDecl;
+        if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+            structDecl = structType->decl;
+        } else {
+            dmz_unreachable(location, "expected struct type for struct comptime value actual '" + type.to_str() + "'");
+        }
+        std::vector<std::pair<int, llvm::Value *>> initializers;
+        for (size_t i = 0; i < fields.size(); i++) {
+            initializers.emplace_back(i,
+                                      generate_comptimeValue(location, fields[i].second, *structDecl->fields[i]->type));
+        }
+        std::string tmpName = "tmp.struct.";
+        if (auto struType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+            tmpName += struType->decl->type->to_str();
+        } else {
+            tmpName += type.to_str();
+        }
+        return generate_aggregate_initialization(location, type, tmpName, initializers);
+    }
+    if (comptimeValue.isUnion()) {
+        auto &unionVal = comptimeValue.getUnion();
+        ResolvedUnionDecl *unionDecl = nullptr;
+        if (auto ut = dynamic_cast<const ResolvedTypeUnion *>(&type))
+            unionDecl = ut->unionDecl();
+        else if (auto ut = dynamic_cast<const ResolvedTypeUnionDecl *>(&type))
+            unionDecl = ut->unionDecl();
+        if (!unionDecl)
+            dmz_unreachable(location, "expected union type for union comptime value actual '" + type.to_str() + "'");
+        auto *tmp = allocate_stack_variable(location, "tmp.union." + type.to_str(), type);
+        auto *llvmType = static_cast<llvm::StructType *>(generate_type(type));
+        auto *tagField = m_builder.CreateStructGEP(llvmType, tmp, 0);
+        auto *tagVal = llvm::ConstantInt::get(generate_type(*unionDecl->tag->type), unionVal.activeTag);
+        m_builder.CreateStore(tagVal, tagField);
+        if (unionVal.payload && !unionVal.payload->isVoid() && !unionVal.payload->isType()) {
+            auto *payloadField = m_builder.CreateStructGEP(llvmType, tmp, 1);
+            auto &activeType = *unionDecl->fields[unionVal.activeTag]->type;
+            auto *activeFieldType = generate_type(activeType);
+            auto *payloadVal = generate_comptimeValue(location, *unionVal.payload, activeType);
+            auto *payloadPtr = m_builder.CreatePointerCast(payloadField, llvm::PointerType::get(activeFieldType, 0));
+            store_value(payloadVal, payloadPtr, activeType, activeType);
+        }
+        return tmp;
+    }
+    if (comptimeValue.isInt()) {
+        return llvm::ConstantInt::get(generate_type(type), comptimeValue.getInt());
+    }
+    if (comptimeValue.isFloat()) {
+        return llvm::ConstantFP::get(generate_type(type), comptimeValue.getFloat());
+    }
+    if (comptimeValue.isBool()) {
+        return llvm::ConstantInt::get(generate_type(type), comptimeValue.getBool());
+    }
+    if (comptimeValue.isString()) {
+        auto str = comptimeValue.getString();
+        auto ptr = create_global_string(str, "string.literal");
+        if (type.kind == ResolvedTypeKind::Slice) {
+            auto slice = allocate_stack_variable(location, "string.literal.slice", type);
+            auto sliceType = generate_type(type);
+            llvm::Value *slice_value = llvm::UndefValue::get(sliceType);
+            slice_value = m_builder.CreateInsertValue(slice_value, ptr, 0);
+            auto length = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), str.size());
+            slice_value = m_builder.CreateInsertValue(slice_value, length, 1);
+            m_builder.CreateStore(slice_value, slice);
+            return slice;
+        }
+        return ptr;
+    }
+    dmz_unreachable(location, "cannot generate comptimeValue " + comptimeValue.to_str() + " of type " + type.to_str());
+}
+
+llvm::Value *Codegen::generate_aggregate_initialization(
+    const SourceLocation &location, const ResolvedType &type, std::string_view tmpName,
+    const std::vector<std::pair<int, llvm::Value *>> &initializers) {
+    debug_func(tmpName);
+    llvm::Value *tmp = allocate_stack_variable(location, tmpName, type);
+
+    llvm::Type *llvmType = generate_type(type, true);
+    llvm::Value *aggregateVal = llvm::ConstantAggregateZero::get(llvmType);
+    bool canOptimize = !initializers.empty();
+
+    for (auto &&[index, val] : initializers) {
+        const ResolvedType *memberType = nullptr;
+        if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+            memberType = structType->decl->fields[index]->type.get();
+        } else if (auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
+            memberType = arrayType->arrayType.get();
+        } else if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
+            memberType = simdType->simdType.get();
+        }
+
+        if (!memberType || store_value_generate_memcpy(*memberType) || !llvm::isa<llvm::Constant>(val)) {
+            canOptimize = false;
+            break;
+        }
+    }
+
+    if (canOptimize) {
+        for (auto &&[index, val] : initializers) {
+            aggregateVal = m_builder.CreateInsertValue(aggregateVal, val, (unsigned)index);
+        }
+        m_builder.CreateStore(aggregateVal, tmp);
+    } else {
+        for (auto &&[index, val] : initializers) {
+            const ResolvedType *memberType = nullptr;
+            if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) {
+                memberType = structType->decl->fields[index]->type.get();
+            } else if (auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
+                memberType = arrayType->arrayType.get();
+            } else if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
+                memberType = simdType->simdType.get();
+            }
+
+            llvm::Value *dst = nullptr;
+            if (type.kind == ResolvedTypeKind::Struct) {
+                dst = m_builder.CreateStructGEP(llvmType, tmp, index);
+            } else {
+                dst = m_builder.CreateGEP(llvmType, tmp, {m_builder.getInt32(0), m_builder.getInt32(index)});
+            }
+
+            if (memberType) {
+                store_value(val, dst, *memberType, *memberType);
+            } else {
+                m_builder.CreateStore(val, dst);
+            }
+        }
+    }
+
+    return tmp;
 }
 }  // namespace DMZ

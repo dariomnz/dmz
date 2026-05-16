@@ -24,7 +24,7 @@ fn main() -> void {
     println(y);
 }
 
-// CHECK: get_x<comptime({x: 10, y: 20})>
+// CHECK: get_x({x: 10, y: 20})
 // CHECK: store i32 10
-// CHECK: get_y<comptime({x: 10, y: 20})>
+// CHECK: get_y({x: 10, y: 20})
 // CHECK: store i32 20

@@ -20,9 +20,11 @@ const UnionT = union {
     b: f32,
 };
 
-const GenericS = struct<T> {
-    val: T,
-};
+fn GenericS(comptime T: type) -> type {
+    return struct {
+        val: T,
+    };
+}
 
 const WithMethod = struct {
     a: i32,
@@ -51,9 +53,11 @@ const WithMethod = struct {
 // CHECK-NEXT:    b: f32,
 // CHECK-NEXT:};
 
-// CHECK:const GenericS = struct<T> {
-// CHECK-NEXT:    val: T,
-// CHECK-NEXT:};
+// CHECK:fn GenericS(comptime T: type) -> type {
+// CHECK-NEXT:    return struct {
+// CHECK-NEXT:        val: T,
+// CHECK-NEXT:    };
+// CHECK-NEXT:}
 
 // CHECK:const WithMethod = struct {
 // CHECK-NEXT:    a: i32,

@@ -4,71 +4,73 @@ const vector_error = error {
     OutOfMemory,
 };
 
-pub const vec = struct<T> {
-    buf: []T,
-    len: usize,
-    alloc: std.mem.Allocator,
+pub fn Vec(comptime T: type) -> type {
+    return struct {
+        buf: []T,
+        len: usize,
+        alloc: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) -> @This {
-        return @This{
-            buf: {},
-            len: 0,
-            alloc: allocator,
-        };
-    }
+        pub fn init(allocator: std.mem.Allocator) -> @This {
+            return @This{
+                buf: {},
+                len: 0,
+                alloc: allocator,
+            };
+        }
 
-    pub fn deinit(self: *@This) -> void {
-        self.alloc.free<T>(self.buf);
-    }
+        pub fn deinit(self: *@This) -> void {
+            self.alloc.free(T, self.buf);
+        }
 
-    pub fn add(self: *@This, v: T) -> !void {
-        if (self.len >= self.buf.len) {
-            if (self.buf.len == 0) {
-                self.buf = try self.alloc.malloc<T>(8);
-            } else {
-                self.buf = try self.alloc.realloc<T>(self.buf, self.buf.len * 2);
+        pub fn add(self: *@This, v: T) -> !void {
+            if (self.len >= self.buf.len) {
+                if (self.buf.len == 0) {
+                    self.buf = try self.alloc.malloc(T, 8);
+                } else {
+                    self.buf = try self.alloc.realloc(T, self.buf, self.buf.len * 2);
+                }
             }
-        }
-        self.buf[self.len] = v;
-        self.len++;
-    }
-
-    pub fn get(self: *@This, index: usize) -> !T {
-        if (index > self.len) {
-            return vector_error.IndexOutOfLenght;
-        }
-        return self.buf[index];
-    }
-
-    pub fn remove(self: *@This, index: usize) -> !void {
-        if (index >= self.len) {
-            return vector_error.IndexOutOfLenght;
+            self.buf[self.len] = v;
+            self.len++;
         }
 
-        if (index < (self.len - 1)) {
-            std.mem.copy<T>(self.buf[index..self.len], self.buf[(index + 1)..self.len]);
+        pub fn get(self: *@This, index: usize) -> !T {
+            if (index > self.len) {
+                return vector_error.IndexOutOfLenght;
+            }
+            return self.buf[index];
         }
 
-        self.len--;
-    }
+        pub fn remove(self: *@This, index: usize) -> !void {
+            if (index >= self.len) {
+                return vector_error.IndexOutOfLenght;
+            }
 
-    pub fn swapRemove(self: *@This, index: usize) -> !void {
-        if (index >= self.len) {
-            return vector_error.IndexOutOfLenght;
+            if (index < (self.len - 1)) {
+                std.mem.copy(T, self.buf[index..self.len], self.buf[(index + 1)..self.len]);
+            }
+
+            self.len--;
         }
 
-        if (index < (self.len - 1)) {
-            self.buf[index] = self.buf[self.len - 1];
+        pub fn swapRemove(self: *@This, index: usize) -> !void {
+            if (index >= self.len) {
+                return vector_error.IndexOutOfLenght;
+            }
+
+            if (index < (self.len - 1)) {
+                self.buf[index] = self.buf[self.len - 1];
+            }
+
+            self.len--;
         }
 
-        self.len--;
-    }
+        pub fn size(self: *@This) -> usize {
+            return self.len;
+        }
 
-    pub fn size(self: *@This) -> usize {
-        return self.len;
-    }
-
-    pub fn slice(self: *@This) -> []T {
-        return self.buf[0..self.len];
-    }
-};
+        pub fn slice(self: *@This) -> []T {
+            return self.buf[0..self.len];
+        }
+    };
+}

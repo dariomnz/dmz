@@ -423,19 +423,9 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     }
     if (const auto *stru = dynamic_cast<const StructDecl *>(&type)) {
         ptr<ResolvedStructDecl> ownedStructDecl = nullptr;
-        ResolvedStructDecl *res = nullptr;
-        ResolvedDecl *context = m_currentFunction;
-        if (!context) context = m_currentStruct;
-
-        auto it = m_resolvedStructs.find({stru, context});
-        if (it != m_resolvedStructs.end()) {
-            res = it->second;
-        } else {
-            varOrReturn(structDecl, resolve_struct_decl(*stru));
-            res = structDecl.get();
-            ownedStructDecl = std::move(structDecl);
-            m_resolvedStructs[{stru, context}] = res;
-        }
+        varOrReturn(structDecl, resolve_struct_decl(*stru));
+        ResolvedStructDecl *res = structDecl.get();
+        ownedStructDecl = std::move(structDecl);
 
         ptr<ResolvedTypeStructDecl> retTypeStruct;
         if (auto unionDecl = dynamic_cast<ResolvedUnionDecl *>(res)) {
@@ -448,6 +438,49 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
 
         if (ownedStructDecl) {
             if (m_currentModule) {
+                if (m_currentFunction && (dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction) ||
+                                          dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction))) {
+                    std::string &id = ownedStructDecl->identifier;
+                    auto anonPos = id.find("structL");
+                    std::string prefixType = "struct.";
+                    if (anonPos == std::string::npos) {
+                        anonPos = id.find("unionL");
+                        prefixType = "union.";
+                    }
+                    if (anonPos == std::string::npos) {
+                        anonPos = id.find("enumL");
+                        prefixType = "enum.";
+                    }
+                    if (anonPos != std::string::npos) {
+                        std::string prefix = id.substr(0, anonPos);
+                        std::string suffix = prefixType + m_currentFunction->identifier;
+                        if (auto *specFn = dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction)) {
+                            suffix += "(";
+                            size_t numGeneric = specFn->genFunc->genericTypeDecls.size();
+                            for (size_t i = 0; i < numGeneric; i++) {
+                                if (i > 0) suffix += ", ";
+                                suffix += specFn->specializedTypes->specializedTypes[i]->to_str();
+                            }
+                            for (size_t i = numGeneric; i < specFn->specializedTypes->specializedTypes.size(); i++) {
+                                auto *ctValue = dynamic_cast<ResolvedTypeComptimeValue *>(
+                                    specFn->specializedTypes->specializedTypes[i].get());
+                                if (ctValue && ctValue->value && !ctValue->value->isType()) {
+                                    if (numGeneric > 0 || i > numGeneric) suffix += ", ";
+                                    suffix += ctValue->value->to_str();
+                                }
+                            }
+                            suffix += ")";
+                        } else if (auto *genFn = dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
+                            suffix += "(";
+                            for (size_t i = 0; i < genFn->genericTypeDecls.size(); i++) {
+                                if (i > 0) suffix += ", ";
+                                suffix += genFn->genericTypeDecls[i]->identifier;
+                            }
+                            suffix += ")";
+                        }
+                        id = prefix + suffix;
+                    }
+                }
                 debug_msg("Adding struct " << ownedStructDecl->name() << " to pending decls");
                 m_pending_decls.emplace(ownedStructDecl.get());
                 retTypeStruct->ownedDecl = ownedStructDecl.get();
@@ -459,6 +492,69 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         ret = std::move(retTypeStruct);
         retPtr = ret.get();
         return debug_ret(ret);
+    }
+
+    if (auto callType = dynamic_cast<const CallExpr *>(&type)) {
+        varOrReturn(resolvedCall, resolve_expr(*callType));
+        if (resolvedCall->type->kind != ResolvedTypeKind::Type) {
+            return report(callType->location, "expression is not a type");
+        }
+        auto constVal = resolvedCall->get_constant_value();
+        if (constVal && constVal->isType()) {
+            ret = constVal->getType()->clone();
+        }
+        if (!ret || ret->is_generic()) {
+            bool hasGenericArg = false;
+            if (auto *resolvedCallExpr = dynamic_cast<ResolvedCallExpr *>(resolvedCall.get())) {
+                for (auto &arg : resolvedCallExpr->arguments) {
+                    if (arg->type->is_generic()) {
+                        hasGenericArg = true;
+                        break;
+                    }
+                }
+            }
+            if (hasGenericArg) {
+                if (auto *resolvedCallExpr = dynamic_cast<ResolvedCallExpr *>(resolvedCall.get())) {
+                    if (auto *declRef = dynamic_cast<ResolvedDeclRefExpr *>(resolvedCallExpr->callee.get())) {
+                        if (auto *genFunc = dynamic_cast<ResolvedGenericFunctionDecl *>(
+                                const_cast<ResolvedDecl *>(&declRef->decl))) {
+                            if (ensure_fully_resolved(*genFunc) && genFunc->body) {
+                                for (auto &stmt : genFunc->body->statements) {
+                                    if (auto *retStmt = dynamic_cast<ResolvedReturnStmt *>(stmt.get())) {
+                                        if (auto *typeExpr = dynamic_cast<ResolvedTypeExpr *>(retStmt->expr.get())) {
+                                            if (auto *structType = dynamic_cast<ResolvedTypeStructDecl *>(
+                                                    typeExpr->resolvedType.get())) {
+                                                ret = makePtr<ResolvedTypeStruct>(type.location, structType->decl);
+                                            } else {
+                                                ret = typeExpr->resolvedType->clone();
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!ret && m_currentFunction &&
+                (dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction) ||
+                 dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction))) {
+                ret = makePtr<ResolvedTypeGeneric>(callType->location, nullptr);
+            }
+        }
+        if (ret) {
+            if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(ret.get())) {
+                ret = makePtr<ResolvedTypeStruct>(type.location, struDecl->decl);
+            } else if (auto unionDecl = dynamic_cast<ResolvedTypeUnionDecl *>(ret.get())) {
+                ret = makePtr<ResolvedTypeUnion>(type.location, unionDecl->unionDecl());
+            } else if (auto enumDecl = dynamic_cast<ResolvedTypeEnumDecl *>(ret.get())) {
+                ret = makePtr<ResolvedTypeEnum>(type.location, enumDecl->enumDecl());
+            }
+            retPtr = ret.get();
+            return debug_ret(ret);
+        }
+        return report(callType->location, "expression cannot be evaluated to a type at compile time");
     }
 
     type.dump();

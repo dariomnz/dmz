@@ -1,83 +1,89 @@
 const std = import("std");
 
-pub const Node = struct<T> {
-    value: T,
-    next: *@This,
-};
+pub fn Node(comptime T: type) -> type {
+    return struct {
+        value: T,
+        next: *@This,
+    };
+}
 
-pub const NodeIterator = struct<T> {
-    current: *Node<T>,
+pub fn NodeIterator(comptime T: type) -> type {
+    return struct {
+        current: *Node(T),
 
-    pub fn next(self: *@This) -> *T {
-        if (!self.current) {
-            return @ptrCast(null);
+        pub fn next(self: *@This) -> *T {
+            if (!self.current) {
+                return @ptrCast(null);
+            }
+            const value_ptr = &self.current.value;
+
+            self.current = self.current.next;
+
+            return @ptrCast(value_ptr);
         }
-        const value_ptr = &self.current.value;
+    };
+}
 
-        self.current = self.current.next;
+pub fn SimplyLinkedList(comptime T: type) -> type {
+    return struct {
+        head: *Node(T),
+        len: usize,
+        alloc: std.mem.Allocator,
 
-        return @ptrCast(value_ptr);
-    }
-};
-
-pub const SimplyLinkedList = struct<T> {
-    head: *Node<T>,
-    len: usize,
-    alloc: std.mem.Allocator,
-
-    pub fn init(allocator: std.mem.Allocator) -> @This {
-        return @This{
-            head: @ptrCast(null),
-            len: 0,
-            alloc: allocator,
-        };
-    }
-
-    pub fn deinit(self: *@This) -> void {
-        let current = self.head;
-        while (current) {
-            const next = current.next;
-            let node_slice: []Node<T> = {};
-            node_slice.ptr = current;
-            node_slice.len = 1;
-            self.alloc.free(node_slice);
-            current = next;
+        pub fn init(allocator: std.mem.Allocator) -> @This {
+            return @This{
+                head: @ptrCast(null),
+                len: 0,
+                alloc: allocator,
+            };
         }
-        self.head = @ptrCast(null);
-        self.len = 0;
-    }
 
-    pub fn insertAtFirst(self: *@This, data: T) -> !void {
-        const new_node = try self.alloc.malloc<Node<T>>(1);
-
-        new_node[0].value = data;
-        new_node[0].next = self.head;
-
-        self.head = new_node.ptr;
-        self.len++;
-    }
-
-    pub fn get(self: *@This, index: usize) -> !T {
-        if (index >= self.len) {
-            return error.IndexOutOfLenght;
+        pub fn deinit(self: *@This) -> void {
+            let current = self.head;
+            while (current) {
+                const next = current.next;
+                let node_slice: []Node(T) = {};
+                node_slice.ptr = current;
+                node_slice.len = 1;
+                self.alloc.free(Node(T), node_slice);
+                current = next;
+            }
+            self.head = @ptrCast(null);
+            self.len = 0;
         }
-        let node = self.head;
-        for (0..index) |i| {
-            node = node.next;
+
+        pub fn insertAtFirst(self: *@This, data: T) -> !void {
+            const new_node = try self.alloc.malloc(Node(T), 1);
+
+            new_node[0].value = data;
+            new_node[0].next = self.head;
+
+            self.head = new_node.ptr;
+            self.len++;
         }
-        return node.value;
-    }
 
-    pub fn size(self: *@This) -> usize {
-        return self.len;
-    }
+        pub fn get(self: *@This, index: usize) -> !T {
+            if (index >= self.len) {
+                return error.IndexOutOfLenght;
+            }
+            let node = self.head;
+            for (0..index) |i| {
+                node = node.next;
+            }
+            return node.value;
+        }
 
-    pub fn iterator(self: *@This) -> NodeIterator<T> {
-        return NodeIterator<T>{
-            current: self.head,
-        };
-    }
-};
+        pub fn size(self: *@This) -> usize {
+            return self.len;
+        }
+
+        pub fn iterator(self: *@This) -> NodeIterator(T) {
+            return NodeIterator(T){
+                current: self.head,
+            };
+        }
+    };
+}
 
 // test "SimplyLinkedList insertAtFirst" {
 //     let libc_alloc = std.mem.libc_allocator.init();

@@ -11,17 +11,17 @@ pub const Allocator = struct {
 
     vtable: VTable,
 
-    pub fn malloc<T>(self: *@This, count: usize) -> ![]T {
+    pub fn malloc(self: *@This, comptime T: type, count: usize) -> ![]T {
         const newSlice = try self.vtable.malloc(self.allocator, count * @sizeof(T));
-        return std.mem.bytesAsSlice<T>(newSlice);
+        return std.mem.bytesAsSlice(T, newSlice);
     }
 
-    pub fn realloc<T>(self: *@This, ptr: []T, count: usize) -> ![]T {
-        const newSlice = try self.vtable.realloc(self.allocator, std.mem.sliceAsBytes<T>(ptr), count * @sizeof(T));
-        return std.mem.bytesAsSlice<T>(newSlice);
+    pub fn realloc(self: *@This, comptime T: type, ptr: []T, count: usize) -> ![]T {
+        const newSlice = try self.vtable.realloc(self.allocator, std.mem.sliceAsBytes(T, ptr), count * @sizeof(T));
+        return std.mem.bytesAsSlice(T, newSlice);
     }
 
-    pub fn free<T>(self: *@This, ptr: []T) -> void {
-        self.vtable.free(self.allocator, std.mem.sliceAsBytes<T>(ptr));
+    pub fn free(self: *@This, comptime T: type, ptr: []T) -> void {
+        self.vtable.free(self.allocator, std.mem.sliceAsBytes(T, ptr));
     }
 };

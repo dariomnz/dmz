@@ -2,19 +2,19 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-const Point = struct<T> {
-    x:T,
-    y:T,
-};
-// CHECK: VarDecl:const  Point global
-// CHECK-NEXT:       StructDecl structL5C14
-// CHECK-NEXT:         GenericTypeDecl T
+fn Point(comptime T: type) -> type {
+    return struct {
+        x:T,
+        y:T,
+    };
+}
+// CHECK:       StructDecl structL6C11
 // CHECK-NEXT:         FieldDecl:T x
 // CHECK-NEXT:         FieldDecl:T y
 
 fn main() -> void {
-    let p1 = Point<i32>{x:1, y:2};
-    let p:Point<i32>;
+    let p1 = Point(i32){x:1, y:2};
+    let p:Point(i32);
     p.x = 1;
     p.y = 2;
     printf("Point %d %d\n", p.x, p.y);
@@ -24,14 +24,15 @@ fn main() -> void {
 // CHECK-NEXT:     DeclStmt
 // CHECK-NEXT:       VarDecl: p1
 // CHECK-NEXT:         StructInstantiationExpr
-// CHECK-NEXT:           GenericExpr Point<i32>
+// CHECK-NEXT:           CallExpr
 // CHECK-NEXT:             DeclRefExpr Point
+// CHECK-NEXT:             TypeNumber i32
 // CHECK-NEXT:           FieldInitStmt x
 // CHECK-NEXT:             IntLiteral '1'
 // CHECK-NEXT:           FieldInitStmt y
 // CHECK-NEXT:             IntLiteral '2'
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl:Point<i32> p
+// CHECK-NEXT:       VarDecl:Point(i32) p
 // CHECK-NEXT:     Assignment
 // CHECK-NEXT:       MemberExpr .x
 // CHECK-NEXT:         DeclRefExpr p

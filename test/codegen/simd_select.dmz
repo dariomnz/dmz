@@ -1,7 +1,7 @@
 // RUN: dmz %s -run 2>&1 | filecheck %s
 extern fn printf(fmt: *u8, ...) -> i32;
 
-fn printVector<T>(v: T, len: i32, fmt: *u8) -> void {
+fn printVector(v: anytype, len: i32, fmt: *u8) -> void {
     printf("[ ");
     for (0..len) |i| {
         printf(fmt, v[i]);
@@ -22,13 +22,13 @@ pub fn main() -> void {
     const result = @simdSelect(a, b, mask);
 
     printf("Vector A: ");
-    printVector<a>(a, size, "%f ");
+    printVector(a, size, "%f ");
     printf("Vector B: ");
-    printVector<b>(b, size, "%f ");
+    printVector(b, size, "%f ");
     printf("Mask (A>B): ");
-    printVector<mask>(mask, size, "%d ");
+    printVector(mask, size, "%d ");
     printf("Result: ");
-    printVector<result>(result, size, "%f ");
+    printVector(result, size, "%f ");
 }
 // CHECK: Vector A: [ 10.500000 2.000000 30.100000 4.400000 ]
 // CHECK-NEXT: Vector B: [ 5.000000 8.800000 15.000000 20.200000 ]

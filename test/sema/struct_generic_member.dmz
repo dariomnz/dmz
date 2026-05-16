@@ -6,17 +6,17 @@ const Point = struct {
     x:i32,
     y:i32,
 
-    pub fn add<T>(self: *@This, n: T) -> void {
+    pub fn add(self: *@This, n: anytype) -> void {
         self.x += n;
         self.y += n;
     }
 // CHECK: ResolvedStructDecl struct_generic_member.Point
 // CHECK-NEXT:           ResolvedFieldDecl:i32 x
 // CHECK-NEXT:           ResolvedFieldDecl:i32 y
-// CHECK-NEXT:           ResolvedGenericMemberFunctionDecl add fn(*struct_generic_member.Point{}, T)->void
-// CHECK-NEXT:             ResolvedGenericTypeDecl T
+// CHECK-NEXT:           ResolvedGenericMemberFunctionDecl add fn(*struct_generic_member.Point{}, anytype)->void
+// CHECK-NEXT:             ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:             ResolvedParamDecl:*struct_generic_member.Point{} self
-// CHECK-NEXT:             ResolvedParamDecl:T n
+// CHECK-NEXT:             ResolvedParamDecl:anytype n
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:               ResolvedAssignment
 // CHECK-NEXT:                 ResolvedMemberExpr:i32 x
@@ -26,7 +26,7 @@ const Point = struct {
 // CHECK-NEXT:                   ResolvedMemberExpr:i32 x
 // CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
 // CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
-// CHECK-NEXT:                   ResolvedDeclRefExpr:T n
+// CHECK-NEXT:                   ResolvedDeclRefExpr:anytype n
 // CHECK-NEXT:               ResolvedAssignment
 // CHECK-NEXT:                 ResolvedMemberExpr:i32 y
 // CHECK-NEXT:                   ResolvedDerefPtrExpr:struct_generic_member.Point{}
@@ -35,8 +35,8 @@ const Point = struct {
 // CHECK-NEXT:                   ResolvedMemberExpr:i32 y
 // CHECK-NEXT:                     ResolvedDerefPtrExpr:struct_generic_member.Point{}
 // CHECK-NEXT:                       ResolvedDeclRefExpr:*struct_generic_member.Point{} self
-// CHECK-NEXT:                   ResolvedDeclRefExpr:T n
-// CHECK-NEXT:             ResolvedSpecializedFunctionDecl add<i32> fn(*struct_generic_member.Point{}, i32)->void
+// CHECK-NEXT:                   ResolvedDeclRefExpr:anytype n
+// CHECK-NEXT:             ResolvedSpecializedFunctionDecl add(i32) fn(*struct_generic_member.Point{}, i32)->void
 // CHECK-NEXT:               ResolvedParamDecl:*struct_generic_member.Point{} self
 // CHECK-NEXT:               ResolvedParamDecl:i32 n
 // CHECK-NEXT:               ResolvedBlock
@@ -62,6 +62,6 @@ const Point = struct {
 
 fn main() -> void {
     let p = Point{x:1, y:2};
-    p.add<i32>(5);
+    p.add(5);
     printf("Point %d %d\n", p.x, p.y);
 }

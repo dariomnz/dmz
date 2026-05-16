@@ -50,10 +50,10 @@ fn bar() -> S {
 }
 // CHECK: define void @return_struct.bar(ptr sret(%return_struct.S) %ret) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %tmp.struct.return_struct.S = alloca %return_struct.S, align 8
 // CHECK-NEXT:   %tmp.struct.return_struct.S2 = alloca %return_struct.S2, align 8
-// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.return_struct.S, i8 0, i64 16, i1 false)
+// CHECK-NEXT:   %tmp.struct.return_struct.S = alloca %return_struct.S, align 8
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.return_struct.S2, i8 0, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %tmp.struct.return_struct.S, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   call void @llvm.memset.inline.p0.i64(ptr align 8 %ret, i8 0, i64 16, i1 false)
 // CHECK-NEXT:   store %return_struct.S2 { i32 1, i32 2, i32 3 }, ptr %tmp.struct.return_struct.S2, align 4
 // CHECK-NEXT:   %0 = getelementptr inbounds nuw %return_struct.S, ptr %tmp.struct.return_struct.S, i32 0, i32 0

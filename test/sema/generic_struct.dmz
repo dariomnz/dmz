@@ -2,21 +2,37 @@
 
 extern fn printf(fmt:*u8, ...) -> i32;
 
-const Point = struct<T> {
-    x:T,
-    y:T,
-};
-// CHECK: ResolvedGenericStructDecl generic_struct.Point
+fn Point(comptime T:type) -> type {
+    return struct {
+        x:T,
+        y:T,
+    };
+}
+// CHECK: ResolvedGenericFunctionDecl Point fn(T)->type
 // CHECK-NEXT:   ResolvedGenericTypeDecl T
-// CHECK-NEXT:   ResolvedFieldDecl:T x
-// CHECK-NEXT:   ResolvedFieldDecl:T y
-// CHECK-NEXT:   ResolvedSpecializedStructDecl generic_struct.Point<i32>
-// CHECK-NEXT:     ResolvedFieldDecl:i32 x
+// CHECK-NEXT:   ResolvedParamDecl:comptime T T
+// CHECK-NEXT:   ResolvedBlock
+// CHECK-NEXT:     ResolvedReturnStmt
+// CHECK-NEXT:       ResolvedTypeExpr:type
+// CHECK-NEXT:       | value: generic_struct.struct.Point(T)
+// CHECK-NEXT:         ResolvedTypeStructDecl generic_struct.struct.Point(T)
+// CHECK-NEXT:           ResolvedStructDecl generic_struct.struct.Point(T)
+// CHECK-NEXT:             ResolvedFieldDecl:T x
+// CHECK-NEXT:             ResolvedFieldDecl:T y
+// CHECK-NEXT:   ResolvedSpecializedFunctionDecl Point(i32) fn(type)->type
+// CHECK-NEXT:     ResolvedParamDecl:comptime type T
+// CHECK-NEXT:     ResolvedBlock
+// CHECK-NEXT:       ResolvedReturnStmt
+// CHECK-NEXT:         ResolvedTypeExpr:type
+// CHECK-NEXT:         | value: generic_struct.struct.Point(i32)
+// CHECK-NEXT:           ResolvedTypeStructDecl generic_struct.struct.Point(i32)
+// CHECK-NEXT:             ResolvedStructDecl generic_struct.struct.Point(i32)
+// CHECK-NEXT:               ResolvedFieldDecl:i32 x
 // CHECK-NEXT:     ResolvedFieldDecl:i32 y
 
 fn main() -> void {
-    let p1 = Point<i32>{x:1, y:2};
-    let p:Point<i32> = Point<i32>{x:1, y:2};
+    let p1 = Point(i32){x:1, y:2};
+    let p:Point(i32) = Point(i32){x:1, y:2};
     p.x = 1;
     p.y = 2;
     printf("Point %d %d\n", p.x, p.y);
@@ -24,9 +40,9 @@ fn main() -> void {
 // CHECK: ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:generic_struct.Point<i32>{} p1
+// CHECK-NEXT:       ResolvedVarDecl:generic_struct.struct.Point(i32){} p1
 // CHECK-NEXT:       | value: {x: 1, y: 2}
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.Point<i32>{}
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.struct.Point(i32){}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -34,9 +50,9 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:     ResolvedDeclStmt
-// CHECK-NEXT:       ResolvedVarDecl:generic_struct.Point<i32>{} p
+// CHECK-NEXT:       ResolvedVarDecl:generic_struct.struct.Point(i32){} p
 // CHECK-NEXT:       | value: {x: 1, y: 2}
-// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.Point<i32>{}
+// CHECK-NEXT:         ResolvedStructInstantiationExpr:generic_struct.struct.Point(i32){}
 // CHECK-NEXT:           ResolvedFieldInitStmt:i32 x
 // CHECK-NEXT:             ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:             | value: 1
@@ -45,12 +61,12 @@ fn main() -> void {
 // CHECK-NEXT:             | value: 2
 // CHECK-NEXT:     ResolvedAssignment
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
-// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.Point<i32>{} p
+// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.struct.Point(i32){} p
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '1'
 // CHECK-NEXT:       | value: 1
 // CHECK-NEXT:     ResolvedAssignment
 // CHECK-NEXT:       ResolvedMemberExpr:i32 y
-// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.Point<i32>{} p
+// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.struct.Point(i32){} p
 // CHECK-NEXT:       ResolvedIntLiteral:i32 '2'
 // CHECK-NEXT:       | value: 2
 // CHECK-NEXT:     ResolvedCallExpr:i32
@@ -58,6 +74,6 @@ fn main() -> void {
 // CHECK-NEXT:       ResolvedStringLiteral:*u8 'Point %d %d\n'
 // CHECK-NEXT:       | value: 'Point %d %d\n'
 // CHECK-NEXT:       ResolvedMemberExpr:i32 x
-// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.Point<i32>{} p
+// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.struct.Point(i32){} p
 // CHECK-NEXT:       ResolvedMemberExpr:i32 y
-// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.Point<i32>{} p
+// CHECK-NEXT:         ResolvedDeclRefExpr:generic_struct.struct.Point(i32){} p

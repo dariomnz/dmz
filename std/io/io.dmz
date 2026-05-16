@@ -5,11 +5,11 @@ pub const Reader = import("reader.dmz").Reader;
 
 const std = import("std");
 
-pub fn print<T>(fmt: []u8, args: T) -> !usize {
+pub fn print(comptime fmt: []u8, args: anytype) -> !usize {
     let buf: [1024]u8 = {};
     const w = stdout.writer(buf[0..1024]);
     defer try w.flush();
-    return std.fmt.fmt<T>(w, fmt, args);
+    return std.fmt.fmt(w, fmt, args);
 }
 
 pub const stdout = struct {
@@ -28,6 +28,27 @@ pub const stdout = struct {
 
         for (0..splat) |i| {
             flused += try file.writeAll(file.stdout, data);
+        }
+        return flused;
+    }
+};
+
+pub const stderr = struct {
+    pub fn writer(buf: []u8) -> Writer {
+        let ret = Writer{
+            buffer: buf,
+            vtable_ptr: null,
+            vtable_flush: &stderr.flush,
+        };
+        return ret;
+    }
+
+    fn flush(ptr: *void, w: *Writer, data: []u8, splat: usize) -> !usize {
+        let flused = try file.writeAll(file.stderr, w.buffer[0..w.end]);
+        w.end = 0;
+
+        for (0..splat) |i| {
+            flused += try file.writeAll(file.stderr, data);
         }
         return flused;
     }

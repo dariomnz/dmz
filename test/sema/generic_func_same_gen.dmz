@@ -2,74 +2,66 @@
 
 extern fn printf(fmt: *u8, ...) -> i32;
 
-pub fn print<T>(scalar: T) -> i32 {
-    return print2<T>(scalar);
+pub fn print(scalar: anytype) -> i32 {
+    return print2(scalar);
 }
 
-fn print2<T>(scalar: T) -> i32 {
-    return print3<T>(scalar);
+fn print2(scalar: anytype) -> i32 {
+    return print3(scalar);
 }
 
-fn print3<T>(scalar: T) -> i32 {
+fn print3(scalar: anytype) -> i32 {
     return printf("value %d\n", scalar);
 }
 
 fn main() -> void {
-    print<i32>(123);
+    print(123);
 }
 // CHECK: ResolvedModuleDecl generic_func_same_gen
 // CHECK-NEXT:   ResolvedExternFunctionDecl printf fn(*u8, ...)->i32
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
-// CHECK-NEXT:   ResolvedGenericFunctionDecl print fn(T)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl T
-// CHECK-NEXT:     ResolvedParamDecl:T scalar
+// CHECK-NEXT:   ResolvedGenericFunctionDecl print fn(anytype)->i32
+// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedCallExpr:i32
-// CHECK-NEXT:           ResolvedGenericExpr:fn(T)->i32 print2
-// CHECK-NEXT:             ResolvedDeclRefExpr:fn(T)->i32 print2
-// CHECK-NEXT:             ResolvedTypeSpecialized <T>
-// CHECK-NEXT:           ResolvedDeclRefExpr:T scalar
-// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print<i32> fn(i32)->i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(anytype)->i32 print2
+// CHECK-NEXT:           ResolvedDeclRefExpr:anytype scalar
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print(i32) fn(i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 scalar
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
 // CHECK-NEXT:           ResolvedCallExpr:i32
-// CHECK-NEXT:             ResolvedGenericExpr:fn(i32)->i32 print2
-// CHECK-NEXT:               ResolvedDeclRefExpr:fn(T)->i32 print2
-// CHECK-NEXT:               ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32 print2
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 scalar
-// CHECK-NEXT:   ResolvedGenericFunctionDecl print2 fn(T)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl T
-// CHECK-NEXT:     ResolvedParamDecl:T scalar
+// CHECK-NEXT:   ResolvedGenericFunctionDecl print2 fn(anytype)->i32
+// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedCallExpr:i32
-// CHECK-NEXT:           ResolvedGenericExpr:fn(T)->i32 print3
-// CHECK-NEXT:             ResolvedDeclRefExpr:fn(T)->i32 print3
-// CHECK-NEXT:             ResolvedTypeSpecialized <T>
-// CHECK-NEXT:           ResolvedDeclRefExpr:T scalar
-// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print2<i32> fn(i32)->i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:fn(anytype)->i32 print3
+// CHECK-NEXT:           ResolvedDeclRefExpr:anytype scalar
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print2(i32) fn(i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 scalar
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
 // CHECK-NEXT:           ResolvedCallExpr:i32
-// CHECK-NEXT:             ResolvedGenericExpr:fn(i32)->i32 print3
-// CHECK-NEXT:               ResolvedDeclRefExpr:fn(T)->i32 print3
-// CHECK-NEXT:               ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32 print3
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 scalar
-// CHECK-NEXT:   ResolvedGenericFunctionDecl print3 fn(T)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl T
-// CHECK-NEXT:     ResolvedParamDecl:T scalar
+// CHECK-NEXT:   ResolvedGenericFunctionDecl print3 fn(anytype)->i32
+// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
+// CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
 // CHECK-NEXT:         ResolvedCallExpr:i32
 // CHECK-NEXT:           ResolvedDeclRefExpr:fn(*u8, ...)->i32 printf
 // CHECK-NEXT:           ResolvedStringLiteral:*u8 'value %d\n'
 // CHECK-NEXT:           | value: 'value %d\n'
-// CHECK-NEXT:           ResolvedDeclRefExpr:T scalar
-// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print3<i32> fn(i32)->i32
+// CHECK-NEXT:           ResolvedDeclRefExpr:anytype scalar
+// CHECK-NEXT:     ResolvedSpecializedFunctionDecl print3(i32) fn(i32)->i32
 // CHECK-NEXT:       ResolvedParamDecl:i32 scalar
 // CHECK-NEXT:       ResolvedBlock
 // CHECK-NEXT:         ResolvedReturnStmt
@@ -81,8 +73,6 @@ fn main() -> void {
 // CHECK-NEXT:   ResolvedFunctionDecl main fn()->void
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedCallExpr:i32
-// CHECK-NEXT:         ResolvedGenericExpr:fn(i32)->i32 print
-// CHECK-NEXT:           ResolvedDeclRefExpr:fn(T)->i32 print
-// CHECK-NEXT:           ResolvedTypeSpecialized <i32>
+// CHECK-NEXT:         ResolvedDeclRefExpr:fn(i32)->i32 print
 // CHECK-NEXT:         ResolvedIntLiteral:i32 '123'
 // CHECK-NEXT:         | value: 123

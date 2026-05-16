@@ -222,6 +222,11 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
         }
     } else if (const auto* te = dynamic_cast<const ResolvedTypeExpr*>(&expr)) {
         if (te->typeExpr) find_in_expr(*te->typeExpr);
+        if (auto* type = dynamic_cast<const ResolvedTypeStructDecl*>(te->resolvedType.get())) {
+            if (type->ownedDecl) {
+                find_in_decl(*type->ownedDecl);
+            }
+        }
     } else if (const auto* pe = dynamic_cast<const ResolvedTypePointerExpr*>(&expr)) {
         find_in_expr(*pe->pointerType);
     } else if (const auto* se = dynamic_cast<const ResolvedTypeSliceExpr*>(&expr)) {
@@ -259,9 +264,9 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
     } else if (const auto* cast = dynamic_cast<const ResolvedGroupingExpr*>(&expr)) {
         find_in_expr(*cast->expr);
     } else if (const auto* at = dynamic_cast<const ResolvedArrayAtExpr*>(&expr)) {
-        find_in_expr(*at->array);
+        if (at->array) find_in_expr(*at->array);
         if (found_decl) return;
-        find_in_expr(*at->index);
+        if (at->index) find_in_expr(*at->index);
     } else if (auto* ptrExpr = dynamic_cast<const ResolvedRefPtrExpr*>(&expr)) {
         find_in_expr(*ptrExpr->expr);
     } else if (auto* ptrExpr = dynamic_cast<const ResolvedDerefPtrExpr*>(&expr)) {
@@ -291,6 +296,10 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             found_decl = &importExpr->moduleDecl;
         }
     } else if (auto comptimeExpr = dynamic_cast<const ResolvedComptimeExpr*>(&expr)) {
+        if (is_at_location(comptimeExpr->location, 8)) {  // "comptime" 8 len
+            found_expr = comptimeExpr;
+            return;
+        }
         find_in_expr(*comptimeExpr->expr);
     }
 

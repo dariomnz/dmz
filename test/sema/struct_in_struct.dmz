@@ -25,9 +25,9 @@ fn main() -> void {
 // CHECK-NEXT:                  ResolvedTypeExpr:struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                   | value: struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:                    ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
-// CHECK-NEXT:                  ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
-// CHECK-NEXT:                    ResolvedStructDecl struct_in_struct.A.structL7C18.B
-// CHECK-NEXT:                      ResolvedFieldDecl:i32 C
+// CHECK-NEXT:                      ResolvedStructDecl struct_in_struct.A.structL7C18.B
+// CHECK-NEXT:                        ResolvedFieldDecl:i32 C
+// CHECK-NEXT:                    ResolvedTypeStructDecl struct_in_struct.A.structL7C18.B
 // CHECK-NEXT:              ResolvedDeclStmt struct_in_struct.A.structL7C18.B{}
 // CHECK-NEXT:                ResolvedVarDecl:struct_in_struct.A.structL7C18.B{} x
 // CHECK-NEXT:                | value: {C: 1}

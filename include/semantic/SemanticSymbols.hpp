@@ -194,7 +194,7 @@ struct ResolvedContinueStmt : public ResolvedStmt {
 
 struct ResolvedCaptureDecl : public ResolvedDecl {
     ResolvedCaptureDecl(SourceLocation location, std::string_view identifier, ptr<ResolvedType> type)
-        : ResolvedDecl(location, identifier, std::move(type), false, true) {}
+        : ResolvedDecl(location, identifier, std::move(type), true, true) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -435,6 +435,7 @@ struct ResolvedStructDecl : public ResolvedDecl {
     bool membersResolved = false;
     bool functionsResolved = false;
     bool functionBodiesResolved = false;
+    mutable bool isGenericVisiting = false;
 
     ResolvedStructDecl(SourceLocation location, bool isPublic, std::string_view identifier,
                        const StructDecl *structDecl, bool isPacked, std::vector<ptr<ResolvedFieldDecl>> fields,

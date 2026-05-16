@@ -65,13 +65,13 @@ test "LibcAllocator basic" {
     let allocator = LibcAllocator.init();
     defer allocator.deinit();
     const a = allocator.Allocator();
-    const b = try a.malloc<u8>(10);
+    const b = try a.malloc(u8, 10);
     std.io.print("Malloc {d} bytes\n", .{b.len});
     std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
-    const c = try a.realloc(b, 20);
+    const c = try a.realloc(u8, b, 20);
     std.io.print("Realloc {d} bytes\n", .{c.len});
     std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
-    defer a.free(c);
+    defer a.free(u8, c);
     std.io.print("Free {d} bytes\n", .{c.len});
     std.io.print("Allocated {d} bytes\n", .{allocator.allocated});
 }

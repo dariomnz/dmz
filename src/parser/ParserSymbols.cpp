@@ -190,7 +190,18 @@ void CallExpr::dump(size_t level) const {
     for (auto &&arg : arguments) arg->dump(level + 1);
 }
 
-std::string CallExpr::to_str() const { dmz_unreachable(location, "TODO"); }
+std::string CallExpr::to_str() const {
+    std::stringstream out;
+    out << callee->to_str() << "(";
+    for (size_t i = 0; i < arguments.size(); i++) {
+        out << arguments[i]->to_str();
+        if (i != arguments.size() - 1) {
+            out << ", ";
+        }
+    }
+    out << ")";
+    return out.str();
+}
 
 void ParamDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ParamDecl:";

@@ -264,7 +264,9 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     debug_func(funcDecl.location);
     size_t numComptime = 0;
     for (auto &&p : funcDecl.params) {
-        if (p->isComptime) numComptime++;
+        bool isTypeComptime = p->isComptime && p->type->kind == ResolvedTypeKind::Generic && p->resolvedTypeExpr &&
+                              p->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::Type;
+        if (p->isComptime && !isTypeComptime) numComptime++;
     }
 
     if (funcDecl.genericTypeDecls.size() + numComptime != genericTypes.specializedTypes.size()) {
@@ -292,6 +294,12 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     }
 
     // If not found specialize the function
+    auto placeholderFunc = makePtr<ResolvedSpecializedFunctionDecl>(
+        funcDecl.location, funcDecl.isPublic, funcDecl.identifier, nullptr, std::vector<ptr<ResolvedParamDecl>>{},
+        nullptr, nullptr, funcDecl.functionDecl, &funcDecl, castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
+    placeholderFunc->symbolName = funcDecl.symbolName;
+    auto *retFunc = funcDecl.specializations.emplace_back(std::move(placeholderFunc)).get();
+
     std::vector<ptr<ResolvedType>> savedTypes;
     for (size_t i = 0; i < funcDecl.genericTypeDecls.size(); i++) {
         debug_msg("Specialize " << funcDecl.genericTypeDecls[i]->identifier << " to "
@@ -309,6 +317,8 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     ScopeRAII parentFunctionScope(*this, funcDecl.genericScope.get());
     ScopeRAII functionScope(*this);
     auto takenScope = functionScope.takeScope();
+    retFunc->scope = std::move(takenScope);
+    retFunc->scope->currentFunction = retFunc;
 
     std::vector<ptr<ResolvedParamDecl>> resolvedParams;
     std::vector<ptr<ResolvedType>> resolvedParamsTypes;
@@ -327,15 +337,27 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         }
 
         if (resolvedParam->isComptime) {
-            if (specIdx >= genericTypes.specializedTypes.size()) {
-                dmz_unreachable(funcDecl.location, "missing specialized comptime value");
+            bool isTypeComptime = funcDecl.params[i]->type->kind == ResolvedTypeKind::Generic &&
+                                  funcDecl.params[i]->resolvedTypeExpr &&
+                                  funcDecl.params[i]->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::Type;
+            if (isTypeComptime) {
+                for (size_t j = 0; j < funcDecl.genericTypeDecls.size(); j++) {
+                    if (funcDecl.genericTypeDecls[j]->identifier == resolvedParam->identifier) {
+                        resolvedParam->set_constant_value(ComptimeValue(genericTypes.specializedTypes[j]->clone()));
+                        break;
+                    }
+                }
+            } else {
+                if (specIdx >= genericTypes.specializedTypes.size()) {
+                    dmz_unreachable(funcDecl.location, "missing specialized comptime value");
+                }
+                auto comptimeType =
+                    dynamic_cast<const ResolvedTypeComptimeValue *>(genericTypes.specializedTypes[specIdx++].get());
+                if (!comptimeType) {
+                    dmz_unreachable(funcDecl.location, "expected comptime value in specialized types");
+                }
+                resolvedParam->set_constant_value(*comptimeType->value);
             }
-            auto comptimeType =
-                dynamic_cast<const ResolvedTypeComptimeValue *>(genericTypes.specializedTypes[specIdx++].get());
-            if (!comptimeType) {
-                dmz_unreachable(funcDecl.location, "expected comptime value in specialized types");
-            }
-            resolvedParam->set_constant_value(*comptimeType->value);
         }
 
         debug_msg("Specialize param " << resolvedParam->identifier << " type " << resolvedParam->type->to_str());
@@ -364,17 +386,12 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         return report(funcDecl.location, "function '" + funcDecl.identifier + "' has invalid '" +
                                              funcDecl.type->to_str() + "' return type");
 
-    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, nullptr, std::move(resolvedParamsTypes),
+    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, retFunc, std::move(resolvedParamsTypes),
                                                 std::move(returnType));
 
-    auto resolvedFunc = makePtr<ResolvedSpecializedFunctionDecl>(
-        funcDecl.location, funcDecl.isPublic, funcDecl.identifier, std::move(fnType), std::move(resolvedParams),
-        std::move(funcDecl.resolvedReturnTypeExpr), std::move(takenScope), funcDecl.functionDecl, &funcDecl,
-        castPtr<ResolvedTypeSpecialized>(genericTypes.clone()));
-    resolvedFunc->getFnType()->fnDecl = resolvedFunc.get();
-    resolvedFunc->symbolName = funcDecl.symbolName;
-    resolvedFunc->scope->currentFunction = resolvedFunc.get();
-    auto *retFunc = funcDecl.specializations.emplace_back(std::move(resolvedFunc)).get();
+    retFunc->type = std::move(fnType);
+    retFunc->params = std::move(resolvedParams);
+    retFunc->resolvedReturnTypeExpr = std::move(funcDecl.resolvedReturnTypeExpr);
 
     debug_msg("Adding specialized function " << retFunc->name() << " to pending decls");
     m_pending_decls.emplace(retFunc);
@@ -508,6 +525,24 @@ bool Sema::resolve_var_decl_initialize(ResolvedVarDecl &varDecl) {
         if (!resolvedInitializer) {
             varDecl.state = ResolvedState::Error;
             return debug_ret(false);
+        }
+
+        if (dynamic_cast<const StructDecl *>(varDecl.varDecl->initializer.get()) ||
+            dynamic_cast<const UnionDecl *>(varDecl.varDecl->initializer.get())) {
+            if (auto *resolvedTypeExpr = dynamic_cast<ResolvedTypeExpr *>(resolvedInitializer.get())) {
+                if (auto *structType = dynamic_cast<ResolvedTypeStructDecl *>(resolvedTypeExpr->resolvedType.get())) {
+                    if (structType->decl->identifier.find("structL") != std::string::npos ||
+                        structType->decl->identifier.find("unionL") != std::string::npos ||
+                        structType->decl->identifier.find("enumL") != std::string::npos) {
+                        if (m_currentFunction == nullptr) {
+                            structType->decl->identifier = resolve_decl_name(varDecl.identifier);
+                        } else {
+                            structType->decl->identifier += "." + varDecl.identifier;
+                        }
+                        structType->decl->isPublic = varDecl.isPublic;
+                    }
+                }
+            }
         }
     }
 
