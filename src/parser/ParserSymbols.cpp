@@ -14,12 +14,6 @@ void Decoration::dump([[maybe_unused]] size_t level) const {}
 
 std::string Decoration::to_str() const { dmz_unreachable(location, "TODO"); }
 
-void GenericTypeDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericTypeDecl " << identifier << '\n';
-}
-
-std::string GenericTypeDecl::to_str() const { return identifier; }
-
 void TypeVoid::dump(size_t level) const { std::cerr << indent(level) << "TypeVoid " << to_str() << '\n'; }
 
 std::string TypeVoid::to_str() const { return "void"; }
@@ -94,22 +88,6 @@ void FunctionDecl::dump(size_t level) const {
 }
 
 std::string FunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
-
-void GenericFunctionDecl::dump(size_t level) const {
-    if (parentDecl) {
-        std::cerr << indent(level) << "GenericMemberFunctionDecl ";
-    } else {
-        std::cerr << indent(level) << "GenericFunctionDecl ";
-    }
-    std::cerr << identifier << " -> " << type->to_str() << "\n";
-    for (auto &&genType : genericTypes) genType->dump(level + 1);
-
-    for (auto &&param : params) param->dump(level + 1);
-
-    body->dump(level + 1);
-}
-
-std::string GenericFunctionDecl::to_str() const { dmz_unreachable(location, "TODO"); }
 
 void ExternFunctionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "ExternFunctionDecl " << identifier << " -> " << type->to_str() << "\n";
@@ -368,24 +346,6 @@ void StructDecl::dump(size_t level) const {
 
 std::string StructDecl::to_str() const { return (isPacked ? "packed " : "") + identifier; }
 
-void GenericStructDecl::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericStructDecl " << (isPacked ? "packed " : "") << identifier << '\n';
-    for (auto &&genType : genericTypes) genType->dump(level + 1);
-
-    for (auto &&decl : decls) decl->dump(level + 1);
-}
-
-std::string GenericStructDecl::to_str() const {
-    std::stringstream out;
-    out << (isPacked ? "packed " : "") << identifier << "<";
-    for (size_t i = 0; i < genericTypes.size(); i++) {
-        out << genericTypes[i]->to_str();
-        if (i != genericTypes.size() - 1) out << ", ";
-    }
-    out << ">";
-    return out.str();
-}
-
 void UnionDecl::dump(size_t level) const {
     std::cerr << indent(level) << "UnionDecl " << (isPacked ? "packed " : "") << identifier << '\n';
 
@@ -413,26 +373,6 @@ std::string MemberExpr::to_str() const { return base->to_str() + "." + field; }
 void AutoMemberExpr::dump(size_t level) const { std::cerr << indent(level) << "AutoMemberExpr ." << field << '\n'; }
 
 std::string AutoMemberExpr::to_str() const { return "." + field; }
-
-void GenericExpr::dump(size_t level) const {
-    std::cerr << indent(level) << "GenericExpr " << to_str() << '\n';
-
-    base->dump(level + 1);
-}
-
-std::string GenericExpr::to_str() const {
-    std::stringstream out;
-    out << base->to_str();
-    out << "<";
-    for (size_t i = 0; i < types.size(); i++) {
-        out << types[i]->to_str();
-        if (i != types.size() - 1) {
-            out << ", ";
-        }
-    }
-    out << ">";
-    return out.str();
-}
 
 void ArrayAtExpr::dump(size_t level) const {
     std::cerr << indent(level) << "ArrayAtExpr" << '\n';

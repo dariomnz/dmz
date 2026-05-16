@@ -26,8 +26,6 @@ ptr<Node> Formatter::fmt_decl(const Decl& decl) {
         return fmt_stmt(*cast_decl);
     } else if (auto cast_decl = dynamic_cast<const ErrorDecl*>(&decl)) {
         return fmt_error_decl(*cast_decl);
-    } else if (auto cast_decl = dynamic_cast<const GenericTypeDecl*>(&decl)) {
-        return makePtr<Text>(cast_decl->identifier);
     } else if (auto cast_decl = dynamic_cast<const CaptureDecl*>(&decl)) {
         return makePtr<Text>(cast_decl->identifier);
     } else {
@@ -86,13 +84,6 @@ ptr<Node> Formatter::fmt_func_decl(const FuncDecl& fnDecl) {
         ret->nodes.emplace_back(makePtr<Text>("fn"));
         ret->nodes.emplace_back(makePtr<Space>());
         ret->nodes.emplace_back(makePtr<Text>(fnDecl.identifier));
-        if (auto generic = dynamic_cast<const GenericFunctionDecl*>(&fnDecl)) {
-            vec<ptr<Node>> gens;
-            for (auto&& gen : generic->genericTypes) {
-                gens.emplace_back(fmt_decl(*gen));
-            }
-            ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
-        }
         ret->nodes.emplace_back(build.comma_separated_list("(", ")", std::move(paramList)));
         ret->nodes.emplace_back(makePtr<Space>());
         ret->nodes.emplace_back(makePtr<Text>("->"));
@@ -128,13 +119,6 @@ ptr<Node> Formatter::fmt_struct_decl(const StructDecl& decl) {
         ret->nodes.emplace_back(makePtr<Space>());
     }
     ret->nodes.emplace_back(makePtr<Text>("struct"));
-    if (auto generic = dynamic_cast<const GenericStructDecl*>(&decl)) {
-        vec<ptr<Node>> gens;
-        for (auto&& gen : generic->genericTypes) {
-            gens.emplace_back(fmt_decl(*gen));
-        }
-        ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
-    }
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(makePtr<Text>("{"));
     ret->nodes.emplace_back(makePtr<Line>());

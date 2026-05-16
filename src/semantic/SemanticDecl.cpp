@@ -38,24 +38,6 @@ ptr<ResolvedParamDecl> Sema::resolve_param_decl(const ParamDecl &param) {
                                       param.isComptime, param.isVararg);
 }
 
-ptr<ResolvedGenericTypeDecl> Sema::resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl) {
-    debug_func(genericTypeDecl.location);
-    return makePtr<ResolvedGenericTypeDecl>(genericTypeDecl.location, genericTypeDecl.identifier);
-}
-
-std::vector<ptr<ResolvedGenericTypeDecl>> Sema::resolve_generic_types_decl(
-    const std::vector<ptr<GenericTypeDecl>> &genericTypesDecl) {
-    debug_func("");
-    std::vector<ptr<ResolvedGenericTypeDecl>> resolvedTypes;
-    resolvedTypes.reserve(genericTypesDecl.size());
-    for (size_t i = 0; i < genericTypesDecl.size(); i++) {
-        auto resolvedGenericType = resolve_generic_type_decl(*genericTypesDecl[i]);
-        if (!resolvedGenericType || !insert_decl_to_current_scope(*resolvedGenericType)) return {};
-        resolvedTypes.emplace_back(std::move(resolvedGenericType));
-    }
-    return resolvedTypes;
-}
-
 ptr<ResolvedFunctionDecl> Sema::resolve_member_function_decl(const ResolvedDecl &parentDecl, const FuncDecl &function) {
     debug_func(function.location);
 
@@ -120,15 +102,9 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         }
     }
 
-    if (dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST) {
+    if (isGenericAST) {
         genericFunctionScope.emplace(*this);
         takenGenericScope = genericFunctionScope->takeScope();
-        if (auto func = dynamic_cast<const GenericFunctionDecl *>(&function)) {
-            if (func->genericTypes.size() != 0) {
-                resolvedGenericTypeDecl = resolve_generic_types_decl(func->genericTypes);
-                if (resolvedGenericTypeDecl.size() == 0) return nullptr;
-            }
-        }
     }
 
     ScopeRAII functionScope(*this);
@@ -180,7 +156,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
     }
 
     if (!returnType) {
-        if (dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST) {
+        if (isGenericAST) {
             returnType = makePtr<ResolvedTypeGeneric>(function.location, nullptr);
         } else {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
@@ -190,7 +166,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
 
     auto resolvedReturnTypeExpr = resolve_expr(*function.type, true);
     if (!resolvedReturnTypeExpr) {
-        if (!(dynamic_cast<const GenericFunctionDecl *>(&function) || isGenericAST)) {
+        if (!isGenericAST) {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                                  function.type->to_str() + "' return type");
         }
@@ -715,26 +691,12 @@ ptr<ResolvedStructDecl> Sema::resolve_struct_decl(const StructDecl &structDecl) 
 
     std::optional<ScopeRAII> genericStructScope = std::nullopt;
     ptr<ResolvedScope> takenGenericScope = nullptr;
-    std::vector<ptr<ResolvedGenericTypeDecl>> resolvedGenericTypesDecl;
-    if (auto genstruct = dynamic_cast<const GenericStructDecl *>(&structDecl)) {
-        genericStructScope.emplace(*this);
-        takenGenericScope = genericStructScope->takeScope();
-        resolvedGenericTypesDecl = resolve_generic_types_decl(genstruct->genericTypes);
-        if (resolvedGenericTypesDecl.size() == 0) return nullptr;
-    }
     ScopeRAII fieldScope(*this);
     auto takenFieldScope = fieldScope.takeScope();
     ptr<ResolvedStructDecl> resStructDecl;
     std::string structName = resolve_decl_name(structDecl.identifier);
     if (count > 0) structName += "." + std::to_string(count);
-    if (dynamic_cast<const GenericStructDecl *>(&structDecl)) {
-        auto resGenStructDecl = makePtr<ResolvedGenericStructDecl>(
-            structDecl.location, structDecl.isPublic, structName, &structDecl, structDecl.isPacked,
-            vec<ptr<ResolvedFieldDecl>>{}, vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope),
-            std::move(takenGenericScope), std::move(resolvedGenericTypesDecl));
-        if (resGenStructDecl->genericScope) resGenStructDecl->genericScope->currentStruct = resGenStructDecl.get();
-        resStructDecl = std::move(resGenStructDecl);
-    } else if (auto unionDecl = dynamic_cast<const UnionDecl *>(&structDecl)) {
+    if (auto unionDecl = dynamic_cast<const UnionDecl *>(&structDecl)) {
         resStructDecl = makePtr<ResolvedUnionDecl>(unionDecl->location, unionDecl->isPublic, structName, unionDecl,
                                                    unionDecl->isPacked, vec<ptr<ResolvedFieldDecl>>{},
                                                    vec<ptr<ResolvedFunctionDecl>>{}, std::move(takenFieldScope));

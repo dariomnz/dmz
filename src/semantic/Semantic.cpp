@@ -398,16 +398,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
         decl->dump();
         dmz_unreachable(decl->location, "TODO");
     }
-    if (auto genType = dynamic_cast<const GenericExpr *>(&type)) {
-        varOrReturn(specExpr, resolve_generic_expr(*genType));
-        if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(specExpr->type.get())) {
-            ret = makePtr<ResolvedTypeStruct>(type.location, struDecl->decl);
-        } else {
-            ret = specExpr->type->clone();
-        }
-        retPtr = ret.get();
-        return debug_ret(ret);
-    }
     if (auto memType = dynamic_cast<const MemberExpr *>(&type)) {
         varOrReturn(resolvedMem, resolve_member_expr(*memType));
         if (auto struDecl = dynamic_cast<ResolvedTypeStructDecl *>(resolvedMem->type.get())) {
@@ -557,18 +547,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     type.dump();
     dmz_unreachable(type.location, "TODO");
     (void)retPtr;
-}
-
-ptr<ResolvedTypeSpecialized> Sema::resolve_specialized_type(const GenericExpr &genericExpr) {
-    debug_func(genericExpr.location << " " << genericExpr.to_str());
-    std::vector<ptr<ResolvedType>> specializedTypes;
-
-    for (auto &&t : genericExpr.types) {
-        varOrReturn(resType, resolve_type(*t));
-        specializedTypes.emplace_back(std::move(resType));
-    }
-
-    return makePtr<ResolvedTypeSpecialized>(genericExpr.location, std::move(specializedTypes));
 }
 
 ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {

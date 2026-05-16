@@ -34,14 +34,6 @@ struct Decl {
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
-struct GenericTypeDecl : public Decl {
-    GenericTypeDecl(SourceLocation location, std::string_view identifier) : Decl(location, true, identifier) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
 struct Stmt {
     SourceLocation location;
     Stmt(SourceLocation location) : location(location) {}
@@ -500,18 +492,6 @@ struct AutoMemberExpr : public Expr {
     DMZ_TYPE_NAME();
 };
 
-struct GenericExpr : public Expr {
-    ptr<Expr> base;
-    std::vector<ptr<Expr>> types;
-
-    GenericExpr(SourceLocation location, ptr<Expr> base, std::vector<ptr<Expr>> types)
-        : Expr(location), base(std::move(base)), types(std::move(types)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
 struct ArrayAtExpr : public AssignableExpr {
     ptr<Expr> array;
     ptr<Expr> index;
@@ -654,21 +634,6 @@ struct FunctionDecl : public FuncDecl {
     DMZ_TYPE_NAME();
 };
 
-struct GenericFunctionDecl : public FunctionDecl {
-    std::vector<ptr<GenericTypeDecl>> genericTypes;
-
-    GenericFunctionDecl(SourceLocation location, bool isPublic, std::string_view identifier, ptr<Expr> type,
-                        std::vector<ptr<ParamDecl>> params, ptr<Block> body,
-                        std::vector<ptr<GenericTypeDecl>> genericTypes, Type* parentDecl = nullptr)
-        : FunctionDecl(location, isPublic, std::move(identifier), std::move(type), std::move(params), std::move(body),
-                       parentDecl),
-          genericTypes(std::move(genericTypes)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
 struct FieldDecl : public Decl {
     ptr<Expr> type;
     ptr<Expr> default_initializer;
@@ -698,19 +663,6 @@ struct StructDecl : public Type {
           identifier(std::move(identifier)),
           isPacked(isPacked),
           decls(std::move(decls)) {}
-
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-};
-
-struct GenericStructDecl : public StructDecl {
-    std::vector<ptr<GenericTypeDecl>> genericTypes;
-
-    GenericStructDecl(SourceLocation location, bool isPublic, std::string_view identifier, bool isPacked,
-                      std::vector<ptr<Decl>> decls, std::vector<ptr<GenericTypeDecl>> genericTypes)
-        : StructDecl(location, isPublic, identifier, isPacked, std::move(decls)),
-          genericTypes(std::move(genericTypes)) {}
 
     void dump(size_t level = 0) const override;
     std::string to_str() const override;

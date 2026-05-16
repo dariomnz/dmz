@@ -66,8 +66,6 @@ ptr<Node> Formatter::fmt_expr(const Expr& expr) {
         node = fmt_try_error_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const OrElseErrorExpr*>(&expr)) {
         node = fmt_orelse_error_expr(*cast_expr);
-    } else if (auto cast_expr = dynamic_cast<const GenericExpr*>(&expr)) {
-        node = fmt_generic_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const TupleInstantiationExpr*>(&expr)) {
         node = fmt_tuple_instantiation_expr(*cast_expr);
     } else if (auto cast_expr = dynamic_cast<const ComptimeExpr*>(&expr)) {
@@ -271,17 +269,6 @@ ptr<Node> Formatter::fmt_orelse_error_expr(const OrElseErrorExpr& expr) {
     ret->nodes.emplace_back(makePtr<Text>("orelse"));
     ret->nodes.emplace_back(makePtr<Space>());
     ret->nodes.emplace_back(fmt_expr(*expr.orElseExpr));
-    return ret;
-}
-
-ptr<Node> Formatter::fmt_generic_expr(const GenericExpr& expr) {
-    auto ret = makePtr<Nodes>(vec<ptr<Node>>{});
-    ret->nodes.emplace_back(fmt_expr(*expr.base));
-    vec<ptr<Node>> gens;
-    for (auto&& gen : expr.types) {
-        gens.emplace_back(fmt_expr(*gen));
-    }
-    ret->nodes.emplace_back(build.comma_separated_list("<", ">", std::move(gens)));
     return ret;
 }
 

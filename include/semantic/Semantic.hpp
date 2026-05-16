@@ -111,11 +111,7 @@ class Sema {
     bool insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl);
 
     ptr<ResolvedType> resolve_type(const Expr &parsedType);
-    ptr<ResolvedTypeSpecialized> resolve_specialized_type(const GenericExpr &parsedType);
     ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
-    ptr<ResolvedGenericTypeDecl> resolve_generic_type_decl(const GenericTypeDecl &genericTypeDecl);
-    std::vector<ptr<ResolvedGenericTypeDecl>> resolve_generic_types_decl(
-        const std::vector<ptr<GenericTypeDecl>> &genericTypesDecl);
     ptr<ResolvedTypeSpecialized> infer_generic_types(const SourceLocation &location,
                                                      ResolvedGenericFunctionDecl &funcDecl,
                                                      std::vector<ptr<ResolvedExpr>> &arguments);
@@ -137,7 +133,6 @@ class Sema {
     ptr<ResolvedReturnStmt> resolve_return_stmt(const ReturnStmt &returnStmt);
     ptr<ResolvedExpr> resolve_expr(const Expr &expr, bool isType = false);
     ptr<ResolvedTypeExpr> resolve_type_expr(const Expr &expr);
-    ptr<ResolvedGenericExpr> resolve_generic_expr(const GenericExpr &genericExpr);
     ptr<ResolvedDeclRefExpr> resolve_decl_ref_expr(const DeclRefExpr &declRefExpr);
     ptr<ResolvedCallExpr> resolve_call_expr(const CallExpr &call);
     ptr<ResolvedComptimeExpr> resolve_comptime_expr(const ComptimeExpr &comptimeExpr);
