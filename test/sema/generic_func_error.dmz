@@ -1,10 +1,10 @@
 // RUN: (dmz %s -res-dump 2>&1 || true) | filecheck %s
 
+// CHECK: error: functions cannot have anytype return type
 fn foo(param: i32) -> anytype {
     return param;
 }
 
 fn main() -> void {
     foo(2);
-    // CHECK: error: could not infer generic type for 'anytype'
 }

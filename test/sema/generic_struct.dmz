@@ -9,7 +9,6 @@ fn Point(comptime T:type) -> type {
     };
 }
 // CHECK: ResolvedGenericFunctionDecl Point fn(T)->type
-// CHECK-NEXT:   ResolvedGenericTypeDecl T
 // CHECK-NEXT:   ResolvedParamDecl:comptime T T
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedReturnStmt

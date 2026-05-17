@@ -204,8 +204,6 @@ struct ResolvedTypeEnum : public ResolvedTypeStruct {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedGenericTypeDecl;  // Forward declaration
-
 struct ResolvedTypeSpecialized : public ResolvedType {
     std::vector<ptr<ResolvedType>> specializedTypes;
     ResolvedTypeSpecialized(SourceLocation location, std::vector<ptr<ResolvedType>> specializedTypes)
@@ -418,9 +416,12 @@ struct ResolvedTypeComptimeValue : public ResolvedType {
 };
 
 struct ResolvedTypeAnyType : public ResolvedType {
-    ResolvedGenericTypeDecl *decl = nullptr;
-    ResolvedTypeAnyType(SourceLocation location, ResolvedGenericTypeDecl *decl = nullptr)
-        : ResolvedType(ResolvedTypeKind::AnyType, std::move(location)), decl(decl) {}
+    ptr<ResolvedType> specialized = nullptr;
+    int genericSlot = -1;
+    std::string name;
+
+    ResolvedTypeAnyType(SourceLocation location, int genericSlot = -1, std::string_view name = "")
+        : ResolvedType(ResolvedTypeKind::AnyType, std::move(location)), genericSlot(genericSlot), name(name) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;
@@ -428,6 +429,7 @@ struct ResolvedTypeAnyType : public ResolvedType {
     void dump(size_t level = 0) const override;
     std::string to_str() const override;
     DMZ_TYPE_NAME();
-    bool is_generic() const override { return true; }
+    bool is_generic() const override { return !specialized; }
+    void set_specialized(ptr<ResolvedType> type) { specialized = std::move(type); }
 };
 }  // namespace DMZ

@@ -9,7 +9,6 @@ fn Point(comptime T: type) -> type {
     };
 }
 // CHECK:   ResolvedGenericFunctionDecl Point fn(T)->type
-// CHECK-NEXT:     ResolvedGenericTypeDecl T
 // CHECK-NEXT:     ResolvedParamDecl:comptime T T
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
@@ -37,7 +36,6 @@ fn foo(comptime T: type) -> Point(T) {
     };
 }
 // CHECK: ResolvedGenericFunctionDecl foo fn(T)->generic_func_struct.struct.Point(T){}
-// CHECK-NEXT:    ResolvedGenericTypeDecl T
 // CHECK-NEXT:    ResolvedParamDecl:comptime T T
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:      ResolvedReturnStmt

@@ -111,11 +111,10 @@ class Sema {
     bool insert_decl_to_module(ResolvedModuleDecl &moduleDecl, ptr<ResolvedDecl> decl);
 
     ptr<ResolvedType> resolve_type(const Expr &parsedType);
-    ptr<ResolvedType> re_resolve_type(const ResolvedType &type);
     ptr<ResolvedTypeSpecialized> infer_generic_types(const SourceLocation &location,
                                                      ResolvedGenericFunctionDecl &funcDecl,
                                                      std::vector<ptr<ResolvedExpr>> &arguments);
-    bool internal_infer_type(std::unordered_map<ResolvedGenericTypeDecl *, ptr<ResolvedType>> &inferredTypes,
+    bool internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &inferredTypes,
                              const ResolvedType &paramType, const ResolvedType &argType,
                              ptr<ResolvedExpr> *argExpr = nullptr);
 

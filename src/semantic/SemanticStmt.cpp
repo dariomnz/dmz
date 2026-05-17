@@ -82,7 +82,7 @@ ptr<ResolvedReturnStmt> Sema::resolve_return_stmt(const ReturnStmt &returnStmt) 
         if (!perform_implicit_cast(resolvedExpr, *fnType->returnType)) return nullptr;
         if (!fnType->returnType->compare(*resolvedExpr->type))
             return report(resolvedExpr->location, "unexpected return type, expected '" + fnType->returnType->to_str() +
-                                                      "' actual '" + resolvedExpr->type->to_str() + "'");
+                                                       "' actual '" + resolvedExpr->type->to_str() + "'");
 
         resolvedExpr->set_constant_value(cee.evaluate(*resolvedExpr, false));
     }
@@ -329,7 +329,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             auto resolvedBody =
                 makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody),
                                        std::vector<ptr<ResolvedDeferRefStmt>>{}, std::move(takenForIterationScope));
-            auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location, nullptr);
+            auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location);
             auto resolvedCapture = makePtr<ResolvedCaptureDecl>(
                 forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
 
@@ -397,7 +397,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         auto resolvedBody =
             makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{},
                                    std::move(takenForIterationScope));
-        auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location, nullptr);
+        auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location);
         auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location,
                                                             forStmt.captures[0]->identifier, std::move(captureType));
 

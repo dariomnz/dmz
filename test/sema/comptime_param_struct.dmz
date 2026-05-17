@@ -15,7 +15,6 @@ fn array(comptime T: type, comptime size: i32) -> type {
     };
 }
 // CHECK:ResolvedGenericFunctionDecl array fn(T, i32)->type
-// CHECK-NEXT:    ResolvedGenericTypeDecl T
 // CHECK-NEXT:    ResolvedParamDecl:comptime T T
 // CHECK-NEXT:    ResolvedParamDecl:comptime i32 size
 // CHECK-NEXT:    ResolvedBlock

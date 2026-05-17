@@ -34,30 +34,6 @@ void ResolvedDecl::dump_dependencies(size_t level, bool dot_format) const {
     }
 }
 
-void ResolvedGenericTypeDecl::dump(size_t level, [[maybe_unused]] bool onlySelf) const {
-    std::cerr << indent(level) << "ResolvedGenericTypeDecl " << identifier << '\n';
-    // if (specializedType) {
-    //     std::cerr << indent(level + 1) << "Specialized type ";
-    //     (*specializedType).dump();
-    //     std::cerr << '\n';
-    // }
-}
-
-std::string ResolvedGenericTypeDecl::generic_types_to_str(
-    const std::vector<ptr<ResolvedGenericTypeDecl>> &genericTypeDecls) {
-    if (genericTypeDecls.size() == 0) return "";
-    std::stringstream out;
-    out << "(";
-    for (size_t i = 0; i < genericTypeDecls.size(); i++) {
-        out << genericTypeDecls[i]->identifier;
-        if (i != genericTypeDecls.size() - 1) {
-            out << ", ";
-        }
-    }
-    out << ")";
-    return out.str();
-}
-
 void ResolvedIntLiteral::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedIntLiteral:" << type->to_str() << " '" << value << "'\n";
     if (onlySelf) return;
@@ -200,7 +176,6 @@ void ResolvedGenericFunctionDecl::dump(size_t level, bool onlySelf) const {
 
     if (onlySelf) return;
 
-    for (auto &&genType : genericTypeDecls) genType->dump(level + 1, onlySelf);
     for (auto &&param : params) param->dump(level + 1, onlySelf);
     if (body) body->dump(level + 1, onlySelf);
 
@@ -214,9 +189,7 @@ void ResolvedGenericFunctionDecl::dump_dependencies(size_t level, bool dot_forma
     for (auto &&function : specializations) function->dump_dependencies(level + 1, dot_format);
 }
 
-std::string ResolvedGenericFunctionDecl::name() const {
-    return ResolvedDecl::name() + ResolvedGenericTypeDecl::generic_types_to_str(genericTypeDecls);
-}
+std::string ResolvedGenericFunctionDecl::name() const { return ResolvedDecl::name(); }
 
 void ResolvedSpecializedFunctionDecl::dump(size_t level, bool onlySelf) const {
     std::cerr << indent(level) << "ResolvedSpecializedFunctionDecl " << identifier << specializedTypes->to_str() << " "

@@ -93,7 +93,7 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
 
     std::optional<ScopeRAII> genericFunctionScope = std::nullopt;
     ptr<ResolvedScope> takenGenericScope = nullptr;
-    std::vector<ptr<ResolvedGenericTypeDecl>> resolvedGenericTypeDecl;
+    int nextSlot = 0;
     bool isGenericAST = false;
     for (auto &&p : function.params) {
         if (p->isComptime || dynamic_cast<const TypeAnyType *>(p->type.get())) {
@@ -128,19 +128,18 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         }
 
         if (resolvedParam->isComptime && resolvedParam->type->kind == ResolvedTypeKind::Type) {
-            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, resolvedParam->identifier);
-            auto genericType = makePtr<ResolvedTypeAnyType>(resolvedParam->location, genTypeDecl.get());
-            resolvedParam->type = genericType->clone();
-            resolvedParam->set_constant_value(ComptimeValue(genericType->clone()));
-            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+            auto slot = nextSlot++;
+            resolvedParam->type =
+                makePtr<ResolvedTypeAnyType>(resolvedParam->location, slot, resolvedParam->identifier);
+            resolvedParam->set_constant_value(
+                ComptimeValue(makePtr<ResolvedTypeAnyType>(resolvedParam->location, slot, resolvedParam->identifier)));
         } else if (resolvedParam->type->kind == ResolvedTypeKind::AnyType) {
             auto &anyType = static_cast<const ResolvedTypeAnyType &>(*resolvedParam->type);
-            if (!anyType.decl) {
-                auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, "anytype");
-                auto genericType = makePtr<ResolvedTypeAnyType>(resolvedParam->location, genTypeDecl.get());
-                resolvedParam->type = genericType->clone();
-                resolvedParam->resolvedTypeExpr->resolvedType = genericType->clone();
-                resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+            if (anyType.genericSlot < 0) {
+                auto slot = nextSlot++;
+                resolvedParam->type = makePtr<ResolvedTypeAnyType>(resolvedParam->location, slot, "anytype");
+                if (resolvedParam->resolvedTypeExpr)
+                    resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
             }
         }
 
@@ -148,20 +147,16 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto returnType = resolve_type(*function.type);
-    if (returnType && returnType->kind == ResolvedTypeKind::AnyType) {
-        auto &anyType = static_cast<const ResolvedTypeAnyType &>(*returnType);
-        if (!anyType.decl) {
-            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(function.type->location, "anytype");
-            auto genericType = makePtr<ResolvedTypeAnyType>(function.type->location, genTypeDecl.get());
-            returnType = genericType->clone();
-            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
-        }
+    if (dynamic_cast<TypeAnyType *>(function.type.get())) {
+        // For the moment return type cannot be anytype
+        return report(function.type->location, "functions cannot have anytype return type");
     }
+
+    auto returnType = resolve_type(*function.type);
 
     if (!returnType) {
         if (isGenericAST) {
-            returnType = makePtr<ResolvedTypeAnyType>(function.location, nullptr);
+            returnType = makePtr<ResolvedTypeAnyType>(function.location);
         } else {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                                  function.type->to_str() + "' return type");
@@ -213,11 +208,10 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
             if (ret->scope) ret->scope->currentFunction = ret.get();
             return ret;
         }
-        if (resolvedGenericTypeDecl.size() != 0 || hasComptimeParam) {
+        if (nextSlot > 0 || hasComptimeParam) {
             auto ret = makePtr<ResolvedGenericFunctionDecl>(
                 function.location, function.isPublic, function.identifier, std::move(fnType), std::move(resolvedParams),
-                std::move(resolvedReturnTypeExpr), std::move(takenScope), std::move(takenGenericScope), functionDecl,
-                std::move(resolvedGenericTypeDecl));
+                std::move(resolvedReturnTypeExpr), std::move(takenScope), std::move(takenGenericScope), functionDecl);
             ret->getFnType()->fnDecl = ret.get();
             ret->symbolName = resolve_decl_name(function.identifier);
             if (ret->genericScope) ret->genericScope->currentFunction = ret.get();
@@ -249,17 +243,26 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         if (p->isComptime && !isTypeComptime) numComptime++;
     }
 
-    if (funcDecl.genericTypeDecls.size() + numComptime != genericTypes.specializedTypes.size()) {
+    int maxSlot = -1;
+    for (auto &&p : funcDecl.params) {
+        if (p->type->kind == ResolvedTypeKind::AnyType) {
+            int s = static_cast<const ResolvedTypeAnyType &>(*p->type).genericSlot;
+            if (s > maxSlot) maxSlot = s;
+        }
+    }
+    if (funcDecl.type->kind == ResolvedTypeKind::Function) {
+        auto &fnType = static_cast<const ResolvedTypeFunction &>(*funcDecl.type);
+        if (fnType.returnType->kind == ResolvedTypeKind::AnyType) {
+            int s = static_cast<const ResolvedTypeAnyType &>(*fnType.returnType).genericSlot;
+            if (s > maxSlot) maxSlot = s;
+        }
+    }
+    size_t numGeneric = maxSlot >= 0 ? maxSlot + 1 : 0;
+    if (numGeneric + numComptime != genericTypes.specializedTypes.size()) {
         return report(location, "unexpected number of specializations, expected " +
-                                    std::to_string(funcDecl.genericTypeDecls.size() + numComptime) + " actual " +
+                                    std::to_string(numGeneric + numComptime) + " actual " +
                                     std::to_string(genericTypes.specializedTypes.size()));
     }
-    for (auto &gt : genericTypes.specializedTypes) {
-        auto res = re_resolve_type(*gt);
-        if (!res) return report(gt->location, "cannot resolve type of " + gt->to_str());
-        *gt = std::move(*res);
-    }
-    // Not specialize if generic types are no specialized
     for (auto &gt : genericTypes.specializedTypes) {
         if (gt->kind == ResolvedTypeKind::AnyType) {
             debug_msg("Not specialize generic types are no specialized");
@@ -280,19 +283,6 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     placeholderFunc->symbolName = funcDecl.symbolName;
     auto *retFunc = funcDecl.specializations.emplace_back(std::move(placeholderFunc)).get();
 
-    std::vector<ptr<ResolvedType>> savedTypes;
-    for (size_t i = 0; i < funcDecl.genericTypeDecls.size(); i++) {
-        debug_msg("Specialize " << funcDecl.genericTypeDecls[i]->identifier << " to "
-                                << genericTypes.specializedTypes[i]->to_str());
-        savedTypes.emplace_back(std::move(funcDecl.genericTypeDecls[i]->specializedType));
-        funcDecl.genericTypeDecls[i]->specializedType = genericTypes.specializedTypes[i]->clone();
-    }
-    defer([&]() {
-        // Desespecialize the types for next iterations
-        for (size_t i = 0; i < funcDecl.genericTypeDecls.size(); i++) {
-            funcDecl.genericTypeDecls[i]->specializedType = std::move(savedTypes[i]);
-        }
-    });
     // Restore scope
     ScopeRAII parentFunctionScope(*this, funcDecl.genericScope.get());
     ScopeRAII functionScope(*this);
@@ -304,16 +294,31 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     std::vector<ptr<ResolvedType>> resolvedParamsTypes;
 
     bool haveVararg = false;
-    size_t specIdx = funcDecl.genericTypeDecls.size();
+    size_t specIdx = numGeneric;
     for (size_t i = 0; i < funcDecl.functionDecl->params.size(); i++) {
         auto &&param = funcDecl.functionDecl->params[i];
         auto resolvedParam = resolve_param_decl(*param);
         if (!resolvedParam) return nullptr;
 
-        // If it was anytype, replace with the generic type from the template
+        // Replace anytype with the specialized concrete type (clone returns concrete when specialized)
         if (resolvedParam->type->kind == ResolvedTypeKind::AnyType) {
-            resolvedParam->type = funcDecl.params[i]->type->clone();
-            resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
+            if (i < funcDecl.params.size()) {
+                auto &origAnyType = static_cast<const ResolvedTypeAnyType &>(*funcDecl.params[i]->type);
+                if (origAnyType.genericSlot >= 0 &&
+                    (size_t)origAnyType.genericSlot < retFunc->specializedTypes->specializedTypes.size()) {
+                    auto concreteType = retFunc->specializedTypes->specializedTypes[origAnyType.genericSlot]->clone();
+                    static_cast<ResolvedTypeAnyType *>(resolvedParam->type.get())
+                        ->set_specialized(concreteType->clone());
+                    resolvedParam->type = resolvedParam->type->clone();
+                    if (resolvedParam->resolvedTypeExpr &&
+                        resolvedParam->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::AnyType) {
+                        static_cast<ResolvedTypeAnyType *>(resolvedParam->resolvedTypeExpr->resolvedType.get())
+                            ->set_specialized(concreteType->clone());
+                        resolvedParam->resolvedTypeExpr->resolvedType =
+                            resolvedParam->resolvedTypeExpr->resolvedType->clone();
+                    }
+                }
+            }
         }
 
         if (resolvedParam->isComptime) {
@@ -321,18 +326,18 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
                                   funcDecl.params[i]->resolvedTypeExpr &&
                                   funcDecl.params[i]->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::Type;
             if (isTypeComptime) {
-                for (size_t j = 0; j < funcDecl.genericTypeDecls.size(); j++) {
-                    if (funcDecl.genericTypeDecls[j]->identifier == resolvedParam->identifier) {
-                        resolvedParam->set_constant_value(ComptimeValue(genericTypes.specializedTypes[j]->clone()));
-                        break;
-                    }
+                auto &anyType = static_cast<const ResolvedTypeAnyType &>(*funcDecl.params[i]->type);
+                if (anyType.genericSlot >= 0 &&
+                    (size_t)anyType.genericSlot < retFunc->specializedTypes->specializedTypes.size()) {
+                    resolvedParam->set_constant_value(
+                        ComptimeValue(retFunc->specializedTypes->specializedTypes[anyType.genericSlot]->clone()));
                 }
             } else {
-                if (specIdx >= genericTypes.specializedTypes.size()) {
+                if (specIdx >= retFunc->specializedTypes->specializedTypes.size()) {
                     dmz_unreachable(funcDecl.location, "missing specialized comptime value");
                 }
-                auto comptimeType =
-                    dynamic_cast<const ResolvedTypeComptimeValue *>(genericTypes.specializedTypes[specIdx++].get());
+                auto comptimeType = dynamic_cast<const ResolvedTypeComptimeValue *>(
+                    retFunc->specializedTypes->specializedTypes[specIdx++].get());
                 if (!comptimeType) {
                     dmz_unreachable(funcDecl.location, "expected comptime value in specialized types");
                 }
@@ -341,10 +346,8 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         }
 
         debug_msg("Specialize param " << resolvedParam->identifier << " type " << resolvedParam->type->to_str());
-        resolvedParam->type = re_resolve_type(*resolvedParam->type);
-        debug_msg("Specialize param " << resolvedParam->identifier << " specialized type "
-                                      << resolvedParam->type->to_str());
-        resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
+        if (resolvedParam->resolvedTypeExpr)
+            resolvedParam->resolvedTypeExpr->resolvedType = resolvedParam->type->clone();
         resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
 
         if (haveVararg) {
@@ -360,16 +363,25 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         resolvedParams.emplace_back(std::move(resolvedParam));
     }
 
-    auto returnType = resolve_type(*funcDecl.functionDecl->type);
+    // Resolve return type from AST — decl->type->clone() returns concrete type via specialized AnyType
+    ptr<ResolvedType> returnType;
+    if (funcDecl.functionDecl->type) {
+        returnType = resolve_type(*funcDecl.functionDecl->type);
+    }
+    if (!returnType) {
+        // Fallback: clone generic return type (AnyType::clone returns specialized type if set)
+        auto &fnType = static_cast<const ResolvedTypeFunction &>(*funcDecl.type);
+        returnType = fnType.returnType->clone();
+    }
 
     if (!returnType)
         return report(funcDecl.location, "function '" + funcDecl.identifier + "' has invalid '" +
                                              funcDecl.type->to_str() + "' return type");
 
-    auto fnType = makePtr<ResolvedTypeFunction>(funcDecl.location, retFunc, std::move(resolvedParamsTypes),
-                                                std::move(returnType));
+    auto newFnType = makePtr<ResolvedTypeFunction>(funcDecl.location, retFunc, std::move(resolvedParamsTypes),
+                                                   std::move(returnType));
 
-    retFunc->type = std::move(fnType);
+    retFunc->type = std::move(newFnType);
     retFunc->params = std::move(resolvedParams);
     retFunc->resolvedReturnTypeExpr = std::move(funcDecl.resolvedReturnTypeExpr);
 
@@ -729,7 +741,7 @@ bool Sema::resolve_struct_members(ResolvedStructDecl &resolvedStructDecl) {
         debug_msg("currentDecl->fields.size() " << currentDecl->fields.size());
         for (auto &&field : currentDecl->fields) {
             debug_msg(field->location << " " << field->identifier);
-            auto type = re_resolve_type(*field->type);
+            auto type = field->type->clone();
             if (!type) return false;
 
             if (type->kind == ResolvedTypeKind::Void) {
@@ -1104,24 +1116,6 @@ bool Sema::resolve_func_body(ResolvedFunctionDecl &function, const Block &body) 
 
     ScopeRAII paramScope(*this, function.scope.get());
 
-    std::vector<ptr<ResolvedType>> savedTypes;
-    std::optional<DeferAction> deferSpecializedType = std::nullopt;
-    if (auto *spec = dynamic_cast<ResolvedSpecializedFunctionDecl *>(&function)) {
-        // Specialize types
-        for (size_t i = 0; i < spec->genFunc->genericTypeDecls.size(); i++) {
-            debug_msg("Specialize " << spec->genFunc->genericTypeDecls[i]->identifier << " to "
-                                    << spec->specializedTypes->specializedTypes[i]->to_str());
-            savedTypes.emplace_back(std::move(spec->genFunc->genericTypeDecls[i]->specializedType));
-            spec->genFunc->genericTypeDecls[i]->specializedType = spec->specializedTypes->specializedTypes[i]->clone();
-        }
-
-        deferSpecializedType.emplace([&]() {
-            // Reset specializedType
-            for (size_t i = 0; i < spec->genFunc->genericTypeDecls.size(); i++) {
-                spec->genFunc->genericTypeDecls[i]->specializedType = std::move(savedTypes[i]);
-            }
-        });
-    }
     if (auto resolvedBody = resolve_block(body)) {
         if (function.body) dmz_unreachable(function.location, "Function already have a body");
         function.body = std::move(resolvedBody);

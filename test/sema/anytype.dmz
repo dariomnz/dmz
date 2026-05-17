@@ -3,7 +3,6 @@
 fn print_any(x: anytype) -> void {
 }
 // CHECK:  ResolvedGenericFunctionDecl print_any fn(anytype)->void
-// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:    ResolvedParamDecl:anytype x
 // CHECK-NEXT:    ResolvedBlock
 // CHECK-NEXT:    ResolvedSpecializedFunctionDecl print_any(i32) fn(i32)->void
@@ -20,8 +19,6 @@ fn add_any(x: anytype, comptime y: anytype) -> void {
     const res = x + y;
 }
 // CHECK:  ResolvedGenericFunctionDecl add_any fn(anytype, anytype)->void
-// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
-// CHECK-NEXT:    ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:    ResolvedParamDecl:anytype x
 // CHECK-NEXT:    ResolvedParamDecl:comptime anytype y
 // CHECK-NEXT:    ResolvedBlock

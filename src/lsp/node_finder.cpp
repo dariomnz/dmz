@@ -55,12 +55,6 @@ void NodeFinder::find_in_decl(const ResolvedDecl& decl) {
     }
 
     if (const auto* fd = dynamic_cast<const ResolvedFuncDecl*>(&decl)) {
-        if (const auto* genFn = dynamic_cast<const ResolvedGenericFunctionDecl*>(fd)) {
-            for (const auto& gt : genFn->genericTypeDecls) {
-                find_in_decl(*gt);
-                if (found_decl) return;
-            }
-        }
         for (const auto& param : fd->params) {
             find_in_decl(*param);
             if (found_decl) return;

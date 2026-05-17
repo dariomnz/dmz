@@ -14,7 +14,6 @@ const Point = struct {
 // CHECK-NEXT:           ResolvedFieldDecl:i32 x
 // CHECK-NEXT:           ResolvedFieldDecl:i32 y
 // CHECK-NEXT:           ResolvedGenericMemberFunctionDecl add fn(*struct_generic_member.Point{}, anytype)->void
-// CHECK-NEXT:             ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:             ResolvedParamDecl:*struct_generic_member.Point{} self
 // CHECK-NEXT:             ResolvedParamDecl:anytype n
 // CHECK-NEXT:             ResolvedBlock

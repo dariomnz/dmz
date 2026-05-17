@@ -89,17 +89,7 @@ struct ResolvedDecl : public ConstantValueContainer<ComptimeValue> {
     virtual std::string_view className() const { return type_name<decltype(*this)>(); }
 };
 
-struct ResolvedGenericTypeDecl : public ResolvedDecl {
-    ptr<ResolvedType> specializedType;
 
-    ResolvedGenericTypeDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeAnyType>(location, this), false, false) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-
-    DMZ_TYPE_NAME();
-    static std::string generic_types_to_str(const std::vector<ptr<ResolvedGenericTypeDecl>> &genericTypeDecls);
-};
 
 // Forward declaration
 struct ResolvedDeferStmt;
@@ -393,7 +383,6 @@ struct ResolvedSpecializedFunctionDecl : public ResolvedFunctionDecl {
 };
 
 struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
-    std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls = {};         // The types used for lookup
     std::vector<ptr<ResolvedSpecializedFunctionDecl>> specializations = {};  // List of specializations
     ptr<ResolvedScope> genericScope;
 
@@ -401,11 +390,9 @@ struct ResolvedGenericFunctionDecl : public ResolvedFunctionDecl {
                                 ptr<ResolvedType> type, std::vector<ptr<ResolvedParamDecl>> params,
                                 ptr<ResolvedExpr> resolvedReturnTypeExpr, ptr<ResolvedScope> scope,
                                 ptr<ResolvedScope> genericScope, const FunctionDecl *functionDecl,
-                                std::vector<ptr<ResolvedGenericTypeDecl>> genericTypeDecls,
                                 ResolvedStructDecl *parentDecl = nullptr, bool isStatic = false)
         : ResolvedFunctionDecl(location, isPublic, identifier, std::move(type), std::move(params),
                                std::move(resolvedReturnTypeExpr), std::move(scope), functionDecl, parentDecl, isStatic),
-          genericTypeDecls(std::move(genericTypeDecls)),
           genericScope(std::move(genericScope)) {}
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();
@@ -559,7 +546,7 @@ struct ResolvedAutoMemberExpr : public ResolvedExpr {
     ResolvedFieldDecl *fieldDecl = nullptr;
 
     ResolvedAutoMemberExpr(SourceLocation location, std::string_view field)
-        : ResolvedExpr(location, makePtr<ResolvedTypeAnyType>(location, nullptr)), field(field) {}
+        : ResolvedExpr(location, makePtr<ResolvedTypeAnyType>(location)), field(field) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

@@ -280,6 +280,10 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             fieldTypes.emplace_back(m_builder.getIntPtrTy(m_module->getDataLayout()));
             static_cast<llvm::StructType *>(ret)->setBody(fieldTypes);
         }
+    } else if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&type)) {
+        if (anyType->specialized) {
+            ret = generate_type(*anyType->specialized, noOpaque);
+        }
     }
     if (ret == nullptr) {
         type.dump();

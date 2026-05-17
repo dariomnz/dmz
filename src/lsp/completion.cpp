@@ -38,8 +38,8 @@ void LSPServer::collect_module_completions(const ResolvedModuleDecl* decl, std::
             kind = CompletionItemKind::Module;
         else if (dynamic_cast<const ResolvedDeclStmt*>(d.get()) || dynamic_cast<const ResolvedVarDecl*>(d.get()))
             kind = CompletionItemKind::Variable;
-        else if (dynamic_cast<const ResolvedGenericTypeDecl*>(d.get()))
-            kind = CompletionItemKind::TypeParameter;
+        else if (dynamic_cast<const ResolvedParamDecl*>(d.get()))
+            kind = CompletionItemKind::Variable;
 
         items << "{\"label\":\"" << escape_json(d->identifier) << "\",\"kind\":" << static_cast<int>(kind)
               << ",\"detail\":\"" << escape_json(d->type != nullptr ? d->type->to_str() : "") << "\"}";
@@ -262,8 +262,7 @@ void LSPServer::collect_scope_completions(const ResolvedScope* scope, size_t cur
                 kind = CompletionItemKind::Module;
             else if (dynamic_cast<const ResolvedParamDecl*>(decl))
                 kind = CompletionItemKind::Variable;
-            else if (dynamic_cast<const ResolvedGenericTypeDecl*>(decl))
-                kind = CompletionItemKind::TypeParameter;
+
 
             if (has_items) items << ",";
             items << "{\"label\":\"" << escape_json(name) << "\",\"kind\":" << static_cast<int>(kind);

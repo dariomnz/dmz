@@ -32,7 +32,6 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
 // CHECK-NEXT:   ResolvedGenericFunctionDecl foo fn(i32, anytype)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:i32 i
 // CHECK-NEXT:     ResolvedParamDecl:anytype arg
 // CHECK-NEXT:     ResolvedBlock
@@ -123,7 +122,6 @@ fn main() -> void {
 // CHECK-NEXT:           ElseBlock
 // CHECK-NEXT:             ResolvedBlock
 // CHECK-NEXT:   ResolvedGenericFunctionDecl bar fn(i32, anytype)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:i32 i
 // CHECK-NEXT:     ResolvedParamDecl:anytype arg
 // CHECK-NEXT:     ResolvedBlock

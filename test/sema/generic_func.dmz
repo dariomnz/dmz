@@ -7,7 +7,6 @@ fn print(param: anytype) -> !void {
 }
 
 // CHECK: ResolvedGenericFunctionDecl print fn(anytype)->!void
-// CHECK-NEXT:   ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:   ResolvedParamDecl:anytype param
 // CHECK-NEXT:   ResolvedBlock
 // CHECK-NEXT:     ResolvedCallExpr:i32

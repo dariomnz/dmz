@@ -22,9 +22,6 @@ SemanticTokenType get_type_from_decl(const ResolvedDecl& decl) {
         type = SemanticTokenType::Parameter;
     else if (dynamic_cast<const ResolvedModuleDecl*>(&decl))
         type = SemanticTokenType::Namespace;
-    else if (dynamic_cast<const ResolvedGenericTypeDecl*>(&decl))
-        type = SemanticTokenType::Type;
-
     if (dynamic_cast<const ResolvedTypeStructDecl*>(decl.type.get()))
         type = SemanticTokenType::Type;
     else if (dynamic_cast<const ResolvedTypeFunction*>(decl.type.get()))
@@ -86,11 +83,6 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                     traverse_stmt(*functionDecl->body);
                 }
             }
-            if (auto* genFn = dynamic_cast<const ResolvedGenericFunctionDecl*>(&decl)) {
-                for (const auto& gt : genFn->genericTypeDecls) {
-                    traverse_decl(*gt);
-                }
-            }
         } else if (auto* paramDecl = dynamic_cast<const ResolvedParamDecl*>(&decl)) {
             add_token(paramDecl->location, paramDecl->identifier, SemanticTokenType::Parameter,
                       (uint32_t)SemanticTokenModifier::Declaration);
@@ -126,9 +118,6 @@ void SemanticTokensCollector::traverse_decl(const ResolvedDecl& decl) {
                 add_token(error->location, error->identifier, SemanticTokenType::Variable,
                           (uint32_t)SemanticTokenModifier::Declaration);
             }
-        } else if (auto* genericTypeDecl = dynamic_cast<const ResolvedGenericTypeDecl*>(&decl)) {
-            add_token(genericTypeDecl->location, genericTypeDecl->identifier, SemanticTokenType::Type,
-                      (uint32_t)SemanticTokenModifier::Declaration);
         } else if (auto* capDecl = dynamic_cast<const ResolvedCaptureDecl*>(&decl)) {
             add_token(capDecl->location, capDecl->identifier, SemanticTokenType::Variable,
                       (uint32_t)SemanticTokenModifier::Declaration);

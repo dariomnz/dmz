@@ -22,7 +22,6 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedParamDecl:*u8 fmt
 // CHECK-NEXT:     ResolvedParamDecl:vararg ...
 // CHECK-NEXT:   ResolvedGenericFunctionDecl print fn(anytype)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
@@ -37,7 +36,6 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32 print2
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 scalar
 // CHECK-NEXT:   ResolvedGenericFunctionDecl print2 fn(anytype)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt
@@ -52,7 +50,6 @@ fn main() -> void {
 // CHECK-NEXT:             ResolvedDeclRefExpr:fn(i32)->i32 print3
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 scalar
 // CHECK-NEXT:   ResolvedGenericFunctionDecl print3 fn(anytype)->i32
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:anytype scalar
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedReturnStmt

@@ -930,24 +930,36 @@ std::string ResolvedTypeComptimeValue::to_str() const { return value->to_str(); 
 
 bool ResolvedTypeAnyType::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeAnyType " << to_str() << " " << other.to_str() << " " << location);
+    if (specialized) return debug_ret(specialized->equal(other));
     if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&other)) {
-        return debug_ret(decl == anyType->decl);
-    } else {
-        return debug_ret(false);
+        if (anyType->specialized) return debug_ret(equal(*anyType->specialized));
+        return debug_ret(genericSlot == anyType->genericSlot);
     }
+    return debug_ret(false);
 }
 
-bool ResolvedTypeAnyType::compare(const ResolvedType &) const { return true; }
+bool ResolvedTypeAnyType::compare(const ResolvedType &other) const {
+    debug_func("ResolvedTypeAnyType " << to_str() << " " << other.to_str() << " " << location);
+    if (specialized) return debug_ret(specialized->compare(other));
+    if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&other)) {
+        if (anyType->specialized) return debug_ret(compare(*anyType->specialized));
+    }
+    return debug_ret(true);
+}
 
 ptr<ResolvedType> ResolvedTypeAnyType::clone() const {
     debug_func("ResolvedTypeAnyType " << location);
-    return makePtr<ResolvedTypeAnyType>(location, decl);
+    if (specialized) return specialized->clone();
+    return makePtr<ResolvedTypeAnyType>(location, genericSlot, name);
 }
 
 void ResolvedTypeAnyType::dump(size_t level) const {
     std::cerr << indent(level) << "ResolvedTypeAnyType " << to_str() << "\n";
 }
 
-std::string ResolvedTypeAnyType::to_str() const { return decl ? decl->name() : "anytype"; }
+std::string ResolvedTypeAnyType::to_str() const {
+    if (specialized) return specialized->to_str();
+    return name.empty() ? "anytype" : name;
+}
 
 }  // namespace DMZ

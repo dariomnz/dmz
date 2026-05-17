@@ -12,7 +12,6 @@ fn main() -> void {
 
 // CHECK: ResolvedModuleDecl generic_slice
 // CHECK-NEXT:   ResolvedGenericFunctionDecl foo fn(anytype)->void
-// CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:anytype slice
 // CHECK-NEXT:     ResolvedBlock
 // CHECK-NEXT:       ResolvedMemberExpr:anytype len

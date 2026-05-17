@@ -384,17 +384,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             retPtr = ret.get();
             return debug_ret(ret);
         }
-        if (auto genDecl = dynamic_cast<ResolvedGenericTypeDecl *>(decl)) {
-            if (genDecl->specializedType) {
-                ret = genDecl->specializedType->clone();
-                retPtr = ret.get();
-                return debug_ret(ret);
-            } else {
-                ret = makePtr<ResolvedTypeAnyType>(type.location, genDecl);
-                retPtr = ret.get();
-                return debug_ret(ret);
-            }
-        }
         decl->dump();
         dmz_unreachable(decl->location, "TODO");
     }
@@ -443,7 +432,10 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                         std::string suffix = prefixType + m_currentFunction->identifier;
                         if (auto *specFn = dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction)) {
                             suffix += "(";
-                            size_t numGeneric = specFn->genFunc->genericTypeDecls.size();
+                            size_t numGeneric = 0;
+                            for (auto &t : specFn->specializedTypes->specializedTypes) {
+                                if (!dynamic_cast<const ResolvedTypeComptimeValue *>(t.get())) numGeneric++;
+                            }
                             for (size_t i = 0; i < numGeneric; i++) {
                                 if (i > 0) suffix += ", ";
                                 suffix += specFn->specializedTypes->specializedTypes[i]->to_str();
@@ -459,9 +451,13 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                             suffix += ")";
                         } else if (auto *genFn = dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction)) {
                             suffix += "(";
-                            for (size_t i = 0; i < genFn->genericTypeDecls.size(); i++) {
-                                if (i > 0) suffix += ", ";
-                                suffix += genFn->genericTypeDecls[i]->identifier;
+                            bool first = true;
+                            for (auto &p : genFn->params) {
+                                if (p->type->kind == ResolvedTypeKind::AnyType) {
+                                    if (!first) suffix += ", ";
+                                    suffix += p->identifier;
+                                    first = false;
+                                }
                             }
                             suffix += ")";
                         }
@@ -527,7 +523,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             if (!ret && m_currentFunction &&
                 (dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction) ||
                  dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction))) {
-                ret = makePtr<ResolvedTypeAnyType>(callType->location, nullptr);
+                ret = makePtr<ResolvedTypeAnyType>(callType->location);
             }
         }
         if (ret) {
@@ -547,68 +543,6 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
     type.dump();
     dmz_unreachable(type.location, "TODO");
     (void)retPtr;
-}
-
-ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
-    ptr<ResolvedType> ret = nullptr;
-    ResolvedType *retPtr = nullptr;
-    debug_func(type.className() << " '" << type.to_str() << "' -> " << (retPtr ? retPtr->className() : "nullptr")
-                                << " '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
-    if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&type)) {
-        if (anyType->decl && anyType->decl->specializedType) {
-            ret = re_resolve_type(*anyType->decl->specializedType);
-            retPtr = ret.get();
-            return ret;
-        } else {
-            ret = anyType->clone();
-            retPtr = ret.get();
-            return ret;
-        }
-    }
-    if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(&type)) {
-        auto cloned = castPtr<ResolvedTypeArray>(arrType->clone());
-        cloned->arrayType = re_resolve_type(*arrType->arrayType);
-        ret = std::move(cloned);
-        retPtr = ret.get();
-        return ret;
-    }
-    if (auto optType = dynamic_cast<const ResolvedTypeOptional *>(&type)) {
-        ret = makePtr<ResolvedTypeOptional>(optType->location, re_resolve_type(*optType->optionalType));
-        retPtr = ret.get();
-        return ret;
-    }
-    if (auto ptrType = dynamic_cast<const ResolvedTypePointer *>(&type)) {
-        ret = makePtr<ResolvedTypePointer>(ptrType->location, re_resolve_type(*ptrType->pointerType));
-        retPtr = ret.get();
-        return ret;
-    }
-    if (auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type)) {
-        ret = makePtr<ResolvedTypeSlice>(sliceType->location, re_resolve_type(*sliceType->sliceType));
-        retPtr = ret.get();
-        return ret;
-    }
-    if (auto vectorType = dynamic_cast<const ResolvedTypeSimd *>(&type)) {
-        auto cloned = castPtr<ResolvedTypeSimd>(vectorType->clone());
-        cloned->simdType = re_resolve_type(*vectorType->simdType);
-        ret = std::move(cloned);
-        retPtr = ret.get();
-        return ret;
-    }
-    if (type.kind == ResolvedTypeKind::Void || type.kind == ResolvedTypeKind::Number ||
-        type.kind == ResolvedTypeKind::Bool || type.kind == ResolvedTypeKind::StructDecl ||
-        type.kind == ResolvedTypeKind::Struct || type.kind == ResolvedTypeKind::UnionDecl ||
-        type.kind == ResolvedTypeKind::Union || type.kind == ResolvedTypeKind::EnumDecl ||
-        type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::ErrorGroup ||
-        type.kind == ResolvedTypeKind::Error || type.kind == ResolvedTypeKind::Function ||
-        type.kind == ResolvedTypeKind::Module || type.kind == ResolvedTypeKind::ComptimeValue ||
-        type.kind == ResolvedTypeKind::Type || type.kind == ResolvedTypeKind::AnyType) {
-        ret = type.clone();
-        retPtr = ret.get();
-        return ret;
-    }
-    (void)retPtr;
-    type.dump();
-    dmz_unreachable(type.location, "TODO");
 }
 
 void Sema::queue_module(ptr<ModuleDecl> ast, std::filesystem::path sourcePath) {
