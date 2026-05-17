@@ -81,7 +81,7 @@ class Sema {
         {"@typeid", nullptr},       {"@typeinfo", nullptr},   {"@hasMethod", nullptr},   {"@simd", nullptr},
         {"@simdSize", nullptr},     {"@simdSplat", nullptr},  {"@simdIota", nullptr},    {"@errorTrace", nullptr},
         {"@testNum", nullptr},      {"@testRun", nullptr},    {"@testName", nullptr},    {"@simdLoad", nullptr},
-        {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@compileError", nullptr},
+        {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@simdShuffle", nullptr}, {"@compileError", nullptr},
         {"@compileLog", nullptr},   {"@asm", nullptr},        {"@ptrCast", nullptr},     {"@intCast", nullptr},
         {"@floatCast", nullptr},    {"@sqrt", nullptr},
     };

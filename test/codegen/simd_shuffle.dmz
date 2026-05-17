@@ -1,0 +1,25 @@
+// RUN: dmz %s -run 2>&1 | filecheck %s
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn printVector(v: anytype, len: i32, fmt: *u8) -> void {
+    printf("[ ");
+    for (0..len) |i| {
+        printf(fmt, v[i]);
+    }
+    printf("]\n");
+}
+
+pub fn main() -> void {
+    const size = 4;
+
+    const a_data: [size]i32 = {10, 20, 30, 40};
+    const a: @simd(i32, size) = @simdLoad(&a_data[0]);
+    const b_data: [size]i32 = {50, 60, 70, 80};
+    const b: @simd(i32, size) = @simdLoad(&b_data[0]);
+
+    const mask: [4]i32 = {0, 2, 4, 6};
+    const result = @simdShuffle(a, b, mask);
+    printf("Result: ");
+    printVector(result, 4, "%d ");
+}
+// CHECK: Result: [ 10 30 50 70 ]

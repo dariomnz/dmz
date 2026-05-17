@@ -297,6 +297,20 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
         return &funcDecl;
+    } else if (fnName == "@simdShuffle") {
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "v1", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "v2", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "mask", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes),
+                                                    makePtr<ResolvedTypeSimd>(loc, makePtr<ResolvedTypeVoid>(loc), 0));
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        return &funcDecl;
     } else if (fnName == "@compileError" || fnName == "@compileLog") {
         auto genericType = makePtr<ResolvedTypeAnyType>(loc);  // Placeholder for return type
         std::vector<ptr<ResolvedParamDecl>> params;
@@ -869,6 +883,52 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(valParam->type->clone());
         paramsTypes.emplace_back(opParam->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             call.type->clone());
+    } else if (resolvedCallee.identifier == "@simdShuffle") {
+        if (resolvedArguments.size() != 3) return report(call.location, "expected 3 arguments for @simdShuffle");
+        auto &v1 = resolvedArguments[0];
+        auto &v2 = resolvedArguments[1];
+        auto &mask = resolvedArguments[2];
+
+        auto *simdType = dynamic_cast<const ResolvedTypeSimd *>(v1->type.get());
+        if (!simdType) return report(v1->location, "expected SIMD type for @simdShuffle v1");
+
+        if (!perform_implicit_cast(v2, *simdType)) return nullptr;
+
+        auto *maskArrType = dynamic_cast<const ResolvedTypeArray *>(mask->type.get());
+        if (!maskArrType) return report(mask->location, "expected array type for @simdShuffle mask");
+
+        auto *maskElemNum = dynamic_cast<const ResolvedTypeNumber *>(maskArrType->arrayType.get());
+        if (!maskElemNum || maskElemNum->numberKind != ResolvedNumberKind::Int || maskElemNum->bitSize != 32) {
+            return report(mask->location, "expected [M]i32 for @simdShuffle mask");
+        }
+
+        if (maskArrType->arraySize < 0) {
+            return report(mask->location, "@simdShuffle mask must have a concrete size");
+        }
+
+        auto maskComptime = mask->get_constant_value();
+        if (!maskComptime || !maskComptime->isArray()) {
+            return report(mask->location, "@simdShuffle mask must be a compile-time constant array");
+        }
+
+        if ((int)maskComptime->getArray().elements.size() != maskArrType->arraySize) {
+            return report(mask->location, "internal error: mask comptime size mismatch");
+        }
+
+        for (auto &elem : maskComptime->getArray().elements) {
+            if (!elem.isInt()) {
+                return report(mask->location, "@simdShuffle mask elements must be compile-time integers");
+            }
+        }
+
+        auto retType = makePtr<ResolvedTypeSimd>(call.location, simdType->simdType->clone(), maskArrType->arraySize);
+        call.type = retType->clone();
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(v1->type->clone());
+        paramsTypes.emplace_back(v2->type->clone());
+        paramsTypes.emplace_back(mask->type->clone());
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              call.type->clone());
     } else if (resolvedCallee.identifier == "@compileError") {

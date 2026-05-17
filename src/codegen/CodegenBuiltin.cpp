@@ -57,6 +57,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_simdSelect(call);
     } else if (builtin.identifier == "@simdReduce") {
         return generate_builtin_simdReduce(call);
+    } else if (builtin.identifier == "@simdShuffle") {
+        return generate_builtin_simdShuffle(call);
     } else if (builtin.identifier == "@errorTrace") {
         return generate_builtin_error_trace();
     } else if (builtin.identifier == "@asm") {
@@ -564,6 +566,28 @@ llvm::Value *Codegen::generate_builtin_simdReduce(const ResolvedCallExpr &call) 
         default:
             dmz_unreachable(call.location, "unsupported simd reduction operator");
     }
+}
+
+llvm::Value *Codegen::generate_builtin_simdShuffle(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 3) dmz_unreachable(call.location, "expected 3 arguments");
+    llvm::Value *v1 = generate_expr(*call.arguments[0]);
+    llvm::Value *v2 = generate_expr(*call.arguments[1]);
+
+    auto maskComptime = call.arguments[2]->get_constant_value();
+    if (!maskComptime || !maskComptime->isArray()) {
+        dmz_unreachable(call.location, "@simdShuffle mask must be a compile-time constant array");
+    }
+
+    const auto &maskElements = maskComptime->getArray().elements;
+    std::vector<int> indices;
+    indices.reserve(maskElements.size());
+    for (const auto &elem : maskElements) {
+        if (!elem.isInt()) dmz_unreachable(call.location, "@simdShuffle mask element is not an integer");
+        indices.push_back(elem.getInt());
+    }
+
+    return m_builder.CreateShuffleVector(v1, v2, indices);
 }
 
 llvm::Value *Codegen::generate_builtin_ptrCast(const ResolvedCallExpr &call) {

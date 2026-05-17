@@ -193,6 +193,7 @@ class Codegen {
     llvm::Value *generate_builtin_simdStore(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_simdSelect(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_simdReduce(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_simdShuffle(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_asm(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_ptrCast(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_intCast(const ResolvedCallExpr &call);
