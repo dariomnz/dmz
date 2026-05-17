@@ -200,11 +200,6 @@ ptr<ResolvedCallExpr> Sema::resolve_call_expr(const CallExpr &call) {
     varOrReturn(resolvedCallee, resolve_expr(*call.callee));
 
     ResolvedMemberExpr *memberExpr = dynamic_cast<ResolvedMemberExpr *>(resolvedCallee.get());
-    if (!memberExpr) {
-        if (auto genericExpr = dynamic_cast<ResolvedGenericExpr *>(resolvedCallee.get())) {
-            memberExpr = dynamic_cast<ResolvedMemberExpr *>(genericExpr->base.get());
-        }
-    }
     if (memberExpr) {
         if (auto memFunc = dynamic_cast<const ResolvedFunctionDecl *>(&memberExpr->member)) {
             if (memFunc->parentDecl && !memFunc->isStatic) {

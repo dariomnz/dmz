@@ -654,25 +654,6 @@ struct ResolvedMemberExpr : public ResolvedAssignableExpr {
     DMZ_TYPE_NAME();
 };
 
-struct ResolvedGenericExpr : public ResolvedAssignableExpr {
-    ptr<ResolvedExpr> base;
-    const ResolvedDecl &decl;
-    ptr<ResolvedTypeSpecialized> specializedTypes;
-    std::vector<ptr<ResolvedTypeExpr>> specializedTypesExpr;
-
-    ResolvedGenericExpr(SourceLocation location, ptr<ResolvedExpr> base, const ResolvedDecl &decl,
-                        ptr<ResolvedTypeSpecialized> specializedTypes,
-                        std::vector<ptr<ResolvedTypeExpr>> specializedTypesExpr = {})
-        : ResolvedAssignableExpr(location, decl.type->clone()),
-          base(std::move(base)),
-          decl(decl),
-          specializedTypes(std::move(specializedTypes)),
-          specializedTypesExpr(std::move(specializedTypesExpr)) {}
-
-    void dump(size_t level = 0, bool onlySelf = false) const override;
-    DMZ_TYPE_NAME();
-};
-
 struct ResolvedArrayAtExpr : public ResolvedAssignableExpr {
     ptr<ResolvedExpr> array;
     ptr<ResolvedExpr> index;

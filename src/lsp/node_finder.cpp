@@ -167,13 +167,6 @@ void NodeFinder::find_in_expr(const ResolvedExpr& expr) {
             found_decl = &dr->decl;
             return;
         }
-    } else if (const auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
-        find_in_expr(*ge->base);
-        if (found_decl) return;
-        for (const auto& tyExpr : ge->specializedTypesExpr) {
-            find_in_expr(*tyExpr);
-            if (found_decl) return;
-        }
     } else if (const auto* me = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
         // me->location is the dot. Its length is 1 + identifier length.
         if (is_at_location(me->location, 1 + me->member.identifier.length())) {

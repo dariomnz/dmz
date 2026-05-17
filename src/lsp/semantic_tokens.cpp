@@ -185,12 +185,6 @@ void SemanticTokensCollector::traverse_expr(const ResolvedExpr& expr) {
             debug_msg("ResolvedDeclRefExpr");
             auto type = get_type_from_decl(declRef->decl);
             add_token(declRef->location, declRef->identifier, type);
-        } else if (auto* ge = dynamic_cast<const ResolvedGenericExpr*>(&expr)) {
-            debug_msg("ResolvedGenericExpr");
-            traverse_expr(*ge->base);
-            for (const auto& tyExpr : ge->specializedTypesExpr) {
-                traverse_expr(*tyExpr);
-            }
         } else if (auto* memberExpr = dynamic_cast<const ResolvedMemberExpr*>(&expr)) {
             debug_msg("ResolvedMemberExpr");
             if (memberExpr->member.identifier.empty()) return;
