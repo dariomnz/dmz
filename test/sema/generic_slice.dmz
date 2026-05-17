@@ -15,7 +15,7 @@ fn main() -> void {
 // CHECK-NEXT:     ResolvedGenericTypeDecl anytype
 // CHECK-NEXT:     ResolvedParamDecl:anytype slice
 // CHECK-NEXT:     ResolvedBlock
-// CHECK-NEXT:       ResolvedMemberExpr:generic len
+// CHECK-NEXT:       ResolvedMemberExpr:anytype len
 // CHECK-NEXT:         ResolvedDeclRefExpr:anytype slice
 // CHECK-NEXT:     ResolvedSpecializedFunctionDecl foo([]i32) fn([]i32)->void
 // CHECK-NEXT:       ResolvedParamDecl:[]i32 slice

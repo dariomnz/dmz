@@ -129,18 +129,19 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
 
         if (resolvedParam->isComptime && resolvedParam->type->kind == ResolvedTypeKind::Type) {
             auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, resolvedParam->identifier);
-            auto genericType = makePtr<ResolvedTypeGeneric>(resolvedParam->location, genTypeDecl.get());
+            auto genericType = makePtr<ResolvedTypeAnyType>(resolvedParam->location, genTypeDecl.get());
             resolvedParam->type = genericType->clone();
             resolvedParam->set_constant_value(ComptimeValue(genericType->clone()));
-            // Also need to store the genTypeDecl somewhere so it doesn't get destroyed.
-            // For now, let's just add it to the list of generic type decls of the function.
             resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
         } else if (resolvedParam->type->kind == ResolvedTypeKind::AnyType) {
-            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, "anytype");
-            auto genericType = makePtr<ResolvedTypeGeneric>(resolvedParam->location, genTypeDecl.get());
-            resolvedParam->type = genericType->clone();
-            resolvedParam->resolvedTypeExpr->resolvedType = genericType->clone();
-            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+            auto &anyType = static_cast<const ResolvedTypeAnyType &>(*resolvedParam->type);
+            if (!anyType.decl) {
+                auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(resolvedParam->location, "anytype");
+                auto genericType = makePtr<ResolvedTypeAnyType>(resolvedParam->location, genTypeDecl.get());
+                resolvedParam->type = genericType->clone();
+                resolvedParam->resolvedTypeExpr->resolvedType = genericType->clone();
+                resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+            }
         }
 
         resolvedParamsTypes.emplace_back(resolvedParam->type->clone());
@@ -149,15 +150,18 @@ ptr<ResolvedFuncDecl> Sema::resolve_function_decl(const FuncDecl &function) {
 
     auto returnType = resolve_type(*function.type);
     if (returnType && returnType->kind == ResolvedTypeKind::AnyType) {
-        auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(function.type->location, "anytype");
-        auto genericType = makePtr<ResolvedTypeGeneric>(function.type->location, genTypeDecl.get());
-        returnType = genericType->clone();
-        resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+        auto &anyType = static_cast<const ResolvedTypeAnyType &>(*returnType);
+        if (!anyType.decl) {
+            auto genTypeDecl = makePtr<ResolvedGenericTypeDecl>(function.type->location, "anytype");
+            auto genericType = makePtr<ResolvedTypeAnyType>(function.type->location, genTypeDecl.get());
+            returnType = genericType->clone();
+            resolvedGenericTypeDecl.emplace_back(std::move(genTypeDecl));
+        }
     }
 
     if (!returnType) {
         if (isGenericAST) {
-            returnType = makePtr<ResolvedTypeGeneric>(function.location, nullptr);
+            returnType = makePtr<ResolvedTypeAnyType>(function.location, nullptr);
         } else {
             return report(function.location, "function '" + function.identifier + "' has invalid '" +
                                                  function.type->to_str() + "' return type");
@@ -240,7 +244,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     debug_func(funcDecl.location);
     size_t numComptime = 0;
     for (auto &&p : funcDecl.params) {
-        bool isTypeComptime = p->isComptime && p->type->kind == ResolvedTypeKind::Generic && p->resolvedTypeExpr &&
+        bool isTypeComptime = p->isComptime && p->type->kind == ResolvedTypeKind::AnyType && p->resolvedTypeExpr &&
                               p->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::Type;
         if (p->isComptime && !isTypeComptime) numComptime++;
     }
@@ -257,7 +261,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
     }
     // Not specialize if generic types are no specialized
     for (auto &gt : genericTypes.specializedTypes) {
-        if (gt->kind == ResolvedTypeKind::Generic) {
+        if (gt->kind == ResolvedTypeKind::AnyType) {
             debug_msg("Not specialize generic types are no specialized");
             return nullptr;
         }
@@ -313,7 +317,7 @@ ResolvedSpecializedFunctionDecl *Sema::specialize_generic_function(const SourceL
         }
 
         if (resolvedParam->isComptime) {
-            bool isTypeComptime = funcDecl.params[i]->type->kind == ResolvedTypeKind::Generic &&
+            bool isTypeComptime = funcDecl.params[i]->type->kind == ResolvedTypeKind::AnyType &&
                                   funcDecl.params[i]->resolvedTypeExpr &&
                                   funcDecl.params[i]->resolvedTypeExpr->resolvedType->kind == ResolvedTypeKind::Type;
             if (isTypeComptime) {
@@ -392,9 +396,12 @@ ptr<ResolvedVarDecl> Sema::resolve_var_decl(const VarDecl &varDecl) {
         }
     }
     if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::AnyType) {
-        return report(varDecl.location,
-                      "variable '" + varDecl.identifier +
-                          "' cannot have 'anytype' type, 'anytype' is only allowed in function parameters");
+        if (!m_currentFunction || (!dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction) &&
+                                   !dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction))) {
+            return report(varDecl.location,
+                          "variable '" + varDecl.identifier +
+                              "' cannot have 'anytype' type, 'anytype' is only allowed in function parameters");
+        }
     }
     if (resolvedvarType && resolvedvarType->resolvedType->kind == ResolvedTypeKind::Void) {
         return report(varDecl.location, "variable '" + varDecl.identifier + "' has invalid '" +

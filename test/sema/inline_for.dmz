@@ -21,7 +21,7 @@ fn main() -> void {
 // CHECK-NEXT:               | value: 2
 // CHECK-NEXT:       ResolvedInlineForStmt
 // CHECK-NEXT:         ResolvedDeclRefExpr:tuple.i32.i32{} t
-// CHECK-NEXT:         ResolvedCaptureDecl:generic x
+// CHECK-NEXT:         ResolvedCaptureDecl:anytype x
 // CHECK-NEXT:         ResolvedBlock
 // CHECK-NEXT:           ResolvedBlock
 // CHECK-NEXT:             ResolvedDeclStmt i32

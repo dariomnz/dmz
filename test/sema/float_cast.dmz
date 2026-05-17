@@ -13,17 +13,17 @@ fn main() -> void {
 
 // CHECK:         ResolvedVarDecl:f32 b
 // CHECK-NEXT:           ResolvedCallExpr:f32
-// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:anytype @floatCast
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
 // CHECK:         ResolvedVarDecl:f64 c
 // CHECK-NEXT:           ResolvedCallExpr:f64
-// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:anytype @floatCast
 // CHECK-NEXT:             ResolvedDeclRefExpr:i32 a
 // CHECK:         ResolvedVarDecl:f64 e
 // CHECK-NEXT:           ResolvedCallExpr:f64
-// CHECK-NEXT:             ResolvedDeclRefExpr:generic @floatCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:anytype @floatCast
 // CHECK-NEXT:             ResolvedDeclRefExpr:f32 d
 // CHECK:         ResolvedVarDecl:i32 f
 // CHECK-NEXT:           ResolvedCallExpr:i32
-// CHECK-NEXT:             ResolvedDeclRefExpr:generic @intCast
+// CHECK-NEXT:             ResolvedDeclRefExpr:anytype @intCast
 // CHECK-NEXT:             ResolvedDeclRefExpr:f32 d

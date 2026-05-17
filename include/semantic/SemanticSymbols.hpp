@@ -93,7 +93,7 @@ struct ResolvedGenericTypeDecl : public ResolvedDecl {
     ptr<ResolvedType> specializedType;
 
     ResolvedGenericTypeDecl(SourceLocation location, std::string_view identifier)
-        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeGeneric>(location, this), false, false) {}
+        : ResolvedDecl(location, identifier, makePtr<ResolvedTypeAnyType>(location, this), false, false) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
 
@@ -559,7 +559,7 @@ struct ResolvedAutoMemberExpr : public ResolvedExpr {
     ResolvedFieldDecl *fieldDecl = nullptr;
 
     ResolvedAutoMemberExpr(SourceLocation location, std::string_view field)
-        : ResolvedExpr(location, makePtr<ResolvedTypeGeneric>(location, nullptr)), field(field) {}
+        : ResolvedExpr(location, makePtr<ResolvedTypeAnyType>(location, nullptr)), field(field) {}
 
     void dump(size_t level = 0, bool onlySelf = false) const override;
     DMZ_TYPE_NAME();

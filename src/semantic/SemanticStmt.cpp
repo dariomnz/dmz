@@ -329,7 +329,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             auto resolvedBody =
                 makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody),
                                        std::vector<ptr<ResolvedDeferRefStmt>>{}, std::move(takenForIterationScope));
-            auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr);
+            auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location, nullptr);
             auto resolvedCapture = makePtr<ResolvedCaptureDecl>(
                 forStmt.captures[0]->location, forStmt.captures[0]->identifier, std::move(captureType));
 
@@ -343,7 +343,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         }
 
         if (!structType) {
-            if (condTypeCheck->type->kind == ResolvedTypeKind::Generic) {
+            if (condTypeCheck->type->kind == ResolvedTypeKind::AnyType) {
                 ScopeRAII iterationScope(*this);
                 auto takenIterationScope = iterationScope.takeScope();
                 auto captureType = condTypeCheck->type->clone();
@@ -397,7 +397,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
         auto resolvedBody =
             makePtr<ResolvedBlock>(forStmt.location, std::move(unrolledBody), std::vector<ptr<ResolvedDeferRefStmt>>{},
                                    std::move(takenForIterationScope));
-        auto captureType = makePtr<ResolvedTypeGeneric>(forStmt.captures[0]->location, nullptr);
+        auto captureType = makePtr<ResolvedTypeAnyType>(forStmt.captures[0]->location, nullptr);
         auto resolvedCapture = makePtr<ResolvedCaptureDecl>(forStmt.captures[0]->location,
                                                             forStmt.captures[0]->identifier, std::move(captureType));
 
@@ -444,7 +444,7 @@ ptr<ResolvedStmt> Sema::resolve_for_stmt(const ForStmt &forStmt) {
             captureType = determine_for_range_capture_type(*rangeExpr, forStmt.captures[i]->location);
         } else if (auto sliceExpr = dynamic_cast<ResolvedTypeSlice *>(resolvedCond->type.get())) {
             captureType = makePtr<ResolvedTypePointer>(forStmt.captures[i]->location, sliceExpr->sliceType->clone());
-        } else if (resolvedCond->type->kind == ResolvedTypeKind::Generic) {
+        } else if (resolvedCond->type->kind == ResolvedTypeKind::AnyType) {
             captureType = resolvedCond->type->clone();
         } else {
             return report(resolvedCond->location,
@@ -538,7 +538,7 @@ ptr<ResolvedAssignment> Sema::resolve_assignment(const Assignment &assignment) {
 
     if (auto assigmentOperator = dynamic_cast<const AssignmentOperator *>(&assignment)) {
         if (resolvedLHS->type->kind != ResolvedTypeKind::Number &&
-            resolvedLHS->type->kind != ResolvedTypeKind::Generic) {
+            resolvedLHS->type->kind != ResolvedTypeKind::AnyType) {
             return report(resolvedLHS->location, "cannot use operator '" + get_op_str(assigmentOperator->op) +
                                                      "' in type '" + resolvedLHS->type->to_str() + "'");
         }

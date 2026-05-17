@@ -390,7 +390,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
                 retPtr = ret.get();
                 return debug_ret(ret);
             } else {
-                ret = makePtr<ResolvedTypeGeneric>(type.location, genDecl);
+                ret = makePtr<ResolvedTypeAnyType>(type.location, genDecl);
                 retPtr = ret.get();
                 return debug_ret(ret);
             }
@@ -527,7 +527,7 @@ ptr<ResolvedType> Sema::resolve_type(const Expr &type) {
             if (!ret && m_currentFunction &&
                 (dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction) ||
                  dynamic_cast<ResolvedSpecializedFunctionDecl *>(m_currentFunction))) {
-                ret = makePtr<ResolvedTypeGeneric>(callType->location, nullptr);
+                ret = makePtr<ResolvedTypeAnyType>(callType->location, nullptr);
             }
         }
         if (ret) {
@@ -554,13 +554,13 @@ ptr<ResolvedType> Sema::re_resolve_type(const ResolvedType &type) {
     ResolvedType *retPtr = nullptr;
     debug_func(type.className() << " '" << type.to_str() << "' -> " << (retPtr ? retPtr->className() : "nullptr")
                                 << " '" << (retPtr ? retPtr->to_str() : "nullptr") << "'");
-    if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&type)) {
-        if (genType->decl && genType->decl->specializedType) {
-            ret = re_resolve_type(*genType->decl->specializedType);
+    if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&type)) {
+        if (anyType->decl && anyType->decl->specializedType) {
+            ret = re_resolve_type(*anyType->decl->specializedType);
             retPtr = ret.get();
             return ret;
         } else {
-            ret = genType->clone();
+            ret = anyType->clone();
             retPtr = ret.get();
             return ret;
         }
@@ -1022,7 +1022,7 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                 } else if (decl->identifier == "@asm") {
                     callExpr->type = expectedType.clone();
                     if (auto funcType = dynamic_cast<ResolvedTypeFunction *>(callExpr->type.get())) {
-                        if (funcType->returnType->kind == ResolvedTypeKind::Generic) {
+                        if (funcType->returnType->kind == ResolvedTypeKind::AnyType) {
                             report(callExpr->location, "@asm must have a concrete return type");
                             return false;
                         }
@@ -1048,13 +1048,13 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                         callExpr->arguments[0]->type->kind != ResolvedTypeKind::Number &&
                         callExpr->arguments[0]->type->kind != ResolvedTypeKind::Bool &&
                         callExpr->arguments[0]->type->kind != ResolvedTypeKind::Enum &&
-                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::Generic) {
+                        callExpr->arguments[0]->type->kind != ResolvedTypeKind::AnyType) {
                         report(callExpr->location, "cannot cast from non-numeric type '" +
                                                        callExpr->arguments[0]->type->to_str() + "' into numeric");
                         return false;
                     }
                     if (expectedType.kind == ResolvedTypeKind::Number || expectedType.kind == ResolvedTypeKind::Bool ||
-                        expectedType.kind == ResolvedTypeKind::Enum || expectedType.kind == ResolvedTypeKind::Generic) {
+                        expectedType.kind == ResolvedTypeKind::Enum || expectedType.kind == ResolvedTypeKind::AnyType) {
                         callExpr->type = expectedType.clone();
                     } else {
                         report(callExpr->location,
@@ -1064,7 +1064,7 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                 } else if (decl->identifier == "@floatCast") {
                     // Infer target numeric type from context
                     if (expectedType.kind == ResolvedTypeKind::Number ||
-                        expectedType.kind == ResolvedTypeKind::Generic) {
+                        expectedType.kind == ResolvedTypeKind::AnyType) {
                         callExpr->type = expectedType.clone();
                     } else {
                         report(callExpr->location,

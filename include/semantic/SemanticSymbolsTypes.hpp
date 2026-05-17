@@ -16,7 +16,6 @@ enum class ResolvedTypeKind {
     Union,
     EnumDecl,
     Enum,
-    Generic,
     Specialized,
     Error,
     ErrorGroup,
@@ -206,19 +205,6 @@ struct ResolvedTypeEnum : public ResolvedTypeStruct {
 };
 
 struct ResolvedGenericTypeDecl;  // Forward declaration
-struct ResolvedTypeGeneric : public ResolvedType {
-    ResolvedGenericTypeDecl *decl;
-    ResolvedTypeGeneric(SourceLocation location, ResolvedGenericTypeDecl *decl)
-        : ResolvedType(ResolvedTypeKind::Generic, std::move(location)), decl(decl) {}
-
-    bool equal(const ResolvedType &other) const override;
-    bool compare(const ResolvedType &other) const override;
-    ptr<ResolvedType> clone() const override;
-    void dump(size_t level = 0) const override;
-    std::string to_str() const override;
-    DMZ_TYPE_NAME();
-    bool is_generic() const override;
-};
 
 struct ResolvedTypeSpecialized : public ResolvedType {
     std::vector<ptr<ResolvedType>> specializedTypes;
@@ -432,7 +418,9 @@ struct ResolvedTypeComptimeValue : public ResolvedType {
 };
 
 struct ResolvedTypeAnyType : public ResolvedType {
-    ResolvedTypeAnyType(SourceLocation location) : ResolvedType(ResolvedTypeKind::AnyType, std::move(location)) {}
+    ResolvedGenericTypeDecl *decl = nullptr;
+    ResolvedTypeAnyType(SourceLocation location, ResolvedGenericTypeDecl *decl = nullptr)
+        : ResolvedType(ResolvedTypeKind::AnyType, std::move(location)), decl(decl) {}
 
     bool equal(const ResolvedType &other) const override;
     bool compare(const ResolvedType &other) const override;

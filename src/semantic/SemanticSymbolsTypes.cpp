@@ -414,35 +414,6 @@ std::string ResolvedTypeEnum::to_str() const {
     return decl->name() + "{}";
 }
 
-bool ResolvedTypeGeneric::equal(const ResolvedType &other) const {
-    debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);
-    if (auto genType = dynamic_cast<const ResolvedTypeGeneric *>(&other)) {
-        debug_msg("decl " << decl << " vs " << genType->decl << " location " << location << " " << genType->location);
-        debug_msg("location generic decls " << decl->location << " " << genType->decl->location);
-        return debug_ret(decl == genType->decl);
-    } else {
-        return debug_ret(false);
-    }
-}
-
-bool ResolvedTypeGeneric::compare([[maybe_unused]] const ResolvedType &other) const {
-    debug_func("ResolvedTypeGeneric " << to_str() << " " << other.to_str() << " " << location);
-    return debug_ret(true);
-}
-
-ptr<ResolvedType> ResolvedTypeGeneric::clone() const {
-    debug_func("ResolvedTypeGeneric " << location);
-    return makePtr<ResolvedTypeGeneric>(location, decl);
-}
-
-void ResolvedTypeGeneric::dump(size_t level) const {
-    std::cerr << indent(level) << "ResolvedTypeGeneric " << to_str() << "\n";
-}
-
-std::string ResolvedTypeGeneric::to_str() const { return decl ? decl->name() : "generic"; }
-
-bool ResolvedTypeGeneric::is_generic() const { return debug_ret(true); }
-
 bool ResolvedTypeSpecialized::equal(const ResolvedType &other) const {
     debug_func("ResolvedTypeSpecialized " << to_str() << " " << other.to_str() << " " << location);
     if (auto specType = dynamic_cast<const ResolvedTypeSpecialized *>(&other)) {
@@ -957,14 +928,26 @@ void ResolvedTypeComptimeValue::dump(size_t level) const {
 
 std::string ResolvedTypeComptimeValue::to_str() const { return value->to_str(); }
 
-bool ResolvedTypeAnyType::equal(const ResolvedType &other) const { return other.kind == ResolvedTypeKind::AnyType; }
+bool ResolvedTypeAnyType::equal(const ResolvedType &other) const {
+    debug_func("ResolvedTypeAnyType " << to_str() << " " << other.to_str() << " " << location);
+    if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&other)) {
+        return debug_ret(decl == anyType->decl);
+    } else {
+        return debug_ret(false);
+    }
+}
 
 bool ResolvedTypeAnyType::compare(const ResolvedType &) const { return true; }
 
-ptr<ResolvedType> ResolvedTypeAnyType::clone() const { return makePtr<ResolvedTypeAnyType>(location); }
+ptr<ResolvedType> ResolvedTypeAnyType::clone() const {
+    debug_func("ResolvedTypeAnyType " << location);
+    return makePtr<ResolvedTypeAnyType>(location, decl);
+}
 
-void ResolvedTypeAnyType::dump(size_t level) const { std::cerr << indent(level) << "ResolvedTypeAnyType\n"; }
+void ResolvedTypeAnyType::dump(size_t level) const {
+    std::cerr << indent(level) << "ResolvedTypeAnyType " << to_str() << "\n";
+}
 
-std::string ResolvedTypeAnyType::to_str() const { return "anytype"; }
+std::string ResolvedTypeAnyType::to_str() const { return decl ? decl->name() : "anytype"; }
 
 }  // namespace DMZ
