@@ -80,14 +80,15 @@ llvm::Function *Codegen::generate_function_decl(const ResolvedFuncDecl &function
     if (dynamic_cast<const ResolvedGenericFunctionDecl *>(&functionDecl)) {
         return nullptr;
     }
-
-    auto llvmFnDecl = m_module->getFunction(generate_decl_name(functionDecl));
+    std::string funcName = generate_decl_name(functionDecl);
+    auto llvmFnDecl = m_module->getFunction(funcName);
     if (llvmFnDecl) return llvmFnDecl;
 
     auto fnType = functionDecl.getFnType();
 
     auto *type = generate_function_type(*fnType);
-    std::string funcName = generate_decl_name(functionDecl);
+    llvmFnDecl = m_module->getFunction(funcName);
+    if (llvmFnDecl) return llvmFnDecl;
     auto *fn = llvm::Function::Create(type, llvm::Function::ExternalLinkage, funcName, *m_module);
     fn->setAttributes(construct_attr_list(*fnType));
 
