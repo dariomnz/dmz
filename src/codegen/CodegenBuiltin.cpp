@@ -424,8 +424,15 @@ llvm::Value *Codegen::generate_builtin_simdiota(const ResolvedCallExpr &callExpr
 
 std::vector<const ResolvedTestDecl *> Codegen::get_tests() {
     if (cached_tests.empty()) {
+        auto sourcePath = m_module->getSourceFileName();
         for (auto &decl : m_resolvedTree) {
             if (auto *moduleDecl = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
+                bool isRoot = (moduleDecl->module_path == sourcePath);
+                bool inTestDir = !m_testDir.empty() && [&]() {
+                    auto rel = std::filesystem::relative(moduleDecl->module_path, m_testDir);
+                    return !rel.empty() && !rel.string().starts_with("..");
+                }();
+                if (!isRoot && !inTestDir) continue;
                 for (auto &modDecl : moduleDecl->declarations) {
                     if (auto testDecl = dynamic_cast<ResolvedTestDecl *>(modDecl.get())) {
                         cached_tests.emplace_back(testDecl);

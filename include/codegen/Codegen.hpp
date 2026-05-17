@@ -18,6 +18,7 @@ class Codegen {
     std::vector<ptr<ResolvedDecl>> m_resolvedTree;
     bool m_noRemoveUnused;
     bool m_isModule;
+    std::filesystem::path m_testDir;
 
     ptr<llvm::LLVMContext> m_context;
     llvm::IRBuilder<> m_builder;
@@ -83,7 +84,7 @@ class Codegen {
 
    public:
     Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
-            bool noRemoveUnused, bool isModule);
+            bool noRemoveUnused, bool isModule, std::filesystem::path testDir = {});
 
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> generate_ir(bool runTest,
                                                                      const std::string &optimizationLevel);

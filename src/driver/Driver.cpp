@@ -298,7 +298,7 @@ std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> Driver::codegen_pass(
     std::vector<ptr<ResolvedModuleDecl>> resolvedTree) {
     debug_func("");
     Codegen codegen(std::move(resolvedTree), m_options.source.c_str(), m_options.debugSymbols, m_options.noRemoveUnused,
-                    m_options.isModule);
+                    m_options.isModule, m_options.testDir);
     std::pair<ptr<llvm::LLVMContext>, ptr<llvm::Module>> module =
         codegen.generate_ir(m_options.test, m_options.optimizationLevel);
 

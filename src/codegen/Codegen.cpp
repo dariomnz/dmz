@@ -25,10 +25,11 @@
 
 namespace DMZ {
 Codegen::Codegen(std::vector<ptr<ResolvedModuleDecl>> resolvedTree, std::string_view sourcePath, bool debugSymbols,
-                 bool noRemoveUnused, bool isModule)
+                 bool noRemoveUnused, bool isModule, std::filesystem::path testDir)
     : m_resolvedTree(move_vector_ptr<ResolvedModuleDecl, ResolvedDecl>(resolvedTree)),
       m_noRemoveUnused(noRemoveUnused),
       m_isModule(isModule),
+      m_testDir(std::move(testDir)),
       m_context(makePtr<llvm::LLVMContext>()),
       m_builder(*m_context),
       m_module(makePtr<llvm::Module>("<translation_unit>", *m_context)),
