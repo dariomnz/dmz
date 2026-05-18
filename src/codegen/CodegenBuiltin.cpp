@@ -69,6 +69,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_intCast(call);
     } else if (builtin.identifier == "@floatCast") {
         return generate_builtin_floatCast(call);
+    } else if (builtin.identifier == "@bitCast") {
+        return generate_builtin_bitCast(call);
     } else if (builtin.identifier == "@sqrt") {
         return generate_builtin_sqrt(call);
     }
@@ -615,6 +617,14 @@ llvm::Value *Codegen::generate_builtin_floatCast(const ResolvedCallExpr &call) {
     if (call.arguments.empty()) dmz_unreachable(call.location, "@floatCast expects 1 argument");
     auto val = generate_expr(*call.arguments[0]);
     return cast_to(val, *call.arguments[0]->type, *call.type);
+}
+
+llvm::Value *Codegen::generate_builtin_bitCast(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "@bitCast expects 1 argument");
+    auto val = generate_expr(*call.arguments[0]);
+    auto targetLLVMType = generate_type(*call.type);
+    return m_builder.CreateBitCast(val, targetLLVMType);
 }
 
 llvm::Value *Codegen::generate_builtin_asm(const ResolvedCallExpr &call) {

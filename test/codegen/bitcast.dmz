@@ -1,0 +1,19 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+
+fn main() -> void {
+    let bits: u32 = 0x7F800000;
+    let f: f32 = @bitCast(bits);
+
+    // CHECK: bitcast i32 %{{.*}} to float
+
+    printf("inf32: %f\n", f);
+
+    let fval: f32 = 3.14;
+    let ibits: u32 = @bitCast(fval);
+
+    // CHECK: bitcast float %{{.*}} to i32
+
+    printf("bits of 3.14: 0x%x\n", ibits);
+}

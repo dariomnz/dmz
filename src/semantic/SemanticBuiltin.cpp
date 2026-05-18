@@ -386,6 +386,19 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
             debug_msg("created @floatCast");
             return &funcDecl;
         }
+    } else if (fnName == "@bitCast") {
+        // @bitCast(val) -> TargetType (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "val", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @bitCast");
+        return &funcDecl;
     } else if (fnName == "@sqrt") {
         // @sqrt(value) -> value  (target inferred from context)
         std::vector<ptr<ResolvedParamDecl>> params;
@@ -1050,6 +1063,30 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         if (valArg->type->kind != ResolvedTypeKind::Number && valArg->type->kind != ResolvedTypeKind::AnyType) {
             return report(valArg->location,
                           "@floatCast: argument must be numeric, got '" + valArg->type->to_str() + "'");
+        }
+
+        // Return type is generic for now, will be inferred in perform_implicit_cast
+        auto returnType = makePtr<ResolvedTypeAnyType>(call.location);
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(valArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
+    } else if (resolvedCallee.identifier == "@bitCast") {
+        if (resolvedArguments.size() != 1) {
+            return report(call.location, "@bitCast expects exactly 1 argument: (val)");
+        }
+        auto &valArg = resolvedArguments[0];
+
+        if (valArg->type->kind != ResolvedTypeKind::Number &&
+            valArg->type->kind != ResolvedTypeKind::Pointer &&
+            valArg->type->kind != ResolvedTypeKind::Bool &&
+            valArg->type->kind != ResolvedTypeKind::Simd &&
+            valArg->type->kind != ResolvedTypeKind::AnyType) {
+            return report(valArg->location,
+                          "@bitCast: argument must be a number, pointer, or SIMD type, got '" +
+                              valArg->type->to_str() + "'");
         }
 
         // Return type is generic for now, will be inferred in perform_implicit_cast

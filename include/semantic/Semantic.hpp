@@ -83,7 +83,7 @@ class Sema {
         {"@testNum", nullptr},      {"@testRun", nullptr},    {"@testName", nullptr},    {"@simdLoad", nullptr},
         {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@simdShuffle", nullptr}, {"@compileError", nullptr},
         {"@compileLog", nullptr},   {"@asm", nullptr},        {"@ptrCast", nullptr},     {"@intCast", nullptr},
-        {"@floatCast", nullptr},    {"@sqrt", nullptr},
+        {"@floatCast", nullptr},    {"@bitCast", nullptr},    {"@sqrt", nullptr},
     };
 
    public:

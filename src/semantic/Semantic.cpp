@@ -1005,6 +1005,24 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
                                "cannot cast to non-numeric type '" + expectedType.to_str() + "' using @floatCast");
                         return false;
                     }
+                } else if (decl->identifier == "@bitCast") {
+                    // Infer target type from context
+                    if (!callExpr->arguments.empty()) {
+                        auto &valArg = callExpr->arguments[0];
+                        if (valArg->type->kind != ResolvedTypeKind::AnyType &&
+                            expectedType.kind != ResolvedTypeKind::AnyType) {
+                            auto srcSize = CodegenUtils::typeBitSize(*valArg->type);
+                            auto dstSize = CodegenUtils::typeBitSize(expectedType);
+                            if (srcSize != dstSize) {
+                                report(callExpr->location, "@bitCast: source type '" + valArg->type->to_str() + "' (" +
+                                                               std::to_string(srcSize) + " bits) and target type '" +
+                                                               expectedType.to_str() + "' (" + std::to_string(dstSize) +
+                                                               " bits) must have the same size");
+                                return false;
+                            }
+                        }
+                        callExpr->type = expectedType.clone();
+                    }
                 }
             }
         }

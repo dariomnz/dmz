@@ -1,5 +1,7 @@
 #include "semantic/Constexpr.hpp"
 
+#include <bit>
+
 #include "Debug.hpp"
 #include "codegen/CodegenUtils.hpp"
 #include "semantic/Semantic.hpp"
@@ -484,6 +486,34 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                 floatVal = val->getBool() ? 1.0 : 0.0;
             }
             return ComptimeValue(floatVal);
+        } else if (builtin->identifier == "@bitCast") {
+            if (expr.arguments.empty()) return std::nullopt;
+            auto val = evaluate(*expr.arguments[0], allowSideEffects);
+            if (!val) return std::nullopt;
+
+            auto targetType = expr.type.get();
+            auto targetNumType = dynamic_cast<const ResolvedTypeNumber *>(targetType);
+            auto valType = expr.arguments[0]->type.get();
+            auto valNumType = dynamic_cast<const ResolvedTypeNumber *>(valType);
+
+            if (valNumType && targetNumType) {
+                if (valNumType->bitSize != targetNumType->bitSize) return std::nullopt;
+
+                if (val->isInt() && targetNumType->numberKind == ResolvedNumberKind::Float) {
+                    if (targetNumType->bitSize == 32)
+                        return ComptimeValue((double)std::bit_cast<float>((uint32_t)(uint64_t)val->getInt()));
+                    if (targetNumType->bitSize == 64)
+                        return ComptimeValue(std::bit_cast<double>((uint64_t)val->getInt()));
+                }
+                if (val->isInt() && targetNumType->numberKind != ResolvedNumberKind::Float) return val;
+                if (val->isFloat() && targetNumType->numberKind == ResolvedNumberKind::Int) {
+                    if (valNumType->bitSize == 32)
+                        return ComptimeValue((int64_t)(uint64_t)std::bit_cast<uint32_t>((float)val->getFloat()));
+                    if (valNumType->bitSize == 64)
+                        return ComptimeValue((int64_t)std::bit_cast<uint64_t>(val->getFloat()));
+                }
+            }
+            return std::nullopt;
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;
