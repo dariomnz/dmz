@@ -1,0 +1,134 @@
+const std = import("std");
+const hittable = import("hittable.dmz");
+const Hittable = hittable.Hittable;
+const HitRecord = hittable.HitRecord;
+const color = import("color.dmz");
+const Color = color.Color;
+const Ray = import("ray.dmz").Ray;
+const Interval = import("interval.dmz").Interval;
+const vec = import("vec.dmz");
+const utils = import("utils.dmz");
+const Vec3 = vec.Vec3;
+
+pub const Camera = struct {
+    // Maximum number of ray bounces into scene
+    max_depth: i32,
+    // Count of random samples for each pixel
+    samples_per_pixel: i32,
+    // Color scale factor for a sum of pixel samples
+    pixel_samples_scale: f64,
+    // Ratio of image width over height
+    aspect_ratio: f64,
+    // Rendered image width in pixel count
+    image_width: i32,
+    // Rendered image height
+    image_height: i32,
+    // Camera center
+    center: Vec3,
+    // Location of pixel 0, 0
+    pixel00_loc: Vec3,
+    // Offset to pixel to the right
+    pixel_delta_u: Vec3,
+    // Offset to pixel below
+    pixel_delta_v: Vec3,
+    pub fn init(aspectRatio: f64, imageWidth: i32, samplesPerPixel: i32, maxDepth: i32) -> @This {
+
+        const imageHeight: i32 = @intCast(@floatCast(imageWidth) / aspectRatio);
+
+        const focalLength = 1.0;
+        const viewportHeight = 2.0;
+        const viewportWidth = viewportHeight * @floatCast(imageWidth) / @floatCast(imageHeight);
+
+        const cameraCenter: Vec3 = {0.0, 0.0, 0.0};
+
+        const viewport_u: Vec3 = {viewportWidth, 0.0, 0.0};
+        const viewport_v: Vec3 = {0.0, -viewportHeight, 0.0};
+
+        const pixel_delta_u = viewport_u / @simdSplat(@floatCast(imageWidth));
+        const pixel_delta_v = viewport_v / @simdSplat(@floatCast(imageHeight));
+
+        const viewport_upper_left = cameraCenter - {0.0, 0.0, focalLength} - viewport_u / @simdSplat(2.0) - viewport_v / @simdSplat(2.0);
+        const pixel00_loc = viewport_upper_left + @simdSplat(0.5) * (pixel_delta_u + pixel_delta_v);
+        return @This{
+            max_depth: maxDepth,
+            samples_per_pixel: samplesPerPixel,
+            pixel_samples_scale: 1.0 / @floatCast(samplesPerPixel),
+            aspect_ratio: aspectRatio,
+            image_width: imageWidth,
+            image_height: imageHeight,
+            center: cameraCenter,
+            pixel00_loc: pixel00_loc,
+            pixel_delta_u: pixel_delta_u,
+            pixel_delta_v: pixel_delta_v,
+        };
+    }
+
+    pub fn render(self: *@This, world: Hittable) -> void {
+        const eBuf: [0]u8 = {};
+        const e = std.io.stderr.writer(eBuf[0..0]);
+        defer e.flush();
+
+        const wBuf: [4096]u8 = {};
+        const w = std.io.stdout.writer(wBuf[0..@sizeof(wBuf)]);
+        defer w.flush();
+
+        std.fmt.fmt(w, "P3\n{d} {d}\n255\n", .{self.image_width, self.image_height});
+
+        for (0..self.image_height) |j| {
+            std.fmt.fmt(e, "\rScanlines remaining: {d}\033[K", .{self.image_height - j});
+
+            for (0..self.image_width) |i| {
+                let pixelColor: Color = {0, 0, 0};
+                for (0..self.samples_per_pixel) |sample| {
+                    const r = self.getRay(i, j);
+                    pixelColor = pixelColor + self.rayColor(r, self.max_depth, world);
+                }
+                color.fmt(w, pixelColor * @simdSplat(self.pixel_samples_scale));
+
+                // const pixelCenter = self.pixel00_loc + (@simdSplat(@floatCast(i)) * self.pixel_delta_u) + (@simdSplat(@floatCast(j)) * self.pixel_delta_v);
+                // const ray_direction = pixelCenter - self.center;
+                // const r: Ray = Ray.init(self.center, ray_direction);
+
+                // const pixelColor = self.rayColor(r, world);
+                // color.fmt(w, pixelColor);
+            }
+        }
+        std.fmt.fmt(e, "\rDone.\033[K\n", .{});
+    }
+
+    pub fn rayColor(self: *@This, r: Ray, depth: i32, world: Hittable) -> Color {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0) return {0, 0, 0};
+
+        const rec: HitRecord = {};
+        if (world.hit(r, Interval{min: 0.001, max: std.math.inf(f64)}, &rec)) {
+            // const direction = vec.randOnHemisphere(rec.normal);
+            const direction = rec.normal + vec.randUnit();
+            return @simdSplat(0.5) * self.rayColor(Ray.init(rec.p, direction), depth - 1, world);
+            // return @simdSplat(0.5) * (rec.normal + @simdSplat(1.0));
+        }
+
+        const unit_direction = vec.unit(r.dir);
+        const a = 0.5 * (vec.y(unit_direction) + 1.0);
+        return @simdSplat(1.0 - a) * {1.0, 1.0, 1.0} + @simdSplat(a) * {0.5, 0.7, 1.0};
+    }
+
+    pub fn getRay(self: *@This, i: i32, j: i32) -> Ray {
+        // Construct a camera ray originating from the origin and directed at randomly sampled
+        // point around the pixel location i, j.
+
+        const offset = self.sampleSquare();
+        const pixel_sample = self.pixel00_loc + (@simdSplat(@floatCast(i) + vec.x(offset)) * self.pixel_delta_u) +
+            (@simdSplat(@floatCast(j) + vec.y(offset)) * self.pixel_delta_v);
+
+        const ray_origin = self.center;
+        const ray_direction = pixel_sample - ray_origin;
+
+        return Ray.init(ray_origin, ray_direction);
+    }
+
+    pub fn sampleSquare(self: *@This) -> Vec3 {
+        // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+        return {utils.randf64() - 0.5, utils.randf64() - 0.5, 0.0};
+    }
+};

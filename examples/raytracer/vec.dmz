@@ -1,6 +1,7 @@
 const std = import("std");
+const utils = import("utils.dmz");
 
-pub const Vec3 = @simd<f64, 3>;
+pub const Vec3 = @simd(f64, 3);
 
 pub fn x(v: Vec3) -> f64 {
     return v[0];
@@ -29,10 +30,43 @@ pub fn dot(u: Vec3, v: Vec3) -> f64 {
 }
 
 pub fn cross(u: Vec3, v: Vec3) -> Vec3 {
-    const ret = {u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]};
-    return @simdLoad(&ret[0]);
+    const u_yzx = @simdShuffle(u, @simdSplat(0.0), {1, 2, 0});
+    const v_zxy = @simdShuffle(v, @simdSplat(0.0), {2, 0, 1});
+
+    const u_zxy = @simdShuffle(u, @simdSplat(0.0), {2, 0, 1});
+    const v_yzx = @simdShuffle(v, @simdSplat(0.0), {1, 2, 0});
+
+    return (u_yzx * v_zxy) - (u_zxy * v_yzx);
 }
 
-pub fn unitVec(v: Vec3) -> Vec3 {
+pub fn unit(v: Vec3) -> Vec3 {
     return v / @simdSplat(length(v));
+}
+
+pub fn rand() -> Vec3 {
+    return {utils.randf64(), utils.randf64(), utils.randf64()};
+}
+
+pub fn randRange(min: f64, max: f64) -> Vec3 {
+    return {utils.randf64Range(min, max), utils.randf64Range(min, max), utils.randf64Range(min, max)};
+}
+
+pub fn randUnit() -> Vec3 {
+    while (true) {
+        const p = randRange(-1.0, 1.0);
+        const lensq = lenghtSquared(p);
+        if (0.00000000001 < lensq && lensq <= 1.0) {
+            return p / @simdSplat(@sqrt(lensq));
+        }
+    }
+}
+
+pub fn randOnHemisphere(normal: Vec3) -> Vec3 {
+    const on_unit_sphere = randUnit();
+    if (dot(on_unit_sphere, normal) > 0.0) {
+        // In the same hemisphere as the normal
+        return on_unit_sphere;
+    } else {
+        return -on_unit_sphere;
+    }
 }

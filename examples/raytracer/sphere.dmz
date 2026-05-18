@@ -1,0 +1,65 @@
+const std = import("std");
+const vec = import("vec.dmz");
+const Vec3 = vec.Vec3;
+const Ray = import("ray.dmz").Ray;
+const Interval = import("interval.dmz").Interval;
+const Material = import("material.dmz").Material;
+
+const hittable = import("hittable.dmz");
+const Hittable = hittable.Hittable;
+const HitRecord = hittable.HitRecord;
+
+pub const Sphere = struct {
+    center: Vec3,
+    radius: f64,
+    mat: *Material,
+
+    pub fn init(center: Vec3, radius: f64) -> @This {
+        let rad = radius;
+        if (rad < 0.0) rad = 0.0;
+        return @This{
+            center: center,
+            radius: rad,
+            mat: @ptrCast(null),
+        };
+    }
+
+    fn hit(self: *@This, r: Ray, ray_t: Interval, hit: *HitRecord) -> bool {
+        const oc: Vec3 = self.center - r.orig;
+        const a = vec.lenghtSquared(r.dir);
+        const h = vec.dot(r.dir, oc);
+        const c = vec.lenghtSquared(oc) - self.radius * self.radius;
+
+        const discriminant = h * h - a * c;
+        if (discriminant < 0.0) {
+            return false;
+        }
+
+        const sqrtd = @sqrt(discriminant);
+
+        // Find the nearest root that lies in the acceptable range.
+        let root = (h - sqrtd) / a;
+        if (!ray_t.surrounds(root)) {
+            root = (h + sqrtd) / a;
+            if (!ray_t.surrounds(root)) {
+                return false;
+            }
+        }
+
+        hit.t = root;
+        hit.p = r.at(hit.t);
+        const outwardNormal = (hit.p - self.center) / @simdSplat(self.radius);
+        hit.setFaceNormal(r, outwardNormal);
+        hit.mat = self.mat;
+        return true;
+    }
+
+    pub fn Hittable(self: *@This) -> Hittable {
+        return Hittable{
+            hittable: @ptrCast(self),
+            vtable: Hittable.VTable{
+                hit: @ptrCast(&self.hit),
+            },
+        };
+    }
+};

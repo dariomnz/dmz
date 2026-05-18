@@ -1,18 +1,21 @@
 
 const std = import("std");
 const vec = import("vec.dmz");
+const Interval = import("interval.dmz").Interval;
 
 pub const Color = vec.Vec3;
 
-pub fn init(r:f64, g:f64,b:f64) -> Color {
-    const rgb = {r,g,b};
-    return @simdLoad(&rgb[0]);
+pub fn linearToGamma(linear_component: f64) -> f64 {
+    if (linear_component > 0.0) {
+        return @sqrt(linear_component);
+    }
+    return 0.0;
 }
 
+const intensity = Interval{min: 0.000, max: 0.999};
 pub fn fmt(w: std.io.Writer, color: Color) -> void {
-    const rgb = color * @simdSplat(255.999);
-    const r: u8 = @intCast(rgb[0]);
-    const g: u8 = @intCast(rgb[1]);
-    const b: u8 = @intCast(rgb[2]);
+    const r: u8 = @intCast(256.0 * @floatCast(intensity.clamp(linearToGamma(color[0]))));
+    const g: u8 = @intCast(256.0 * @floatCast(intensity.clamp(linearToGamma(color[1]))));
+    const b: u8 = @intCast(256.0 * @floatCast(intensity.clamp(linearToGamma(color[2]))));
     std.fmt.fmt(w, "{} {} {}\n", .{r, g, b});
 }

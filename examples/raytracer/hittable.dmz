@@ -1,0 +1,84 @@
+const std = import("std");
+const vec = import("vec.dmz");
+const Vec3 = vec.Vec3;
+const Ray = import("ray.dmz").Ray;
+const Interval = import("interval.dmz").Interval;
+const Material = import("material.dmz").Material;
+
+pub const HitRecord = struct {
+    p: Vec3,
+    normal: Vec3,
+    mat: *Material,
+    t: f64,
+
+    frontFace: bool,
+
+    pub fn setFaceNormal(self: *@This, r: Ray, outwardNormal: Vec3) -> void {
+        self.frontFace = vec.dot(r.dir, outwardNormal) < 0.0;
+        if (self.frontFace) {
+            self.normal = outwardNormal;
+        } else {
+            self.normal = -outwardNormal;
+        }
+    }
+};
+
+pub const Hittable = struct {
+    pub const VTable = struct {
+        hit: *fn(*void, Ray, Interval, *HitRecord)->bool,
+    };
+
+    hittable: *void,
+    vtable: VTable,
+
+    pub fn hit(self: *@This, r: Ray, ray_t: Interval, hit: *HitRecord) -> bool {
+        if (self.vtable.hit) return self.vtable.hit(self.hittable, r, ray_t, hit);
+        return false;
+    }
+};
+
+pub const HittableList = struct {
+
+    list: std.Vec(Hittable),
+
+    pub fn init(alloc: std.mem.Allocator) -> @This {
+        return @This{
+            list: std.Vec(Hittable).init(alloc),
+        };
+    }
+
+    pub fn deinit(self: *@This) -> void {
+        self.list.deinit();
+    }
+
+    pub fn clear(self: *@This) -> void {
+        self.list.clear();
+    }
+
+    pub fn add(self: *@This, hittable: Hittable) -> !void {
+        return self.list.add(hittable);
+    }
+
+    pub fn hit(self: *@This, r: Ray, ray_t: Interval, hit: *HitRecord) -> bool {
+        let hitAnything = false;
+        let closest_so_far = ray_t.max;
+        let temp_rec: HitRecord = {};
+        for (self.list.slice()) |item| {
+            if (item.hit(r, Interval{min: ray_t.min, max: closest_so_far}, &temp_rec)) {
+                hitAnything = true;
+                closest_so_far = temp_rec.t;
+                hit.* = temp_rec;
+            }
+        }
+        return hitAnything;
+    }
+
+    pub fn Hittable(self: *@This) -> Hittable {
+        return Hittable{
+            hittable: @ptrCast(self),
+            vtable: Hittable.VTable{
+                hit: @ptrCast(&self.hit),
+            },
+        };
+    }
+};

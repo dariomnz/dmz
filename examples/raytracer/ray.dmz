@@ -2,7 +2,7 @@
 const vec = import("vec.dmz");
 const Vec3 = vec.Vec3;
 
-const Ray = struct {
+pub const Ray = struct {
     orig: Vec3,
     dir: Vec3,
 

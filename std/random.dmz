@@ -4,6 +4,8 @@ pub fn simpleRand() -> u32 {
     return seed;
 }
 
+pub const simpleRandMAX: u32 = 0xFFFFFFFF; 
+
 test "simple random" {
     const std = import("std");
     const len: u32 = 100;

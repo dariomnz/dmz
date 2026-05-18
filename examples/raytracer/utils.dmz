@@ -1,0 +1,15 @@
+const std = import("std");
+
+pub fn deg_to_rad(degrees: f64) -> f64 {
+    return degrees * std.math.pi / 180.0;
+}
+
+pub fn randf64() -> f64 {
+    // Returns a random real in [0,1).
+    return @floatCast(std.rand.simpleRand()) / (@floatCast(std.rand.simpleRandMAX) + 1.0);
+}
+
+pub fn randf64Range(min: f64, max: f64) -> f64 {
+    // Returns a random real in [min,max).
+    return min + (max - min) * randf64();
+}
