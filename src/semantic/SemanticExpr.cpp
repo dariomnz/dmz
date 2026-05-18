@@ -43,8 +43,10 @@ ptr<ResolvedDeclRefExpr> Sema::resolve_decl_ref_expr(const DeclRefExpr &declRefE
 
     if (!decl->type && !ensure_fully_resolved(*decl)) return nullptr;
 
-    debug_msg("Adding decl ref " << decl->name() << " to pending decls");
-    m_pending_decls.emplace(decl);
+    if (decl->state != ResolvedState::FullyResolved && decl->state != ResolvedState::Error) {
+        debug_msg("Adding decl ref " << decl->name() << " to pending decls");
+        m_pending_decls.emplace(decl);
+    }
     if (!decl->type) {
         decl->dump();
         return report(declRefExpr.location, "could not resolve type for '" + declRefExpr.identifier + "'");
