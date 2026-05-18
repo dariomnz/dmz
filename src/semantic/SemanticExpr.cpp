@@ -423,7 +423,7 @@ ptr<ResolvedExpr> Sema::resolve_expr(const Expr &expr, bool isType) {
     debug_func((m_currentModule ? m_currentModule->module_path : "<no module>")
                << " " << expr.location << " " << expr.className());
     if (const auto *number = dynamic_cast<const IntLiteral *>(&expr)) {
-        int val = 0;
+        int64_t val = 0;
         if (number->value.size() > 2 && number->value[0] == '0' && number->value[1] == 'x') {
             val = std::stoll(number->value, nullptr, 16);
         } else if (number->value.size() > 2 && number->value[0] == '0' && number->value[1] == 'b') {

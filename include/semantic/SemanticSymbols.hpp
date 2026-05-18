@@ -476,9 +476,9 @@ struct ResolvedEnumDecl : public ResolvedStructDecl {
 };
 
 struct ResolvedIntLiteral : public ResolvedExpr {
-    int value;
+    int64_t value;
 
-    ResolvedIntLiteral(SourceLocation location, int value)
+    ResolvedIntLiteral(SourceLocation location, int64_t value)
         : ResolvedExpr(location, makePtr<ResolvedTypeNumber>(location, ResolvedNumberKind::Int, 32)), value(value) {}
 
     bool isLiteral() const override { return true; }

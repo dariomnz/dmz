@@ -186,7 +186,11 @@ llvm::Value *Codegen::generate_unary_operator(const ResolvedUnaryOperator &unop)
     llvm::Value *rhs = generate_expr(*unop.operand, keepPointer);
 
     if (unop.op == TokenType::op_minus) {
-        if (auto typeNum = dynamic_cast<const ResolvedTypeNumber *>(unop.operand->type.get())) {
+        const ResolvedTypeNumber *typeNum = dynamic_cast<const ResolvedTypeNumber *>(unop.operand->type.get());
+        if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(unop.operand->type.get())) {
+            typeNum = dynamic_cast<const ResolvedTypeNumber *>(simdType->simdType.get());
+        }
+        if (typeNum) {
             if (typeNum->numberKind == ResolvedNumberKind::Int || typeNum->numberKind == ResolvedNumberKind::UInt)
                 return m_builder.CreateNeg(rhs);
             else if (typeNum->numberKind == ResolvedNumberKind::Float)
