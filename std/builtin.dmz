@@ -23,13 +23,13 @@ fn printSourceLine(file_path: []u8, line: i32, col: i32) -> void {
     const r = reader.reader(buffer[0..1024]);
 
     let current_line = 1;
+    const isTerminal = std.terminal.isTerminal();
     while (true) {
         const readline = r.readLine() catch |er| {
             return;
         };
         if (current_line == line) {
             let start: usize = 0;
-            const isTerminal = std.terminal.isTerminal();
             if (isTerminal) std.io.print("{s}", .{std.terminal.COLORBLUE});
             start += try std.io.print(" {d}", .{line});
             if (isTerminal) std.io.print("{s}", .{std.terminal.COLORRESET});

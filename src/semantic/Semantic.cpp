@@ -1042,6 +1042,40 @@ bool Sema::perform_implicit_cast(ptr<ResolvedExpr> &expr, const ResolvedType &ex
         }
     }
 
+    if (auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&expectedType)) {
+        if (auto val = cee.evaluate(*expr, false)) {
+            if (val->isArray() && !val->getArray().elements.empty()) {
+                auto &arr = val->getArray();
+                if ((int)arr.elements.size() == simdType->simdSize) {
+                    ComptimeValue::Simd simdVal;
+                    simdVal.elements = arr.elements;
+                    expr->set_constant_value(ComptimeValue(std::move(simdVal)));
+                    expr->type = simdType->clone();
+                    return true;
+                }
+            }
+        }
+        if (auto arrType = dynamic_cast<const ResolvedTypeArray *>(expr->type.get())) {
+            if (arrType->arrayType->compare(*simdType->simdType) &&
+                (simdType->simdSize == 0 || (int)arrType->arraySize == simdType->simdSize)) {
+                expr->type =
+                    simdType->simdSize > 0
+                        ? simdType->clone()
+                        : makePtr<ResolvedTypeSimd>(expr->location, simdType->simdType->clone(), arrType->arraySize);
+                return true;
+            }
+        }
+    }
+
+    if (auto comptimeExpr = dynamic_cast<ResolvedComptimeExpr *>(expr.get())) {
+        bool neededChange = !comptimeExpr->expr->type->equal(expectedType);
+        if (!perform_implicit_cast(comptimeExpr->expr, expectedType)) return false;
+        if (neededChange) {
+            expr->type = comptimeExpr->expr->type->clone();
+            comptimeExpr->set_constant_value(std::nullopt);
+        }
+    }
+
     if (auto arrayInstantiation = dynamic_cast<ResolvedArrayInstantiationExpr *>(expr.get())) {
         if (auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&expectedType)) {
             for (auto &elem : arrayInstantiation->initializers) {

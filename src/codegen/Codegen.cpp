@@ -1083,6 +1083,40 @@ llvm::Value *Codegen::generate_comptimeValue(const SourceLocation &location, con
         }
         return ptr;
     }
+    if (comptimeValue.isSimd()) {
+        auto simdTy = dynamic_cast<const ResolvedTypeSimd *>(&type);
+        if (!simdTy) {
+            dmz_unreachable(location, "expected SIMD type for SIMD comptime value");
+        }
+        auto &simdVal = comptimeValue.getSimd();
+        auto llvmVecTy = generate_type(type);
+        auto llvmElTy = generate_type(*simdTy->simdType);
+        llvm::Value *vec = llvm::UndefValue::get(llvmVecTy);
+        bool isFloatEl = llvmElTy->isFloatingPointTy();
+        for (size_t i = 0; i < simdVal.elements.size() && (int)i < simdTy->simdSize; i++) {
+            llvm::Value *laneVal;
+            auto &elem = simdVal.elements[i];
+            if (elem.isInt()) {
+                if (isFloatEl) {
+                    laneVal = llvm::ConstantFP::get(llvmElTy, (double)elem.getInt());
+                } else {
+                    laneVal = llvm::ConstantInt::get(llvmElTy, elem.getInt());
+                }
+            } else if (elem.isFloat()) {
+                if (isFloatEl) {
+                    laneVal = llvm::ConstantFP::get(llvmElTy, elem.getFloat());
+                } else {
+                    laneVal = llvm::ConstantInt::get(llvmElTy, (int64_t)elem.getFloat());
+                }
+            } else if (elem.isBool()) {
+                laneVal = llvm::ConstantInt::get(llvmElTy, elem.getBool());
+            } else {
+                dmz_unreachable(location, "unsupported SIMD element type in comptime value");
+            }
+            vec = m_builder.CreateInsertElement(vec, laneVal, (uint64_t)i);
+        }
+        return vec;
+    }
     dmz_unreachable(location, "cannot generate comptimeValue " + comptimeValue.to_str() + " of type " + type.to_str());
 }
 

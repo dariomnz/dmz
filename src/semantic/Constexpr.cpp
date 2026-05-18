@@ -119,6 +119,11 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
                 if (idx >= 0 && (size_t)idx < str.size()) {
                     return ComptimeValue((int64_t)str[idx]);
                 }
+            } else if (containerVal->isSimd()) {
+                const auto &simdV = containerVal->getSimd();
+                if (idx >= 0 && (size_t)idx < simdV.elements.size()) {
+                    return simdV.elements[idx];
+                }
             }
         }
         return std::nullopt;
@@ -282,6 +287,76 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             int bit_simd_size = CodegenUtils::target_simd_size();
             int bit_type_size = CodegenUtils::typeBitSize(*targetType);
             return ComptimeValue((int64_t)(bit_simd_size / bit_type_size));
+        } else if (builtin->identifier == "@simdSplat") {
+            auto simdType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+            if (!simdType) return std::nullopt;
+            auto val = evaluate(*expr.arguments[0], allowSideEffects);
+            if (!val) return std::nullopt;
+            int laneCount = simdType->simdSize;
+            if (laneCount <= 0) {
+                int bitCount = CodegenUtils::typeBitSize(*simdType->simdType);
+                if (bitCount <= 0) return std::nullopt;
+                laneCount = CodegenUtils::target_simd_size() / bitCount;
+                if (laneCount <= 0) return std::nullopt;
+            }
+            ComptimeValue::Simd simdVal;
+            simdVal.elements.assign(laneCount, *val);
+            return ComptimeValue(std::move(simdVal));
+        } else if (builtin->identifier == "@simdIota") {
+            auto simdType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+            if (!simdType) return std::nullopt;
+            int laneCount = simdType->simdSize;
+            if (laneCount <= 0) {
+                int bitCount = CodegenUtils::typeBitSize(*simdType->simdType);
+                if (bitCount <= 0) return std::nullopt;
+                laneCount = CodegenUtils::target_simd_size() / bitCount;
+                if (laneCount <= 0) return std::nullopt;
+            }
+            ComptimeValue::Simd simdVal;
+            for (int i = 0; i < laneCount; i++) {
+                simdVal.elements.emplace_back((int64_t)i);
+            }
+            return ComptimeValue(std::move(simdVal));
+        } else if (builtin->identifier == "@simdSelect") {
+            auto simdType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+            if (!simdType) return std::nullopt;
+            if (expr.arguments.size() < 3) return std::nullopt;
+            auto aVal = evaluate(*expr.arguments[0], allowSideEffects);
+            auto bVal = evaluate(*expr.arguments[1], allowSideEffects);
+            auto maskVal = evaluate(*expr.arguments[2], allowSideEffects);
+            if (!aVal || !bVal || !maskVal) return std::nullopt;
+            if (!aVal->isSimd() || !bVal->isSimd() || !maskVal->isSimd()) return std::nullopt;
+            auto &aSimd = aVal->getSimd();
+            auto &bSimd = bVal->getSimd();
+            auto &maskSimd = maskVal->getSimd();
+            if (aSimd.elements.size() != bSimd.elements.size() || aSimd.elements.size() != maskSimd.elements.size()) {
+                return std::nullopt;
+            }
+            ComptimeValue::Simd result;
+            for (size_t i = 0; i < aSimd.elements.size(); ++i) {
+                bool takeA = maskSimd.elements[i].toInt().value_or(0) != 0;
+                result.elements.push_back(takeA ? aSimd.elements[i] : bSimd.elements[i]);
+            }
+            return ComptimeValue(std::move(result));
+        } else if (builtin->identifier == "@simdLoad") {
+            auto simdType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
+            if (!simdType) return std::nullopt;
+            auto ptrVal = evaluate(*expr.arguments[0], allowSideEffects);
+            if (!ptrVal) return std::nullopt;
+            if (!ptrVal->isArray()) return std::nullopt;
+            auto &arr = ptrVal->getArray();
+            int laneCount = simdType->simdSize;
+            if (laneCount <= 0) {
+                int bitCount = CodegenUtils::typeBitSize(*simdType->simdType);
+                if (bitCount <= 0) return std::nullopt;
+                laneCount = CodegenUtils::target_simd_size() / bitCount;
+                if (laneCount <= 0) return std::nullopt;
+            }
+            ComptimeValue::Simd simdVal;
+            for (int i = 0; i < laneCount && (size_t)i < arr.elements.size(); i++) {
+                simdVal.elements.push_back(arr.elements[i]);
+            }
+            return ComptimeValue(std::move(simdVal));
         } else if (builtin->identifier == "@typeinfo") {
             auto &typeArg = expr.arguments[0];
             ptr<ResolvedType> targetType = typeArg->type->clone();
@@ -529,6 +604,28 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_type(const Re
     return ComptimeValue((int64_t)99);
 }
 
+template <typename T>
+ComptimeValue unaryop_value(SourceLocation loc, TokenType op, T val) {
+    switch (op) {
+        case TokenType::op_minus:
+            return ComptimeValue(-val);
+        case TokenType::op_excla_mark:
+            return ComptimeValue(!val);
+        default:
+            break;
+    }
+
+    if constexpr (std::is_integral_v<T>) {
+        switch (op) {
+            case TokenType::op_tilde:
+                return ComptimeValue(~val);
+            default:
+                break;
+        }
+    }
+    dmz_unreachable(loc, "unexpected binary operator");
+}
+
 std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_unary_operator(const ResolvedUnaryOperator &unop,
                                                                                   bool allowSideEffects) {
     debug_func(unop.location << " " << unop.op << " " << unop.operand << " allowSideEffects: " << allowSideEffects);
@@ -549,21 +646,15 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_unary_operato
         return std::nullopt;
     }
 
-    auto optVal = operandVal->toInt();
-    if (!optVal.has_value()) {
-        if (allowSideEffects) report(unop.location, "unary operand is not an integer");
+    if (operandVal->isInt()) {
+        return unaryop_value(unop.location, unop.op, (int64_t)operandVal->getInt());
+    } else if (operandVal->isBool()) {
+        return unaryop_value(unop.location, unop.op, (int64_t)operandVal->getBool());
+    } else if (operandVal->isFloat()) {
+        return unaryop_value(unop.location, unop.op, (double)operandVal->getFloat());
+    } else {
+        if (allowSideEffects) report(unop.location, "unary operand is not a number");
         return std::nullopt;
-    }
-    int64_t val = optVal.value();
-    switch (unop.op) {
-        case TokenType::op_minus:
-            return ComptimeValue(-val);
-        case TokenType::op_excla_mark:
-            return ComptimeValue(!val);
-        case TokenType::op_tilde:
-            return ComptimeValue(~val);
-        default:
-            dmz_unreachable(unop.location, "unexpected binary operator");
     }
 
     dmz_unreachable(unop.location, "unexpected unary operator");
@@ -657,6 +748,31 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_binary_operat
         if (allowSideEffects) report(binop.rhs->location, "right operand of binary operator cannot be evaluated");
         return std::nullopt;
     }
+
+    if (lhs->isSimd() && rhs->isSimd()) {
+        auto &lhsSimd = lhs->getSimd();
+        auto &rhsSimd = rhs->getSimd();
+        if (lhsSimd.elements.size() != rhsSimd.elements.size()) {
+            report(binop.location, "SIMD operands must have the same number of lanes");
+            return std::nullopt;
+        }
+        ComptimeValue::Simd result;
+        for (size_t i = 0; i < lhsSimd.elements.size(); ++i) {
+            bool isFloatOp = lhsSimd.elements[i].isFloat() || rhsSimd.elements[i].isFloat();
+            if (isFloatOp) {
+                double v1 = lhsSimd.elements[i].getFloat();
+                double v2 = rhsSimd.elements[i].getFloat();
+                result.elements.push_back(binop_value<double>(binop.location, binop.op, v1, v2));
+            } else {
+                auto lhsInt = lhsSimd.elements[i].toInt();
+                auto rhsInt = rhsSimd.elements[i].toInt();
+                if (!lhsInt || !rhsInt) return std::nullopt;
+                result.elements.push_back(binop_value<int64_t>(binop.location, binop.op, *lhsInt, *rhsInt));
+            }
+        }
+        return ComptimeValue(std::move(result));
+    }
+
     bool isFloatOp = lhs->isFloat() || rhs->isFloat();
     if (isFloatOp) {
         double val1 = lhs->getFloat();

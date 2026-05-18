@@ -86,8 +86,8 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
 
         if (!internal_infer_type(inferredTypes, *funcDecl.params[i]->type, *argType, &arguments[i])) {
             return report(arguments[i]->location, "type mismatch during generic inference: expected '" +
-                                                       funcDecl.params[i]->type->to_str() + "', actual '" +
-                                                       argType->to_str() + "'");
+                                                      funcDecl.params[i]->type->to_str() + "', actual '" +
+                                                      argType->to_str() + "'");
         }
     }
 
@@ -119,8 +119,8 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
             if (!val) {
                 if (!(m_currentFunction && dynamic_cast<ResolvedGenericFunctionDecl *>(m_currentFunction))) {
                     return report(arguments[i]->location, "argument for comptime parameter '" +
-                                                               funcDecl.params[i]->identifier +
-                                                               "' must be a compile-time constant");
+                                                              funcDecl.params[i]->identifier +
+                                                              "' must be a compile-time constant");
                 }
             }
             specializedTypes.emplace_back(makePtr<ResolvedTypeComptimeValue>(
@@ -131,8 +131,8 @@ ptr<ResolvedTypeSpecialized> Sema::infer_generic_types(const SourceLocation &loc
     return makePtr<ResolvedTypeSpecialized>(location, std::move(specializedTypes));
 }
 
-bool Sema::internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &inferredTypes,
-                               const ResolvedType &paramType, const ResolvedType &argType, ptr<ResolvedExpr> *argExpr) {
+bool Sema::internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &inferredTypes, const ResolvedType &paramType,
+                               const ResolvedType &argType, ptr<ResolvedExpr> *argExpr) {
     debug_msg("    internal_infer: " << paramType.to_str() << " <-> " << argType.to_str());
 
     if (auto anyType = dynamic_cast<const ResolvedTypeAnyType *>(&paramType)) {
@@ -153,9 +153,8 @@ bool Sema::internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &infer
             }
             if (!matches) {
                 std::string typeName = anyType->name.empty() ? "anytype" : anyType->name;
-                report(anyType->location, "conflict for '" + typeName + "': already '" +
-                                              inferredTypes[slot]->to_str() + "', cannot be '" +
-                                              argType.to_str() + "'");
+                report(anyType->location, "conflict for '" + typeName + "': already '" + inferredTypes[slot]->to_str() +
+                                              "', cannot be '" + argType.to_str() + "'");
             }
             return matches;
         }
@@ -650,8 +649,29 @@ ptr<ResolvedBinaryOperator> Sema::resolve_binary_operator(const BinaryOperator &
     varOrReturn(resolvedLHS, resolve_expr(*binop.lhs));
     varOrReturn(resolvedRHS, resolve_expr(*binop.rhs));
 
-    if (!perform_implicit_cast(resolvedLHS, *resolvedRHS->type)) return nullptr;
-    if (!perform_implicit_cast(resolvedRHS, *resolvedLHS->type)) return nullptr;
+    if (resolvedLHS->type->kind == ResolvedTypeKind::Simd && resolvedRHS->type->kind == ResolvedTypeKind::Array) {
+        if (!perform_implicit_cast(resolvedRHS, *resolvedLHS->type)) return nullptr;
+        if (auto lhsSimd = dynamic_cast<const ResolvedTypeSimd *>(resolvedLHS->type.get())) {
+            if (dynamic_cast<const ResolvedTypeSimd *>(resolvedRHS->type.get())) {
+                if (lhsSimd->simdSize == 0) {
+                    resolvedLHS->type = resolvedRHS->type->clone();
+                }
+            }
+        }
+    } else if (resolvedLHS->type->kind == ResolvedTypeKind::Array &&
+               resolvedRHS->type->kind == ResolvedTypeKind::Simd) {
+        if (!perform_implicit_cast(resolvedLHS, *resolvedRHS->type)) return nullptr;
+        if (auto rhsSimd = dynamic_cast<const ResolvedTypeSimd *>(resolvedRHS->type.get())) {
+            if (dynamic_cast<const ResolvedTypeSimd *>(resolvedLHS->type.get())) {
+                if (rhsSimd->simdSize == 0) {
+                    resolvedRHS->type = resolvedLHS->type->clone();
+                }
+            }
+        }
+    } else {
+        if (!perform_implicit_cast(resolvedLHS, *resolvedRHS->type)) return nullptr;
+        if (!perform_implicit_cast(resolvedRHS, *resolvedLHS->type)) return nullptr;
+    }
 
     auto lhsKind = resolvedLHS->type->kind;
     auto rhsKind = resolvedRHS->type->kind;
@@ -1055,8 +1075,8 @@ ptr<ResolvedExpr> Sema::resolve_struct_instantiation(const StructInstantiationEx
                 resolvedFieldInits.emplace_back(std::move(init));
             }
             if (error) return nullptr;
-        return makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, std::move(resolvedBase),
-                                                        *genericStructDecl, std::move(resolvedFieldInits), false);
+            return makePtr<ResolvedStructInstantiationExpr>(structInstantiation.location, std::move(resolvedBase),
+                                                            *genericStructDecl, std::move(resolvedFieldInits), false);
         }
         return makePtr<ResolvedTypeExpr>(structInstantiation.location, std::move(instType));
     }

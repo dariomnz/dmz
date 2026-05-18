@@ -24,6 +24,10 @@ struct ComptimeValue {
         std::vector<ComptimeValue> elements;
         bool operator==(const Slice& other) const;
     };
+    struct Simd {
+        std::vector<ComptimeValue> elements;
+        bool operator==(const Simd& other) const;
+    };
     struct Struct {
         std::vector<std::pair<std::string, ComptimeValue>> fields;
         bool operator==(const Struct& other) const;
@@ -36,7 +40,7 @@ struct ComptimeValue {
     };
 
     using ValueVariant =
-        std::variant<Void, int64_t, double, bool, std::string, Array, Slice, Struct, Union, ptr<ResolvedType>>;
+        std::variant<Void, int64_t, double, bool, std::string, Array, Slice, Simd, Struct, Union, ptr<ResolvedType>>;
 
     ValueVariant value;
 
@@ -48,6 +52,7 @@ struct ComptimeValue {
     ComptimeValue(const char* s) : value(std::string(s)) {}
     ComptimeValue(Array a) : value(std::move(a)) {}
     ComptimeValue(Slice s) : value(std::move(s)) {}
+    ComptimeValue(Simd s) : value(std::move(s)) {}
     ComptimeValue(Struct s) : value(std::move(s)) {}
     ComptimeValue(Union u) : value(std::move(u)) {}
     ComptimeValue(ptr<ResolvedType> t) : value(std::move(t)) {}
@@ -66,6 +71,7 @@ struct ComptimeValue {
     bool isString() const { return std::holds_alternative<std::string>(value); }
     bool isArray() const { return std::holds_alternative<Array>(value); }
     bool isSlice() const { return std::holds_alternative<Slice>(value); }
+    bool isSimd() const { return std::holds_alternative<Simd>(value); }
     bool isStruct() const { return std::holds_alternative<Struct>(value); }
     bool isUnion() const { return std::holds_alternative<Union>(value); }
     bool isType() const { return std::holds_alternative<ptr<ResolvedType>>(value); }
@@ -76,8 +82,8 @@ struct ComptimeValue {
     const std::string& getString() const { return std::get<std::string>(value); }
     const Array& getArray() const { return std::get<Array>(value); }
     const Slice& getSlice() const { return std::get<Slice>(value); }
+    const Simd& getSimd() const { return std::get<Simd>(value); }
     const Struct& getStruct() const { return std::get<Struct>(value); }
-    Union& getUnion() { return std::get<Union>(value); }
     const Union& getUnion() const { return std::get<Union>(value); }
     ptr<ResolvedType> getType() const;
 

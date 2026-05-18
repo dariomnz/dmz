@@ -6,7 +6,7 @@ pub const Arena = import("alloc/arena.dmz").Arena;
 pub extern fn memmove(dest: *void, src: *void, size: usize) -> *void;
 pub extern fn memcmp(buf1: *void, buf2: *void, size: usize) -> i32;
 
-pub fn bytesAsSlice(comptime T:type, bytes: []u8) -> ![]T {
+pub fn bytesAsSlice(comptime T: type, bytes: []u8) -> ![]T {
     const byte_count = bytes.len;
     const t_count = byte_count / @sizeof(T);
 
@@ -20,7 +20,7 @@ pub fn bytesAsSlice(comptime T:type, bytes: []u8) -> ![]T {
     return newSlice;
 }
 
-pub fn sliceAsBytes(comptime T:type, slice: []T) -> []u8 {
+pub fn sliceAsBytes(comptime T: type, slice: []T) -> []u8 {
     let bytes: []u8 = {};
     bytes.ptr = @ptrCast(slice.ptr);
     bytes.len = slice.len * @sizeof(T);
@@ -69,14 +69,15 @@ fn indexOfScalarSIMD(comptime T: type, slice: []T, scalar: T) -> isize {
     const scalar_vec: @simd(T, simd_len) = @simdSplat(scalar);
 
     const index_vec: @simd(u16, simd_len) = @simdIota();
+    const splat_simd_len: @simd(u16, simd_len) = @simdSplat(@intCast(simd_len));
+
     let i: usize = offset;
     while (i <= slice.len - simd_len) {
-        const slice_ptr = &slice[i];
-        const data: @simd(T, simd_len) = @simdLoad(slice_ptr);
+        const data: @simd(T, simd_len) = @simdLoad(&slice[i]);
         const match_mask = data == scalar_vec;
 
         if (@simdReduce(match_mask, .Or)) {
-            const matches: @simd(u16, simd_len) = @simdSelect(index_vec, @simdSplat(@intCast(simd_len)), match_mask);
+            const matches: @simd(u16, simd_len) = @simdSelect(index_vec, splat_simd_len, match_mask);
             return @intCast(i + @simdReduce(matches, .Min));
         }
         i += simd_len;
@@ -133,7 +134,7 @@ fn copyScalarBackwards(comptime T: type, dest: []T, src: []T) -> void {
 }
 
 // Need same len
-fn copySIMD(comptime T:type, dest: []T, src: []T) -> void {
+fn copySIMD(comptime T: type, dest: []T, src: []T) -> void {
     let len = src.len;
 
     const simd_len = @simdSize(T);
@@ -200,7 +201,7 @@ fn copySIMDBackwards(comptime T: type, dest: []T, src: []T) -> void {
     }
 }
 
-pub fn set(comptime T:type, dest: []T, value: T) -> void {
+pub fn set(comptime T: type, dest: []T, value: T) -> void {
     setSIMD(T, dest, value);
 }
 

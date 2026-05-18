@@ -64,6 +64,14 @@ bool ComptimeValue::Struct::operator==(const Struct& other) const {
     return true;
 }
 
+bool ComptimeValue::Simd::operator==(const Simd& other) const {
+    if (elements.size() != other.elements.size()) return false;
+    for (size_t i = 0; i < elements.size(); ++i) {
+        if (!(elements[i] == other.elements[i])) return false;
+    }
+    return true;
+}
+
 bool ComptimeValue::Union::operator==(const Union& other) const {
     if (activeTag != other.activeTag) return false;
     if (activeFieldName != other.activeFieldName) return false;
@@ -99,6 +107,8 @@ void ComptimeValue::dump() const {
         std::cerr << "array";
     } else if (isSlice()) {
         std::cerr << "slice";
+    } else if (isSimd()) {
+        std::cerr << "simd";
     } else if (isStruct()) {
         std::cerr << "struct";
     } else if (isUnion()) {
@@ -144,6 +154,16 @@ std::ostream& operator<<(std::ostream& os, const ComptimeValue& cv) {
             first = false;
         }
         os << ']';
+    } else if (cv.isSimd()) {
+        auto& simd = cv.getSimd();
+        os << "simd(";
+        bool first = true;
+        for (auto&& elem : simd.elements) {
+            if (!first) os << ", ";
+            os << elem;
+            first = false;
+        }
+        os << ')';
     } else if (cv.isStruct()) {
         os << '{';
         bool first = true;

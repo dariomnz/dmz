@@ -709,6 +709,17 @@ llvm::Value *Codegen::generate_temporary_union(const ResolvedUnionInstantiationE
 llvm::Value *Codegen::generate_temporary_array(const ResolvedArrayInstantiationExpr &aie) {
     debug_func("");
     if (aie.type->kind == ResolvedTypeKind::DefaultInit) return nullptr;
+    if (aie.type->kind == ResolvedTypeKind::Simd) {
+        auto simdType = dynamic_cast<const ResolvedTypeSimd *>(aie.type.get());
+        auto vecType = generate_type(*simdType);
+        llvm::Value *result = llvm::UndefValue::get(vecType);
+        int idx = 0;
+        for (auto &&initExpr : aie.initializers) {
+            auto elem = generate_expr(*initExpr);
+            result = m_builder.CreateInsertElement(result, elem, idx++);
+        }
+        return result;
+    }
     auto typeArray = dynamic_cast<const ResolvedTypeArray *>(aie.type.get());
     if (!typeArray) {
         aie.dump();
