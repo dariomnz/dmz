@@ -15,7 +15,8 @@ std::optional<bool> ConstantExpressionEvaluator::to_bool(const std::optional<Com
 }
 
 std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const ResolvedExpr &expr, bool allowSideEffects) {
-    debug_func(expr.location << " " << expr.className() << " allowSideEffects: " << allowSideEffects);
+    debug_func(expr.location << " " << expr.className() << " allowSideEffects: " << allowSideEffects << " val "
+                             << (expr.get_constant_value() ? *expr.get_constant_value() : ComptimeValue()));
     if (m_depth >= MAX_RECURSION_DEPTH) {
         if (allowSideEffects) report(expr.location, "maximum recursion depth reached in comptime evaluation");
         return std::nullopt;
@@ -372,6 +373,42 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             }
 
             return ComptimeValue(ComptimeValue::Union{tag, fieldName, makePtr<ComptimeValue>(std::move(payload))});
+        } else if (builtin->identifier == "@intCast") {
+            auto &valArg = expr.arguments[0];
+            auto val = evaluate(*valArg, allowSideEffects);
+            if (!val) return std::nullopt;
+
+            if (!val->isFloat() && !val->isInt() && !val->isBool()) {
+                return std::nullopt;
+            }
+
+            int64_t intVal;
+            if (val->isFloat()) {
+                intVal = (int64_t)val->getFloat();
+            } else if (val->isBool()) {
+                intVal = val->getBool() ? 1 : 0;
+            } else {
+                intVal = val->getInt();
+            }
+            return ComptimeValue(intVal);
+        } else if (builtin->identifier == "@floatCast") {
+            auto &valArg = expr.arguments[0];
+            auto val = evaluate(*valArg, allowSideEffects);
+            if (!val) return std::nullopt;
+
+            if (!val->isFloat() && !val->isInt() && !val->isBool()) {
+                return std::nullopt;
+            }
+
+            double floatVal;
+            if (val->isFloat()) {
+                floatVal = val->getFloat();
+            } else if (val->isInt()) {
+                floatVal = (double)val->getInt();
+            } else {
+                floatVal = val->getBool() ? 1.0 : 0.0;
+            }
+            return ComptimeValue(floatVal);
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;

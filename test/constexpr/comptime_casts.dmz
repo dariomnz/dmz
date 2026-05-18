@@ -1,0 +1,23 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const a: i32 = comptime @intCast(100);
+    const b: u8 = comptime @intCast(255);
+    const c: f32 = comptime @floatCast(3.14);
+    const d: f64 = comptime @floatCast(42);
+    const e: i64 = comptime @intCast(true);
+    const f: i16 = comptime @intCast(false);
+}
+
+// CHECK: ResolvedVarDecl:const i32 a
+// CHECK-NEXT: | value: 100
+// CHECK: ResolvedVarDecl:const u8 b
+// CHECK-NEXT: | value: 255
+// CHECK: ResolvedVarDecl:const f32 c
+// CHECK-NEXT: | value: 3.14
+// CHECK: ResolvedVarDecl:const f64 d
+// CHECK-NEXT: | value: 42
+// CHECK: ResolvedVarDecl:const i64 e
+// CHECK-NEXT: | value: 1
+// CHECK: ResolvedVarDecl:const i16 f
+// CHECK-NEXT: | value: 0
