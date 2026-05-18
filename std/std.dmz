@@ -1,4 +1,5 @@
 pub const mem = import("mem.dmz");
+pub const math = import("math.dmz");
 pub const Vec = import("vector.dmz").Vec;
 pub const testing = import("testing.dmz");
 pub const builtin = import("builtin.dmz");

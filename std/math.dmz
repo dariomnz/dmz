@@ -1,0 +1,75 @@
+const std = import("std");
+
+pub const pi: f64 = 3.14159265358979323846264338327950288419716939937510;
+
+pub fn inf(comptime T: type) -> T {
+    const typeInfo = @typeinfo(T);
+
+    inline if (typeInfo.tag != std.types.TypeInfo.infoFloat) {
+        @compileError("inf only supports floating-point types, actual", T);
+    }
+
+    inline switch (typeInfo.infoFloat.bits) {
+        case 16 => {
+            const value: u16 = 0x7C00;
+            return @bitCast(value);
+        }
+        case 32 => {
+            const value: u32 = 0x7F800000;
+            return @bitCast(value);
+        }
+        case 64 => {
+            const value: u64 = 0x7FF0000000000000;
+            return @bitCast(value);
+        }
+        else => @compileError("inf only supports floating-point types with 16, 32 and 64 bits, actual", T);
+    }
+
+    return 0.0;
+}
+
+pub fn isInf(val: anytype) -> bool {
+    const typeInfo = @typeinfo(@typeof(val));
+
+    inline if (typeInfo.tag != std.types.TypeInfo.infoFloat) {
+        @compileError("isInf only supports floating-point types, actual", @typeof(val));
+    }
+
+    inline switch (typeInfo.infoFloat.bits) {
+        case 16 => {
+            const bits: u16 = @bitCast(val);
+            return (bits & 0x7FFF) == 0x7C00;
+        }
+        case 32 => {
+            const bits: u32 = @bitCast(val);
+            return (bits & 0x7FFFFFFF) == 0x7F800000;
+        }
+        case 64 => {
+            const bits: u64 = @bitCast(val);
+            return (bits & 0x7FFFFFFFFFFFFFFF) == 0x7FF0000000000000;
+        }
+        else => @compileError("Unsupported float size");
+    }
+
+    return false;
+}
+
+test "math infinity" {
+    const inf16 = inf(f16);
+    const inf32 = inf(f32);
+    const inf64 = inf(f64);
+
+    const infi16: u16 = @bitCast(inf16);
+    const infi32: u32 = @bitCast(inf32);
+    const infi64: u64 = @bitCast(inf64);
+
+    std.io.print("{} {} {} {X} {X} {X}\n", .{inf16, -inf32, inf64, infi16, infi32, infi64});
+
+    std.testing.expect(isInf(inf16));
+    std.testing.expect(isInf(inf32));
+    std.testing.expect(isInf(inf64));
+
+    std.testing.expect(inf16 > 9999999999.0);
+    std.testing.expect(inf32 > 9999999999.0);
+    std.testing.expect(inf64 > 9999999999.0);
+}

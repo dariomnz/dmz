@@ -109,7 +109,10 @@ pub fn fmtFloat(w: std.io.Writer, f: anytype, spec: FormatOptions) -> !usize {
         ret += try w.writeChar('-');
         val = -val;
     }
-
+    if (std.math.isInf(f)) {
+        ret += try w.writeAll("inf");
+        return ret;
+    }
     let parte_entera: usize = @intCast(val);
     let divisor: usize = 1;
 

@@ -69,6 +69,10 @@ pub fn Vec(comptime T: type) -> type {
             return self.len;
         }
 
+        pub fn clear(self: *@This) -> void {
+            self.len = 0;
+        }
+
         pub fn slice(self: *@This) -> []T {
             return self.buf[0..self.len];
         }
