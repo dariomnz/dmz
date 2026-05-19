@@ -204,6 +204,7 @@ class Codegen {
     llvm::Value *generate_builtin_abs(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_min(const ResolvedCallExpr &call);
     llvm::Value *generate_builtin_max(const ResolvedCallExpr &call);
+    llvm::Value *generate_builtin_pow(const ResolvedCallExpr &call);
 
     llvm::GlobalVariable *create_global_string(const std::string &str, const std::string &name = "global.str");
 };

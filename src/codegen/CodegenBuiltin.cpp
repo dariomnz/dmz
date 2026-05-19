@@ -79,6 +79,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_min(call);
     } else if (builtin.identifier == "@max") {
         return generate_builtin_max(call);
+    } else if (builtin.identifier == "@pow") {
+        return generate_builtin_pow(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -724,5 +726,49 @@ llvm::Value *Codegen::generate_builtin_max(const ResolvedCallExpr &call) {
     auto intrin = select_minmax_intrin(a->getType(), false, isUnsigned);
     auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
     return m_builder.CreateCall(decl, {a, b}, "max");
+}
+
+llvm::Value *Codegen::generate_builtin_pow(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@pow expects 2 arguments");
+    auto base = generate_expr(*call.arguments[0]);
+    auto exp = generate_expr(*call.arguments[1]);
+
+    // If exponent is an integer type, use powi (with i32 cast)
+    if (exp->getType()->isIntegerTy() ||
+        (exp->getType()->isVectorTy() && exp->getType()->getScalarType()->isIntegerTy())) {
+        auto *i32Ty = llvm::Type::getInt32Ty(*m_context);
+        if (exp->getType()->isVectorTy()) {
+            auto *vecTy = llvm::cast<llvm::FixedVectorType>(exp->getType());
+            auto *i32VecTy = llvm::FixedVectorType::get(i32Ty, vecTy->getNumElements());
+            if (exp->getType() != i32VecTy) {
+                bool isUnsigned = false;
+                if (auto numTy = dynamic_cast<ResolvedTypeNumber *>(call.arguments[1]->type.get())) {
+                    isUnsigned = numTy->numberKind == ResolvedNumberKind::UInt;
+                } else if (auto simdTy = dynamic_cast<ResolvedTypeSimd *>(call.arguments[1]->type.get())) {
+                    if (auto inner = dynamic_cast<ResolvedTypeNumber *>(simdTy->simdType.get()))
+                        isUnsigned = inner->numberKind == ResolvedNumberKind::UInt;
+                }
+                if (isUnsigned)
+                    exp = m_builder.CreateZExtOrTrunc(exp, i32VecTy, "exp.i32");
+                else
+                    exp = m_builder.CreateSExtOrTrunc(exp, i32VecTy, "exp.i32");
+            }
+        } else if (exp->getType() != i32Ty) {
+            bool isUnsigned = false;
+            if (auto numTy = dynamic_cast<ResolvedTypeNumber *>(call.arguments[1]->type.get()))
+                isUnsigned = numTy->numberKind == ResolvedNumberKind::UInt;
+            if (isUnsigned)
+                exp = m_builder.CreateZExtOrTrunc(exp, i32Ty, "exp.i32");
+            else
+                exp = m_builder.CreateSExtOrTrunc(exp, i32Ty, "exp.i32");
+        }
+        auto PowiIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::powi,
+                                                                  {base->getType(), exp->getType()});
+        return m_builder.CreateCall(PowiIntrin, {base, exp}, "powi");
+    }
+
+    auto PowIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::pow, base->getType());
+    return m_builder.CreateCall(PowIntrin, {base, exp}, "pow");
 }
 }  // namespace DMZ

@@ -1,0 +1,24 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const a = comptime @pow(2.0, 3.0);
+    const b = comptime @pow(4.0, 0.5);
+    const c = comptime @pow(10.0, 2.0);
+    const d = comptime @pow(16.0, 0.25);
+
+    const simd1: @simd(f32, 4) = @simdSplat(2.0);
+    const simd2: @simd(f32, 4) = @simdSplat(3.0);
+
+    const e = comptime @pow(simd1, simd2);
+}
+
+// CHECK: ResolvedVarDecl:const f64 a
+// CHECK-NEXT: | value: 8
+// CHECK: ResolvedVarDecl:const f64 b
+// CHECK-NEXT: | value: 2
+// CHECK: ResolvedVarDecl:const f64 c
+// CHECK-NEXT: | value: 100
+// CHECK: ResolvedVarDecl:const f64 d
+// CHECK-NEXT: | value: 2
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) e
+// CHECK-NEXT: | value: simd(8.000000, 8.000000, 8.000000, 8.000000)

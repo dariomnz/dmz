@@ -81,10 +81,10 @@ class Sema {
         {"@typeid", nullptr},       {"@typeinfo", nullptr},   {"@hasMethod", nullptr},   {"@simd", nullptr},
         {"@simdSize", nullptr},     {"@simdSplat", nullptr},  {"@simdIota", nullptr},    {"@errorTrace", nullptr},
         {"@testNum", nullptr},      {"@testRun", nullptr},    {"@testName", nullptr},    {"@simdLoad", nullptr},
-        {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@simdShuffle", nullptr}, {"@compileError", nullptr},
-        {"@compileLog", nullptr},   {"@asm", nullptr},        {"@ptrCast", nullptr},     {"@intCast", nullptr},
-        {"@floatCast", nullptr},    {"@bitCast", nullptr},    {"@sqrt", nullptr},    {"@abs", nullptr},
-        {"@min", nullptr},      {"@max", nullptr},
+        {"@simdStore", nullptr},    {"@simdSelect", nullptr}, {"@simdReduce", nullptr},  {"@simdShuffle", nullptr},
+        {"@compileError", nullptr}, {"@compileLog", nullptr}, {"@asm", nullptr},         {"@ptrCast", nullptr},
+        {"@intCast", nullptr},      {"@floatCast", nullptr},  {"@bitCast", nullptr},     {"@sqrt", nullptr},
+        {"@abs", nullptr},          {"@min", nullptr},        {"@max", nullptr},         {"@pow", nullptr},
     };
 
    public:
@@ -115,9 +115,8 @@ class Sema {
     ptr<ResolvedTypeSpecialized> infer_generic_types(const SourceLocation &location,
                                                      ResolvedGenericFunctionDecl &funcDecl,
                                                      std::vector<ptr<ResolvedExpr>> &arguments);
-    bool internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &inferredTypes,
-                             const ResolvedType &paramType, const ResolvedType &argType,
-                             ptr<ResolvedExpr> *argExpr = nullptr);
+    bool internal_infer_type(std::unordered_map<int, ptr<ResolvedType>> &inferredTypes, const ResolvedType &paramType,
+                             const ResolvedType &argType, ptr<ResolvedExpr> *argExpr = nullptr);
 
     ResolvedSpecializedFunctionDecl *specialize_generic_function(const SourceLocation &location,
                                                                  ResolvedGenericFunctionDecl &funcDecl,
