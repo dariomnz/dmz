@@ -1,6 +1,7 @@
 #include "semantic/Constexpr.hpp"
 
 #include <bit>
+#include <cmath>
 
 #include "Debug.hpp"
 #include "codegen/CodegenUtils.hpp"
@@ -307,6 +308,10 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
         } else if (builtin->identifier == "@simdIota") {
             auto simdType = dynamic_cast<const ResolvedTypeSimd *>(expr.type.get());
             if (!simdType) return std::nullopt;
+            bool isFloat = false;
+            auto targetNumType = dynamic_cast<const ResolvedTypeNumber *>(simdType->simdType.get());
+            if (!targetNumType) return std::nullopt;
+            if (targetNumType->numberKind == ResolvedNumberKind::Float) isFloat = true;
             int laneCount = simdType->simdSize;
             if (laneCount <= 0) {
                 int bitCount = CodegenUtils::typeBitSize(*simdType->simdType);
@@ -316,7 +321,11 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             }
             ComptimeValue::Simd simdVal;
             for (int i = 0; i < laneCount; i++) {
-                simdVal.elements.emplace_back((int64_t)i);
+                if (isFloat) {
+                    simdVal.elements.emplace_back((double)i);
+                } else {
+                    simdVal.elements.emplace_back((int64_t)i);
+                }
             }
             return ComptimeValue(std::move(simdVal));
         } else if (builtin->identifier == "@simdSelect") {
@@ -512,6 +521,52 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                     if (valNumType->bitSize == 64)
                         return ComptimeValue((int64_t)std::bit_cast<uint64_t>(val->getFloat()));
                 }
+            }
+            return std::nullopt;
+        } else if (builtin->identifier == "@sqrt") {
+            auto &valArg = expr.arguments[0];
+            auto val = evaluate(*valArg, allowSideEffects);
+            if (!val) return std::nullopt;
+
+            if (val->isSimd()) {
+                auto &simdV = val->getSimd();
+                ComptimeValue::Simd result;
+                for (auto &elem : simdV.elements) {
+                    if (elem.isFloat()) {
+                        result.elements.emplace_back(std::sqrt(elem.getFloat()));
+                    } else {
+                        return std::nullopt;
+                    }
+                }
+                return ComptimeValue(std::move(result));
+            } else if (val->isFloat()) {
+                return ComptimeValue(std::sqrt(val->getFloat()));
+            }
+            return std::nullopt;
+        } else if (builtin->identifier == "@abs") {
+            auto &valArg = expr.arguments[0];
+            auto val = evaluate(*valArg, allowSideEffects);
+            if (!val) return std::nullopt;
+
+            if (val->isSimd()) {
+                auto &simdV = val->getSimd();
+                ComptimeValue::Simd result;
+                for (auto &elem : simdV.elements) {
+                    if (elem.isFloat()) {
+                        double f = elem.getFloat();
+                        result.elements.emplace_back(f < 0 ? -f : f);
+                    } else {
+                        int64_t i = elem.getInt();
+                        result.elements.emplace_back(i < 0 ? -i : i);
+                    }
+                }
+                return ComptimeValue(std::move(result));
+            } else if (val->isFloat()) {
+                double f = val->getFloat();
+                return ComptimeValue(f < 0 ? -f : f);
+            } else if (val->isInt()) {
+                int64_t i = val->getInt();
+                return ComptimeValue(i < 0 ? -i : i);
             }
             return std::nullopt;
         }

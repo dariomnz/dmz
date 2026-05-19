@@ -73,6 +73,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_bitCast(call);
     } else if (builtin.identifier == "@sqrt") {
         return generate_builtin_sqrt(call);
+    } else if (builtin.identifier == "@abs") {
+        return generate_builtin_abs(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -666,5 +668,19 @@ llvm::Value *Codegen::generate_builtin_sqrt(const ResolvedCallExpr &call) {
     auto val = generate_expr(*call.arguments[0]);
     auto SqrtIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::sqrt, val->getType());
     return m_builder.CreateCall(SqrtIntrin, val, "sqrt");
+}
+
+llvm::Value *Codegen::generate_builtin_abs(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.empty()) dmz_unreachable(call.location, "@abs expects 1 argument");
+    auto val = generate_expr(*call.arguments[0]);
+    if (val->getType()->isFPOrFPVectorTy()) {
+        auto FabsIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fabs, val->getType());
+        return m_builder.CreateCall(FabsIntrin, val, "abs");
+    } else {
+        auto AbsIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::abs, val->getType());
+        llvm::Value *isPoison = llvm::ConstantInt::getFalse(val->getContext());
+        return m_builder.CreateCall(AbsIntrin, {val, isPoison}, "abs");
+    }
 }
 }  // namespace DMZ

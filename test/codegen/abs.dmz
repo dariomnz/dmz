@@ -1,0 +1,20 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let val1 = 4;
+    const absval1 = @abs(val1);
+    let val2 = -4;
+    const absval2 = @abs(val2);
+    let val3 = 4.0;
+    const absval3 = @abs(val3);
+    let val4 = -4.0;
+    const absval4 = @abs(val4);
+    let val5 = -5;
+    const absval5 = @abs(val5);
+}
+// CHECK: %abs = call i32 @llvm.abs.i32(i32 %0, i1 false)
+// CHECK: %abs1 = call i32 @llvm.abs.i32(i32 %1, i1 false)
+// CHECK: %abs2 = call double @llvm.fabs.f64(double %2)
+// CHECK: %abs3 = call double @llvm.fabs.f64(double %3)
+// CHECK: %abs4 = call i32 @llvm.abs.i32(i32 %4, i1 false)
