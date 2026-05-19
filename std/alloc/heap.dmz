@@ -15,7 +15,7 @@ pub const MmapAllocator = struct {
         return @This{};
     }
 
-    fn malloc(self: *@This, size: usize) -> ![]u8 {
+    fn malloc(self: *@This, size: usize, align: usize) -> ![]u8 {
         const total_size = size + @sizeof(Header);
 
         const raw_ptr = try std.syscall.mmap(
@@ -53,7 +53,7 @@ pub const MmapAllocator = struct {
         self.allocated_bytes -= total_size;
     }
 
-    fn realloc(self: *@This, ptr: []u8, new_size: usize) -> ![]u8 {
+    fn realloc(self: *@This, ptr: []u8, new_size: usize, align: usize) -> ![]u8 {
         const int_ptr: usize = ptr.ptr;
         const header_ptr: *Header = int_ptr - @sizeof(Header);
         const old_user_size: usize = header_ptr.size;
@@ -61,14 +61,14 @@ pub const MmapAllocator = struct {
         if (new_size <= old_user_size) return ptr;
 
         const old_ptr: *u8 = ptr.ptr;
-        const new_ptr = try self.malloc(new_size);
+        const new_ptr = try self.malloc(new_size, align);
         std.mem.copy(u8, new_ptr[0..new_size], old_ptr[0..old_user_size]);
 
         self.free(ptr);
         return new_ptr;
     }
 
-    pub fn allocator(self: *@This) -> std.mem.Allocator {
+    pub fn Allocator(self: *@This) -> std.mem.Allocator {
         return std.mem.Allocator{
             allocator: @ptrCast(self),
             vtable: std.mem.Allocator.VTable{
@@ -82,7 +82,7 @@ pub const MmapAllocator = struct {
 
 test "MmapAllocator basic" {
     let allocator = MmapAllocator.init();
-    const alloc = allocator.allocator();
+    const alloc = allocator.Allocator();
     {
         let x = try alloc.malloc(i8, 10);
         defer alloc.free(i8, x);

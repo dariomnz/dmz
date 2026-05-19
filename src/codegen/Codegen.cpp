@@ -244,7 +244,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             if (!ret) dmz_unreachable(type.location, "unexpected error generating union decl");
         }
     } else if (type.kind == ResolvedTypeKind::Enum || type.kind == ResolvedTypeKind::EnumDecl) {
-        ret = generate_type(ResolvedTypeNumber{SourceLocation::builtin(), ResolvedNumberKind::UInt, 32});
+        ret = generate_type(ResolvedTypeNumber{SourceLocation::builtin(), ResolvedNumberKind::UInt, 32}, true);
     } else if (auto typeArray = dynamic_cast<const ResolvedTypeArray *>(&type)) {
         ret = generate_type(*typeArray->arrayType, true);
         ret = llvm::ArrayType::get(ret, typeArray->arraySize);
@@ -259,7 +259,7 @@ llvm::Type *Codegen::generate_type(const ResolvedType &type, bool noOpaque) {
             if (typeOptional->optionalType->kind == ResolvedTypeKind::Void) {
                 fieldTypes.emplace_back(m_builder.getInt1Ty());
             } else {
-                fieldTypes.emplace_back(generate_type(*typeOptional->optionalType));
+                fieldTypes.emplace_back(generate_type(*typeOptional->optionalType, true));
             }
             // Type of error
             fieldTypes.emplace_back(llvm::PointerType::get(*m_context, 0));

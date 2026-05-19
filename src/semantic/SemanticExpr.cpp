@@ -1340,23 +1340,21 @@ ptr<ResolvedTryErrorExpr> Sema::resolve_try_error_expr(const TryErrorExpr &tryEr
     auto optType = static_cast<const ResolvedTypeOptional *>(resolvedErr->type.get());
     auto defers = resolve_defer_ref_stmt(false, true);
 
-    ResolvedFunctionDecl *printErrorDecl = nullptr;
-    for (auto &lazy_mod : m_lazy_modules) {
-        auto mod = lazy_mod.get();
-        auto pathStr = mod->module_path.string();
-        debug_msg("Module " << mod->name() << " path " << pathStr);
-        if (pathStr.ends_with("std/builtin.dmz")) {
-            for (auto &decl : mod->declarations) {
-                debug_msg("Target " << "printErrorTrace" << " search " << decl->identifier);
-                if (decl->identifier == "printErrorTrace") {
-                    if (auto funcDecl = dynamic_cast<ResolvedFunctionDecl *>(decl.get())) {
-                        printErrorDecl = funcDecl;
-                        break;
-                    }
+    for (size_t i = 0; i < m_lazy_modules.size(); i++) {
+        auto mod = m_lazy_modules[i].get();
+        debug_msg("Module " << mod->name() << " path " << mod->module_path);
+        if (mod->module_path.string().ends_with("std.dmz")) {
+            ImportExpr typesImportExpr(SourceLocation::builtin(), "builtin");
+            auto types_import_expr = resolve_import_expr(typesImportExpr);
+            if (!types_import_expr) return nullptr;
+            for (auto &bdecl : types_import_expr->moduleDecl.declarations) {
+                debug_msg("Target " << "printErrorTrace" << " search " << bdecl->identifier);
+                if (bdecl->identifier == "printErrorTrace") {
+                    if (!ensure_fully_resolved(*bdecl)) return {};
+                    break;
                 }
             }
         }
-        if (printErrorDecl != nullptr) break;
     }
 
     return makePtr<ResolvedTryErrorExpr>(tryErrorExpr.location, optType->optionalType->clone(), std::move(resolvedErr),

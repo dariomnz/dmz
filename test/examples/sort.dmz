@@ -19,7 +19,7 @@ fn main() -> void {
     const buff_size = 16 * 1024;
     const buffer: [buff_size]u8 = {};
     let arena = std.mem.Arena.init(buffer[0..buff_size]);
-    let allocator = arena.allocator();
+    let allocator = arena.Allocator();
 
     const lambda = struct {
         pub fn comp(a: i32, b: i32) -> bool {

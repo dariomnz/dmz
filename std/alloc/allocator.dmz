@@ -4,20 +4,20 @@ pub const Allocator = struct {
     allocator: *void,
 
     pub const VTable = struct {
-        malloc: *fn(*void, usize)->![]u8,
-        realloc: *fn(*void, []u8, usize)->![]u8,
+        malloc: *fn(*void, usize, usize)->![]u8,
+        realloc: *fn(*void, []u8, usize, usize)->![]u8,
         free: *fn(*void, []u8)->void,
     };
 
     vtable: VTable,
 
     pub fn malloc(self: *@This, comptime T: type, count: usize) -> ![]T {
-        const newSlice = try self.vtable.malloc(self.allocator, count * @sizeof(T));
+        const newSlice = try self.vtable.malloc(self.allocator, count * @sizeof(T), @sizeof(T));
         return std.mem.bytesAsSlice(T, newSlice);
     }
 
     pub fn realloc(self: *@This, comptime T: type, ptr: []T, count: usize) -> ![]T {
-        const newSlice = try self.vtable.realloc(self.allocator, std.mem.sliceAsBytes(T, ptr), count * @sizeof(T));
+        const newSlice = try self.vtable.realloc(self.allocator, std.mem.sliceAsBytes(T, ptr), count * @sizeof(T), @sizeof(T));
         return std.mem.bytesAsSlice(T, newSlice);
     }
 

@@ -22,7 +22,7 @@ pub const LibcAllocator = struct {
         }
     }
 
-    fn malloc(self: *@This, size: usize) -> ![]u8 {
+    fn malloc(self: *@This, size: usize, align: usize) -> ![]u8 {
         self.allocated += size;
         self.allocated_count++;
         const ptr = malloc(size);
@@ -33,7 +33,7 @@ pub const LibcAllocator = struct {
         return slice;
     }
 
-    fn realloc(self: *@This, ptr: []u8, size: usize) -> ![]u8 {
+    fn realloc(self: *@This, ptr: []u8, size: usize, align: usize) -> ![]u8 {
         self.allocated -= ptr.len;
         self.allocated += size;
         const raw = realloc(@ptrCast(ptr.ptr), size);

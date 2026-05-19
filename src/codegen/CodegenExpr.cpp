@@ -872,6 +872,21 @@ llvm::Value *Codegen::generate_try_error_expr(const ResolvedTryErrorExpr &tryErr
         assert(retBB && "function with return stmt doesn't have a return block");
         break_into_bb(retBB);
     } else {
+        for (auto &decl : m_resolvedTree) {
+            if (auto *moduleDecl = dynamic_cast<ResolvedModuleDecl *>(decl.get())) {
+                auto pathStr = moduleDecl->module_path.string();
+                if (pathStr.ends_with("std/builtin.dmz")) {
+                    for (auto &modDecl : moduleDecl->declarations) {
+                        if (modDecl->identifier == "printErrorTrace") {
+                            if (auto funcDecl = dynamic_cast<ResolvedFuncDecl *>(modDecl.get())) {
+                                generate_decl(*funcDecl);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         llvm::Function *printErrorTraceFn = m_module->getFunction("std.builtin.printErrorTrace");
         if (!printErrorTraceFn) printErrorTraceFn = m_module->getFunction("printErrorTrace");
 
