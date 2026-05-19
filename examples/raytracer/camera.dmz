@@ -11,16 +11,18 @@ const utils = import("utils.dmz");
 const Vec3 = vec.Vec3;
 
 pub const Camera = struct {
+    // Vertical view angle (field of view)
+    vfov: f64 = 90.0,
     // Maximum number of ray bounces into scene
-    max_depth: i32,
+    max_depth: i32 = 10,
     // Count of random samples for each pixel
-    samples_per_pixel: i32,
+    samples_per_pixel: i32 = 10,
     // Color scale factor for a sum of pixel samples
     pixel_samples_scale: f64,
     // Ratio of image width over height
-    aspect_ratio: f64,
+    aspect_ratio: f64 = 1.0,
     // Rendered image width in pixel count
-    image_width: i32,
+    image_width: i32 = 100,
     // Rendered image height
     image_height: i32,
     // Camera center
@@ -31,12 +33,16 @@ pub const Camera = struct {
     pixel_delta_u: Vec3,
     // Offset to pixel below
     pixel_delta_v: Vec3,
-    pub fn init(aspectRatio: f64, imageWidth: i32, samplesPerPixel: i32, maxDepth: i32) -> @This {
+    pub fn init(aspectRatio: f64, imageWidth: i32, samplesPerPixel: i32, maxDepth: i32, vfov: f64) -> @This {
 
         const imageHeight: i32 = @intCast(@floatCast(imageWidth) / aspectRatio);
 
         const focalLength = 1.0;
-        const viewportHeight = 2.0;
+        // const viewportHeight = 2.0;
+
+        const theta = utils.degToRad(vfov);
+        const h = @math(.Tan, theta / 2.0);
+        const viewportHeight = 2.0 * h * focalLength;
         const viewportWidth = viewportHeight * @floatCast(imageWidth) / @floatCast(imageHeight);
 
         const cameraCenter: Vec3 = {0.0, 0.0, 0.0};
@@ -50,6 +56,7 @@ pub const Camera = struct {
         const viewport_upper_left = cameraCenter - {0.0, 0.0, focalLength} - viewport_u / @simdSplat(2.0) - viewport_v / @simdSplat(2.0);
         const pixel00_loc = viewport_upper_left + @simdSplat(0.5) * (pixel_delta_u + pixel_delta_v);
         return @This{
+            vfov: vfov,
             max_depth: maxDepth,
             samples_per_pixel: samplesPerPixel,
             pixel_samples_scale: 1.0 / @floatCast(samplesPerPixel),
@@ -102,10 +109,12 @@ pub const Camera = struct {
 
         const rec: HitRecord = {};
         if (world.hit(r, Interval{min: 0.001, max: std.math.inf(f64)}, &rec)) {
-            // const direction = vec.randOnHemisphere(rec.normal);
-            const direction = rec.normal + vec.randUnit();
-            return @simdSplat(0.5) * self.rayColor(Ray.init(rec.p, direction), depth - 1, world);
-            // return @simdSplat(0.5) * (rec.normal + @simdSplat(1.0));
+            const scattered: Ray = {};
+            const attenuation: Color = {};
+            if (rec.mat.scatter(r, rec, &attenuation, &scattered)) {
+                return attenuation * self.rayColor(scattered, depth - 1, world);
+            }
+            return {0, 0, 0};
         }
 
         const unit_direction = vec.unit(r.dir);

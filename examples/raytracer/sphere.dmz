@@ -14,13 +14,13 @@ pub const Sphere = struct {
     radius: f64,
     mat: *Material,
 
-    pub fn init(center: Vec3, radius: f64) -> @This {
+    pub fn init(center: Vec3, radius: f64, material: *Material) -> @This {
         let rad = radius;
         if (rad < 0.0) rad = 0.0;
         return @This{
             center: center,
             radius: rad,
-            mat: @ptrCast(null),
+            mat: material,
         };
     }
 
@@ -35,7 +35,7 @@ pub const Sphere = struct {
             return false;
         }
 
-        const sqrtd = @sqrt(discriminant);
+        const sqrtd = @math(.Sqrt, discriminant);
 
         // Find the nearest root that lies in the acceptable range.
         let root = (h - sqrtd) / a;

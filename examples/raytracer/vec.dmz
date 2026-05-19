@@ -14,7 +14,7 @@ pub fn z(v: Vec3) -> f64 {
 }
 
 pub fn length(v: Vec3) -> f64 {
-    return @sqrt(lenghtSquared(v));
+    return @math(.Sqrt, lenghtSquared(v));
 }
 
 pub fn lenghtSquared(v: Vec3) -> f64 {
@@ -56,7 +56,7 @@ pub fn randUnit() -> Vec3 {
         const p = randRange(-1.0, 1.0);
         const lensq = lenghtSquared(p);
         if (0.00000000001 < lensq && lensq <= 1.0) {
-            return p / @simdSplat(@sqrt(lensq));
+            return p / @simdSplat(@math(.Sqrt, lensq));
         }
     }
 }
@@ -69,4 +69,23 @@ pub fn randOnHemisphere(normal: Vec3) -> Vec3 {
     } else {
         return -on_unit_sphere;
     }
+}
+
+pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+    return v - @simdSplat(2.0 * dot(v, n)) * n;
+}
+
+pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
+    const cos_theta = @math(.Min, dot(-uv, n), 1.0);
+    const r_out_perp = @simdSplat(etai_over_etat) * (uv + @simdSplat(cos_theta) * n);
+    const r_out_parallel = @simdSplat(-@math(.Sqrt, @math(.Abs, 1.0 - lenghtSquared(r_out_perp)))) * n;
+    return r_out_perp + r_out_parallel;
+}
+
+pub fn nearZero(vec: Vec3) -> bool {
+    // Return true if the vector is close to zero in all dimensions.
+    const splat_s: Vec3 = @simdSplat(0.00000001);
+    const abs_vec = @math(.Abs, vec);
+    const mask = abs_vec < splat_s;
+    return @simdReduce(mask, .And);
 }

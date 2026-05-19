@@ -1,5 +1,110 @@
 
+const utils = import("utils.dmz");
+const vec = import("vec.dmz");
+const Vec3 = vec.Vec3;
+const hittable = import("hittable.dmz");
+const Ray = import("ray.dmz").Ray;
+const Color = import("color.dmz").Color;
+const HitRecord = hittable.HitRecord;
 
 pub const Material = struct {
+    pub const VTable = struct {
+        scatter: *fn(*void, Ray, HitRecord, *Color, *Ray)->bool,
+    };
 
+    material: *void,
+    vtable: VTable,
+
+    pub fn scatter(self: *@This, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) -> bool {
+        if (self.vtable.scatter) return self.vtable.scatter(self.material, r_in, rec, attenuation, scattered);
+        return false;
+    }
+};
+
+pub const Lambertian = struct {
+    albedo: Color,
+
+    pub fn scatter(self: *@This, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) -> bool {
+        let scatter_direction = rec.normal + vec.randUnit();
+
+        // Catch degenerate scatter direction
+        if (vec.nearZero(scatter_direction)) scatter_direction = rec.normal;
+
+        scattered.* = Ray.init(rec.p, scatter_direction);
+        attenuation.* = self.albedo;
+        return true;
+    }
+
+    pub fn Material(self: *@This) -> Material {
+        return Material{
+            material: @ptrCast(self),
+            vtable: Material.VTable{
+                scatter: @ptrCast(&self.scatter),
+            },
+        };
+    }
+};
+
+pub const Metal = struct {
+    albedo: Color,
+    fuzz: f64,
+
+    pub fn scatter(self: *@This, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) -> bool {
+        let reflected = vec.reflect(r_in.dir, rec.normal);
+        reflected = vec.unit(reflected) + (@simdSplat(self.fuzz) * vec.randUnit());
+        scattered.* = Ray.init(rec.p, reflected);
+        attenuation.* = self.albedo;
+        return (vec.dot(scattered.dir, rec.normal) > 0.0);
+    }
+
+    pub fn Material(self: *@This) -> Material {
+        return Material{
+            material: @ptrCast(self),
+            vtable: Material.VTable{
+                scatter: @ptrCast(&self.scatter),
+            },
+        };
+    }
+};
+
+pub const Dielectric = struct {
+    refractionIndex: f64,
+
+    pub fn scatter(self: *@This, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) -> bool {
+        attenuation.* = {1.0, 1.0, 1.0};
+        let ri = self.refractionIndex;
+        if (rec.frontFace) ri = 1.0 / self.refractionIndex;
+
+        const unit_direction = vec.unit(r_in.dir);
+
+        const cos_theta = @math(.Min, vec.dot(-unit_direction, rec.normal), 1.0);
+        const sin_theta = @math(.Sqrt, 1.0 - cos_theta * cos_theta);
+
+        const cannot_refract = ri * sin_theta > 1.0;
+        let direction: Vec3 = {};
+        if (cannot_refract) {
+            if (cannot_refract || @This.reflectance(cos_theta, ri) > utils.randf64()) direction = vec.reflect(unit_direction, rec.normal);
+        } else {
+            direction = vec.refract(unit_direction, rec.normal, ri);
+        }
+
+        scattered.* = Ray.init(rec.p, direction);
+        return true;
+    }
+
+    pub fn Material(self: *@This) -> Material {
+        return Material{
+            material: @ptrCast(self),
+            vtable: Material.VTable{
+                scatter: @ptrCast(&self.scatter),
+            },
+        };
+    }
+
+    pub fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+        // Use Schlick's approximation for reflectance.
+        let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        r0 = r0 * r0;
+        return r0 + (1.0 - r0) * @math(.Pow, (1.0 - cosine), 5.0);
+    }
 };

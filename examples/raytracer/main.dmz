@@ -4,6 +4,7 @@ const color = import("color.dmz");
 const Ray = import("ray.dmz").Ray;
 const hittable = import("hittable.dmz");
 const sphere = import("sphere.dmz");
+const material = import("material.dmz");
 const Camera = import("camera.dmz").Camera;
 
 const Vec3 = vec.Vec3;
@@ -19,19 +20,36 @@ fn main() -> void {
     let allocator = libc_alloc.Allocator();
 
     // World
+    const ground = material.Lambertian{albedo: {0.8, 0.8, 0.0}};
+    const matGround = ground.Material();
+    const center = material.Lambertian{albedo: {0.1, 0.2, 0.5}};
+    const matCenter = center.Material();
+    const left = material.Dielectric{refractionIndex: 1.50};
+    const matLeft = left.Material();
+    const bubble = material.Dielectric{refractionIndex: 1.00 / 1.50};
+    const matBubble = bubble.Material();
+    const right = material.Metal{albedo: {0.8, 0.6, 0.2}, fuzz: 1.0};
+    const matRight = right.Material();
 
     const worldList: HittableList = HittableList.init(allocator);
+    defer worldList.deinit();
 
-    const sphere1: Sphere = Sphere.init({0.0, 0.0, -1.0}, 0.5);
+    const sphere1: Sphere = Sphere.init({0.0, -100.5, -1.0}, 100.0, &matGround);
     try worldList.add(sphere1.Hittable());
-    const sphere2: Sphere = Sphere.init({0.0, -100.5, -1.0}, 100.0);
+    const sphere2: Sphere = Sphere.init({0.0, 0.0, -1.2}, 0.5, &matCenter);
     try worldList.add(sphere2.Hittable());
+    const sphere3: Sphere = Sphere.init({-1.0, 0.0, -1.0}, 0.5, &matLeft);
+    try worldList.add(sphere3.Hittable());
+    const sphere3_2: Sphere = Sphere.init({-1.0, 0.0, -1.0}, 0.4, &matBubble);
+    try worldList.add(sphere3_2.Hittable());
+    const sphere4: Sphere = Sphere.init({1.0, 0.0, -1.0}, 0.5, &matRight);
+    try worldList.add(sphere4.Hittable());
 
     const world = worldList.Hittable();
 
     // Render
 
-    const cam = Camera.init(16.0 / 9.0, 400, 100, 50);
+    const cam = Camera.init(16.0 / 9.0, 400, 100, 50, 90.0);
 
     cam.render(world);
 }

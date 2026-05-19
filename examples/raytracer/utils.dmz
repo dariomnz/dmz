@@ -1,6 +1,6 @@
 const std = import("std");
 
-pub fn deg_to_rad(degrees: f64) -> f64 {
+pub fn degToRad(degrees: f64) -> f64 {
     return degrees * std.math.pi / 180.0;
 }
 
