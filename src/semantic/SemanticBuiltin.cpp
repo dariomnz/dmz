@@ -423,6 +423,34 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         it->second = &funcDecl;
         debug_msg("created @abs");
         return &funcDecl;
+    } else if (fnName == "@min") {
+        // @min(a, b) -> a|b  (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "a", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "b", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @min");
+        return &funcDecl;
+    } else if (fnName == "@max") {
+        // @max(a, b) -> a|b  (target inferred from context)
+        std::vector<ptr<ResolvedParamDecl>> params;
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "a", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "b", genericTypeExpr(), false));
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(params[0]->type->clone());
+        paramsTypes.emplace_back(params[1]->type->clone());
+        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
+        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
+        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
+        it->second = &funcDecl;
+        debug_msg("created @max");
+        return &funcDecl;
     }
     debug_msg("return null");
     return nullptr;
@@ -1173,6 +1201,52 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
 
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(valArg->type->clone());
+        return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
+                                             std::move(returnType));
+    } else if (resolvedCallee.identifier == "@min" || resolvedCallee.identifier == "@max") {
+        if (resolvedArguments.size() != 2) {
+            return report(call.location, resolvedCallee.identifier + " expects exactly 2 arguments: (a, b)");
+        }
+        auto &aArg = resolvedArguments[0];
+        auto &bArg = resolvedArguments[1];
+
+        // Both args must be the same numeric or simd type
+        ptr<ResolvedType> returnType = nullptr;
+        bool isCorrectType = true;
+        auto aNum = dynamic_cast<ResolvedTypeNumber *>(aArg->type.get());
+        auto bNum = dynamic_cast<ResolvedTypeNumber *>(bArg->type.get());
+        auto aSimd = dynamic_cast<ResolvedTypeSimd *>(aArg->type.get());
+        auto bSimd = dynamic_cast<ResolvedTypeSimd *>(bArg->type.get());
+
+        if (aNum && bNum) {
+            if (aNum->numberKind == bNum->numberKind && aNum->bitSize == bNum->bitSize) {
+                returnType = aNum->clone();
+            } else {
+                isCorrectType = false;
+            }
+        } else if (aSimd && bSimd) {
+            auto aInner = dynamic_cast<ResolvedTypeNumber *>(aSimd->simdType.get());
+            auto bInner = dynamic_cast<ResolvedTypeNumber *>(bSimd->simdType.get());
+            if (aInner && bInner && aInner->numberKind == bInner->numberKind &&
+                aInner->bitSize == bInner->bitSize && aSimd->simdSize == bSimd->simdSize) {
+                returnType = aSimd->clone();
+            } else {
+                isCorrectType = false;
+            }
+        } else {
+            isCorrectType = false;
+        }
+        if (!isCorrectType) {
+            return report(call.location,
+                          resolvedCallee.identifier + ": arguments must be matching numeric or simd types, got '" +
+                              aArg->type->to_str() + "' and '" + bArg->type->to_str() + "'");
+        }
+
+        call.type = returnType->clone();
+
+        std::vector<ptr<ResolvedType>> paramsTypes;
+        paramsTypes.emplace_back(aArg->type->clone());
+        paramsTypes.emplace_back(bArg->type->clone());
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              std::move(returnType));
     }

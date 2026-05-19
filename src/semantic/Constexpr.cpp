@@ -569,6 +569,42 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                 return ComptimeValue(i < 0 ? -i : i);
             }
             return std::nullopt;
+        } else if (builtin->identifier == "@min" || builtin->identifier == "@max") {
+            auto &aArg = expr.arguments[0];
+            auto &bArg = expr.arguments[1];
+            auto a = evaluate(*aArg, allowSideEffects);
+            auto b = evaluate(*bArg, allowSideEffects);
+            if (!a || !b) return std::nullopt;
+
+            bool isMin = builtin->identifier == "@min";
+
+            if (a->isSimd() && b->isSimd()) {
+                auto &simdA = a->getSimd();
+                auto &simdB = b->getSimd();
+                if (simdA.elements.size() != simdB.elements.size()) return std::nullopt;
+                ComptimeValue::Simd result;
+                for (size_t i = 0; i < simdA.elements.size(); i++) {
+                    auto &ea = simdA.elements[i];
+                    auto &eb = simdB.elements[i];
+                    if (ea.isFloat() && eb.isFloat()) {
+                        result.elements.emplace_back(isMin ? std::min(ea.getFloat(), eb.getFloat())
+                                                           : std::max(ea.getFloat(), eb.getFloat()));
+                    } else if (ea.isInt() && eb.isInt()) {
+                        result.elements.emplace_back(isMin ? std::min(ea.getInt(), eb.getInt())
+                                                           : std::max(ea.getInt(), eb.getInt()));
+                    } else {
+                        return std::nullopt;
+                    }
+                }
+                return ComptimeValue(std::move(result));
+            } else if (a->isFloat() && b->isFloat()) {
+                return ComptimeValue(isMin ? std::min(a->getFloat(), b->getFloat())
+                                           : std::max(a->getFloat(), b->getFloat()));
+            } else if (a->isInt() && b->isInt()) {
+                return ComptimeValue(isMin ? std::min(a->getInt(), b->getInt())
+                                           : std::max(a->getInt(), b->getInt()));
+            }
+            return std::nullopt;
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;

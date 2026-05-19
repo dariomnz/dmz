@@ -1,0 +1,47 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    const a = comptime @min(10, 20);
+    const b = comptime @max(10, 20);
+    const c = comptime @min(20, 10);
+    const d = comptime @max(20, 10);
+    const e = comptime @min(3.0, 7.0);
+    const f = comptime @max(3.0, 7.0);
+    const g = comptime @min(7.0, 3.0);
+    const h = comptime @max(7.0, 3.0);
+
+    const si: @simd(i32, 4) = @simdIota();
+    const si2: @simd(i32, 4) = @simdSplat(2);
+    const r1 = comptime @min(si, si2);
+    const r2 = comptime @max(si, si2);
+
+    const sf: @simd(f32, 4) = @simdIota();
+    const sf2: @simd(f32, 4) = @simdSplat(1.5);
+    const r3 = comptime @min(sf, sf2);
+    const r4 = comptime @max(sf, sf2);
+}
+
+// CHECK: ResolvedVarDecl:const i32 a
+// CHECK-NEXT: | value: 10
+// CHECK: ResolvedVarDecl:const i32 b
+// CHECK-NEXT: | value: 20
+// CHECK: ResolvedVarDecl:const i32 c
+// CHECK-NEXT: | value: 10
+// CHECK: ResolvedVarDecl:const i32 d
+// CHECK-NEXT: | value: 20
+// CHECK: ResolvedVarDecl:const f64 e
+// CHECK-NEXT: | value: 3
+// CHECK: ResolvedVarDecl:const f64 f
+// CHECK-NEXT: | value: 7.000000
+// CHECK: ResolvedVarDecl:const f64 g
+// CHECK-NEXT: | value: 3.000000
+// CHECK: ResolvedVarDecl:const f64 h
+// CHECK-NEXT: | value: 7.000000
+// CHECK: ResolvedVarDecl:const @simd(i32, 4) r1
+// CHECK-NEXT: | value: simd(0, 1, 2, 2)
+// CHECK: ResolvedVarDecl:const @simd(i32, 4) r2
+// CHECK-NEXT: | value: simd(2, 2, 2, 3)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) r3
+// CHECK-NEXT: | value: simd(0.000000, 1.000000, 1.500000, 1.500000)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) r4
+// CHECK-NEXT: | value: simd(1.500000, 1.500000, 2.000000, 3.000000)

@@ -75,6 +75,10 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_sqrt(call);
     } else if (builtin.identifier == "@abs") {
         return generate_builtin_abs(call);
+    } else if (builtin.identifier == "@min") {
+        return generate_builtin_min(call);
+    } else if (builtin.identifier == "@max") {
+        return generate_builtin_max(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -675,12 +679,50 @@ llvm::Value *Codegen::generate_builtin_abs(const ResolvedCallExpr &call) {
     if (call.arguments.empty()) dmz_unreachable(call.location, "@abs expects 1 argument");
     auto val = generate_expr(*call.arguments[0]);
     if (val->getType()->isFPOrFPVectorTy()) {
-        auto FabsIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fabs, val->getType());
+        auto FabsIntrin =
+            llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fabs, val->getType());
         return m_builder.CreateCall(FabsIntrin, val, "abs");
     } else {
         auto AbsIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::abs, val->getType());
         llvm::Value *isPoison = llvm::ConstantInt::getFalse(val->getContext());
         return m_builder.CreateCall(AbsIntrin, {val, isPoison}, "abs");
     }
+}
+
+static llvm::Intrinsic::ID select_minmax_intrin(llvm::Type *ty, bool isMin, bool isUnsigned) {
+    if (ty->isFPOrFPVectorTy()) return isMin ? llvm::Intrinsic::minnum : llvm::Intrinsic::maxnum;
+    if (isUnsigned) return isMin ? llvm::Intrinsic::umin : llvm::Intrinsic::umax;
+    return isMin ? llvm::Intrinsic::smin : llvm::Intrinsic::smax;
+}
+
+static bool is_unsigned_arg(const ptr<ResolvedExpr> &arg) {
+    if (auto numType = dynamic_cast<ResolvedTypeNumber *>(arg->type.get()))
+        return numType->numberKind == ResolvedNumberKind::UInt;
+    if (auto simdType = dynamic_cast<ResolvedTypeSimd *>(arg->type.get()))
+        if (auto inner = dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get()))
+            return inner->numberKind == ResolvedNumberKind::UInt;
+    return false;
+}
+
+llvm::Value *Codegen::generate_builtin_min(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@min expects 2 arguments");
+    auto a = generate_expr(*call.arguments[0]);
+    auto b = generate_expr(*call.arguments[1]);
+    bool isUnsigned = is_unsigned_arg(call.arguments[0]);
+    auto intrin = select_minmax_intrin(a->getType(), true, isUnsigned);
+    auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
+    return m_builder.CreateCall(decl, {a, b}, "min");
+}
+
+llvm::Value *Codegen::generate_builtin_max(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@max expects 2 arguments");
+    auto a = generate_expr(*call.arguments[0]);
+    auto b = generate_expr(*call.arguments[1]);
+    bool isUnsigned = is_unsigned_arg(call.arguments[0]);
+    auto intrin = select_minmax_intrin(a->getType(), false, isUnsigned);
+    auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
+    return m_builder.CreateCall(decl, {a, b}, "max");
 }
 }  // namespace DMZ

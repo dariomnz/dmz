@@ -1,0 +1,47 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    let a = 3;
+    let b = 7;
+    const min_ab = @min(a, b);
+    const max_ab = @max(a, b);
+
+    let c = -5;
+    let d = 2;
+    const min_cd = @min(c, d);
+    const max_cd = @max(c, d);
+
+    let e = 3.0;
+    let f = 7.0;
+    const min_ef = @min(e, f);
+    const max_ef = @max(e, f);
+
+    let g: u32 = 10;
+    let h: u32 = 20;
+    const min_gh = @min(g, h);
+    const max_gh = @max(g, h);
+
+    let sa: @simd(i32, 4) = @simdSplat(5);
+    let sb: @simd(i32, 4) = @simdSplat(10);
+    const r1 = @min(sa, sb);
+    const r2 = @max(sa, sb);
+
+    let sc: @simd(f32, 4) = @simdSplat(1.5);
+    let sd: @simd(f32, 4) = @simdSplat(3.5);
+    const r3 = @min(sc, sd);
+    const r4 = @max(sc, sd);
+}
+
+// CHECK: %min = call i32 @llvm.smin.i32(i32 %0, i32 %1)
+// CHECK: %max = call i32 @llvm.smax.i32(i32 %2, i32 %3)
+// CHECK: %min1 = call i32 @llvm.smin.i32(i32 %4, i32 %5)
+// CHECK: %max2 = call i32 @llvm.smax.i32(i32 %6, i32 %7)
+// CHECK: %min3 = call double @llvm.minnum.f64(double %8, double %9)
+// CHECK: %max4 = call double @llvm.maxnum.f64(double %10, double %11)
+// CHECK: %min5 = call i32 @llvm.umin.i32(i32 %12, i32 %13)
+// CHECK: %max6 = call i32 @llvm.umax.i32(i32 %14, i32 %15)
+// CHECK: %min7 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %16, <4 x i32> %17)
+// CHECK: %max8 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %18, <4 x i32> %19)
+// CHECK: %min9 = call <4 x float> @llvm.minnum.v4f32(<4 x float> %20, <4 x float> %21)
+// CHECK: %max10 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %22, <4 x float> %23)
