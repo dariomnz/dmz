@@ -1,10 +1,10 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
 fn main() -> void {
-    const a = comptime @abs(-5);
-    const b = comptime @abs(3);
-    const c = comptime @abs(-3.14);
-    const d = comptime @abs(2.71);
+    const a = comptime @math(.Abs, -5);
+    const b = comptime @math(.Abs, 3);
+    const c = comptime @math(.Abs, -3.14);
+    const d = comptime @math(.Abs, 2.71);
 }
 
 // CHECK: ResolvedVarDecl:const i32 a

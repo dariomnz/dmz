@@ -1,0 +1,131 @@
+// RUN: dmz %s -res-dump 2>&1 | filecheck %s
+
+fn main() -> void {
+    // Unary float ops
+    const a00 = comptime @math(.Sin, 0.0);
+    const a01 = comptime @math(.Cos, 0.0);
+    const a02 = comptime @math(.Tan, 0.0);
+    const a03 = comptime @math(.Asin, 0.0);
+    const a04 = comptime @math(.Acos, 1.0);
+    const a05 = comptime @math(.Atan, 0.0);
+    const a06 = comptime @math(.Sinh, 0.0);
+    const a07 = comptime @math(.Cosh, 0.0);
+    const a08 = comptime @math(.Tanh, 0.0);
+    const a09 = comptime @math(.Exp, 0.0);
+    const a10 = comptime @math(.Exp2, 0.0);
+    const a11 = comptime @math(.Exp10, 0.0);
+    const a12 = comptime @math(.Log, 1.0);
+    const a13 = comptime @math(.Log2, 1.0);
+    const a14 = comptime @math(.Log10, 1.0);
+    const a15 = comptime @math(.Floor, 1.5);
+    const a16 = comptime @math(.Ceil, 1.5);
+    const a17 = comptime @math(.Trunc, 1.5);
+    const a18 = comptime @math(.Rint, 1.5);
+    const a19 = comptime @math(.Round, 1.5);
+    const a20 = comptime @math(.Roundeven, 1.5);
+    const a21 = comptime @math(.Sqrt, 4.0);
+
+    // Binary float ops
+    const a22 = comptime @math(.Atan2, 0.0, 1.0);
+    const a23 = comptime @math(.Copysign, 1.0, -1.0);
+    const a24 = comptime @math(.Pow, 2.0, 3.0);
+
+    // Fma
+    const a25 = comptime @math(.Fma, 2.0, 3.0, 4.0);
+
+    // Abs (int and float)
+    const a26 = comptime @math(.Abs, -5);
+    const a27 = comptime @math(.Abs, -3.5);
+
+    // Min/Max
+    const a28 = comptime @math(.Min, 10, 20);
+    const a29 = comptime @math(.Max, 10, 20);
+    const a30 = comptime @math(.Min, 3.0, 7.0);
+    const a31 = comptime @math(.Max, 3.0, 7.0);
+
+    // SIMD unary
+    const simd1: @simd(f32, 4) = @simdIota();
+    const a32 = comptime @math(.Sqrt, simd1);
+    const a33 = comptime @math(.Sin, simd1);
+
+    // SIMD binary
+    const simd2: @simd(f32, 4) = @simdSplat(2.0);
+    const a34 = comptime @math(.Pow, simd1, simd2);
+    const a35 = comptime @math(.Min, simd1, simd2);
+    const a36 = comptime @math(.Max, simd1, simd2);
+}
+
+// CHECK: ResolvedVarDecl:const f64 a00
+// CHECK-NEXT: | value: 0
+// CHECK: ResolvedVarDecl:const f64 a01
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a02
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a03
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a04
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a05
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a06
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a07
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a08
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a09
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a10
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a11
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a12
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a13
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a14
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a15
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a16
+// CHECK-NEXT: | value: 2.000000
+// CHECK: ResolvedVarDecl:const f64 a17
+// CHECK-NEXT: | value: 1.000000
+// CHECK: ResolvedVarDecl:const f64 a18
+// CHECK-NEXT: | value: 2.000000
+// CHECK: ResolvedVarDecl:const f64 a19
+// CHECK-NEXT: | value: 2.000000
+// CHECK: ResolvedVarDecl:const f64 a20
+// CHECK-NEXT: | value: 2.000000
+// CHECK: ResolvedVarDecl:const f64 a21
+// CHECK-NEXT: | value: 2.000000
+// CHECK: ResolvedVarDecl:const f64 a22
+// CHECK-NEXT: | value: 0.000000
+// CHECK: ResolvedVarDecl:const f64 a23
+// CHECK-NEXT: | value: -1.000000
+// CHECK: ResolvedVarDecl:const f64 a24
+// CHECK-NEXT: | value: 8.000000
+// CHECK: ResolvedVarDecl:const f64 a25
+// CHECK-NEXT: | value: 10.000000
+// CHECK: ResolvedVarDecl:const i32 a26
+// CHECK-NEXT: | value: 5
+// CHECK: ResolvedVarDecl:const f64 a27
+// CHECK-NEXT: | value: 3.500000
+// CHECK: ResolvedVarDecl:const i32 a28
+// CHECK-NEXT: | value: 10
+// CHECK: ResolvedVarDecl:const i32 a29
+// CHECK-NEXT: | value: 20
+// CHECK: ResolvedVarDecl:const f64 a30
+// CHECK-NEXT: | value: 3.000000
+// CHECK: ResolvedVarDecl:const f64 a31
+// CHECK-NEXT: | value: 7.000000
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) a32
+// CHECK-NEXT: | value: simd(0.000000, 1.000000, 1.414214, 1.732051)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) a33
+// CHECK-NEXT: | value: simd(0.000000, 0.841471, 0.909297, 0.141120)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) a34
+// CHECK-NEXT: | value: simd(0.000000, 1.000000, 4.000000, 9.000000)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) a35
+// CHECK-NEXT: | value: simd(0.000000, 1.000000, 2.000000, 2.000000)
+// CHECK: ResolvedVarDecl:const @simd(f32, 4) a36
+// CHECK-NEXT: | value: simd(2.000000, 2.000000, 2.000000, 3.000000)

@@ -3,15 +3,15 @@
 extern fn printf(fmt: *u8, ...) -> i32;
 fn main() -> void {
     let val1 = 4;
-    const absval1 = @abs(val1);
+    const absval1 = @math(.Abs, val1);
     let val2 = -4;
-    const absval2 = @abs(val2);
+    const absval2 = @math(.Abs, val2);
     let val3 = 4.0;
-    const absval3 = @abs(val3);
+    const absval3 = @math(.Abs, val3);
     let val4 = -4.0;
-    const absval4 = @abs(val4);
+    const absval4 = @math(.Abs, val4);
     let val5 = -5;
-    const absval5 = @abs(val5);
+    const absval5 = @math(.Abs, val5);
 }
 // CHECK: %abs = call i32 @llvm.abs.i32(i32 %0, i1 false)
 // CHECK: %abs1 = call i32 @llvm.abs.i32(i32 %1, i1 false)

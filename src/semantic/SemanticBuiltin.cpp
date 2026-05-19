@@ -398,71 +398,26 @@ ResolvedBuiltinFunctionDecl *Sema::resolve_builtin_function_symbol(const DeclRef
         it->second = &funcDecl;
         debug_msg("created @bitCast");
         return &funcDecl;
-    } else if (fnName == "@sqrt") {
-        // @sqrt(value) -> value  (target inferred from context)
+    } else if (fnName == "@math") {
+        // @math(op, val...) -> val (type inferred from args)
         std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
-        std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(params[0]->type->clone());
-        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
-        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
-        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
-        it->second = &funcDecl;
-        debug_msg("created @sqrt");
-        return &funcDecl;
-    } else if (fnName == "@abs") {
-        // @abs(value) -> value  (target inferred from context)
-        std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "value", genericTypeExpr(), false));
-        std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(params[0]->type->clone());
-        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
-        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
-        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
-        it->second = &funcDecl;
-        debug_msg("created @abs");
-        return &funcDecl;
-    } else if (fnName == "@min") {
-        // @min(a, b) -> a|b  (target inferred from context)
-        std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "a", genericTypeExpr(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "b", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "op", makePtr<ResolvedTypeExpr>(loc, makePtr<ResolvedTypeEnum>(loc, nullptr)), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "val1", genericTypeExpr(), false));
+        params.emplace_back(makePtr<ResolvedParamDecl>(
+            loc, "varargs",
+            makePtr<ResolvedTypeExpr>(SourceLocation::builtin(),
+                                      makePtr<ResolvedTypeVarArg>(SourceLocation::builtin())),
+            false));
         std::vector<ptr<ResolvedType>> paramsTypes;
         paramsTypes.emplace_back(params[0]->type->clone());
         paramsTypes.emplace_back(params[1]->type->clone());
+        paramsTypes.emplace_back(params[2]->type->clone());
         auto genericType = makePtr<ResolvedTypeAnyType>(loc);
         auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
         static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
         it->second = &funcDecl;
-        debug_msg("created @min");
-        return &funcDecl;
-    } else if (fnName == "@max") {
-        // @max(a, b) -> a|b  (target inferred from context)
-        std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "a", genericTypeExpr(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "b", genericTypeExpr(), false));
-        std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(params[0]->type->clone());
-        paramsTypes.emplace_back(params[1]->type->clone());
-        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
-        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
-        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
-        it->second = &funcDecl;
-        debug_msg("created @max");
-        return &funcDecl;
-    } else if (fnName == "@pow") {
-        // @pow(base, exp) -> base|exp  (target inferred from context)
-        std::vector<ptr<ResolvedParamDecl>> params;
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "base", genericTypeExpr(), false));
-        params.emplace_back(makePtr<ResolvedParamDecl>(loc, "exp", genericTypeExpr(), false));
-        std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(params[0]->type->clone());
-        paramsTypes.emplace_back(params[1]->type->clone());
-        auto genericType = makePtr<ResolvedTypeAnyType>(loc);
-        auto fnType = makePtr<ResolvedTypeFunction>(loc, nullptr, std::move(paramsTypes), genericType->clone());
-        static auto funcDecl = ResolvedBuiltinFunctionDecl(loc, fnName, std::move(fnType), std::move(params), true);
-        it->second = &funcDecl;
-        debug_msg("created @pow");
+        debug_msg("created @math");
         return &funcDecl;
     }
     debug_msg("return null");
@@ -1193,7 +1148,7 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         if (auto numType = dynamic_cast<ResolvedTypeNumber *>(valArg->type.get())) {
             returnType = numType->clone();
         } else if (auto simdType = dynamic_cast<ResolvedTypeSimd *>(valArg->type.get())) {
-            if (auto numType = dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get())) {
+            if (dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get())) {
                 returnType = simdType->clone();
             } else {
                 isCorrectType = false;
@@ -1258,68 +1213,177 @@ ptr<ResolvedTypeFunction> Sema::resolve_builtin_function_expr(ResolvedExpr &call
         paramsTypes.emplace_back(bArg->type->clone());
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              std::move(returnType));
-    } else if (resolvedCallee.identifier == "@pow") {
-        if (resolvedArguments.size() != 2) {
-            return report(call.location, "@pow expects exactly 2 arguments: (base, exp)");
+    } else if (resolvedCallee.identifier == "@math") {
+        if (resolvedArguments.size() < 2) {
+            return report(call.location, "@math expects at least 2 arguments: (op, val...)");
         }
-        auto &aArg = resolvedArguments[0];
-        auto &bArg = resolvedArguments[1];
+        if (resolvedArguments.size() > 4) {
+            return report(call.location, "@math expects at most 4 arguments: (op, val...)");
+        }
 
-        ptr<ResolvedType> returnType = nullptr;
-        bool isCorrectType = true;
-        auto aNum = dynamic_cast<ResolvedTypeNumber *>(aArg->type.get());
-        auto bNum = dynamic_cast<ResolvedTypeNumber *>(bArg->type.get());
-        auto aSimd = dynamic_cast<ResolvedTypeSimd *>(aArg->type.get());
-        auto bSimd = dynamic_cast<ResolvedTypeSimd *>(bArg->type.get());
+        auto &opParam = resolvedArguments[0];
 
-        if (aNum) {
-            if (!bNum) {
-                isCorrectType = false;
-            } else if (aNum->numberKind == ResolvedNumberKind::Float && bNum->numberKind == ResolvedNumberKind::Float &&
-                       aNum->bitSize == bNum->bitSize) {
-                // f** -> pow
-                returnType = aNum->clone();
-            } else if (aNum->numberKind == ResolvedNumberKind::Float &&
-                       (bNum->numberKind == ResolvedNumberKind::Int || bNum->numberKind == ResolvedNumberKind::UInt)) {
-                // f^i -> powi
-                returnType = aNum->clone();
-            } else {
-                isCorrectType = false;
-            }
-        } else if (aSimd) {
-            if (!bSimd) {
-                isCorrectType = false;
-            } else {
-                auto aInner = dynamic_cast<ResolvedTypeNumber *>(aSimd->simdType.get());
-                auto bInner = dynamic_cast<ResolvedTypeNumber *>(bSimd->simdType.get());
-                if (aInner && bInner && aInner->numberKind == ResolvedNumberKind::Float &&
-                    bInner->numberKind == ResolvedNumberKind::Float && aInner->bitSize == bInner->bitSize &&
-                    aSimd->simdSize == bSimd->simdSize) {
-                    // <Nxf> ** <Nxf> -> pow
-                    returnType = aSimd->clone();
-                } else if (aInner && bInner && aInner->numberKind == ResolvedNumberKind::Float &&
-                           (bInner->numberKind == ResolvedNumberKind::Int ||
-                            bInner->numberKind == ResolvedNumberKind::UInt) &&
-                           aSimd->simdSize == bSimd->simdSize) {
-                    // <Nxf> ^ <Nxi> -> powi
-                    returnType = aSimd->clone();
-                } else {
-                    isCorrectType = false;
+        // Resolve MathOp enum from std/math.dmz
+        ImportExpr mathImportExpr(SourceLocation::builtin(), "math");
+        auto math_import_expr = resolve_import_expr(mathImportExpr);
+        if (!math_import_expr) return {};
+
+        auto mathOpDecl = lookup_in_module(call.location, math_import_expr->moduleDecl, "MathOp");
+        if (mathOpDecl) {
+            if (auto enumDecl = dynamic_cast<ResolvedTypeEnumDecl *>(mathOpDecl->type.get())) {
+                if (!perform_implicit_cast(opParam, *makePtr<ResolvedTypeEnum>(call.location, enumDecl->enumDecl()))) {
+                    return nullptr;
                 }
             }
         } else {
-            isCorrectType = false;
-        }
-        if (!isCorrectType) {
-            return report(call.location, "@pow: expected (float|simd_float, float|simd_float|int|simd_int), got '" +
-                                             aArg->type->to_str() + "' and '" + bArg->type->to_str() + "'");
+            return report(opParam->location, "MathOp not found in std/math.dmz");
         }
 
+        // Determine operation type and check arity/type constraints
+        std::string opStr = "unknown";
+        if (auto autoMember = dynamic_cast<ResolvedAutoMemberExpr *>(opParam.get())) {
+            opStr = autoMember->field;
+        }
+
+        // Categorize operations
+        bool isFloatOnly = false;
+        bool isAnyNumeric = false;
+        bool isMinMax = false;
+        bool isPow = false;
+
+        if (opStr == "Sin" || opStr == "Cos" || opStr == "Tan" || opStr == "Asin" || opStr == "Acos" ||
+            opStr == "Atan" || opStr == "Sinh" || opStr == "Cosh" || opStr == "Tanh" || opStr == "Exp" ||
+            opStr == "Exp2" || opStr == "Exp10" || opStr == "Log" || opStr == "Log2" || opStr == "Log10" ||
+            opStr == "Floor" || opStr == "Ceil" || opStr == "Trunc" || opStr == "Rint" || opStr == "Round" ||
+            opStr == "Roundeven" || opStr == "Sqrt") {
+            isFloatOnly = true;
+        } else if (opStr == "Atan2" || opStr == "Copysign") {
+            isFloatOnly = true;
+        } else if (opStr == "Fma") {
+            isFloatOnly = true;
+        } else if (opStr == "Abs") {
+            isAnyNumeric = true;
+        } else if (opStr == "Min" || opStr == "Max") {
+            isMinMax = true;
+        } else if (opStr == "Pow") {
+            isPow = true;
+        }
+
+        // Check arity
+        if (opStr != "unknown") {
+            bool isBinary =
+                (opStr == "Atan2" || opStr == "Pow" || opStr == "Copysign" || opStr == "Min" || opStr == "Max");
+            bool isTernary = (opStr == "Fma");
+            size_t expectedArgs = isTernary ? 4 : (isBinary ? 3 : 2);
+            if (resolvedArguments.size() != expectedArgs) {
+                return report(call.location, "@math: " + opStr + " expects " + std::to_string(expectedArgs - 1) +
+                                                 " value argument(s), got " +
+                                                 std::to_string(resolvedArguments.size() - 1));
+            }
+        }
+
+        // Validate value argument types
+        auto &val1 = resolvedArguments[1];
+
+        if (isFloatOnly) {
+            // All args must be float or simd-float
+            for (size_t i = 1; i < resolvedArguments.size(); i++) {
+                auto &arg = resolvedArguments[i];
+                auto numType = dynamic_cast<ResolvedTypeNumber *>(arg->type.get());
+                auto simdType = dynamic_cast<ResolvedTypeSimd *>(arg->type.get());
+                bool ok = false;
+                if (numType && numType->numberKind == ResolvedNumberKind::Float) {
+                    ok = true;
+                } else if (simdType) {
+                    if (auto inner = dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get())) {
+                        ok = (inner->numberKind == ResolvedNumberKind::Float);
+                    }
+                }
+                if (!ok) {
+                    return report(arg->location, "@math: " + opStr + " argument " + std::to_string(i) +
+                                                     " must be floating-point, got '" + arg->type->to_str() + "'");
+                }
+            }
+        } else if (isAnyNumeric) {
+            // Abs: any numeric (int, uint, float) or simd
+            if (resolvedArguments.size() != 2) {
+                return report(call.location, "@math: Abs expects 1 value argument");
+            }
+            auto numType = dynamic_cast<ResolvedTypeNumber *>(val1->type.get());
+            auto simdType = dynamic_cast<ResolvedTypeSimd *>(val1->type.get());
+            if (!numType && !simdType) {
+                return report(val1->location,
+                              "@math: Abs argument must be numeric or simd, got '" + val1->type->to_str() + "'");
+            }
+            if (simdType && !dynamic_cast<ResolvedTypeNumber *>(simdType->simdType.get())) {
+                return report(val1->location,
+                              "@math: Abs argument must be numeric or simd, got '" + val1->type->to_str() + "'");
+            }
+        } else if (isMinMax) {
+            // Min/Max: both args must match numeric or simd types
+            if (resolvedArguments.size() != 3) {
+                return report(call.location, "@math: " + opStr + " expects 2 value arguments");
+            }
+            auto &val2 = resolvedArguments[2];
+            auto aNum = dynamic_cast<ResolvedTypeNumber *>(val1->type.get());
+            auto bNum = dynamic_cast<ResolvedTypeNumber *>(val2->type.get());
+            auto aSimd = dynamic_cast<ResolvedTypeSimd *>(val1->type.get());
+            auto bSimd = dynamic_cast<ResolvedTypeSimd *>(val2->type.get());
+
+            bool ok = false;
+            if (aNum && bNum) {
+                ok = (aNum->numberKind == bNum->numberKind && aNum->bitSize == bNum->bitSize);
+            } else if (aSimd && bSimd) {
+                auto aInner = dynamic_cast<ResolvedTypeNumber *>(aSimd->simdType.get());
+                auto bInner = dynamic_cast<ResolvedTypeNumber *>(bSimd->simdType.get());
+                ok = (aInner && bInner && aInner->numberKind == bInner->numberKind &&
+                      aInner->bitSize == bInner->bitSize && aSimd->simdSize == bSimd->simdSize);
+            }
+            if (!ok) {
+                return report(call.location, "@math: " + opStr +
+                                                 " arguments must be matching numeric or simd types, got '" +
+                                                 val1->type->to_str() + "' and '" + val2->type->to_str() + "'");
+            }
+        } else if (isPow) {
+            // Pow: (float, float) or (float, int/uint) or simd variants
+            if (resolvedArguments.size() != 3) {
+                return report(call.location, "@math: Pow expects 2 value arguments");
+            }
+            auto &val2 = resolvedArguments[2];
+            auto aNum = dynamic_cast<ResolvedTypeNumber *>(val1->type.get());
+            auto bNum = dynamic_cast<ResolvedTypeNumber *>(val2->type.get());
+            auto aSimd = dynamic_cast<ResolvedTypeSimd *>(val1->type.get());
+            auto bSimd = dynamic_cast<ResolvedTypeSimd *>(val2->type.get());
+
+            bool ok = false;
+            if (aNum && bNum) {
+                ok = (aNum->numberKind == ResolvedNumberKind::Float &&
+                      (bNum->numberKind == ResolvedNumberKind::Float || bNum->numberKind == ResolvedNumberKind::Int ||
+                       bNum->numberKind == ResolvedNumberKind::UInt));
+            } else if (aSimd && bSimd) {
+                auto aInner = dynamic_cast<ResolvedTypeNumber *>(aSimd->simdType.get());
+                auto bInner = dynamic_cast<ResolvedTypeNumber *>(bSimd->simdType.get());
+                ok = (aInner && bInner && aInner->numberKind == ResolvedNumberKind::Float &&
+                      (bInner->numberKind == ResolvedNumberKind::Float ||
+                       bInner->numberKind == ResolvedNumberKind::Int ||
+                       bInner->numberKind == ResolvedNumberKind::UInt) &&
+                      aSimd->simdSize == bSimd->simdSize);
+            }
+            if (!ok) {
+                return report(call.location,
+                              "@math: Pow expects (float|simd_float, float|simd_float|int|simd_int), got '" +
+                                  val1->type->to_str() + "' and '" + val2->type->to_str() + "'");
+            }
+        }
+
+        // Return type matches first value arg (for pow with int exp, return float type)
+        auto returnType = val1->type->clone();
         call.type = returnType->clone();
 
         std::vector<ptr<ResolvedType>> paramsTypes;
-        paramsTypes.emplace_back(aArg->type->clone());
-        paramsTypes.emplace_back(bArg->type->clone());
+        for (auto &arg : resolvedArguments) {
+            paramsTypes.emplace_back(arg->type->clone());
+        }
         return makePtr<ResolvedTypeFunction>(call.location, &resolvedCallee, std::move(paramsTypes),
                                              std::move(returnType));
     }

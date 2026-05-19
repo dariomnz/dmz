@@ -3,19 +3,19 @@
 extern fn printf(fmt: *u8, ...) -> i32;
 fn main() -> void {
     let val1 = 4.0;
-    const sqrtval1 = @sqrt(val1);
+    const sqrtval1 = @math(.Sqrt, val1);
     let val2 = 2.0;
-    const sqrtval2 = @sqrt(val2);
+    const sqrtval2 = @math(.Sqrt, val2);
     let val3 = 1.0;
-    const sqrtval3 = @sqrt(val3);
+    const sqrtval3 = @math(.Sqrt, val3);
     let val4 = 20.0;
-    const sqrtval4 = @sqrt(val4);
+    const sqrtval4 = @math(.Sqrt, val4);
 
     let simd1: @simd(f32, 4) = @simdIota();
     let simd2: @simd(f64, 4) = @simdSplat(5.0);
 
-    const val5 = @sqrt(simd1);
-    const val6 = @sqrt(simd2);
+    const val5 = @math(.Sqrt, simd1);
+    const val6 = @math(.Sqrt, simd2);
 }
 // CHECK:   %0 = load double, ptr %val1, align 8
 // CHECK-NEXT:   %sqrt = call double @llvm.sqrt.f64(double %0)

@@ -4,33 +4,33 @@ extern fn printf(fmt: *u8, ...) -> i32;
 fn main() -> void {
     let a = 3;
     let b = 7;
-    const min_ab = @min(a, b);
-    const max_ab = @max(a, b);
+    const min_ab = @math(.Min, a, b);
+    const max_ab = @math(.Max, a, b);
 
     let c = -5;
     let d = 2;
-    const min_cd = @min(c, d);
-    const max_cd = @max(c, d);
+    const min_cd = @math(.Min, c, d);
+    const max_cd = @math(.Max, c, d);
 
     let e = 3.0;
     let f = 7.0;
-    const min_ef = @min(e, f);
-    const max_ef = @max(e, f);
+    const min_ef = @math(.Min, e, f);
+    const max_ef = @math(.Max, e, f);
 
     let g: u32 = 10;
     let h: u32 = 20;
-    const min_gh = @min(g, h);
-    const max_gh = @max(g, h);
+    const min_gh = @math(.Min, g, h);
+    const max_gh = @math(.Max, g, h);
 
     let sa: @simd(i32, 4) = @simdSplat(5);
     let sb: @simd(i32, 4) = @simdSplat(10);
-    const r1 = @min(sa, sb);
-    const r2 = @max(sa, sb);
+    const r1 = @math(.Min, sa, sb);
+    const r2 = @math(.Max, sa, sb);
 
     let sc: @simd(f32, 4) = @simdSplat(1.5);
     let sd: @simd(f32, 4) = @simdSplat(3.5);
-    const r3 = @min(sc, sd);
-    const r4 = @max(sc, sd);
+    const r3 = @math(.Min, sc, sd);
+    const r4 = @math(.Max, sc, sd);
 }
 
 // CHECK: %min = call i32 @llvm.smin.i32(i32 %0, i32 %1)

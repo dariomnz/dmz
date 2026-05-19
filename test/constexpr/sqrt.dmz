@@ -1,16 +1,16 @@
 // RUN: dmz %s -res-dump 2>&1 | filecheck %s
 
 fn main() -> void {
-    const a = comptime @sqrt(4.0);
-    const b = comptime @sqrt(2.0);
-    const c = comptime @sqrt(1.0);
-    const d = comptime @sqrt(10.0);
+    const a = comptime @math(.Sqrt, 4.0);
+    const b = comptime @math(.Sqrt, 2.0);
+    const c = comptime @math(.Sqrt, 1.0);
+    const d = comptime @math(.Sqrt, 10.0);
 
     const simd1: @simd(f32, 4) = @simdIota();
     const simd2: @simd(f64, 4) = @simdSplat(5.0);
 
-    const e = comptime @sqrt(simd1);
-    const f = comptime @sqrt(simd2);
+    const e = comptime @math(.Sqrt, simd1);
+    const f = comptime @math(.Sqrt, simd2);
 }
 
 // CHECK: ResolvedVarDecl:const f64 a

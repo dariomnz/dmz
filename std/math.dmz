@@ -2,6 +2,38 @@ const std = import("std");
 
 pub const pi: f64 = 3.14159265358979323846264338327950288419716939937510;
 
+pub const MathOp = enum {
+    Sin,
+    Cos,
+    Tan,
+    Asin,
+    Acos,
+    Atan,
+    Atan2,
+    Sinh,
+    Cosh,
+    Tanh,
+    Exp,
+    Exp2,
+    Exp10,
+    Log,
+    Log2,
+    Log10,
+    Pow,
+    Fma,
+    Floor,
+    Ceil,
+    Trunc,
+    Rint,
+    Round,
+    Roundeven,
+    Copysign,
+    Sqrt,
+    Abs,
+    Min,
+    Max,
+};
+
 pub fn inf(comptime T: type) -> T {
     const typeInfo = @typeinfo(T);
 

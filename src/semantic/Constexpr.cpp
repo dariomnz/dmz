@@ -523,117 +523,170 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                 }
             }
             return std::nullopt;
-        } else if (builtin->identifier == "@sqrt") {
-            auto &valArg = expr.arguments[0];
-            auto val = evaluate(*valArg, allowSideEffects);
-            if (!val) return std::nullopt;
+        } else if (builtin->identifier == "@math") {
+            if (expr.arguments.size() < 2) return std::nullopt;
 
-            if (val->isSimd()) {
-                auto &simdV = val->getSimd();
-                ComptimeValue::Simd result;
-                for (auto &elem : simdV.elements) {
-                    if (elem.isFloat()) {
-                        result.elements.emplace_back(std::sqrt(elem.getFloat()));
-                    } else {
+            // Evaluate the op enum
+            auto &opArg = expr.arguments[0];
+            auto opVal = evaluate(*opArg, allowSideEffects);
+            if (!opVal || !opVal->isInt()) return std::nullopt;
+            int op = static_cast<int>(opVal->getInt());
+
+            auto &valArg1 = expr.arguments[1];
+            auto val1 = evaluate(*valArg1, allowSideEffects);
+            if (!val1) return std::nullopt;
+
+            // Helper for unary math
+            auto unaryOp = [&](double (*fn)(double)) -> std::optional<ComptimeValue> {
+                if (val1->isSimd()) {
+                    auto &simdV = val1->getSimd();
+                    ComptimeValue::Simd result;
+                    for (auto &elem : simdV.elements) {
+                        if (elem.isFloat()) {
+                            result.elements.emplace_back(fn(elem.getFloat()));
+                        } else {
+                            return std::nullopt;
+                        }
+                    }
+                    return ComptimeValue(std::move(result));
+                } else if (val1->isFloat()) {
+                    return ComptimeValue(fn(val1->getFloat()));
+                }
+                return std::nullopt;
+            };
+
+            // Helper for binary math
+            auto binaryOp = [&](double (*fn)(double, double)) -> std::optional<ComptimeValue> {
+                if (expr.arguments.size() < 3) return std::nullopt;
+                auto &valArg2 = expr.arguments[2];
+                auto val2 = evaluate(*valArg2, allowSideEffects);
+                if (!val2) return std::nullopt;
+
+                if (val1->isSimd() && val2->isSimd()) {
+                    auto &simdA = val1->getSimd();
+                    auto &simdB = val2->getSimd();
+                    if (simdA.elements.size() != simdB.elements.size()) return std::nullopt;
+                    ComptimeValue::Simd result;
+                    for (size_t i = 0; i < simdA.elements.size(); i++) {
+                        auto &ea = simdA.elements[i];
+                        auto &eb = simdB.elements[i];
+                        if (ea.isFloat() && eb.isFloat()) {
+                            result.elements.emplace_back(fn(ea.getFloat(), eb.getFloat()));
+                        } else {
+                            return std::nullopt;
+                        }
+                    }
+                    return ComptimeValue(std::move(result));
+                } else if (val1->isFloat() && val2->isFloat()) {
+                    return ComptimeValue(fn(val1->getFloat(), val2->getFloat()));
+                }
+                return std::nullopt;
+            };
+
+            // Helper for ternary math (fma)
+            auto ternaryOp = [&](double (*fn)(double, double, double)) -> std::optional<ComptimeValue> {
+                if (expr.arguments.size() < 4) return std::nullopt;
+                auto &valArg2 = expr.arguments[2];
+                auto &valArg3 = expr.arguments[3];
+                auto val2 = evaluate(*valArg2, allowSideEffects);
+                auto val3 = evaluate(*valArg3, allowSideEffects);
+                if (!val2 || !val3) return std::nullopt;
+                if (val1->isFloat() && val2->isFloat() && val3->isFloat()) {
+                    return ComptimeValue(fn(val1->getFloat(), val2->getFloat(), val3->getFloat()));
+                }
+                return std::nullopt;
+            };
+
+            switch (op) {
+                case 0: return unaryOp(static_cast<double (*)(double)>(std::sin));
+                case 1: return unaryOp(static_cast<double (*)(double)>(std::cos));
+                case 2: return unaryOp(static_cast<double (*)(double)>(std::tan));
+                case 3: return unaryOp(static_cast<double (*)(double)>(std::asin));
+                case 4: return unaryOp(static_cast<double (*)(double)>(std::acos));
+                case 5: return unaryOp(static_cast<double (*)(double)>(std::atan));
+                case 6: return binaryOp(static_cast<double (*)(double, double)>(std::atan2));
+                case 7: return unaryOp(static_cast<double (*)(double)>(std::sinh));
+                case 8: return unaryOp(static_cast<double (*)(double)>(std::cosh));
+                case 9: return unaryOp(static_cast<double (*)(double)>(std::tanh));
+                case 10: return unaryOp(static_cast<double (*)(double)>(std::exp));
+                case 11: return unaryOp(static_cast<double (*)(double)>(std::exp2));
+                case 12: return unaryOp([](double x) { return std::pow(10.0, x); });
+                case 13: return unaryOp(static_cast<double (*)(double)>(std::log));
+                case 14: return unaryOp(static_cast<double (*)(double)>(std::log2));
+                case 15: return unaryOp(static_cast<double (*)(double)>(std::log10));
+                case 16: return binaryOp(static_cast<double (*)(double, double)>(std::pow));
+                case 17: return ternaryOp(static_cast<double (*)(double, double, double)>(std::fma));
+                case 18: return unaryOp(static_cast<double (*)(double)>(std::floor));
+                case 19: return unaryOp(static_cast<double (*)(double)>(std::ceil));
+                case 20: return unaryOp(static_cast<double (*)(double)>(std::trunc));
+                case 21: return unaryOp(static_cast<double (*)(double)>(std::rint));
+                case 22: return unaryOp(static_cast<double (*)(double)>(std::round));
+                case 23: return unaryOp([](double x) { return ::roundeven(x); });
+                case 24: return binaryOp(static_cast<double (*)(double, double)>(std::copysign));
+                case 25: return unaryOp(static_cast<double (*)(double)>(std::sqrt));
+                case 26: {  // Abs: works on int and float
+                    if (val1->isFloat()) {
+                        double f = val1->getFloat();
+                        return ComptimeValue(f < 0 ? -f : f);
+                    } else if (val1->isInt()) {
+                        int64_t i = val1->getInt();
+                        return ComptimeValue(i < 0 ? -i : i);
+                    } else if (val1->isSimd()) {
+                        auto &simdV = val1->getSimd();
+                        ComptimeValue::Simd result;
+                        for (auto &elem : simdV.elements) {
+                            if (elem.isFloat()) {
+                                double f = elem.getFloat();
+                                result.elements.emplace_back(f < 0 ? -f : f);
+                            } else {
+                                int64_t i = elem.getInt();
+                                result.elements.emplace_back(i < 0 ? -i : i);
+                            }
+                        }
+                        return ComptimeValue(std::move(result));
+                    }
+                    return std::nullopt;
+                }
+                case 27:  // Min
+                case 28: {  // Max
+                    if (expr.arguments.size() < 3) return std::nullopt;
+                    auto &valArg2 = expr.arguments[2];
+                    auto val2 = evaluate(*valArg2, allowSideEffects);
+                    if (!val2) return std::nullopt;
+                    bool isMin = (op == 27);
+
+                    auto apply = [&](auto fn) -> std::optional<ComptimeValue> {
+                        if (val1->isSimd() && val2->isSimd()) {
+                            auto &simdA = val1->getSimd();
+                            auto &simdB = val2->getSimd();
+                            if (simdA.elements.size() != simdB.elements.size()) return std::nullopt;
+                            ComptimeValue::Simd result;
+                            for (size_t i = 0; i < simdA.elements.size(); i++) {
+                                result.elements.emplace_back(fn(simdA.elements[i], simdB.elements[i]));
+                            }
+                            return ComptimeValue(std::move(result));
+                        } else if (val1->isFloat() && val2->isFloat()) {
+                            return ComptimeValue(fn(*val1, *val2));
+                        } else if (val1->isInt() && val2->isInt()) {
+                            return ComptimeValue(fn(*val1, *val2));
+                        }
                         return std::nullopt;
-                    }
-                }
-                return ComptimeValue(std::move(result));
-            } else if (val->isFloat()) {
-                return ComptimeValue(std::sqrt(val->getFloat()));
-            }
-            return std::nullopt;
-        } else if (builtin->identifier == "@abs") {
-            auto &valArg = expr.arguments[0];
-            auto val = evaluate(*valArg, allowSideEffects);
-            if (!val) return std::nullopt;
+                    };
 
-            if (val->isSimd()) {
-                auto &simdV = val->getSimd();
-                ComptimeValue::Simd result;
-                for (auto &elem : simdV.elements) {
-                    if (elem.isFloat()) {
-                        double f = elem.getFloat();
-                        result.elements.emplace_back(f < 0 ? -f : f);
+                    if (isMin) {
+                        return apply([](const ComptimeValue &a, const ComptimeValue &b) {
+                            if (a.isFloat()) return ComptimeValue(std::min(a.getFloat(), b.getFloat()));
+                            return ComptimeValue(std::min(a.getInt(), b.getInt()));
+                        });
                     } else {
-                        int64_t i = elem.getInt();
-                        result.elements.emplace_back(i < 0 ? -i : i);
+                        return apply([](const ComptimeValue &a, const ComptimeValue &b) {
+                            if (a.isFloat()) return ComptimeValue(std::max(a.getFloat(), b.getFloat()));
+                            return ComptimeValue(std::max(a.getInt(), b.getInt()));
+                        });
                     }
                 }
-                return ComptimeValue(std::move(result));
-            } else if (val->isFloat()) {
-                double f = val->getFloat();
-                return ComptimeValue(f < 0 ? -f : f);
-            } else if (val->isInt()) {
-                int64_t i = val->getInt();
-                return ComptimeValue(i < 0 ? -i : i);
+                default: return std::nullopt;
             }
-            return std::nullopt;
-        } else if (builtin->identifier == "@min" || builtin->identifier == "@max") {
-            auto &aArg = expr.arguments[0];
-            auto &bArg = expr.arguments[1];
-            auto a = evaluate(*aArg, allowSideEffects);
-            auto b = evaluate(*bArg, allowSideEffects);
-            if (!a || !b) return std::nullopt;
-
-            bool isMin = builtin->identifier == "@min";
-
-            if (a->isSimd() && b->isSimd()) {
-                auto &simdA = a->getSimd();
-                auto &simdB = b->getSimd();
-                if (simdA.elements.size() != simdB.elements.size()) return std::nullopt;
-                ComptimeValue::Simd result;
-                for (size_t i = 0; i < simdA.elements.size(); i++) {
-                    auto &ea = simdA.elements[i];
-                    auto &eb = simdB.elements[i];
-                    if (ea.isFloat() && eb.isFloat()) {
-                        result.elements.emplace_back(isMin ? std::min(ea.getFloat(), eb.getFloat())
-                                                           : std::max(ea.getFloat(), eb.getFloat()));
-                    } else if (ea.isInt() && eb.isInt()) {
-                        result.elements.emplace_back(isMin ? std::min(ea.getInt(), eb.getInt())
-                                                           : std::max(ea.getInt(), eb.getInt()));
-                    } else {
-                        return std::nullopt;
-                    }
-                }
-                return ComptimeValue(std::move(result));
-            } else if (a->isFloat() && b->isFloat()) {
-                return ComptimeValue(isMin ? std::min(a->getFloat(), b->getFloat())
-                                           : std::max(a->getFloat(), b->getFloat()));
-            } else if (a->isInt() && b->isInt()) {
-                return ComptimeValue(isMin ? std::min(a->getInt(), b->getInt()) : std::max(a->getInt(), b->getInt()));
-            }
-            return std::nullopt;
-        } else if (builtin->identifier == "@pow") {
-            auto &aArg = expr.arguments[0];
-            auto &bArg = expr.arguments[1];
-            auto a = evaluate(*aArg, allowSideEffects);
-            auto b = evaluate(*bArg, allowSideEffects);
-            if (!a || !b) return std::nullopt;
-
-            if (a->isSimd() && b->isSimd()) {
-                auto &simdA = a->getSimd();
-                auto &simdB = b->getSimd();
-                if (simdA.elements.size() != simdB.elements.size()) return std::nullopt;
-                ComptimeValue::Simd result;
-                for (size_t i = 0; i < simdA.elements.size(); i++) {
-                    auto &ea = simdA.elements[i];
-                    auto &eb = simdB.elements[i];
-                    if (ea.isFloat() && eb.isFloat()) {
-                        result.elements.emplace_back(std::pow(ea.getFloat(), eb.getFloat()));
-                    } else if (ea.isFloat() && eb.isInt()) {
-                        result.elements.emplace_back(std::pow(ea.getFloat(), (double)eb.getInt()));
-                    } else {
-                        return std::nullopt;
-                    }
-                }
-                return ComptimeValue(std::move(result));
-            } else if (a->isFloat() && b->isFloat()) {
-                return ComptimeValue(std::pow(a->getFloat(), b->getFloat()));
-            } else if (a->isFloat() && b->isInt()) {
-                return ComptimeValue(std::pow(a->getFloat(), (double)b->getInt()));
-            }
-            return std::nullopt;
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;

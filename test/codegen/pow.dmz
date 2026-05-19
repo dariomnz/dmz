@@ -5,32 +5,32 @@ fn main() -> void {
     // pow: float ** float
     let base1 = 2.0;
     let exp1 = 3.0;
-    const pow1 = @pow(base1, exp1);
+    const pow1 = @math(.Pow, base1, exp1);
 
     // powi: float ^ int
     let base2 = 2.0;
     let exp2: i32 = 3;
-    const pow2 = @pow(base2, exp2);
+    const pow2 = @math(.Pow, base2, exp2);
 
     // powi: float ^ uint
     let base3 = 2.0;
     let exp3: u32 = 4;
-    const pow3 = @pow(base3, exp3);
+    const pow3 = @math(.Pow, base3, exp3);
 
     // pow: <4 x f32> ** <4 x f32>
     let simd1: @simd(f32, 4) = @simdSplat(2.0);
     let simd2: @simd(f32, 4) = @simdSplat(3.0);
-    const pow4 = @pow(simd1, simd2);
+    const pow4 = @math(.Pow, simd1, simd2);
 
     // powi: <4 x f32> ^ <4 x i32>
     let simd3: @simd(f32, 4) = @simdSplat(2.0);
     let simd4: @simd(i32, 4) = @simdSplat(3);
-    const pow5 = @pow(simd3, simd4);
+    const pow5 = @math(.Pow, simd3, simd4);
 
     // pow: <4 x f64> ** <4 x f64>
     let simd5: @simd(f64, 4) = @simdSplat(4.0);
     let simd6: @simd(f64, 4) = @simdSplat(0.5);
-    const pow6 = @pow(simd5, simd6);
+    const pow6 = @math(.Pow, simd5, simd6);
 }
 // CHECK: call double @llvm.pow.f64(
 // CHECK: call double @llvm.powi.f64.i32(

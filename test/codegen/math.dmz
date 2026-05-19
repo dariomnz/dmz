@@ -1,0 +1,150 @@
+// RUN: dmz %s -llvm-dump 2>&1 | filecheck %s
+
+extern fn printf(fmt: *u8, ...) -> i32;
+fn main() -> void {
+    // Unary float ops
+    let a = 1.0;
+    const r00 = @math(.Sin, a);
+    const r01 = @math(.Cos, a);
+    const r02 = @math(.Tan, a);
+    const r03 = @math(.Asin, a);
+    const r04 = @math(.Acos, a);
+    const r05 = @math(.Atan, a);
+    const r06 = @math(.Sinh, a);
+    const r07 = @math(.Cosh, a);
+    const r08 = @math(.Tanh, a);
+    const r09 = @math(.Exp, a);
+    const r10 = @math(.Exp2, a);
+    const r11 = @math(.Exp10, a);
+    const r12 = @math(.Log, a);
+    const r13 = @math(.Log2, a);
+    const r14 = @math(.Log10, a);
+    const r15 = @math(.Floor, a);
+    const r16 = @math(.Ceil, a);
+    const r17 = @math(.Trunc, a);
+    const r18 = @math(.Rint, a);
+    const r19 = @math(.Round, a);
+    const r20 = @math(.Roundeven, a);
+    const r21 = @math(.Sqrt, a);
+
+    // Binary float ops
+    let b = 2.0;
+    const r22 = @math(.Atan2, a, b);
+    const r23 = @math(.Copysign, a, b);
+    const r24 = @math(.Pow, a, b);
+
+    // Pow with int exponent
+    let c: i32 = 3;
+    const r25 = @math(.Pow, a, c);
+
+    // Ternary op
+    const r26 = @math(.Fma, a, b, b);
+
+    // Abs (int and float)
+    let d: i32 = -5;
+    const r27 = @math(.Abs, d);
+    let e: u32 = 7;
+    const r28 = @math(.Abs, e);
+    const r29 = @math(.Abs, a);
+
+    // Min/Max (int and float)
+    let f: i32 = 10;
+    let g: i32 = 20;
+    const r30 = @math(.Min, f, g);
+    const r31 = @math(.Max, f, g);
+    let h: u32 = 10;
+    let i: u32 = 20;
+    const r32 = @math(.Min, h, i);
+    const r33 = @math(.Max, h, i);
+    const r34 = @math(.Min, a, b);
+    const r35 = @math(.Max, a, b);
+
+    // SIMD unary
+    let simd1: @simd(f32, 4) = @simdIota();
+    const r36 = @math(.Sin, simd1);
+    const r37 = @math(.Sqrt, simd1);
+    const r38 = @math(.Abs, simd1);
+
+    // SIMD binary
+    let simd2: @simd(f32, 4) = @simdSplat(2.0);
+    const r39 = @math(.Pow, simd1, simd2);
+    const r40 = @math(.Min, simd1, simd2);
+    const r41 = @math(.Max, simd1, simd2);
+
+    // SIMD int Min/Max
+    let simd3: @simd(i32, 4) = @simdIota();
+    let simd4: @simd(i32, 4) = @simdSplat(2);
+    const r42 = @math(.Min, simd3, simd4);
+    const r43 = @math(.Max, simd3, simd4);
+
+    // SIMD Abs int
+    let simd5: @simd(i32, 4) = @simdSplat(-3);
+    const r44 = @math(.Abs, simd5);
+}
+
+// Unary float intrinsics
+// CHECK: %sin = call double @llvm.sin.f64
+// CHECK: %cos = call double @llvm.cos.f64
+// CHECK: %tan = call double @llvm.tan.f64
+// CHECK: %asin = call double @llvm.asin.f64
+// CHECK: %acos = call double @llvm.acos.f64
+// CHECK: %atan = call double @llvm.atan.f64
+// CHECK: %sinh = call double @llvm.sinh.f64
+// CHECK: %cosh = call double @llvm.cosh.f64
+// CHECK: %tanh = call double @llvm.tanh.f64
+// CHECK: %exp = call double @llvm.exp.f64
+// CHECK: %exp2 = call double @llvm.exp2.f64
+// CHECK: %exp10 = call double @llvm.exp10.f64
+// CHECK: %log = call double @llvm.log.f64
+// CHECK: %log2 = call double @llvm.log2.f64
+// CHECK: %log10 = call double @llvm.log10.f64
+// CHECK: %floor = call double @llvm.floor.f64
+// CHECK: %ceil = call double @llvm.ceil.f64
+// CHECK: %trunc = call double @llvm.trunc.f64
+// CHECK: %rint = call double @llvm.rint.f64
+// CHECK: %round = call double @llvm.round.f64
+// CHECK: %roundeven = call double @llvm.roundeven.f64
+// CHECK: %sqrt = call double @llvm.sqrt.f64
+
+// Binary float intrinsics
+// CHECK: %atan2 = call double @llvm.atan2.f64
+// CHECK: %copysign = call double @llvm.copysign.f64
+// CHECK: %pow = call double @llvm.pow.f64
+
+// Pow with int exponent → powi
+// CHECK: %powi = call double @llvm.powi.f64.i32
+
+// Fma
+// CHECK: %fma = call double @llvm.fma.f64
+
+// Abs int
+// CHECK: call i32 @llvm.abs.i32(i32
+// Abs float → fabs
+// CHECK: call double @llvm.fabs.f64
+
+// Min/Max int signed
+// CHECK: call i32 @llvm.smin.i32
+// CHECK: call i32 @llvm.smax.i32
+// Min/Max unsigned
+// CHECK: call i32 @llvm.umin.i32
+// CHECK: call i32 @llvm.umax.i32
+// Min/Max float
+// CHECK: call double @llvm.minnum.f64
+// CHECK: call double @llvm.maxnum.f64
+
+// SIMD unary
+// CHECK: call <4 x float> @llvm.sin.v4f32
+// CHECK: call <4 x float> @llvm.sqrt.v4f32
+// CHECK: call <4 x float> @llvm.fabs.v4f32
+
+// SIMD binary
+// CHECK: call <4 x float> @llvm.pow.v4f32
+// CHECK: call <4 x float> @llvm.minnum.v4f32
+// CHECK: call <4 x float> @llvm.maxnum.v4f32
+
+// SIMD int Min/Max
+// CHECK: call <4 x i32> @llvm.smin.v4i32
+// CHECK: call <4 x i32> @llvm.smax.v4i32
+
+// SIMD Abs int
+// CHECK: call <4 x i32> @llvm.abs.v4i32

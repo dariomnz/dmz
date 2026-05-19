@@ -71,16 +71,8 @@ llvm::Value *Codegen::generate_builtin_function(const ResolvedBuiltinFunctionDec
         return generate_builtin_floatCast(call);
     } else if (builtin.identifier == "@bitCast") {
         return generate_builtin_bitCast(call);
-    } else if (builtin.identifier == "@sqrt") {
-        return generate_builtin_sqrt(call);
-    } else if (builtin.identifier == "@abs") {
-        return generate_builtin_abs(call);
-    } else if (builtin.identifier == "@min") {
-        return generate_builtin_min(call);
-    } else if (builtin.identifier == "@max") {
-        return generate_builtin_max(call);
-    } else if (builtin.identifier == "@pow") {
-        return generate_builtin_pow(call);
+    } else if (builtin.identifier == "@math") {
+        return generate_builtin_math(call);
     }
     dmz_unreachable(call.location, "unsuported builtin function " + builtin.identifier);
 }
@@ -668,29 +660,6 @@ llvm::Value *Codegen::generate_builtin_asm(const ResolvedCallExpr &call) {
     return m_builder.CreateCall(asmFnType, ia, args);
 }
 
-llvm::Value *Codegen::generate_builtin_sqrt(const ResolvedCallExpr &call) {
-    debug_func(call.location);
-    if (call.arguments.empty()) dmz_unreachable(call.location, "@sqrt expects 1 argument");
-    auto val = generate_expr(*call.arguments[0]);
-    auto SqrtIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::sqrt, val->getType());
-    return m_builder.CreateCall(SqrtIntrin, val, "sqrt");
-}
-
-llvm::Value *Codegen::generate_builtin_abs(const ResolvedCallExpr &call) {
-    debug_func(call.location);
-    if (call.arguments.empty()) dmz_unreachable(call.location, "@abs expects 1 argument");
-    auto val = generate_expr(*call.arguments[0]);
-    if (val->getType()->isFPOrFPVectorTy()) {
-        auto FabsIntrin =
-            llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fabs, val->getType());
-        return m_builder.CreateCall(FabsIntrin, val, "abs");
-    } else {
-        auto AbsIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::abs, val->getType());
-        llvm::Value *isPoison = llvm::ConstantInt::getFalse(val->getContext());
-        return m_builder.CreateCall(AbsIntrin, {val, isPoison}, "abs");
-    }
-}
-
 static llvm::Intrinsic::ID select_minmax_intrin(llvm::Type *ty, bool isMin, bool isUnsigned) {
     if (ty->isFPOrFPVectorTy()) return isMin ? llvm::Intrinsic::minnum : llvm::Intrinsic::maxnum;
     if (isUnsigned) return isMin ? llvm::Intrinsic::umin : llvm::Intrinsic::umax;
@@ -706,69 +675,229 @@ static bool is_unsigned_arg(const ptr<ResolvedExpr> &arg) {
     return false;
 }
 
-llvm::Value *Codegen::generate_builtin_min(const ResolvedCallExpr &call) {
-    debug_func(call.location);
-    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@min expects 2 arguments");
-    auto a = generate_expr(*call.arguments[0]);
-    auto b = generate_expr(*call.arguments[1]);
-    bool isUnsigned = is_unsigned_arg(call.arguments[0]);
-    auto intrin = select_minmax_intrin(a->getType(), true, isUnsigned);
-    auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
-    return m_builder.CreateCall(decl, {a, b}, "min");
-}
+static std::optional<ComptimeValue> get_enum_constant(const ptr<ResolvedExpr> &arg) {
+    // Try direct constant value first
+    auto val = arg->get_constant_value();
+    if (val) return val;
 
-llvm::Value *Codegen::generate_builtin_max(const ResolvedCallExpr &call) {
-    debug_func(call.location);
-    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@max expects 2 arguments");
-    auto a = generate_expr(*call.arguments[0]);
-    auto b = generate_expr(*call.arguments[1]);
-    bool isUnsigned = is_unsigned_arg(call.arguments[0]);
-    auto intrin = select_minmax_intrin(a->getType(), false, isUnsigned);
-    auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
-    return m_builder.CreateCall(decl, {a, b}, "max");
-}
-
-llvm::Value *Codegen::generate_builtin_pow(const ResolvedCallExpr &call) {
-    debug_func(call.location);
-    if (call.arguments.size() != 2) dmz_unreachable(call.location, "@pow expects 2 arguments");
-    auto base = generate_expr(*call.arguments[0]);
-    auto exp = generate_expr(*call.arguments[1]);
-
-    // If exponent is an integer type, use powi (with i32 cast)
-    if (exp->getType()->isIntegerTy() ||
-        (exp->getType()->isVectorTy() && exp->getType()->getScalarType()->isIntegerTy())) {
-        auto *i32Ty = llvm::Type::getInt32Ty(*m_context);
-        if (exp->getType()->isVectorTy()) {
-            auto *vecTy = llvm::cast<llvm::FixedVectorType>(exp->getType());
-            auto *i32VecTy = llvm::FixedVectorType::get(i32Ty, vecTy->getNumElements());
-            if (exp->getType() != i32VecTy) {
-                bool isUnsigned = false;
-                if (auto numTy = dynamic_cast<ResolvedTypeNumber *>(call.arguments[1]->type.get())) {
-                    isUnsigned = numTy->numberKind == ResolvedNumberKind::UInt;
-                } else if (auto simdTy = dynamic_cast<ResolvedTypeSimd *>(call.arguments[1]->type.get())) {
-                    if (auto inner = dynamic_cast<ResolvedTypeNumber *>(simdTy->simdType.get()))
-                        isUnsigned = inner->numberKind == ResolvedNumberKind::UInt;
-                }
-                if (isUnsigned)
-                    exp = m_builder.CreateZExtOrTrunc(exp, i32VecTy, "exp.i32");
-                else
-                    exp = m_builder.CreateSExtOrTrunc(exp, i32VecTy, "exp.i32");
-            }
-        } else if (exp->getType() != i32Ty) {
-            bool isUnsigned = false;
-            if (auto numTy = dynamic_cast<ResolvedTypeNumber *>(call.arguments[1]->type.get()))
-                isUnsigned = numTy->numberKind == ResolvedNumberKind::UInt;
-            if (isUnsigned)
-                exp = m_builder.CreateZExtOrTrunc(exp, i32Ty, "exp.i32");
-            else
-                exp = m_builder.CreateSExtOrTrunc(exp, i32Ty, "exp.i32");
-        }
-        auto PowiIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::powi,
-                                                                  {base->getType(), exp->getType()});
-        return m_builder.CreateCall(PowiIntrin, {base, exp}, "powi");
+    // Handle ResolvedMemberExpr wrapping an enum field
+    if (auto memberExpr = dynamic_cast<ResolvedMemberExpr *>(arg.get())) {
+        // The member IS the field decl with its constant value (enum ordinal)
+        val = memberExpr->member.get_constant_value();
+        if (val) return val;
     }
 
-    auto PowIntrin = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::pow, base->getType());
-    return m_builder.CreateCall(PowIntrin, {base, exp}, "pow");
+    // Handle ResolvedAutoMemberExpr with fieldDecl set
+    if (auto autoMember = dynamic_cast<ResolvedAutoMemberExpr *>(arg.get())) {
+        if (autoMember->fieldDecl) {
+            val = autoMember->fieldDecl->get_constant_value();
+            if (val) return val;
+        }
+    }
+
+    return std::nullopt;
+}
+
+llvm::Value *Codegen::generate_builtin_math(const ResolvedCallExpr &call) {
+    debug_func(call.location);
+    if (call.arguments.size() < 2) dmz_unreachable(call.location, "@math expects at least 2 arguments");
+
+    auto constValOpt = get_enum_constant(call.arguments[0]);
+    int opVal = constValOpt.has_value() ? constValOpt->getInt() : -1;
+    if (opVal < 0) {
+        dmz_unreachable(call.location, "@math: operator is not a constant");
+    }
+
+    // Map enum ordinal to LLVM intrinsic
+    switch (opVal) {
+        case 0: {  // Sin
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::sin, val->getType());
+            return m_builder.CreateCall(callee, val, "sin");
+        }
+        case 1: {  // Cos
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::cos, val->getType());
+            return m_builder.CreateCall(callee, val, "cos");
+        }
+        case 2: {  // Tan
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::tan, val->getType());
+            return m_builder.CreateCall(callee, val, "tan");
+        }
+        case 3: {  // Asin
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::asin, val->getType());
+            return m_builder.CreateCall(callee, val, "asin");
+        }
+        case 4: {  // Acos
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::acos, val->getType());
+            return m_builder.CreateCall(callee, val, "acos");
+        }
+        case 5: {  // Atan
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::atan, val->getType());
+            return m_builder.CreateCall(callee, val, "atan");
+        }
+        case 6: {  // Atan2
+            auto a = generate_expr(*call.arguments[1]);
+            auto b = generate_expr(*call.arguments[2]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::atan2, a->getType());
+            return m_builder.CreateCall(callee, {a, b}, "atan2");
+        }
+        case 7: {  // Sinh
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::sinh, val->getType());
+            return m_builder.CreateCall(callee, val, "sinh");
+        }
+        case 8: {  // Cosh
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::cosh, val->getType());
+            return m_builder.CreateCall(callee, val, "cosh");
+        }
+        case 9: {  // Tanh
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::tanh, val->getType());
+            return m_builder.CreateCall(callee, val, "tanh");
+        }
+        case 10: {  // Exp
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::exp, val->getType());
+            return m_builder.CreateCall(callee, val, "exp");
+        }
+        case 11: {  // Exp2
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::exp2, val->getType());
+            return m_builder.CreateCall(callee, val, "exp2");
+        }
+        case 12: {  // Exp10
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::exp10, val->getType());
+            return m_builder.CreateCall(callee, val, "exp10");
+        }
+        case 13: {  // Log
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::log, val->getType());
+            return m_builder.CreateCall(callee, val, "log");
+        }
+        case 14: {  // Log2
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::log2, val->getType());
+            return m_builder.CreateCall(callee, val, "log2");
+        }
+        case 15: {  // Log10
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::log10, val->getType());
+            return m_builder.CreateCall(callee, val, "log10");
+        }
+        case 16: {  // Pow
+            auto base = generate_expr(*call.arguments[1]);
+            auto exp = generate_expr(*call.arguments[2]);
+            if (exp->getType()->isIntegerTy() ||
+                (exp->getType()->isVectorTy() && exp->getType()->getScalarType()->isIntegerTy())) {
+                auto *i32Ty = llvm::Type::getInt32Ty(*m_context);
+                if (exp->getType()->isVectorTy()) {
+                    auto *vecTy = llvm::cast<llvm::FixedVectorType>(exp->getType());
+                    auto *i32VecTy = llvm::FixedVectorType::get(i32Ty, vecTy->getNumElements());
+                    if (exp->getType() != i32VecTy) {
+                        bool isUnsigned = is_unsigned_arg(call.arguments[2]);
+                        if (isUnsigned)
+                            exp = m_builder.CreateZExtOrTrunc(exp, i32VecTy, "exp.i32");
+                        else
+                            exp = m_builder.CreateSExtOrTrunc(exp, i32VecTy, "exp.i32");
+                    }
+                } else if (exp->getType() != i32Ty) {
+                    bool isUnsigned = is_unsigned_arg(call.arguments[2]);
+                    if (isUnsigned)
+                        exp = m_builder.CreateZExtOrTrunc(exp, i32Ty, "exp.i32");
+                    else
+                        exp = m_builder.CreateSExtOrTrunc(exp, i32Ty, "exp.i32");
+                }
+                auto PowiIntrin = llvm::Intrinsic::getOrInsertDeclaration(
+                    m_module.get(), llvm::Intrinsic::powi, {base->getType(), exp->getType()});
+                return m_builder.CreateCall(PowiIntrin, {base, exp}, "powi");
+            }
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::pow, base->getType());
+            return m_builder.CreateCall(callee, {base, exp}, "pow");
+        }
+        case 17: {  // Fma
+            auto a = generate_expr(*call.arguments[1]);
+            auto b = generate_expr(*call.arguments[2]);
+            auto c = generate_expr(*call.arguments[3]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fma, a->getType());
+            return m_builder.CreateCall(callee, {a, b, c}, "fma");
+        }
+        case 18: {  // Floor
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::floor, val->getType());
+            return m_builder.CreateCall(callee, val, "floor");
+        }
+        case 19: {  // Ceil
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::ceil, val->getType());
+            return m_builder.CreateCall(callee, val, "ceil");
+        }
+        case 20: {  // Trunc
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::trunc, val->getType());
+            return m_builder.CreateCall(callee, val, "trunc");
+        }
+        case 21: {  // Rint
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::rint, val->getType());
+            return m_builder.CreateCall(callee, val, "rint");
+        }
+        case 22: {  // Round
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::round, val->getType());
+            return m_builder.CreateCall(callee, val, "round");
+        }
+        case 23: {  // Roundeven
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::roundeven, val->getType());
+            return m_builder.CreateCall(callee, val, "roundeven");
+        }
+        case 24: {  // Copysign
+            auto a = generate_expr(*call.arguments[1]);
+            auto b = generate_expr(*call.arguments[2]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::copysign, a->getType());
+            return m_builder.CreateCall(callee, {a, b}, "copysign");
+        }
+        case 25: {  // Sqrt
+            auto val = generate_expr(*call.arguments[1]);
+            auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::sqrt, val->getType());
+            return m_builder.CreateCall(callee, val, "sqrt");
+        }
+        case 26: {  // Abs
+            auto val = generate_expr(*call.arguments[1]);
+            if (val->getType()->isFPOrFPVectorTy()) {
+                auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::fabs, val->getType());
+                return m_builder.CreateCall(callee, val, "abs");
+            } else {
+                auto callee = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::abs, val->getType());
+                llvm::Value *isPoison = llvm::ConstantInt::getFalse(val->getContext());
+                return m_builder.CreateCall(callee, {val, isPoison}, "abs");
+            }
+        }
+        case 27: {  // Min
+            auto a = generate_expr(*call.arguments[1]);
+            auto b = generate_expr(*call.arguments[2]);
+            bool isUnsigned = is_unsigned_arg(call.arguments[1]);
+            auto intrin = select_minmax_intrin(a->getType(), true, isUnsigned);
+            auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
+            return m_builder.CreateCall(decl, {a, b}, "min");
+        }
+        case 28: {  // Max
+            auto a = generate_expr(*call.arguments[1]);
+            auto b = generate_expr(*call.arguments[2]);
+            bool isUnsigned = is_unsigned_arg(call.arguments[1]);
+            auto intrin = select_minmax_intrin(a->getType(), false, isUnsigned);
+            auto decl = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), intrin, a->getType());
+            return m_builder.CreateCall(decl, {a, b}, "max");
+        }
+        default:
+            dmz_unreachable(call.location, "unsupported @math operation");
+    }
 }
 }  // namespace DMZ

@@ -347,6 +347,7 @@ int Driver::generate_exec_pass(ptr<llvm::Module> &module) {
         if (m_options.debugSymbols) {
             args.emplace_back("-g");
         }
+        args.emplace_back("-lm");
         args.emplace_back("-x");
         args.emplace_back("ir");
         args.emplace_back("-");
