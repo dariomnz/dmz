@@ -13,64 +13,72 @@ const Vec3 = vec.Vec3;
 pub const Camera = struct {
     // Vertical view angle (field of view)
     vfov: f64 = 90.0,
+    // Point camera is looking from
+    lookfrom: Vec3 = {0, 0, 0},
+    // Point camera is looking at
+    lookat: Vec3 = {0, 0, -1},
+    // Camera-relative "up" direction
+    vup: Vec3 = {0, 1, 0},
     // Maximum number of ray bounces into scene
     max_depth: i32 = 10,
     // Count of random samples for each pixel
     samples_per_pixel: i32 = 10,
     // Color scale factor for a sum of pixel samples
-    pixel_samples_scale: f64,
+    pixel_samples_scale: f64 = 0.0,
     // Ratio of image width over height
     aspect_ratio: f64 = 1.0,
     // Rendered image width in pixel count
     image_width: i32 = 100,
     // Rendered image height
-    image_height: i32,
+    image_height: i32 = 0,
     // Camera center
-    center: Vec3,
+    center: Vec3 = {},
     // Location of pixel 0, 0
-    pixel00_loc: Vec3,
+    pixel00_loc: Vec3 = {},
     // Offset to pixel to the right
-    pixel_delta_u: Vec3,
+    pixel_delta_u: Vec3 = {},
     // Offset to pixel below
-    pixel_delta_v: Vec3,
-    pub fn init(aspectRatio: f64, imageWidth: i32, samplesPerPixel: i32, maxDepth: i32, vfov: f64) -> @This {
+    pixel_delta_v: Vec3 = {},
 
-        const imageHeight: i32 = @intCast(@floatCast(imageWidth) / aspectRatio);
+    // Camera frame basis vectors
+    u: Vec3 = {},
+    v: Vec3 = {},
+    w: Vec3 = {},
 
-        const focalLength = 1.0;
-        // const viewportHeight = 2.0;
+    pub fn initialize(self: *@This) -> void {
+        self.image_height = @intCast(@floatCast(self.image_width) / self.aspect_ratio);
 
-        const theta = utils.degToRad(vfov);
+        self.pixel_samples_scale = 1.0 / @floatCast(self.samples_per_pixel);
+
+        self.center = self.lookfrom;
+
+        const focalLength = vec.length(self.lookfrom - self.lookat);
+        const theta = utils.degToRad(self.vfov);
         const h = @math(.Tan, theta / 2.0);
-        const viewportHeight = 2.0 * h * focalLength;
-        const viewportWidth = viewportHeight * @floatCast(imageWidth) / @floatCast(imageHeight);
+        const viewport_height = 2.0 * h * focalLength;
+        const viewport_width = viewport_height * @floatCast(self.image_width) / @floatCast(self.image_height);
 
-        const cameraCenter: Vec3 = {0.0, 0.0, 0.0};
+        // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+        self.w = vec.unit(self.lookfrom - self.lookat);
+        self.u = vec.unit(vec.cross(self.vup, self.w));
+        self.v = vec.cross(self.w, self.u);
 
-        const viewport_u: Vec3 = {viewportWidth, 0.0, 0.0};
-        const viewport_v: Vec3 = {0.0, -viewportHeight, 0.0};
+        // Calculate the vectors across the horizontal and down the vertical viewport edges.
+        // Vector across viewport horizontal edge
+        const viewport_u = @simdSplat(viewport_width) * self.u;
+        // Vector down viewport vertical edge
+        const viewport_v = @simdSplat(viewport_height) * -self.v;
 
-        const pixel_delta_u = viewport_u / @simdSplat(@floatCast(imageWidth));
-        const pixel_delta_v = viewport_v / @simdSplat(@floatCast(imageHeight));
+        self.pixel_delta_u = viewport_u / @simdSplat(@floatCast(self.image_width));
+        self.pixel_delta_v = viewport_v / @simdSplat(@floatCast(self.image_height));
 
-        const viewport_upper_left = cameraCenter - {0.0, 0.0, focalLength} - viewport_u / @simdSplat(2.0) - viewport_v / @simdSplat(2.0);
-        const pixel00_loc = viewport_upper_left + @simdSplat(0.5) * (pixel_delta_u + pixel_delta_v);
-        return @This{
-            vfov: vfov,
-            max_depth: maxDepth,
-            samples_per_pixel: samplesPerPixel,
-            pixel_samples_scale: 1.0 / @floatCast(samplesPerPixel),
-            aspect_ratio: aspectRatio,
-            image_width: imageWidth,
-            image_height: imageHeight,
-            center: cameraCenter,
-            pixel00_loc: pixel00_loc,
-            pixel_delta_u: pixel_delta_u,
-            pixel_delta_v: pixel_delta_v,
-        };
+        const viewport_upper_left = self.center - (@simdSplat(focalLength) * self.w) - viewport_u / @simdSplat(2.0) - viewport_v / @simdSplat(2.0);
+
+        self.pixel00_loc = viewport_upper_left + @simdSplat(0.5) * (self.pixel_delta_u + self.pixel_delta_v);
     }
 
     pub fn render(self: *@This, world: Hittable) -> void {
+        self.initialize();
         const eBuf: [0]u8 = {};
         const e = std.io.stderr.writer(eBuf[0..0]);
         defer e.flush();

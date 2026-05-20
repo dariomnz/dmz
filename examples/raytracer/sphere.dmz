@@ -12,9 +12,9 @@ const HitRecord = hittable.HitRecord;
 pub const Sphere = struct {
     center: Vec3,
     radius: f64,
-    mat: *Material,
+    mat: Material,
 
-    pub fn init(center: Vec3, radius: f64, material: *Material) -> @This {
+    pub fn init(center: Vec3, radius: f64, material: Material) -> @This {
         let rad = radius;
         if (rad < 0.0) rad = 0.0;
         return @This{
@@ -54,11 +54,25 @@ pub const Sphere = struct {
         return true;
     }
 
+    pub fn destroy(self: *@This, alloc: std.mem.Allocator) -> void {
+        let slice: []@This = {};
+        slice.ptr = self;
+        slice.len = 1;
+        alloc.free(@This, slice);
+    }
+
+    pub fn create(alloc: std.mem.Allocator, center: Vec3, radius: f64, material: Material) -> !Hittable {
+        const slice = try alloc.malloc(@This, 1);
+        slice[0] = @This.init(center, radius, material);
+        return slice[0].Hittable();
+    }
+
     pub fn Hittable(self: *@This) -> Hittable {
         return Hittable{
             hittable: @ptrCast(self),
             vtable: Hittable.VTable{
                 hit: @ptrCast(&self.hit),
+                destroy: @ptrCast(&self.destroy),
             },
         };
     }

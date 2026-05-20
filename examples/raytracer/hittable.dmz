@@ -8,7 +8,7 @@ const Material = import("material.dmz").Material;
 pub const HitRecord = struct {
     p: Vec3,
     normal: Vec3,
-    mat: *Material,
+    mat: Material,
     t: f64,
 
     frontFace: bool,
@@ -26,6 +26,7 @@ pub const HitRecord = struct {
 pub const Hittable = struct {
     pub const VTable = struct {
         hit: *fn(*void, Ray, Interval, *HitRecord)->bool,
+        destroy: *fn(*void, std.mem.Allocator)->void,
     };
 
     hittable: *void,
@@ -34,6 +35,10 @@ pub const Hittable = struct {
     pub fn hit(self: *@This, r: Ray, ray_t: Interval, hit: *HitRecord) -> bool {
         if (self.vtable.hit) return self.vtable.hit(self.hittable, r, ray_t, hit);
         return false;
+    }
+
+    pub fn destroy(self: *@This, alloc: std.mem.Allocator) -> void {
+        if (self.vtable.destroy) self.vtable.destroy(self.hittable, alloc);
     }
 };
 
@@ -73,11 +78,29 @@ pub const HittableList = struct {
         return hitAnything;
     }
 
+    pub fn destroy(self: *@This, alloc: std.mem.Allocator) -> void {
+        for (self.list.slice()) |item| {
+            item.destroy(alloc);
+        }
+        self.deinit();
+        let slice: []@This = {};
+        slice.ptr = self;
+        slice.len = 1;
+        alloc.free(@This, slice);
+    }
+
+    pub fn create(alloc: std.mem.Allocator) -> !Hittable {
+        const slice = try alloc.malloc(@This, 1);
+        slice[0] = @This.init(alloc);
+        return slice[0].Hittable();
+    }
+
     pub fn Hittable(self: *@This) -> Hittable {
         return Hittable{
             hittable: @ptrCast(self),
             vtable: Hittable.VTable{
                 hit: @ptrCast(&self.hit),
+                destroy: @ptrCast(&self.destroy),
             },
         };
     }
