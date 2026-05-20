@@ -528,6 +528,105 @@ void Codegen::generate_in_module_body(const std::vector<ptr<ResolvedDecl>> &decl
     }
 }
 
+llvm::Constant *Codegen::generate_global_constant(const SourceLocation &location, const ComptimeValue &comptimeValue,
+                                                  const ResolvedType &type, const std::string &name) {
+    if (comptimeValue.isInt()) {
+        return llvm::ConstantInt::get(generate_type(type), comptimeValue.getInt());
+    }
+
+    if (comptimeValue.isFloat()) {
+        return llvm::ConstantFP::get(generate_type(type), comptimeValue.getFloat());
+    }
+
+    if (comptimeValue.isBool()) {
+        return llvm::ConstantInt::get(generate_type(type), comptimeValue.getBool());
+    }
+
+    if (comptimeValue.isString()) {
+        auto str = comptimeValue.getString();
+        auto ptr = create_global_string(str, "string.literal." + name);
+        if (type.kind == ResolvedTypeKind::Slice) {
+            auto sliceType = cast<llvm::StructType>(generate_type(type));
+            auto lengthTy = m_builder.getIntPtrTy(m_module->getDataLayout());
+            return llvm::ConstantStruct::get(sliceType, {ptr, llvm::ConstantInt::get(lengthTy, str.size())});
+        }
+        return ptr;
+    }
+
+    if (comptimeValue.isArray()) {
+        auto &elements = comptimeValue.getArray().elements;
+        auto arrayType = dynamic_cast<const ResolvedTypeArray *>(&type);
+        if (!arrayType) dmz_unreachable(location, "expected array type for array comptime value");
+        auto &elType = *arrayType->arrayType;
+        auto llvmElType = generate_type(elType);
+        std::vector<llvm::Constant *> elementVals;
+        for (auto &elem : elements) {
+            elementVals.push_back(generate_global_constant(location, elem, elType, name));
+        }
+        auto arrTy = llvm::ArrayType::get(llvmElType, elementVals.size());
+        return llvm::ConstantArray::get(arrTy, elementVals);
+    }
+
+    if (comptimeValue.isSlice()) {
+        auto &elements = comptimeValue.getSlice().elements;
+        auto sliceType = dynamic_cast<const ResolvedTypeSlice *>(&type);
+        if (!sliceType) dmz_unreachable(location, "expected slice type for slice comptime value");
+        auto sliceTy = cast<llvm::StructType>(generate_type(type));
+        auto nullSlice = llvm::ConstantAggregateZero::get(sliceTy);
+        if (elements.empty()) return nullSlice;
+        auto &elType = *sliceType->sliceType;
+        auto llvmElType = generate_type(elType);
+        auto llvmElStructTy = llvm::dyn_cast<llvm::StructType>(llvmElType);
+        std::vector<llvm::Constant *> elementVals;
+        for (auto &elem : elements) {
+            if (elem.isString() && llvmElStructTy) {
+                auto ptr = create_global_string(elem.getString(), "comptime.slice.elem." + name);
+                auto len =
+                    llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), elem.getString().size());
+                elementVals.push_back(llvm::ConstantStruct::get(llvmElStructTy, {ptr, len}));
+            } else {
+                elementVals.push_back(generate_global_constant(location, elem, elType, name));
+            }
+        }
+        auto arrayTy = llvm::ArrayType::get(llvmElType, elementVals.size());
+        auto arrayInit = llvm::ConstantArray::get(arrayTy, elementVals);
+        auto arrayGV = new llvm::GlobalVariable(*m_module, arrayTy, true, llvm::GlobalValue::PrivateLinkage, arrayInit,
+                                                "comptime.slice.data." + name);
+        auto lenVal = llvm::ConstantInt::get(m_builder.getIntPtrTy(m_module->getDataLayout()), elementVals.size());
+        return llvm::ConstantStruct::get(sliceTy, {arrayGV, lenVal});
+    }
+
+    if (comptimeValue.isStruct()) {
+        auto &fields = comptimeValue.getStruct().fields;
+        ResolvedStructDecl *structDecl = nullptr;
+        if (auto structType = dynamic_cast<const ResolvedTypeStruct *>(&type)) structDecl = structType->decl;
+        if (!structDecl) dmz_unreachable(location, "expected struct type for struct comptime value");
+        std::vector<llvm::Constant *> fieldVals;
+        for (size_t i = 0; i < fields.size(); i++) {
+            fieldVals.push_back(
+                generate_global_constant(location, fields[i].second, *structDecl->fields[i]->type, name));
+        }
+        auto llvmStructType = cast<llvm::StructType>(generate_type(type));
+        return llvm::ConstantStruct::get(llvmStructType, fieldVals);
+    }
+
+    if (comptimeValue.isSimd()) {
+        auto &elements = comptimeValue.getSimd().elements;
+        auto simdType = dynamic_cast<const ResolvedTypeSimd *>(&type);
+        if (!simdType) dmz_unreachable(location, "expected simd type for simd comptime value");
+        auto &elType = *simdType->simdType;
+        // auto llvmElType = generate_type(elType);
+        std::vector<llvm::Constant *> elementVals;
+        for (auto &elem : elements) {
+            elementVals.push_back(generate_global_constant(location, elem, elType, name));
+        }
+        // auto vecTy = llvm::VectorType::get(llvmElType, elementVals.size(), false);
+        return llvm::ConstantVector::get(elementVals);
+    }
+
+    dmz_unreachable(location, "cannot generate global constant from comptimeValue of type '" + type.to_str() + "'");
+}
+
 void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
     debug_func("");
     if (stmt.type->kind == ResolvedTypeKind::Module || stmt.type->kind == ResolvedTypeKind::Function ||
@@ -545,43 +644,18 @@ void Codegen::generate_global_var_decl(const ResolvedDeclStmt &stmt) {
         return;
     }
 
-    llvm::GlobalVariable *globalVar = nullptr;
-    if (auto strLit = dynamic_cast<ResolvedStringLiteral *>(stmt.varDecl->initializer.get())) {
-        llvm::GlobalVariable *ptr = create_global_string(strLit->value, "string.literal." + stmt.name());
-        if (strLit->type->kind == ResolvedTypeKind::Slice) {
-            auto sliceType = cast<llvm::StructType>(generate_type(*strLit->type));
-            std::vector<llvm::Constant *> elements;
-            elements.push_back(ptr);
+    auto comptimeVal = stmt.varDecl->get_constant_value();
+    if (!comptimeVal)
+        dmz_unreachable(stmt.varDecl->location, "global variable '" + stmt.name() + "' without comptime value");
 
-            auto lengthTy = m_builder.getIntPtrTy(m_module->getDataLayout());
-            elements.push_back(llvm::ConstantInt::get(lengthTy, strLit->value.size()));
-            llvm::Constant *initializer = llvm::ConstantStruct::get(sliceType, elements);
-            globalVar = new llvm::GlobalVariable(*m_module, sliceType, false, llvm::GlobalValue::ExternalLinkage,
-                                                 initializer, stmt.name());
+    llvm::Constant *initializer =
+        generate_global_constant(stmt.varDecl->location, *comptimeVal, *stmt.type, stmt.name());
 
-            m_declarations[&stmt] = globalVar;
-            m_declarations[stmt.varDecl.get()] = globalVar;
-        } else {
-            globalVar = ptr;
-            m_declarations[&stmt] = globalVar;
-            m_declarations[stmt.varDecl.get()] = globalVar;
-        }
-    } else {
-        llvm::Constant *initializer = nullptr;
-        if (auto constVal = stmt.varDecl->initializer->get_constant_value()) {
-            if (constVal->isInt()) {
-                initializer = llvm::ConstantInt::get(generate_type(*stmt.type), constVal->getInt());
-            } else if (constVal->isFloat()) {
-                initializer = llvm::ConstantFP::get(generate_type(*stmt.type), constVal->getFloat());
-            }
-        }
-        globalVar =
-            new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
-                                     llvm::GlobalValue::LinkageTypes::InternalLinkage, initializer, stmt.name());
-        m_module->insertGlobalVariable(globalVar);
-        m_declarations[&stmt] = globalVar;
-        m_declarations[stmt.varDecl.get()] = globalVar;
-    }
+    auto *globalVar = new llvm::GlobalVariable(generate_type(*stmt.type), !stmt.isMutable,
+                                               llvm::GlobalValue::InternalLinkage, initializer, stmt.name());
+    m_module->insertGlobalVariable(globalVar);
+    m_declarations[&stmt] = globalVar;
+    m_declarations[stmt.varDecl.get()] = globalVar;
 
     if (m_debugSymbols && globalVar) {
         bool isLocal =

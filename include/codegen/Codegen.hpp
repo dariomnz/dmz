@@ -167,6 +167,8 @@ class Codegen {
 
     llvm::Value *generate_comptimeValue(const SourceLocation &location, const ComptimeValue &comptimeValue,
                                         const ResolvedType &type);
+    llvm::Constant *generate_global_constant(const SourceLocation &location, const ComptimeValue &comptimeValue,
+                                             const ResolvedType &type, const std::string &name);
     llvm::Value *generate_aggregate_initialization(const SourceLocation &location, const ResolvedType &type,
                                                    std::string_view tmpName,
                                                    const std::vector<std::pair<int, llvm::Value *>> &initializers);
