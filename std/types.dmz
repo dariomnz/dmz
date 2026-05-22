@@ -38,7 +38,7 @@ pub const TypeInfo = union {
     infoOptional: void,
     infoSimd: TypeInfoSimd,
     // TODO: infoUnion
-    infoUnion: void,
+    infoUnion: TypeInfoStruct,
 };
 
 pub const TypeInfoStruct = struct {

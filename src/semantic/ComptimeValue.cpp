@@ -91,32 +91,37 @@ bool ComptimeValue::operator==(const ComptimeValue& other) const {
     return value == other.value;
 }
 
-void ComptimeValue::dump() const {
-    std::cerr << "ComptimeValue ";
+void ComptimeValue::dump() const { std::cerr << to_dump() << "\n"; }
+
+std::string ComptimeValue::to_dump() const {
+    std::stringstream ss;
     if (isVoid()) {
-        std::cerr << "void";
+        ss << "void";
     } else if (isInt()) {
-        std::cerr << "int";
+        ss << "int";
     } else if (isFloat()) {
-        std::cerr << "float";
+        ss << "float";
     } else if (isBool()) {
-        std::cerr << "bool";
+        ss << "bool";
     } else if (isString()) {
-        std::cerr << "string";
+        ss << "string";
     } else if (isArray()) {
-        std::cerr << "array";
+        ss << "array";
     } else if (isSlice()) {
-        std::cerr << "slice";
+        ss << "slice";
     } else if (isSimd()) {
-        std::cerr << "simd";
+        ss << "simd";
     } else if (isStruct()) {
-        std::cerr << "struct";
+        ss << "struct";
     } else if (isUnion()) {
-        std::cerr << "union";
+        ss << "union";
+    } else if (isRange()) {
+        ss << "range";
     } else {
-        std::cerr << "unknown";
+        ss << "unknown";
     }
-    std::cerr << ": " << *this << "\n";
+    ss << ": " << *this;
+    return ss.str();
 }
 
 std::string ComptimeValue::to_str() const {
@@ -180,7 +185,10 @@ std::ostream& operator<<(std::ostream& os, const ComptimeValue& cv) {
         os << "}";
     } else if (cv.isType())
         os << cv.getType()->to_str();
-    else
+    else if (cv.isRange()) {
+        auto& r = cv.getRange();
+        os << r.start << ".." << r.end;
+    } else
         os << "unknown";
     return os;
 }

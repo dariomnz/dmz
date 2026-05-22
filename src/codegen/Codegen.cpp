@@ -1117,7 +1117,8 @@ llvm::Value *Codegen::generate_comptimeValue(const SourceLocation &location, con
         }
         return vec;
     }
-    dmz_unreachable(location, "cannot generate comptimeValue " + comptimeValue.to_str() + " of type " + type.to_str());
+    dmz_unreachable(location, "cannot generate comptimeValue " + comptimeValue.to_str() + " of type " + type.to_str() +
+                                  " " + std::string(type.className()));
 }
 
 llvm::Value *Codegen::generate_aggregate_initialization(

@@ -6,6 +6,9 @@ pub const Reader = import("reader.dmz").Reader;
 const std = import("std");
 
 pub fn print(comptime fmt: []u8, args: anytype) -> !usize {
+    inline if (comptime !std.fmt.validate(fmt)) {
+        @compileError("Invalid format string", fmt);
+    }
     let buf: [1024]u8 = {};
     const w = stdout.writer(buf[0..1024]);
     defer try w.flush();

@@ -110,22 +110,51 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
         }
         auto containerVal = evaluate(*arrayAtExpr->array, allowSideEffects);
         auto indexVal = evaluate(*arrayAtExpr->index, allowSideEffects);
-        if (containerVal && indexVal && indexVal->isInt()) {
-            int64_t idx = indexVal->getInt();
-            if (containerVal->isArray()) {
-                const auto &arr = containerVal->getArray();
-                if (idx >= 0 && (size_t)idx < arr.elements.size()) {
-                    return arr.elements[idx];
+        if (containerVal && indexVal) {
+            if (indexVal->isInt()) {
+                int64_t idx = indexVal->getInt();
+                if (containerVal->isArray()) {
+                    const auto &arr = containerVal->getArray();
+                    if (idx >= 0 && (size_t)idx < arr.elements.size()) {
+                        return arr.elements[idx];
+                    }
+                } else if (containerVal->isSlice()) {
+                    const auto &slice = containerVal->getSlice();
+                    if (idx >= 0 && (size_t)idx < slice.elements.size()) {
+                        return slice.elements[idx];
+                    }
+                } else if (containerVal->isString()) {
+                    const auto &str = containerVal->getString();
+                    if (idx >= 0 && (size_t)idx < str.size()) {
+                        return ComptimeValue((int64_t)str[idx]);
+                    }
+                } else if (containerVal->isSimd()) {
+                    const auto &simdV = containerVal->getSimd();
+                    if (idx >= 0 && (size_t)idx < simdV.elements.size()) {
+                        return simdV.elements[idx];
+                    }
                 }
-            } else if (containerVal->isString()) {
-                const auto &str = containerVal->getString();
-                if (idx >= 0 && (size_t)idx < str.size()) {
-                    return ComptimeValue((int64_t)str[idx]);
-                }
-            } else if (containerVal->isSimd()) {
-                const auto &simdV = containerVal->getSimd();
-                if (idx >= 0 && (size_t)idx < simdV.elements.size()) {
-                    return simdV.elements[idx];
+            } else if (indexVal->isRange()) {
+                int64_t start = indexVal->getRange().start;
+                int64_t end = indexVal->getRange().end;
+                if (containerVal->isString()) {
+                    const auto &str = containerVal->getString();
+                    if (start >= 0 && end >= start && (size_t)end <= str.size()) {
+                        return ComptimeValue(str.substr(start, end - start));
+                    }
+                } else if (containerVal->isArray()) {
+                    const auto &arr = containerVal->getArray();
+                    if (start >= 0 && end >= start && (size_t)end <= arr.elements.size()) {
+                        std::vector<ComptimeValue> subElems(arr.elements.begin() + start, arr.elements.begin() + end);
+                        return ComptimeValue(ComptimeValue::Slice{subElems});
+                    }
+                } else if (containerVal->isSlice()) {
+                    const auto &slice = containerVal->getSlice();
+                    if (start >= 0 && end >= start && (size_t)end <= slice.elements.size()) {
+                        std::vector<ComptimeValue> subElems(slice.elements.begin() + start,
+                                                            slice.elements.begin() + end);
+                        return ComptimeValue(ComptimeValue::Slice{subElems});
+                    }
                 }
             }
         }
@@ -166,6 +195,14 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate(const Resolve
             }
             return ComptimeValue(std::move(arrayVal));
         }
+    }
+    if (const auto *rangeExpr = dynamic_cast<const ResolvedRangeExpr *>(&expr)) {
+        auto startVal = evaluate(*rangeExpr->startExpr, allowSideEffects);
+        auto endVal = evaluate(*rangeExpr->endExpr, allowSideEffects);
+        if (startVal && endVal && startVal->isInt() && endVal->isInt()) {
+            return ComptimeValue(ComptimeValue::Range{startVal->getInt(), endVal->getInt()});
+        }
+        return std::nullopt;
     }
     return expr.get_constant_value();
 }
@@ -408,8 +445,14 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                     break;
                 }
                 case ResolvedTypeKind::StructDecl:
-                case ResolvedTypeKind::Struct: {
+                case ResolvedTypeKind::Struct:
+                case ResolvedTypeKind::UnionDecl:
+                case ResolvedTypeKind::Union: {
                     ResolvedStructDecl *structDecl = nullptr;
+                    if (auto sd = dynamic_cast<const ResolvedTypeUnionDecl *>(targetType.get()))
+                        structDecl = sd->decl;
+                    else if (auto sd = dynamic_cast<const ResolvedTypeUnion *>(targetType.get()))
+                        structDecl = sd->decl;
                     if (auto sd = dynamic_cast<const ResolvedTypeStructDecl *>(targetType.get()))
                         structDecl = sd->decl;
                     else if (auto sd = dynamic_cast<const ResolvedTypeStruct *>(targetType.get()))
@@ -598,32 +641,58 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
             };
 
             switch (op) {
-                case 0: return unaryOp(static_cast<double (*)(double)>(std::sin));
-                case 1: return unaryOp(static_cast<double (*)(double)>(std::cos));
-                case 2: return unaryOp(static_cast<double (*)(double)>(std::tan));
-                case 3: return unaryOp(static_cast<double (*)(double)>(std::asin));
-                case 4: return unaryOp(static_cast<double (*)(double)>(std::acos));
-                case 5: return unaryOp(static_cast<double (*)(double)>(std::atan));
-                case 6: return binaryOp(static_cast<double (*)(double, double)>(std::atan2));
-                case 7: return unaryOp(static_cast<double (*)(double)>(std::sinh));
-                case 8: return unaryOp(static_cast<double (*)(double)>(std::cosh));
-                case 9: return unaryOp(static_cast<double (*)(double)>(std::tanh));
-                case 10: return unaryOp(static_cast<double (*)(double)>(std::exp));
-                case 11: return unaryOp(static_cast<double (*)(double)>(std::exp2));
-                case 12: return unaryOp([](double x) { return std::pow(10.0, x); });
-                case 13: return unaryOp(static_cast<double (*)(double)>(std::log));
-                case 14: return unaryOp(static_cast<double (*)(double)>(std::log2));
-                case 15: return unaryOp(static_cast<double (*)(double)>(std::log10));
-                case 16: return binaryOp(static_cast<double (*)(double, double)>(std::pow));
-                case 17: return ternaryOp(static_cast<double (*)(double, double, double)>(std::fma));
-                case 18: return unaryOp(static_cast<double (*)(double)>(std::floor));
-                case 19: return unaryOp(static_cast<double (*)(double)>(std::ceil));
-                case 20: return unaryOp(static_cast<double (*)(double)>(std::trunc));
-                case 21: return unaryOp(static_cast<double (*)(double)>(std::rint));
-                case 22: return unaryOp(static_cast<double (*)(double)>(std::round));
-                case 23: return unaryOp([](double x) { return ::roundeven(x); });
-                case 24: return binaryOp(static_cast<double (*)(double, double)>(std::copysign));
-                case 25: return unaryOp(static_cast<double (*)(double)>(std::sqrt));
+                case 0:
+                    return unaryOp(static_cast<double (*)(double)>(std::sin));
+                case 1:
+                    return unaryOp(static_cast<double (*)(double)>(std::cos));
+                case 2:
+                    return unaryOp(static_cast<double (*)(double)>(std::tan));
+                case 3:
+                    return unaryOp(static_cast<double (*)(double)>(std::asin));
+                case 4:
+                    return unaryOp(static_cast<double (*)(double)>(std::acos));
+                case 5:
+                    return unaryOp(static_cast<double (*)(double)>(std::atan));
+                case 6:
+                    return binaryOp(static_cast<double (*)(double, double)>(std::atan2));
+                case 7:
+                    return unaryOp(static_cast<double (*)(double)>(std::sinh));
+                case 8:
+                    return unaryOp(static_cast<double (*)(double)>(std::cosh));
+                case 9:
+                    return unaryOp(static_cast<double (*)(double)>(std::tanh));
+                case 10:
+                    return unaryOp(static_cast<double (*)(double)>(std::exp));
+                case 11:
+                    return unaryOp(static_cast<double (*)(double)>(std::exp2));
+                case 12:
+                    return unaryOp([](double x) { return std::pow(10.0, x); });
+                case 13:
+                    return unaryOp(static_cast<double (*)(double)>(std::log));
+                case 14:
+                    return unaryOp(static_cast<double (*)(double)>(std::log2));
+                case 15:
+                    return unaryOp(static_cast<double (*)(double)>(std::log10));
+                case 16:
+                    return binaryOp(static_cast<double (*)(double, double)>(std::pow));
+                case 17:
+                    return ternaryOp(static_cast<double (*)(double, double, double)>(std::fma));
+                case 18:
+                    return unaryOp(static_cast<double (*)(double)>(std::floor));
+                case 19:
+                    return unaryOp(static_cast<double (*)(double)>(std::ceil));
+                case 20:
+                    return unaryOp(static_cast<double (*)(double)>(std::trunc));
+                case 21:
+                    return unaryOp(static_cast<double (*)(double)>(std::rint));
+                case 22:
+                    return unaryOp(static_cast<double (*)(double)>(std::round));
+                case 23:
+                    return unaryOp([](double x) { return ::roundeven(x); });
+                case 24:
+                    return binaryOp(static_cast<double (*)(double, double)>(std::copysign));
+                case 25:
+                    return unaryOp(static_cast<double (*)(double)>(std::sqrt));
                 case 26: {  // Abs: works on int and float
                     if (val1->isFloat()) {
                         double f = val1->getFloat();
@@ -647,7 +716,7 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                     }
                     return std::nullopt;
                 }
-                case 27:  // Min
+                case 27:    // Min
                 case 28: {  // Max
                     if (expr.arguments.size() < 3) return std::nullopt;
                     auto &valArg2 = expr.arguments[2];
@@ -685,18 +754,19 @@ std::optional<ComptimeValue> ConstantExpressionEvaluator::evaluate_call_expr(con
                         });
                     }
                 }
-                default: return std::nullopt;
+                default:
+                    return std::nullopt;
             }
         }
     } else if (auto func = dynamic_cast<const ResolvedFunctionDecl *>(resolvedDecl)) {
         if (!allowSideEffects) return std::nullopt;
         if (!func->body) {
             if (m_sema) {
-                m_sema->ensure_fully_resolved(const_cast<ResolvedFunctionDecl &>(*func));
+                if (!m_sema->ensure_fully_resolved(const_cast<ResolvedFunctionDecl &>(*func))) return std::nullopt;
             }
             if (!func->body) {
-                report(expr.location,
-                       "function '" + func->name() + "' has no body and cannot be evaluated at compile time");
+                report(expr.location, std::to_string((size_t)m_sema) + " function '" + func->name() +
+                                          "' has no body and cannot be evaluated at compile time");
                 return std::nullopt;
             }
         }

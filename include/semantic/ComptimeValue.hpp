@@ -38,9 +38,14 @@ struct ComptimeValue {
         ptr<ComptimeValue> payload;
         bool operator==(const Union& other) const;
     };
+    struct Range {
+        int64_t start;
+        int64_t end;
+        bool operator==(const Range& other) const = default;
+    };
 
-    using ValueVariant =
-        std::variant<Void, int64_t, double, bool, std::string, Array, Slice, Simd, Struct, Union, ptr<ResolvedType>>;
+    using ValueVariant = std::variant<Void, int64_t, double, bool, std::string, Array, Slice, Simd, Struct, Union,
+                                      ptr<ResolvedType>, Range>;
 
     ValueVariant value;
 
@@ -56,6 +61,7 @@ struct ComptimeValue {
     ComptimeValue(Struct s) : value(std::move(s)) {}
     ComptimeValue(Union u) : value(std::move(u)) {}
     ComptimeValue(ptr<ResolvedType> t) : value(std::move(t)) {}
+    ComptimeValue(Range r) : value(r) {}
 
     ComptimeValue(const ComptimeValue& other);
     ComptimeValue& operator=(const ComptimeValue& other);
@@ -75,6 +81,7 @@ struct ComptimeValue {
     bool isStruct() const { return std::holds_alternative<Struct>(value); }
     bool isUnion() const { return std::holds_alternative<Union>(value); }
     bool isType() const { return std::holds_alternative<ptr<ResolvedType>>(value); }
+    bool isRange() const { return std::holds_alternative<Range>(value); }
 
     int64_t getInt() const { return std::get<int64_t>(value); }
     double getFloat() const { return std::get<double>(value); }
@@ -85,6 +92,7 @@ struct ComptimeValue {
     const Simd& getSimd() const { return std::get<Simd>(value); }
     const Struct& getStruct() const { return std::get<Struct>(value); }
     const Union& getUnion() const { return std::get<Union>(value); }
+    const Range& getRange() const { return std::get<Range>(value); }
     ptr<ResolvedType> getType() const;
 
     // Conversion to int64_t for backward compatibility where possible
@@ -95,6 +103,7 @@ struct ComptimeValue {
     }
 
     void dump() const;
+    std::string to_dump() const;
     std::string to_str() const;
     friend std::ostream& operator<<(std::ostream& os, const ComptimeValue& cv);
 };

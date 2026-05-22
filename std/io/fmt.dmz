@@ -10,6 +10,7 @@ pub const FormatHex = struct {
 
 pub const FormatOptions = union {
     none: void,
+    invalid: void,
     string: void,
     character: void,
     decimal: void,
@@ -34,6 +35,7 @@ pub fn fmtType(w: std.io.Writer, arg: anytype, spec: FormatOptions) -> !usize {
         case std.types.error_t => return fmtError(w, arg, spec);
         case std.types.optional_t => return w.writeAll("unsupported optional");
         case std.types.simd_t => return fmtSimd(w, arg, spec);
+        case std.types.union_t => return fmtUnion(w, arg, spec);
         else => return w.writeAll("unsupported type");
     }
 }
@@ -178,6 +180,27 @@ pub fn fmtStruct(w: std.io.Writer, s: anytype, spec: FormatOptions) -> !usize {
     return ret;
 }
 
+pub fn fmtUnion(w: std.io.Writer, s: anytype, spec: FormatOptions) -> !usize {
+    inline if (@hasMethod(s, "fmt")) {
+        return s.fmt(w, spec);
+    }
+    const typeinfo = @typeinfo(s).infoUnion;
+    let ret: usize = 0;
+    ret += try w.writeAll(typeinfo.name);
+    ret += try w.writeChar('[');
+    ret += try w.writeAll(typeinfo.fields[s.tag]);
+    ret += try w.writeAll(": ");
+    let current_field = 0;
+    inline for (s) |field| {
+        if (s.tag == @intCast(current_field)) {
+            ret += try fmtType(w, field, FormatOptions{none: void});
+        }
+        current_field++;
+    }
+    ret += try w.writeChar(']');
+    return ret;
+}
+
 pub fn fmtPointer(w: std.io.Writer, ptr: *void, spec: FormatOptions) -> !usize {
     if (spec.tag == FormatOptions.string) {
         return w.writeStr(@ptrCast(ptr));
@@ -241,28 +264,68 @@ pub fn fmtSimd(w: std.io.Writer, v: anytype, spec: FormatOptions) -> !usize {
     return ret;
 }
 
+pub fn validate(format: []u8) -> bool {
+    let idx: usize = 0;
+    while (idx < format.len) {
+        if (format[idx] == '{') {
+            idx++;
+            if (idx < format.len && format[idx] == '{') {
+                idx++;
+                continue;
+            }
+            let spec_start: usize = idx;
+            while (idx < format.len && format[idx] != '}') {
+                if (format[idx] == '{') return false;
+                idx++;
+            }
+            if (idx >= format.len) return false;
+            const spec_str = format[spec_start..idx];
+            const spec = parseSpecifier(spec_str);
+            if (spec.tag == FormatOptions.invalid) return false;
+            idx++;
+        } else if (format[idx] == '}') {
+            idx++;
+            if (idx >= format.len || format[idx] != '}') {
+                return false;
+            }
+            idx++;
+        } else {
+            idx++;
+        }
+    }
+    return true;
+}
+
 fn parseSpecifier(s: []u8) -> FormatOptions {
-    let ret = FormatOptions{none: void};
-    if (s.len == 0) return ret;
+    if (s.len == 0) return FormatOptions{none: void};
     if (s.len == 1) {
-        if (s[0] == 's') ret = FormatOptions{string: void};
-        if (s[0] == 'c') ret = FormatOptions{character: void};
-        if (s[0] == 'x') ret = FormatOptions{hex: FormatHex{upper: false}};
-        if (s[0] == 'X') ret = FormatOptions{hex: FormatHex{upper: true}};
-        if (s[0] == 'b') ret = FormatOptions{binary: void};
-        if (s[0] == 'd') ret = FormatOptions{decimal: void};
-        if (s[0] == 'f') ret = FormatOptions{float: FormatFloat{precision: 3}};
+        if (s[0] == 's') return FormatOptions{string: void};
+        if (s[0] == 'c') return FormatOptions{character: void};
+        if (s[0] == 'x') return FormatOptions{hex: FormatHex{upper: false}};
+        if (s[0] == 'X') return FormatOptions{hex: FormatHex{upper: true}};
+        if (s[0] == 'b') return FormatOptions{binary: void};
+        if (s[0] == 'd') return FormatOptions{decimal: void};
+        if (s[0] == 'f') return FormatOptions{float: FormatFloat{precision: 3}};
+        return FormatOptions{invalid: void};
     }
     if (s[0] == 'f' && s.len > 2 && s[1] == '.') {
         let precision: usize = 0;
         let i: usize = 2;
+        let valid = true;
         while (i < s.len) {
-            precision = precision * 10 + (s[i] - '0');
+            if (s[i] >= '0' && s[i] <= '9') {
+                precision = precision * 10 + (s[i] - '0');
+            } else {
+                valid = false;
+                break;
+            }
             i++;
         }
-        ret = FormatOptions{float: FormatFloat{precision: precision}};
+        if (valid) {
+            return FormatOptions{float: FormatFloat{precision: precision}};
+        }
     }
-    return ret;
+    return FormatOptions{invalid: void};
 }
 
 pub fn fmt(w: std.io.Writer, format: []u8, args: anytype) -> !usize {
@@ -288,17 +351,33 @@ pub fn fmt(w: std.io.Writer, format: []u8, args: anytype) -> !usize {
                 spec = parseSpecifier(format[spec_start..fmt_idx]);
                 fmt_idx++;
                 // skip '}'
+            } else {
+                ret += try w.writeChar('{');
+                ret += try w.writeAll(format[spec_start..format.len]);
+                break;
             }
 
             let current_arg: usize = 0;
             inline if (@typeid(args) == std.types.tuple_t) {
+                let tuple_len: usize = 0;
                 inline for (args) |arg| {
-                    if (current_arg++ == arg_tracker) {
-                        ret += try fmtType(w, arg, spec);
+                    tuple_len++;
+                }
+                if (arg_tracker < tuple_len) {
+                    inline for (args) |arg| {
+                        if (current_arg++ == arg_tracker) {
+                            ret += try fmtType(w, arg, spec);
+                        }
                     }
+                } else {
+                    ret += try w.writeAll("{missing}");
                 }
             } else {
-                ret += try fmtType(w, args, spec);
+                if (arg_tracker == 0) {
+                    ret += try fmtType(w, args, spec);
+                } else {
+                    ret += try w.writeAll("{missing}");
+                }
             }
             arg_tracker++;
         } else if (format[fmt_idx] == '}' && fmt_idx + 1 < format.len && format[fmt_idx + 1] == '}') {
@@ -369,28 +448,83 @@ test "format specifiers" {
 
     // Test {s}
     try fmt(w, "str: {s}\n", .{"hello"});
-    // const expected = "str: hello\n";
-    // try std.testing.expectEqualSlice<u8>(buf[0..11], expected[0..std.mem.strlen(expected)]);
-    // w.end = 0;
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "str: hello\n");
+    w.end = 0;
 
     // Test {x} and {X}
     let x = 123;
     try fmt(w, "hex: {x} HEX: {X} ptr: {x} {X}\n", .{255, 255, &x, &x});
-    // try std.testing.expect(std.mem.memcmp(&buf[0], "hex: ff HEX: FF", 15) == 0);
-    // w.end = 0;
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "hex: 0xff HEX: 0xFF");
+    w.end = 0;
 
     // Test {b}
     try fmt(w, "bin: {b}\n", .{5});
-    // try std.testing.expect(std.mem.memcmp(&buf[0], "bin: 101", 8) == 0);
-    // w.end = 0;
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "bin: 0b101");
+    w.end = 0;
 
     // Test {.precision} for float
     try fmt(w, "float: {f.5}\n", .{1.23456});
-    // try std.testing.expect(std.mem.memcmp(&buf[0], "float: 1.23", 11) == 0);
-    // w.end = 0;
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "float: 1.23");
+    w.end = 0;
 
     // Test {c}
     try fmt(w, "char: {c}\n", .{65});
-    // try std.testing.expect(std.mem.memcmp(&buf[0], "char: A", 7) == 0);
-    // w.end = 0;
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "char: A");
+    w.end = 0;
+}
+
+test "validate format strings" {
+    // Valid format strings
+    try std.testing.expect(validate("hello"));
+    try std.testing.expect(validate("hello {}"));
+    try std.testing.expect(validate("hello {s}"));
+    try std.testing.expect(validate("hello {x}"));
+    try std.testing.expect(validate("hello {f.4}"));
+    try std.testing.expect(validate("hello {{}}"));
+    try std.testing.expect(validate("{{hello}}"));
+    try std.testing.expect(validate("{}"));
+    try std.testing.expect(validate("{s} {} {x}"));
+
+    // Invalid format strings
+    try std.testing.expect(validate("hello {") == false);
+    try std.testing.expect(validate("hello }") == false);
+    try std.testing.expect(validate("hello {s") == false);
+    try std.testing.expect(validate("hello {invalid}") == false);
+    try std.testing.expect(validate("hello {f.a}") == false);
+    try std.testing.expect(validate("hello {f.}") == false);
+    try std.testing.expect(validate("hello { {} }") == false);
+}
+
+test "format missing and duplicate arguments" {
+    const buf_len = 128;
+    let buf: [buf_len]u8 = {};
+    let w = std.io.Writer.fixed(buf[0..buf_len]);
+
+    // Format with missing arguments in a tuple
+    w.end = 0;
+    try fmt(w, "a: {} b: {} c: {}\n", .{1, 2});
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "a: 1 b: 2 c: {missing}\n");
+
+    // Format with a single value and too many braces
+    w.end = 0;
+    try fmt(w, "a: {} b: {}\n", 42);
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "a: 42 b: {missing}\n");
+}
+
+test "format union" {
+    const TestUnion = union {
+        a: i32,
+        b: bool,
+    };
+
+    let au1 = TestUnion{a: 42};
+    let au2 = TestUnion{b: true};
+
+    const buf_len = 128;
+    let buf: [buf_len]u8 = {};
+    let w = std.io.Writer.fixed(buf[0..buf_len]);
+
+    try fmt(w, "u1: {} u2: {}\n", .{au1, au2});
+    std.io.print("{s}\n", .{buf[0..w.end]});
+    try std.testing.expectEqualSlice(u8, buf[0..w.end], "u1: TestUnion[a: 42] u2: TestUnion[b: true]\n");
 }
